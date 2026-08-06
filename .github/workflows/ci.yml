@@ -139,10 +139,10 @@ jobs:
           tags: |
             ghcr.io/${{ github.repository }}:latest
             ghcr.io/${{ github.repository }}:${{ steps.meta.outputs.sha }}
-          build-args:
-            GIT_COMMIT: ${{ steps.meta.outputs.sha }}
-            BUILD_DATE: ${{ steps.meta.outputs.date }}
-            VERSION: v${{ github.run_number }}
+          build-args: |
+            GIT_COMMIT=${{ steps.meta.outputs.sha }}
+            BUILD_DATE=${{ steps.meta.outputs.date }}
+            VERSION=v${{ github.run_number }}
 
       - name: Build (no push)
         if: github.ref != 'refs/heads/main'
@@ -151,10 +151,10 @@ jobs:
           context: .
           file: ./Dockerfile
           load: true
-          build-args:
-            GIT_COMMIT: ${{ steps.meta.outputs.sha }}
-            BUILD_DATE: ${{ steps.meta.outputs.date }}
-            VERSION: ci
+          build-args: |
+            GIT_COMMIT=${{ steps.meta.outputs.sha }}
+            BUILD_DATE=${{ steps.meta.outputs.date }}
+            VERSION=ci
 
   release:
     name: Check Release

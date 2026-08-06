@@ -23,6 +23,11 @@ func newConcurrentDailyTurnStore() *concurrentDailyTurnStore {
 func (m *concurrentDailyTurnStore) CreateDailyTurn(ctx context.Context, dt *game.DailyTurn) (*game.DailyTurn, error) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
+	for _, t := range m.turns {
+		if t.UID == dt.UID && t.Date == dt.Date && t.QuestSlug == dt.QuestSlug {
+			return nil, errors.New("unique constraint violation")
+		}
+	}
 	m.nextID++
 	dt.ID = m.nextID
 	dt.CreatedAt = time.Now().UTC()
