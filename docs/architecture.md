@@ -51,13 +51,15 @@ odyssey/
 │   └── <resource>/index.go       # One Handler(w, r) per resource
 ├── pkg/                          # Shared, reusable Go packages
 │   ├── auth/                     # Authenticator port + Firestore adapter
-│   ├── db/                       # Supabase REST client (thin wrapper)
-│   ├── game/                     # Game logic (quests, progression, economy)
+│   ├── content/                  # ContentService (DB-backed definitions & caching)
+│   ├── db/                       # Supabase REST client & store implementations
+│   ├── game/                     # Game logic (quests, progression, economy, chapters, lore, achievements)
 │   │   ├── quest/                # Quest & challenge domain
 │   │   ├── progression/          # XP, levels, milestones, relics
 │   │   ├── creative/             # Creative-space, story submissions
 │   │   └── world/                # Realm progress, world state
-│   └── shared/                   # Logging, errors, config helpers
+│   ├── observability/            # Structured logging, metrics, health, profiler
+│   └── shared/                   # Config, security middleware, CORS, rate limiting
 ├── web/                          # React 19 PWA frontend
 │   ├── src/
 │   │   ├── app/                  # App shell, routing, session provider

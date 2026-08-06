@@ -367,6 +367,14 @@ export interface QuestWithChallenges {
   challenges: Challenge[]
 }
 
+export interface CompleteChallengeResult {
+  quest?: QuestWithChallenges | null
+  quest_completed: boolean
+  xp: number
+  new_level: number
+  level_up: boolean
+}
+
 export interface DailyTurnView {
   today: string
   completed: boolean

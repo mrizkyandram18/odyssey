@@ -211,7 +211,7 @@ part of the MVP domain.
 
 The domain is organized into three layers:
 
-### Definition Layer (`pkg/game/content`)
+### Definition Layer (`pkg/content` and `pkg/game/content`)
 
 Owns ALL game content definitions. These are data-only types with no
 runtime behavior. Each definition is independent and maps to a database table.

@@ -27,8 +27,8 @@ storytelling — purely for fun, learning, and engagement.
 - `cmd/` - CLI tools and utilities
 - `docs/` - Project documentation
 - `pkg/` - Core domain logic and integrations
-- `scripts/` - Development and deployment scripts
-- `supabase/` - Database migrations and configuration
+- `scripts/` - Local dev/deploy scripts and database migrations (`scripts/migrations/`)
+- `supabase/` - Supabase project configuration (`config.toml`)
 - `web/` - React frontend application
 
 ## Getting Started

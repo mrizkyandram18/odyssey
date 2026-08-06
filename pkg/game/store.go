@@ -173,9 +173,8 @@ type Repository struct {
 	Config              ConfigStore
 }
 
-// BuildRepository constructs a Repository from a concrete adapter.
-// The wiring logic lives in pkg/db/wire.go to avoid an import cycle.
-// This function is a placeholder that returns an error until wired.
+// BuildRepository is a package placeholder. Concrete repository construction
+// is implemented in pkg/db/wire.go (BuildRepository) to avoid an import cycle.
 func BuildRepository(_ any) (*Repository, error) {
-	return nil, fmt.Errorf("repository wiring not implemented")
+	return nil, fmt.Errorf("use pkg/db.BuildRepository for repository construction")
 }

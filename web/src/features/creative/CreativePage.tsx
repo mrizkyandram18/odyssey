@@ -96,16 +96,13 @@ export function CreativePage() {
           />
         </div>
         <div className="flex flex-col gap-2">
-          <label className="text-xs text-muted-foreground">Kind</label>
+          <label className="text-xs text-muted-foreground">Submission Type (Phase 1: Story Only)</label>
           <select
             value={kind}
             onChange={(e) => setKind(e.target.value as SubmissionKind)}
             className="rounded-md border border-border bg-background p-2 text-sm"
           >
-            <option value="STORY">Story</option>
-            <option value="COMIC">Comic</option>
-            <option value="PHOTO">Photo</option>
-            <option value="VIDEO">Video</option>
+            <option value="STORY">Story Snippet</option>
           </select>
         </div>
         <div className="flex flex-col gap-2">
