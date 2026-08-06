@@ -1,0 +1,38 @@
+# Go
+.bin/
+.env
+.env.*
+!.env.example
+production.env
+*.local
+*.exe
+*.exe~
+coverage
+coverage.out
+*.test.exe
+*.prof
+.go-version
+.tmp-go-build/
+.tmp-go-mod/
+
+# Node
+node_modules/
+web/node_modules/
+web/dist/
+
+# IDE
+.vscode/*
+!.vscode/extensions.json
+.idea
+.DS_Store
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+# Logs
+*.log
+
+# OS
+Thumbs.db

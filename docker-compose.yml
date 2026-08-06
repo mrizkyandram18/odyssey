@@ -1,0 +1,56 @@
+version: "3.8"
+
+services:
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        GIT_COMMIT: ${GIT_COMMIT:-local}
+        BUILD_DATE: ${BUILD_DATE:-2024-01-01T00:00:00Z}
+        VERSION: ${VERSION:-dev}
+    image: odyssey/backend:latest
+    container_name: odyssey-backend
+    restart: unless-stopped
+    ports:
+      - "${PORT:-8080}:8080"
+    env_file:
+      - ./production.env
+    environment:
+      - PORT=${PORT:-8080}
+    networks:
+      - odyssey-net
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:8080/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
+
+  postgres:
+    image: postgres:16-alpine
+    container_name: odyssey-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-odyssey}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-odyssey_dev}
+      POSTGRES_DB: ${POSTGRES_DB:-odyssey}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./scripts/migrations:/docker-entrypoint-initdb.d
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    networks:
+      - odyssey-net
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-odyssey}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  postgres_data:
+
+networks:
+  odyssey-net:
+    driver: bridge

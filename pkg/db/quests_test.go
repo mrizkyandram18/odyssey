@@ -1,0 +1,99 @@
+package db
+
+import (
+	"context"
+	"encoding/json"
+	"errors"
+	"testing"
+	"time"
+
+	"odyssey/pkg/game"
+)
+
+func TestQuestStore_GetQuest_Success(t *testing.T) {
+	now := time.Date(2026, 8, 3, 12, 0, 0, 0, time.UTC)
+	ts := now
+	data, _ := json.Marshal([]QuestInstance{
+		{
+			ID:           1,
+			CrewID:       "crew-1",
+			TemplateSlug: "morning-light",
+			Title:        "Test Quest",
+			Status:       "PENDING",
+			CreatedAt:    now,
+			StartedAt:    &ts,
+		},
+	})
+	store := NewQuestStore(&mockSupabaseClient{data: data})
+	q, err := store.GetQuest(context.Background(), 1)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if q.ID != 1 {
+		t.Errorf("expected ID 1, got %d", q.ID)
+	}
+	if q.TemplateSlug != "morning-light" {
+		t.Errorf("expected slug morning-light, got %s", q.TemplateSlug)
+	}
+	if q.Status != "PENDING" {
+		t.Errorf("expected status PENDING, got %s", q.Status)
+	}
+}
+
+func TestQuestStore_GetQuest_NotFound(t *testing.T) {
+	data, _ := json.Marshal([]QuestInstance{})
+	store := NewQuestStore(&mockSupabaseClient{data: data})
+	_, err := store.GetQuest(context.Background(), 999)
+	if !errors.Is(err, game.ErrNotFound) {
+		t.Errorf("expected ErrNotFound, got %v", err)
+	}
+}
+
+func TestQuestStore_ListByCrew(t *testing.T) {
+	now := time.Date(2026, 8, 3, 12, 0, 0, 0, time.UTC)
+	data, _ := json.Marshal([]QuestInstance{
+		{ID: 1, CrewID: "crew-1", Title: "Quest A", Status: "DONE", CreatedAt: now},
+		{ID: 2, CrewID: "crew-1", Title: "Quest B", Status: "ACTIVE", StartedAt: &now, CreatedAt: now},
+	})
+	store := NewQuestStore(&mockSupabaseClient{data: data})
+	quests, err := store.ListQuestByCrew(context.Background(), "crew-1")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if len(quests) != 2 {
+		t.Fatalf("expected 2 quests, got %d", len(quests))
+	}
+	if quests[0].Title != "Quest A" {
+		t.Errorf("expected first quest 'Quest A', got %s", quests[0].Title)
+	}
+}
+
+func TestQuestStore_GetChallenges(t *testing.T) {
+	data, _ := json.Marshal([]Challenge{
+		{ID: 10, QuestID: 1, Slug: "obs", Description: "Observe", Status: "DONE"},
+		{ID: 11, QuestID: 1, Slug: "research", Description: "Research", Status: "PENDING"},
+	})
+	store := NewQuestStore(&mockSupabaseClient{data: data})
+	challenges, err := store.GetChallenges(context.Background(), 1)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if len(challenges) != 2 {
+		t.Fatalf("expected 2 challenges, got %d", len(challenges))
+	}
+	if challenges[0].Status != "DONE" {
+		t.Errorf("expected first challenge DONE, got %s", challenges[0].Status)
+	}
+}
+
+func TestQuestStore_UpdateQuest(t *testing.T) {
+	store := NewQuestStore(&mockSupabaseClient{data: []byte("[]")})
+	err := store.UpdateQuest(context.Background(), 1, map[string]any{"status": "ACTIVE"})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+}
+
+func TestQuestStore_ImplementsInterface(t *testing.T) {
+	var _ game.QuestStore = (*supabaseQuestStore)(nil)
+}

@@ -1,0 +1,280 @@
+File: api\achievements\index.go:42
+Found: empty return in err check
+
+File: api\admin\index.go:467
+Found: empty return in err check
+
+File: api\admin\index.go:476
+Found: empty return in err check
+
+File: api\admin\index.go:507
+Found: empty return in err check
+
+File: api\admin\index.go:519
+Found: empty return in err check
+
+File: api\admin\index.go:531
+Found: empty return in err check
+
+File: api\admin\index.go:583
+Found: empty return in err check
+
+File: api\admin\index.go:592
+Found: empty return in err check
+
+File: api\admin\index.go:605
+Found: empty return in err check
+
+File: api\admin\index.go:622
+Found: empty return in err check
+
+File: api\admin\index.go:635
+Found: empty return in err check
+
+File: api\admin\index.go:644
+Found: empty return in err check
+
+File: api\admin\index.go:657
+Found: empty return in err check
+
+File: api\admin\index.go:665
+Found: empty return in err check
+
+File: api\admin\index.go:678
+Found: empty return in err check
+
+File: api\admin\index.go:691
+Found: empty return in err check
+
+File: api\admin\index.go:704
+Found: empty return in err check
+
+File: api\chapters\index.go:61
+Found: empty return in err check
+
+File: api\chapters\index.go:70
+Found: empty return in err check
+
+File: api\chapters\index.go:83
+Found: empty return in err check
+
+File: api\chapters\index.go:84
+Found: empty return in err check
+
+File: api\chests\index.go:57
+Found: empty return in err check
+
+File: api\chests\index.go:70
+Found: empty return in err check
+
+File: api\chests\index.go:76
+Found: empty return in err check
+
+File: api\chests\index.go:77
+Found: empty return in err check
+
+File: api\chests\index.go:111
+Found: empty return in err check
+
+File: api\chests\index.go:117
+Found: empty return in err check
+
+File: api\chests\index.go:118
+Found: empty return in err check
+
+File: api\creative\index.go:101
+Found: empty return in err check
+
+File: api\creative\index.go:114
+Found: empty return in err check
+
+File: api\creative\index.go:145
+Found: empty return in err check
+
+File: api\creative\index.go:151
+Found: empty return in err check
+
+File: api\creative\index.go:160
+Found: empty return in err check
+
+File: api\creative\index.go:166
+Found: empty return in err check
+
+File: api\creative\index.go:167
+Found: empty return in err check
+
+File: api\creative\index.go:190
+Found: empty return in err check
+
+File: api\creative\index.go:196
+Found: empty return in err check
+
+File: api\creative\index.go:197
+Found: empty return in err check
+
+File: api\creative\index.go:215
+Found: empty return in err check
+
+File: api\creative\index.go:223
+Found: empty return in err check
+
+File: api\creative\index.go:233
+Found: empty return in err check
+
+File: api\creative\index.go:234
+Found: empty return in err check
+
+File: api\crews\index.go:67
+Found: empty return in err check
+
+File: api\crews\index.go:68
+Found: empty return in err check
+
+File: api\daily_turns\index.go:59
+Found: empty return in err check
+
+File: api\daily_turns\index.go:60
+Found: empty return in err check
+
+File: api\daily_turns\index.go:85
+Found: empty return in err check
+
+File: api\daily_turns\index.go:98
+Found: empty return in err check
+
+File: api\daily_turns\index.go:99
+Found: empty return in err check
+
+File: api\home\index.go:44
+Found: empty return in err check
+
+File: api\login\index.go:57
+Found: empty return in err check
+
+File: api\login\index.go:64
+Found: empty return in err check
+
+File: api\login\index.go:84
+Found: empty return in err check
+
+File: api\lore\index.go:63
+Found: empty return in err check
+
+File: api\lore\index.go:72
+Found: empty return in err check
+
+File: api\lore\index.go:81
+Found: empty return in err check
+
+File: api\me\index.go:43
+Found: empty return in err check
+
+File: api\me\index.go:44
+Found: empty return in err check
+
+File: api\quests\index.go:106
+Found: empty return in err check
+
+File: api\quests\index.go:115
+Found: empty return in err check
+
+File: api\quests\index.go:121
+Found: empty return in err check
+
+File: api\quests\index.go:122
+Found: empty return in err check
+
+File: api\quests\index.go:135
+Found: empty return in err check
+
+File: api\quests\index.go:140
+Found: empty return in err check
+
+File: api\quests\index.go:141
+Found: empty return in err check
+
+File: api\quests\index.go:154
+Found: empty return in err check
+
+File: api\quests\index.go:159
+Found: empty return in err check
+
+File: api\quests\index.go:165
+Found: empty return in err check
+
+File: api\quests\index.go:166
+Found: empty return in err check
+
+File: api\realm_progress\index.go:50
+Found: empty return in err check
+
+File: api\relics\index.go:55
+Found: empty return in err check
+
+File: api\relics\index.go:74
+Found: empty return in err check
+
+File: pkg\auth\firestore.go:192
+Found: return nil in err check
+
+File: pkg\auth\middleware.go:51
+Found: empty return in err check
+
+File: pkg\game\achievement\service.go:159
+Found: continue in err check
+
+File: pkg\game\achievement\service.go:164
+Found: continue in err check
+
+File: pkg\game\achievement\service.go:179
+Found: continue in err check
+
+File: pkg\game\chapter\service.go:239
+Found: return nil in err check
+
+File: pkg\game\chapter\service.go:249
+Found: return nil in err check
+
+File: pkg\game\chapter\service.go:279
+Found: return nil in err check
+
+File: pkg\game\chapter\service.go:380
+Found: return nil in err check
+
+File: pkg\game\chest\catalog.go:87
+Found: continue in err check
+
+File: pkg\game\chest\service.go:336
+Found: return nil in err check
+
+File: pkg\game\lore\service.go:178
+Found: continue in err check
+
+File: pkg\game\lore\service.go:189
+Found: continue in err check
+
+File: pkg\game\quest\handler.go:208
+Found: empty return in err check
+
+File: pkg\game\quest\handler.go:236
+Found: empty return in err check
+
+File: pkg\game\quest\handler.go:264
+Found: empty return in err check
+
+File: pkg\observability\logging.go:73
+Found: empty return in err check
+
+File: pkg\observability\logging.go:104
+Found: empty return in err check
+
+File: pkg\observability\logging.go:236
+Found: empty return in err check
+
+File: pkg\observability\logging.go:244
+Found: empty return in err check
+
+File: pkg\observability\middleware.go:47
+Found: recover
+
+Total: 93
