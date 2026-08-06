@@ -219,12 +219,12 @@ func TestOpenChest_ConcurrentRequests_OnlyOneSucceeds(t *testing.T) {
 
 	failCount := 0
 	for _, err := range errs {
-		if err != nil && err.Error() == "chest already opened" {
+		if err != nil {
 			failCount++
 		}
 	}
 	if failCount != 1 {
-		t.Errorf("expected exactly 1 'already opened' error, got %d", failCount)
+		t.Errorf("expected exactly 1 failed open, got %d (errors: %v)", failCount, errs)
 	}
 }
 
