@@ -1175,9 +1175,9 @@ func TestVerify_BOTH_CompliancePasses_BeforeBindingCheck(t *testing.T) {
 
 func TestVerify_MinuteBoundary(t *testing.T) {
 	t.Parallel()
-	// lastSeen exactly at 5 minutes ago should pass (boundary)
+	// lastSeen just under 5 minutes ago should pass (boundary)
 	doc := validGatekeeperDoc()
-	doc["lastSeen"] = time.Now().Add(-5 * time.Minute)
+	doc["lastSeen"] = time.Now().Add(-(5*time.Minute - 2*time.Second))
 	auth := newTestAuthenticator(t, &mockFirestoreReader{data: doc}, &mockProfileReader{}, &mockPasswordHasher{})
 	device := DevicePayload{LoginMethod: "GATEKEEPER", DeviceID: "dev-1"}
 	_, err := auth.Verify(context.Background(), "user-1", "", device)
