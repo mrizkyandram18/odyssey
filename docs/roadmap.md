@@ -67,8 +67,16 @@ strategy, and reward integration deferral.
 - Role mastery mechanics.
 
 **Exit criteria:** A family of 3–4 can play through all 6 quests, complete
-daily turns for a week, and see meaningful progression — entirely on a phone,
-PWA installed.
+daily turns for a week, dan melihat progresi secara nyata.
+
+### Phase 1 Release Engineering (Micro-Phases)
+Untuk memastikan kualitas rilis, Phase 1 dipecah menjadi beberapa fase kecil sebelum Tag `v0.1.0` dibuat:
+
+- **Phase 1 (MVP)**: Implementasi Core Loop.
+- **Phase 1.1 (Testing Infrastructure)**: Setup Playwright E2E, PWA Checklist, Test Data Strategy, dan pemisahan Job di CI. *(Current)*
+- **Phase 1.2 (CI Runtime Automation)**: Menghubungkan GitHub Actions ke *ephemeral database*, *seeding* otomatis, dan eksekusi Playwright melawan *backend* sungguhan.
+- **Phase 1.3 (Production Validation)**: *Smoke testing* terhadap *staging*, konfirmasi PWA dan fungsional manual.
+- **Tag v0.1.0**: Rilis resmi dilakukan, status berubah menjadi GO.
 
 ---
 
