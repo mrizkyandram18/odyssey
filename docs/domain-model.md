@@ -77,7 +77,7 @@ collected, admired, and (Phase 2) traded within the family.
 
 A reward container earned through quest completion or Explorer Level-ups.
 MVP Chests have **known, fixed contents** (not randomized in a way that
-simulates gambling — see Principles P3 in [principles](../principles.md)).
+simulates gambling — see Principles P3 in [principles](principles.md)).
 
 ### Achievement
 
