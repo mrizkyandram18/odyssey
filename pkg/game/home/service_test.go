@@ -358,3 +358,4 @@ func TestGetHome_NilChapterLoreAchievementServices(t *testing.T) {
 		t.Error("expected nil lore summary in section when service not set")
 	}
 }
+func (m *mockUserStore) ListUsersByCrew(ctx context.Context, crewID string) ([]game.Player, error) { return nil, nil }

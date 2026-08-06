@@ -214,7 +214,7 @@ export function HomePage() {
         ) : (
           home?.active_quests && home.active_quests.length > 0 ? (
             home.active_quests.map((q: QuestView) => (
-              <QuestCard key={q.id} quest={q} />
+              <QuestCard key={q.id} quest={q} isMyTurn={q.active_challenge_assigned_to === home?.player.uid} />
             ))
           ) : (
             <p className="text-sm text-muted-foreground">No active quests. Check back soon!</p>

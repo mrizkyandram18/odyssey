@@ -307,3 +307,4 @@ func (m *mockContentGateway) GetQuest(ctx context.Context, slug string) (*gameco
 func (m *mockContentGateway) ListQuestsByRealm(ctx context.Context, realm string) ([]gamecontent.QuestDefinition, error) {
 	return nil, nil
 }
+func (m *mockGateUserStore) ListUsersByCrew(ctx context.Context, crewID string) ([]game.Player, error) { return nil, nil }

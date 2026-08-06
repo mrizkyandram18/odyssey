@@ -139,6 +139,7 @@ func main() {
 		quest.NewQuestGate(chapterStore, realmStore, repo.Users, repo.Quests, seasonSvc.IsActive),
 		contentSvc,
 	)
+	questSvc.SetUserStore(repo.Users)
 
 	chapterSvc := chapter.NewChapterService(chapterStore, repo.Quests, contentSvc, dispatcher)
 	chapterSvc.SetMetrics(metrics)

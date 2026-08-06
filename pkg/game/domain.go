@@ -48,6 +48,7 @@ type Challenge struct {
 	Slug        string     `json:"slug"`
 	Description string     `json:"description"`
 	Status      string     `json:"status"`
+	AssignedTo  *string    `json:"assigned_to,omitempty"`
 	CompletedBy string     `json:"completed_by,omitempty"`
 	CompletedAt *time.Time `json:"completed_at"`
 	CreatedAt   time.Time  `json:"created_at"`

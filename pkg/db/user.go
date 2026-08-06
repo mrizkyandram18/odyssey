@@ -97,4 +97,37 @@ func (s *supabaseUserStore) UpdateUserIfMatch(ctx context.Context, uid string, v
 	return len(profiles) > 0, nil
 }
 
+func (s *supabaseUserStore) ListUsersByCrew(ctx context.Context, crewID string) ([]game.Player, error) {
+	v := url.Values{}
+	v.Set("crew_id", "eq."+crewID)
+	v.Set("order", "created_at.asc") // Consistent ordering for round-robin
+	params := v.Encode()
+
+	raw, err := s.client.Get(ctx, "odyssey_user_profiles", params)
+	if err != nil {
+		return nil, fmt.Errorf("list users by crew: %w", err)
+	}
+
+	var profiles []UserProfile
+	if err := json.Unmarshal(raw, &profiles); err != nil {
+		return nil, fmt.Errorf("parse user profiles: %w", err)
+	}
+
+	players := make([]game.Player, 0, len(profiles))
+	for _, p := range profiles {
+		players = append(players, game.Player{
+			UID:          p.UID,
+			CrewID:       p.CrewID,
+			ExplorerName: p.ExplorerName,
+			Role:         p.Role,
+			Level:        p.Level,
+			XP:           p.XP,
+			Version:      p.Version,
+			CreatedAt:    p.CreatedAt,
+			UpdatedAt:    p.UpdatedAt,
+		})
+	}
+	return players, nil
+}
+
 var _ game.UserStore = (*supabaseUserStore)(nil)

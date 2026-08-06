@@ -383,3 +383,4 @@ func TestRewardCountForRarity_NilBalance(t *testing.T) {
 		}
 	}
 }
+func (m *mockUserStore) ListUsersByCrew(ctx context.Context, crewID string) ([]game.Player, error) { return nil, nil }

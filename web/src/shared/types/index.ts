@@ -353,6 +353,7 @@ export interface QuestView {
   created_at: string
   challenge_count: number
   completed_count: number
+  active_challenge_assigned_to?: string
 }
 
 export interface QuestWithChallenges {

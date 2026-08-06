@@ -16,12 +16,13 @@ var ErrNotFound = errors.New("not found")
 // At runtime, the api/handlers wire a concrete implementation into each
 // interactor. For now, these interfaces stand alone — no import of pkg/db.
 
-// UserStore provides persistence operations for player (explorer) data.
+// UserStore manages player identities.
 type UserStore interface {
 	GetUser(ctx context.Context, uid string) (*Player, error)
 	CreateUser(ctx context.Context, p *Player) error
 	UpdateUser(ctx context.Context, uid string, patch map[string]any) error
 	UpdateUserIfMatch(ctx context.Context, uid string, version int, patch map[string]any) (bool, error)
+	ListUsersByCrew(ctx context.Context, crewID string) ([]Player, error)
 }
 
 // CrewStore provides persistence operations for crew (family group) data.

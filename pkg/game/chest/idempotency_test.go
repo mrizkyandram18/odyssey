@@ -291,3 +291,4 @@ func TestQuestCompletedHandler_NoDuplicateChestsOnReplay(t *testing.T) {
 		t.Errorf("expected 1 quest chest, got %d", questChests)
 	}
 }
+func (m *concurrentUserStore) ListUsersByCrew(ctx context.Context, crewID string) ([]game.Player, error) { return nil, nil }
