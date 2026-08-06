@@ -11,22 +11,40 @@ const ROLE_DESCRIPTIONS: Record<string, string> = {
 }
 
 export function ProfilePage() {
-  const { profile, session, loading, logout } = useSession()
+  const { profile, session, loading, error, logout } = useSession()
 
   if (loading) {
     return (
-      <div className="flex flex-col gap-4 p-4 pb-safe">
-        <Link to="/" className="text-sm text-muted-foreground">← Home</Link>
-        <p className="text-sm text-muted-foreground">Loading profile...</p>
+      <div className="flex flex-col gap-6 p-4 pb-safe">
+        <header className="flex items-center justify-between">
+          <Link to="/" className="text-sm text-muted-foreground hover:text-primary transition-colors">
+            ← Home
+          </Link>
+          <h1 className="text-xl font-semibold">Explorer Profile</h1>
+        </header>
+        <div className="h-24 w-full animate-pulse rounded-lg border border-border bg-surface/50" />
+        <div className="h-20 w-full animate-pulse rounded-lg border border-border bg-surface/50" />
+        <div className="h-24 w-full animate-pulse rounded-lg border border-border bg-surface/50" />
       </div>
     )
   }
 
-  if (!profile) {
+  if (error || !profile) {
     return (
       <div className="flex flex-col gap-4 p-4 pb-safe">
-        <Link to="/" className="text-sm text-muted-foreground">← Home</Link>
-        <p className="text-sm text-muted-foreground">No profile data available.</p>
+        <header className="flex items-center justify-between">
+          <Link to="/" className="text-sm text-muted-foreground hover:text-primary transition-colors">
+            ← Home
+          </Link>
+        </header>
+        <div className="flex flex-col items-center justify-center gap-3 rounded-lg border border-border bg-surface p-6 text-center">
+          <p className="text-sm text-muted-foreground">
+            {error || 'No active profile found. Please sign in to view your explorer profile.'}
+          </p>
+          <Link to="/" className="text-xs font-semibold text-primary hover:underline">
+            Return to Sign In
+          </Link>
+        </div>
       </div>
     )
   }

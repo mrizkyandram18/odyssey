@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { DailyTurnBanner } from '../../shared/components/molecules/DailyTurnBanner'
 import { QuestCard } from '../../shared/components/molecules/QuestCard'
 import { StreakBadge } from '../../shared/components/molecules/StreakBadge'
@@ -50,6 +50,10 @@ export function HomePage() {
       setLoading(false)
     }
   }
+
+  useEffect(() => {
+    loadHome()
+  }, [])
 
   if (loading && !home) {
     return <p className="p-4 text-sm text-muted-foreground">Loading...</p>

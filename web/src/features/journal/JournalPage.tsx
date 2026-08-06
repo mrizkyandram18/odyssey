@@ -1,8 +1,9 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { Link } from 'react-router-dom'
 import { achievementsApi, loreApi } from '../../shared/lib/api'
 import type { AchievementView, LoreView } from '../../shared/types'
 import { Badge } from '../../shared/components/atoms/Badge'
+import { Button } from '../../shared/components/atoms/Button'
 
 export function JournalPage() {
   const [tab, setTab] = useState<'achievements' | 'lore'>('achievements')
@@ -11,25 +12,26 @@ export function JournalPage() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
-  useEffect(() => {
-    const loadJournal = async () => {
-      setLoading(true)
-      setError(null)
-      try {
-        const [achData, loreData] = await Promise.all([
-          achievementsApi.list().catch(() => []),
-          loreApi.list().catch(() => []),
-        ])
-        setAchievements(achData)
-        setLoreEntries(loreData)
-      } catch (e) {
-        setError(e instanceof Error ? e.message : 'failed to load journal data')
-      } finally {
-        setLoading(false)
-      }
+  const loadJournal = useCallback(async () => {
+    setLoading(true)
+    setError(null)
+    try {
+      const [achData, loreData] = await Promise.all([
+        achievementsApi.list().catch(() => []),
+        loreApi.list().catch(() => []),
+      ])
+      setAchievements(achData)
+      setLoreEntries(loreData)
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'failed to load journal data')
+    } finally {
+      setLoading(false)
     }
-    loadJournal()
   }, [])
+
+  useEffect(() => {
+    loadJournal()
+  }, [loadJournal])
 
   const unlockedAchievementsCount = achievements.filter((a) => a.unlocked).length
   const unlockedLoreCount = loreEntries.filter((l) => l.unlocked).length
@@ -66,10 +68,21 @@ export function JournalPage() {
         </button>
       </div>
 
-      {error && <p className="text-xs text-error bg-error/10 p-2 rounded">{error}</p>}
+      {error && (
+        <div className="flex items-center justify-between gap-2 rounded-lg bg-error/10 border border-error/20 p-3 text-xs text-error">
+          <span>{error}</span>
+          <Button size="sm" variant="ghost" onClick={loadJournal} className="border border-error/30 text-error hover:bg-error/20">
+            Retry
+          </Button>
+        </div>
+      )}
 
       {loading ? (
-        <p className="text-sm text-muted-foreground">Loading journal entries...</p>
+        <div className="flex flex-col gap-3">
+          <div className="h-20 w-full animate-pulse rounded-lg border border-border bg-surface/50" />
+          <div className="h-20 w-full animate-pulse rounded-lg border border-border bg-surface/50" />
+          <div className="h-20 w-full animate-pulse rounded-lg border border-border bg-surface/50" />
+        </div>
       ) : tab === 'achievements' ? (
         <div className="flex flex-col gap-3">
           {achievements.length === 0 ? (

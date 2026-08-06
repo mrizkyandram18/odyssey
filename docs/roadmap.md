@@ -31,7 +31,7 @@ strategy, and reward integration deferral.
 
 ## Phase 1 — MVP: The First Adventure (Weeks 1—4)
 
-**Status:** In Progress (Development)
+**Status:** Release Candidate (Conditional GO / Pending Live Verification)
 
 **Goal:** Ship the smallest complete cooperative loop that delivers a real
 "aha" moment.

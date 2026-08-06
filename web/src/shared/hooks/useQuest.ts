@@ -45,7 +45,11 @@ export function useQuest(questId?: number) {
     setError(null)
     try {
       const result = await questsApi.completeChallenge(questId, challengeId)
-      await fetchQuest()
+      if (result && result.quest) {
+        setData(result.quest)
+      } else {
+        await fetchQuest()
+      }
       return result
     } catch (e) {
       setError(e instanceof Error ? e.message : 'failed to complete challenge')

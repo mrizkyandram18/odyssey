@@ -30,6 +30,7 @@ Cooperative adventure platform for private family groups.
 | `docs/ui-guidelines.md` | Mobile-first, PWA, component, motion, voice. |
 | `docs/ai.md` | Future AI integration (story, quest, comic, quiz). |
 | `docs/future.md` | Future expansion ideas backlog. |
+| `docs/release/` | Phase 1 release engineering reports & checklists. |
 | `docs/decisions/` | Architecture Decision Records (ADRs). |
 
 **Start here:** `vision.md` → `principles.md` → `non-goals.md` →
