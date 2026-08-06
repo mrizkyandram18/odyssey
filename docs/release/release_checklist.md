@@ -12,11 +12,12 @@ Use this checklist to perform pre-release validation before tagging any Phase 1 
 
 ---
 
-## ⚙️ Backend Quality Gate
-- [ ] `go fmt ./...` passes with zero modified files.
-- [ ] `go vet ./...` passes with 0 warnings/errors.
-- [ ] `go test ./...` passes 100% of test packages.
-- [ ] Race detector executed (`go test -race ./...`) OR CGO/OS limitation explicitly documented in Release Report.
+## [1] Pre-Release (Phase 1.1)
+- [ ] Merge `main` to `develop`.
+- [ ] Run Playwright E2E Integration Test via GitHub Actions.
+- [ ] Confirm Race Detector PASS on CI.
+- [ ] Execute PWA Validation (`pwa_checklist.md`) and attach evidence.
+- [ ] Verify staging database seeded correctly (jika smoke test diperlukan).CGO/OS limitation explicitly documented in Release Report.
 
 ---
 
