@@ -152,6 +152,18 @@ type ConfigStore interface {
 	GetSystemConfig(ctx context.Context, key string) (string, error)
 }
 
+// ReactionStore provides persistence for peer reactions.
+type ReactionStore interface {
+	CreateReaction(ctx context.Context, r *Reaction) (*Reaction, error)
+	GetReactionsForTarget(ctx context.Context, targetUserID string) ([]Reaction, error)
+}
+
+// ActivityStore provides persistence for daily user activity and streak calculation.
+type ActivityStore interface {
+	RecordActivity(ctx context.Context, act *DailyActivity) (*DailyActivity, error)
+	GetStreak(ctx context.Context, uid string) (int, error)
+}
+
 // Repository groups all persistence interfaces for convenient dependency injection.
 type Repository struct {
 	Users               UserStore
@@ -171,6 +183,8 @@ type Repository struct {
 	LoreUnlocks         LoreUnlockStore
 	Achievements        AchievementStore
 	Config              ConfigStore
+	Reactions           ReactionStore
+	Activity            ActivityStore
 }
 
 // BuildRepository is a package placeholder. Concrete repository construction

@@ -275,3 +275,22 @@ type PlayerAchievement struct {
 	AwardedAt time.Time `json:"awarded_at"`
 	CreatedAt time.Time `json:"created_at"`
 }
+
+// Reaction represents a peer reaction to a crew's action (e.g. quest, submission).
+type Reaction struct {
+	ID           string    `json:"id"`
+	CreatorID    string    `json:"creator_id"`
+	TargetUserID string    `json:"target_user_id"`
+	QuestID      *string   `json:"quest_id,omitempty"`
+	EmojiCode    string    `json:"emoji_code"`
+	CreatedAt    time.Time `json:"created_at"`
+}
+
+// DailyActivity tracks a user's activity for streaks and history.
+type DailyActivity struct {
+	ID           string    `json:"id"`
+	UserID       string    `json:"user_id"`
+	ActivityDate string    `json:"activity_date"`
+	ActivityType string    `json:"activity_type"`
+	CreatedAt    time.Time `json:"created_at"`
+}

@@ -23,6 +23,7 @@ import (
 	apiLore "odyssey/api/lore"
 	"odyssey/api/me"
 	"odyssey/api/quests"
+	apiReactions "odyssey/api/reactions"
 	"odyssey/api/realm_progress"
 	"odyssey/api/relics"
 	"odyssey/api/status"
@@ -43,6 +44,7 @@ import (
 	"odyssey/pkg/game/quest"
 	"odyssey/pkg/game/relic"
 	"odyssey/pkg/game/season"
+	"odyssey/pkg/game/social"
 	"odyssey/pkg/game/world"
 	"odyssey/pkg/observability"
 	"odyssey/pkg/shared"
@@ -184,6 +186,7 @@ func main() {
 	dailyTurnHandler := dailyturn.NewDailyTurnAPIHandlerWithPublisher(dailyTurnSvc, progSvc, dispatcher, balanceSvc)
 	dailyTurnHandler.SetMetrics(metrics)
 	dailyTurnHandler.SetLogger(logger)
+	dailyTurnHandler.SetActivityStore(repo.Activity)
 
 	chestEngine := chest.NewRewardEngine(repo.ChestDefinitions, repo.RelicDefinitions)
 	chestSvc := chest.NewChestServiceWithPublisher(repo.Chests, repo.PlayerRelics, repo.Relics, repo.Users, chestEngine, dispatcher)
@@ -234,6 +237,9 @@ func main() {
 	apiChapters.Setup(chapterSvc)
 	apiLore.Setup(loreSvc)
 	apiAchievements.Setup(achieveSvc)
+
+	reactionSvc := social.NewReactionService(repo.Reactions)
+	apiReactions.Setup(reactionSvc)
 
 	crews.Setup(repo.Crews)
 	realm_progress.Setup(repo.RealmProgress)
@@ -370,6 +376,8 @@ func main() {
 	mux.HandleFunc("/api/lore/", secure(mw.RequireAuth(apiLore.Handler)))
 	mux.HandleFunc("/api/achievements", secure(mw.RequireAuth(apiAchievements.Handler)))
 	mux.HandleFunc("/api/achievements/", secure(mw.RequireAuth(apiAchievements.Handler)))
+	mux.HandleFunc("/api/reactions", secure(mw.RequireAuth(apiReactions.Handler)))
+	mux.HandleFunc("/api/reactions/", secure(mw.RequireAuth(apiReactions.Handler)))
 	mux.HandleFunc("/api/admin", secure(rateLimit(adminLimiter, mw.RequireRole(auth.RoleAdmin)(admin.Handler))))
 	mux.HandleFunc("/api/admin/", secure(rateLimit(adminLimiter, mw.RequireRole(auth.RoleAdmin)(admin.Handler))))
 

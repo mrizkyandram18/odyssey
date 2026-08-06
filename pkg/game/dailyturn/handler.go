@@ -32,6 +32,7 @@ type DailyTurnAPIHandler struct {
 	balance   *balance.Service
 	metrics   *observability.Metrics
 	logger    *observability.Logger
+	activity  game.ActivityStore
 }
 
 // SetMetrics attaches an optional metrics sink. Safe to call with nil.
@@ -43,6 +44,11 @@ func (h *DailyTurnAPIHandler) SetMetrics(m *observability.Metrics) {
 // Safe to call with nil.
 func (h *DailyTurnAPIHandler) SetLogger(l *observability.Logger) {
 	h.logger = l
+}
+
+// SetActivityStore attaches an ActivityStore to record daily turns as generic activity.
+func (h *DailyTurnAPIHandler) SetActivityStore(s game.ActivityStore) {
+	h.activity = s
 }
 
 // NewDailyTurnAPIHandler constructs a DailyTurnAPIHandler from its collaborators.
@@ -115,9 +121,22 @@ func (h *DailyTurnAPIHandler) Consume(ctx context.Context, uid string, questSlug
 		return nil, fmt.Errorf("award daily turn xp: %w", err)
 	}
 
-	streak, err := h.dts.ComputeStreak(ctx, uid)
-	if err != nil {
-		streak = 0
+	streak := 0
+	if h.activity != nil {
+		_, _ = h.activity.RecordActivity(ctx, &game.DailyActivity{
+			UserID:       uid,
+			ActivityDate: date,
+			ActivityType: "daily_turn",
+		})
+		s, err := h.activity.GetStreak(ctx, uid)
+		if err == nil {
+			streak = s
+		}
+	} else {
+		s, err := h.dts.ComputeStreak(ctx, uid)
+		if err == nil {
+			streak = s
+		}
 	}
 
 	h.publisher.Publish(ctx, events.DailyTurnCompletedEvent{
