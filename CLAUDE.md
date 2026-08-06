@@ -5,7 +5,7 @@ Cooperative adventure platform for private family groups.
 ## Tech Stack
 
 - Frontend: React 19, Vite, TypeScript, Tailwind CSS
-- Backend: Go (standard library)
+- Backend: Go 1.25 (mostly standard library)
 - Database: Supabase (PostgreSQL) — shared project, `odyssey_*` tables only
 - Auth: Gatekeeper (external, immutable) via Authentication Provider adapter
 
@@ -54,8 +54,21 @@ Cooperative adventure platform for private family groups.
 | Family Reward | `D:\Personal\Projects\kuota - Copy` | Auth flow, API style, DB conventions. |
 | Gatekeeper | Android app (Firestore-backed) | Device trust, `users/{PARENT_ID}/children/{uid}`. |
 
-## Development
+## Development & Project Structure
 
-Documentation phase (Phase 0) is in progress. No application code or
-dependencies are scaffolded until the ADRs are approved. See
-`docs/roadmap.md` for the Phase 1 MVP scope.
+### Build & Run
+- **Backend:** `go run api/dev/main.go`
+- **Frontend:** `cd web && npm run dev`
+- **Build (CI):** `go build ./...` for backend, `npm run build` for frontend.
+
+### Testing
+- **Backend Tests:** `go test -v -race -count=1 ./...`
+- **Frontend Tests:** `npm run test` (Vitest)
+- **Linting:** `go vet ./...` and `go fmt ./...` for Go, `npm run lint` for frontend.
+
+### Directories
+- `api/` - HTTP entry points
+- `cmd/` - CLI utilities
+- `docs/` - Architecture & ADRs
+- `pkg/` - Core domain, database, auth
+- `web/` - React frontend

@@ -2,7 +2,7 @@
 
 ## Goals
 
-- **Modular monolith backend** (Go, standard library) that can deploy as
+- **Modular monolith backend** (Go, mostly standard library) that can deploy as
   serverless functions or a single service.
 - **PWA frontend** (React 19, Vite, TypeScript, Tailwind CSS) that works on
   phones first and is installable to the home screen.

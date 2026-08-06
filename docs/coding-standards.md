@@ -12,7 +12,7 @@ this document codifies what "existing" will look like once development begins.
 
 - **Module path:** `odyssey` (matches the repo name).
 - **Go version:** 1.25+ (matching Family Reward).
-- **Dependencies:** Standard library only for the core. Allow only the
+- **Dependencies:** Mostly standard library for the core. Allow only the
   minimum third-party dependencies required for:
   - Supabase REST (direct `net/http`, no SDK — we use raw HTTP like Family Reward).
   - Firestore Admin (for the Gatekeeper auth adapter, read-only).

@@ -11,9 +11,9 @@ extend them.
 
 ---
 
-## Phase 0 — Foundation (Current Deliverable)
+## Phase 0 — Foundation
 
-**Status:** In progress (documentation only)
+**Status:** Complete
 
 **Goal:** Establish the long-term foundation: vision, architecture decisions,
 domain model, and coding standards. No application code is written.
@@ -29,7 +29,9 @@ strategy, and reward integration deferral.
 
 ---
 
-## Phase 1 — MVP: The First Adventure (Weeks 1–4)
+## Phase 1 — MVP: The First Adventure (Weeks 1—4)
+
+**Status:** In Progress (Development)
 
 **Goal:** Ship the smallest complete cooperative loop that delivers a real
 "aha" moment.

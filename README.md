@@ -17,15 +17,29 @@ storytelling — purely for fun, learning, and engagement.
 | Layer    | Technology                          |
 |----------|-------------------------------------|
 | Frontend | React 19, Vite, TypeScript, Tailwind CSS |
-| Backend  | Go (standard library only)          |
+| Backend  | Go 1.25 (mostly standard library)   |
 | Database | Supabase (PostgreSQL) — `odyssey_*` tables |
 | Auth     | Gatekeeper (BOTH login mode) via adapter |
+
+## Project Structure
+
+- `api/` - HTTP handlers and entry points
+- `cmd/` - CLI tools and utilities
+- `docs/` - Project documentation
+- `pkg/` - Core domain logic and integrations
+- `scripts/` - Development and deployment scripts
+- `supabase/` - Database migrations and configuration
+- `web/` - React frontend application
 
 ## Getting Started
 
 1. Copy `.env.example` to `.env` and fill in the values.
 2. **Backend:** `go run api/dev/main.go`
 3. **Frontend:** `cd web && npm install && npm run dev`
+
+## CI Status
+
+GitHub Actions CI is currently green (Docker build & tests).
 
 ## Documentation
 
@@ -37,7 +51,7 @@ Start at `CLAUDE.md`, then read `docs/vision.md` → `docs/principles.md` →
 | Phase | Scope | Status |
 |-------|-------|--------|
 | 0 — Foundation | Vision, ADRs, architecture, coding standards | Complete |
-| 1 — MVP | One realm, 3 quests, daily turns, basic progression | Next |
+| 1 — MVP | One realm, 3 quests, daily turns, basic progression | In Progress |
 | 2 — Social Fabric | Peer reactions, coin currency, expanded creative tools | Future |
 | 3 — Deeper Storytelling | Branching quests, second realm, achievement log | Future |
 | 4 — Richer Creation | Comic mode, expanded creative tools, trading | Future |
