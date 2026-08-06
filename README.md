@@ -51,7 +51,7 @@ Start at `CLAUDE.md`, then read `docs/vision.md` → `docs/principles.md` →
 | Phase | Scope | Status |
 |-------|-------|--------|
 | 0 — Foundation | Vision, ADRs, architecture, coding standards | Complete |
-| 1 — MVP | One realm, 3 quests, daily turns, basic progression | Release Candidate (Conditional GO) |
+| 1 — MVP | One realm, 6 quests, daily turns, basic progression | Release Candidate (Conditional GO) |
 | 2 — Social Fabric | Peer reactions, coin currency, expanded creative tools | Future |
 | 3 — Deeper Storytelling | Branching quests, second realm, achievement log | Future |
 | 4 — Richer Creation | Comic mode, expanded creative tools, trading | Future |

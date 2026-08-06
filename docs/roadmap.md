@@ -41,7 +41,7 @@ strategy, and reward integration deferral.
 - Gatekeeper BOTH login (device trust via auth adapter + credential) → Odyssey session.
 - A single **home screen** showing the family's crew level, daily turn, and active quests.
 - **One realm** ("The Whispering Woods") with a short introductory story.
-- **3 quests** in that realm, each with 2–3 challenges:
+- **6 quests** in that realm, each with 2–3 challenges:
   - One solo quest (observation/research).
   - One relay quest (sequential legs).
   - One **Creative Quest** (a group Story submission).
@@ -66,7 +66,7 @@ strategy, and reward integration deferral.
 - Family Reward integration or reward signals.
 - Role mastery mechanics.
 
-**Exit criteria:** A family of 3–4 can play through all 3 quests, complete
+**Exit criteria:** A family of 3–4 can play through all 6 quests, complete
 daily turns for a week, and see meaningful progression — entirely on a phone,
 PWA installed.
 
