@@ -221,6 +221,17 @@ export function HomePage() {
           )
         )}
       </section>
+
+      <section className="mt-4 flex gap-2">
+        <Link to="/creative" className="flex-1 rounded-lg bg-surface border border-border p-3 text-center transition-colors hover:border-primary">
+          <p className="text-sm font-semibold text-primary">Family Journal</p>
+          <p className="text-xs text-muted-foreground mt-1">Read your stories</p>
+        </Link>
+        <Link to="/journal" className="flex-1 rounded-lg bg-surface border border-border p-3 text-center transition-colors hover:border-accent">
+          <p className="text-sm font-semibold text-accent">Milestones</p>
+          <p className="text-xs text-muted-foreground mt-1">Lore & Achievements</p>
+        </Link>
+      </section>
     </div>
   )
 }

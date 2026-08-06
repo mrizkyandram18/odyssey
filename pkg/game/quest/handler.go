@@ -20,6 +20,7 @@ import (
 type CompleteChallengeResult struct {
 	Quest          *QuestWithChallenges `json:"quest"`
 	QuestCompleted bool                 `json:"quest_completed"`
+	NextAction     string               `json:"next_action,omitempty"`
 	XP             int64                `json:"xp"`
 	NewLevel       int                  `json:"new_level"`
 	LevelUp        bool                 `json:"level_up"`
@@ -155,12 +156,14 @@ func (h *QuestAPIHandler) CompleteChallenge(ctx context.Context, questID, challe
 
 	result = &CompleteChallengeResult{
 		QuestCompleted: questCompleted,
+		NextAction:     "",
 		XP:             challengeXP,
 		NewLevel:       player.Level,
 		LevelUp:        levelUp,
 	}
 
 	if questCompleted {
+		result.NextAction = "CREATE_MEMORY"
 		qd := (*gamecontent.QuestDefinition)(nil)
 		if h.content != nil {
 			qd, _ = h.content.GetQuest(ctx, qwc.TemplateSlug)

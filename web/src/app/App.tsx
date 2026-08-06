@@ -4,7 +4,7 @@ import { PublicRoute } from '../shared/components/PublicRoute'
 import { LoginPage } from '../features/login/LoginPage'
 import { HomePage } from '../features/home/HomePage'
 import { QuestView } from '../features/quest/QuestView'
-import { CreativePage } from '../features/creative/CreativePage'
+import { FamilyTimeline } from '../features/creative/FamilyTimeline'
 import { JournalPage } from '../features/journal/JournalPage'
 import { ProfilePage } from '../features/profile/ProfilePage'
 import { ChestPage } from '../features/chests/ChestPage'
@@ -22,7 +22,7 @@ export function App() {
       <Route element={<ProtectedRoute />}>
         <Route index element={<HomePage />} />
         <Route path="/quests/:questId" element={<QuestRoute />} />
-        <Route path="/creative" element={<CreativePage />} />
+        <Route path="/creative" element={<FamilyTimeline />} />
         <Route path="/journal" element={<JournalPage />} />
         <Route path="/profile" element={<ProfilePage />} />
         <Route path="/chests" element={<ChestPage />} />

@@ -131,23 +131,28 @@ func handleSubmit(w http.ResponseWriter, r *http.Request, claims *auth.SessionCl
 }
 
 func handleList(w http.ResponseWriter, r *http.Request, claims *auth.SessionClaims) {
-	if !isReviewer(claims) {
-		shared.WriteForbidden(w)
-		return
-	}
-
 	questIDStr := r.URL.Query().Get("quest_id")
-	if questIDStr == "" {
-		shared.WriteJSONError(w, "quest_id is required", http.StatusBadRequest)
-		return
-	}
-	questID, err := strconv.ParseInt(questIDStr, 10, 64)
-	if err != nil {
-		shared.WriteJSONError(w, "invalid quest_id", http.StatusBadRequest)
+	
+	if questIDStr != "" {
+		if !isReviewer(claims) {
+			shared.WriteForbidden(w)
+			return
+		}
+		questID, err := strconv.ParseInt(questIDStr, 10, 64)
+		if err != nil {
+			shared.WriteJSONError(w, "invalid quest_id", http.StatusBadRequest)
+			return
+		}
+		views, err := handler.ListByQuest(r.Context(), questID)
+		if err != nil {
+			shared.WriteJSONError(w, "failed to list submissions", http.StatusInternalServerError)
+			return
+		}
+		shared.WriteJSON(w, http.StatusOK, views)
 		return
 	}
 
-	views, err := handler.ListByQuest(r.Context(), questID)
+	views, err := handler.ListByCrew(r.Context(), claims.CrewID)
 	if err != nil {
 		shared.WriteJSONError(w, "failed to list submissions", http.StatusInternalServerError)
 		return

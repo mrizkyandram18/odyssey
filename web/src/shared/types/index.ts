@@ -371,6 +371,7 @@ export interface QuestWithChallenges {
 export interface CompleteChallengeResult {
   quest?: QuestWithChallenges | null
   quest_completed: boolean
+  next_action?: string
   xp: number
   new_level: number
   level_up: boolean

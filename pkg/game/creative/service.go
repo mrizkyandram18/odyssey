@@ -112,6 +112,15 @@ func (s *CreativeService) ListByQuest(ctx context.Context, questID int64) ([]gam
 	return subs, nil
 }
 
+// ListByCrew returns all submissions for a given crew.
+func (s *CreativeService) ListByCrew(ctx context.Context, crewID string) ([]game.Submission, error) {
+	subs, err := s.submissions.ListByCrew(ctx, crewID)
+	if err != nil {
+		return nil, fmt.Errorf("list submissions by crew: %w", err)
+	}
+	return subs, nil
+}
+
 // GetSubmission returns a single submission by ID.
 func (s *CreativeService) GetSubmission(ctx context.Context, submissionID int64) (*game.Submission, error) {
 	sub, err := s.submissions.GetSubmission(ctx, submissionID)

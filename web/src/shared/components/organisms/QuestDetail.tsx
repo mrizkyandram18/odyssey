@@ -2,6 +2,7 @@ import { useState } from 'react'
 import type { Challenge, Quest, CompleteChallengeResult } from '../../types'
 import { Badge } from '../atoms/Badge'
 import { Button } from '../atoms/Button'
+import { SubmissionForm } from '../../../features/creative/SubmissionForm'
 
 export interface QuestDetailProps {
   quest: Quest
@@ -72,7 +73,18 @@ export function QuestDetail({
         <p className="text-xs text-error bg-error/10 p-2 rounded">{actionError}</p>
       )}
 
-      {lastResult && (
+      {lastResult && lastResult.next_action === 'CREATE_MEMORY' && (
+        <div className="mt-4 animate-in fade-in slide-in-from-bottom-4 duration-500">
+          <SubmissionForm
+            questId={quest.id}
+            challengeId={challenges[challenges.length - 1]?.id || 1}
+            onComplete={() => setLastResult({ ...lastResult, next_action: undefined })}
+            onSkip={() => setLastResult({ ...lastResult, next_action: undefined })}
+          />
+        </div>
+      )}
+
+      {lastResult && lastResult.next_action !== 'CREATE_MEMORY' && (
         <div className="rounded-lg border border-accent bg-accent/10 p-4 text-center space-y-1">
           <p className="text-sm font-bold text-accent">
             + {lastResult.xp} XP Earned!
