@@ -6,7 +6,7 @@ import type { DevicePayload } from '../../shared/types'
 
 export function LoginPage() {
   const { login } = useSession()
-  const [uid, setUid] = useState('')
+  const [username, setUsername] = useState('')
   const [credential, setCredential] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -19,7 +19,7 @@ export function LoginPage() {
         device_id: 'web-pwa',
         login_method: 'BOTH',
       }
-      await login(uid, credential, device)
+      await login(username, credential, device)
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Login failed')
     } finally {
@@ -32,19 +32,19 @@ export function LoginPage() {
       <div className="w-full max-w-sm space-y-4">
         <h1 className="text-center text-xl font-bold">Odyssey</h1>
         <p className="text-center text-sm text-muted-foreground">
-          Sign in with Gatekeeper BOTH login
+          Sign in to your crew
         </p>
         <div className="space-y-3">
           <Input
-            label="UID"
-            placeholder="Family member ID"
-            value={uid}
-            onChange={(e) => setUid(e.target.value)}
+            label="Username"
+            placeholder="e.g. demo1"
+            value={username}
+            onChange={(e) => setUsername(e.target.value)}
           />
           <Input
-            label="Password (PIN)"
+            label="Password"
             type="password"
-            placeholder="••••••"
+            placeholder="••••••••"
             value={credential}
             onChange={(e) => setCredential(e.target.value)}
           />

@@ -1,32 +1,29 @@
-package main
+package server
 
 import (
 	"context"
 	"errors"
 	"log"
 	"net/http"
-	"os"
-	"os/signal"
-	"syscall"
 	"time"
 
-	"github.com/joho/godotenv"
-	apiAchievements "odyssey/api/achievements"
-	"odyssey/api/admin"
-	apiChapters "odyssey/api/chapters"
-	"odyssey/api/chests"
-	"odyssey/api/creative"
-	"odyssey/api/crews"
-	"odyssey/api/daily_turns"
-	apiHome "odyssey/api/home"
-	"odyssey/api/login"
-	apiLore "odyssey/api/lore"
-	"odyssey/api/me"
-	"odyssey/api/quests"
-	apiReactions "odyssey/api/reactions"
-	"odyssey/api/realm_progress"
-	"odyssey/api/relics"
-	"odyssey/api/status"
+	apiAchievements "odyssey/internal/api/achievements"
+	"odyssey/internal/api/admin"
+	apiChapters "odyssey/internal/api/chapters"
+	"odyssey/internal/api/chests"
+	"odyssey/internal/api/creative"
+	"odyssey/internal/api/crews"
+	"odyssey/internal/api/daily_turns"
+	apiHome "odyssey/internal/api/home"
+	"odyssey/internal/api/login"
+	apiLore "odyssey/internal/api/lore"
+	"odyssey/internal/api/me"
+	"odyssey/internal/api/quests"
+	apiReactions "odyssey/internal/api/reactions"
+	"odyssey/internal/api/realm_progress"
+	"odyssey/internal/api/relics"
+	"odyssey/internal/api/rewards"
+	"odyssey/internal/api/status"
 	"odyssey/pkg/auth"
 	"odyssey/pkg/content"
 	"odyssey/pkg/db"
@@ -43,6 +40,7 @@ import (
 	"odyssey/pkg/game/progression"
 	"odyssey/pkg/game/quest"
 	"odyssey/pkg/game/relic"
+	"odyssey/pkg/game/reward"
 	"odyssey/pkg/game/season"
 	"odyssey/pkg/game/social"
 	"odyssey/pkg/game/world"
@@ -50,27 +48,24 @@ import (
 	"odyssey/pkg/shared"
 )
 
-func main() {
-	_ = godotenv.Load("../../.env")
+type Server struct {
+	Handler http.Handler
+	Cleanup func(context.Context) error
+}
 
+func BuildHandler() (*Server, error) {
 	config := shared.LoadConfig()
 	if err := config.Validate(); err != nil {
-		log.Fatalf("Configuration error: %v", err)
+		return nil, err
 	}
 
 	ctx := context.Background()
-
-	store, err := auth.NewFirestoreClient(ctx)
-	if err != nil {
-		log.Fatalf("Failed to create Firestore client: %v", err)
-	}
-	firestoreReader := auth.NewFirestoreStore(store)
 
 	supabaseClient := db.NewClient(config.SupabaseURL, config.SupabaseServiceKey)
 	profileStore := db.NewProfileStore(supabaseClient)
 	repo, err := db.BuildRepository(supabaseClient)
 	if err != nil {
-		log.Fatalf("Failed to build repository: %v", err)
+		return nil, errors.New("Failed to build repository: " + err.Error())
 	}
 
 	realmCfg := world.DefaultRealmCatalog
@@ -83,7 +78,7 @@ func main() {
 
 	contentRepo, err := db.BuildContentRepository(supabaseClient)
 	if err != nil {
-		log.Fatalf("Failed to build content repository: %v", err)
+		return nil, errors.New("Failed to build content repository: " + err.Error())
 	}
 
 	contentSvc := content.NewContentService(
@@ -130,7 +125,9 @@ func main() {
 		}
 	}
 
-	go syncCacheStats(ctx, contentSvc, metrics)
+	// We pass a new context for background tasks so they can be cancelled on shutdown
+	bgCtx, cancelBg := context.WithCancel(context.Background())
+	go syncCacheStats(bgCtx, contentSvc, metrics)
 
 	seasonSvc := season.NewSeasonService(contentRepo.Seasons, nil)
 
@@ -178,16 +175,21 @@ func main() {
 	progSvc := progression.NewProgressionServiceWithPublisher(repo.Users, &progCfg, dispatcher, balanceSvc)
 	progSvc.SetMetrics(metrics)
 
-	questHandler := quest.NewQuestAPIHandler(questSvc, progSvc, realmStore, realmCfg, &progCfg)
-	questHandler.SetPublisher(dispatcher)
-	questHandler.SetContentGateway(contentSvc)
-	questHandler.SetBalance(balanceSvc)
-	questHandler.SetMetrics(metrics)
-	questHandler.SetLogger(logger)
-	dailyTurnHandler := dailyturn.NewDailyTurnAPIHandlerWithPublisher(dailyTurnSvc, progSvc, dispatcher, balanceSvc)
-	dailyTurnHandler.SetMetrics(metrics)
-	dailyTurnHandler.SetLogger(logger)
-	dailyTurnHandler.SetActivityStore(repo.Activity)
+	rewardSvc := reward.NewService(repo)
+
+	questAPIHandler := quest.NewQuestAPIHandler(questSvc, progSvc, realmStore, realmCfg, &progCfg)
+	questAPIHandler.SetPublisher(dispatcher)
+	questAPIHandler.SetContentGateway(contentSvc)
+	questAPIHandler.SetBalance(balanceSvc)
+	questAPIHandler.SetMetrics(metrics)
+	questAPIHandler.SetLogger(logger)
+	questAPIHandler.SetRewardService(rewardSvc)
+
+	dailyTurnAPIHandler := dailyturn.NewDailyTurnAPIHandlerWithPublisher(dailyTurnSvc, progSvc, dispatcher, balanceSvc)
+	dailyTurnAPIHandler.SetMetrics(metrics)
+	dailyTurnAPIHandler.SetLogger(logger)
+	dailyTurnAPIHandler.SetActivityStore(repo.Activity)
+	dailyTurnAPIHandler.SetRewardService(rewardSvc)
 
 	chestEngine := chest.NewRewardEngine(repo.ChestDefinitions, repo.RelicDefinitions)
 	chestSvc := chest.NewChestServiceWithPublisher(repo.Chests, repo.PlayerRelics, repo.Relics, repo.Users, chestEngine, dispatcher)
@@ -213,12 +215,10 @@ func main() {
 	adminSvc.SetMetrics(metrics)
 	admin.Setup(adminSvc)
 
-	authenticator := auth.NewFirestoreAuthenticator(
-		config.ParentID,
-		config.MinBuildNumber,
+	localUserStore := db.NewLocalUserStore(supabaseClient)
+	authenticator := auth.NewLocalAuthProvider(
 		auth.NewBcryptHasher(),
-		firestoreReader,
-		profileStore,
+		localUserStore,
 	)
 
 	sessionSecret := config.SessionSecret
@@ -230,8 +230,9 @@ func main() {
 
 	login.Setup(authenticator, issuer, profileStore)
 	me.Setup(profileStore)
-	quests.Setup(questHandler)
-	daily_turns.Setup(dailyTurnHandler)
+	quests.Setup(questAPIHandler)
+	daily_turns.Setup(dailyTurnAPIHandler)
+	rewards.Setup(rewardSvc)
 	creative.Setup(creativeHandler)
 	apiHome.Setup(homeSvc)
 
@@ -261,9 +262,14 @@ func main() {
 		ticker := time.NewTicker(5 * time.Minute)
 		defer ticker.Stop()
 		for range ticker.C {
-			userLimiter.Cleanup()
-			loginLimiter.Cleanup()
-			adminLimiter.Cleanup()
+			select {
+			case <-bgCtx.Done():
+				return
+			default:
+				userLimiter.Cleanup()
+				loginLimiter.Cleanup()
+				adminLimiter.Cleanup()
+			}
 		}
 	}()
 
@@ -329,6 +335,8 @@ func main() {
 	}
 
 	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+		// Vercel routes /api/* here, but if we catch /, just return not found or frontend.
+		// For vercel, we usually don't serve the frontend from the API.
 		if r.URL.Path != "/" {
 			http.NotFound(w, r)
 			return
@@ -398,73 +406,22 @@ func main() {
 	}
 
 	handler := obs.Wrap(mux)
-	srv := &http.Server{
-		Addr:              ":" + getPort(),
-		Handler:           handler,
-		ReadHeaderTimeout: 10 * time.Second,
-		ReadTimeout:       30 * time.Second,
-		WriteTimeout:      60 * time.Second,
-		IdleTimeout:       120 * time.Second,
-	}
 
-	port := getPort()
-	log.Printf("Odyssey server starting on :%s", port)
-	log.Printf("Timezone: %s | DailyTurnXP: %d | MaxDailyTurns: %d | RealmCatalog: %d realms",
-		config.Timezone, config.DailyTurnXP, config.MaxDailyTurnsPerDay, len(realmCfg.Order()))
-	log.Printf("Routes: /api/login /api/me /api/status /api/quests /api/crews /api/realm_progress /api/daily_turns /api/creative /api/home /api/chests /api/relics /api/chapters /api/lore /api/achievements /api/admin /metrics /version /health /ready /live /debug/profile")
-
-	sigCh := make(chan os.Signal, 1)
-	signal.Notify(sigCh, syscall.SIGINT, syscall.SIGTERM)
-
-	sm := observability.NewShutdownManager(srv, 30*time.Second)
-	sm.AddHook("content_service_stop", func(ctx context.Context) error {
+	cleanup := func(shutdownCtx context.Context) error {
+		cancelBg()
 		contentSvc.Stop()
-		return nil
-	})
-	sm.AddHook("dispatcher_close", func(ctx context.Context) error {
 		dispatcher.Close()
-		return nil
-	})
-	sm.AddHook("rate_limiter_cleanup", func(ctx context.Context) error {
 		userLimiter.Cleanup()
 		loginLimiter.Cleanup()
 		adminLimiter.Cleanup()
-		return nil
-	})
-	sm.AddHook("logger_close", func(ctx context.Context) error {
 		logger.Close()
 		return nil
-	})
-	sm.AddHook("cache_stats_stop", func(ctx context.Context) error {
-		// The syncCacheStats goroutine will stop when the main context is cancelled
-		return nil
-	})
-
-	go func() {
-		if err := srv.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
-			log.Fatalf("Server error: %v", err)
-		}
-	}()
-
-	logger.Info("server_started", map[string]any{
-		"port":    port,
-		"version": observability.Version,
-	})
-
-	<-sigCh
-	logger.Info("shutdown_signal_received", nil)
-	if err := sm.Shutdown(ctx); err != nil {
-		log.Fatalf("Graceful shutdown error: %v", err)
 	}
-	logger.Info("server_stopped", nil)
-}
 
-func getPort() string {
-	port := os.Getenv("PORT")
-	if port == "" {
-		port = "8080"
-	}
-	return port
+	return &Server{
+		Handler:  handler,
+		Cleanup:  cleanup,
+	}, nil
 }
 
 func syncCacheStats(ctx context.Context, svc *content.ContentService, metrics *observability.Metrics) {

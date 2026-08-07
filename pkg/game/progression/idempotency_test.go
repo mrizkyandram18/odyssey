@@ -175,4 +175,6 @@ func TestAwardXP_StoreConflictError(t *testing.T) {
 		t.Logf("got error: %v", err)
 	}
 }
-func (m *concurrentUserStore) ListUsersByCrew(ctx context.Context, crewID string) ([]game.Player, error) { return nil, nil }
+func (m *concurrentUserStore) ListUsersByCrew(ctx context.Context, crewID string) ([]game.Player, error) {
+	return nil, nil
+}

@@ -4,8 +4,9 @@ go 1.25.0
 
 require (
 	cloud.google.com/go/firestore v1.21.0
+	github.com/google/uuid v1.6.0
 	github.com/joho/godotenv v1.5.1
-	golang.org/x/crypto v0.43.0
+	golang.org/x/crypto v0.54.0
 	google.golang.org/api v0.256.0
 	google.golang.org/grpc v1.76.0
 )
@@ -28,11 +29,11 @@ require (
 	go.opentelemetry.io/otel v1.37.0 // indirect
 	go.opentelemetry.io/otel/metric v1.37.0 // indirect
 	go.opentelemetry.io/otel/trace v1.37.0 // indirect
-	golang.org/x/net v0.46.0 // indirect
+	golang.org/x/net v0.56.0 // indirect
 	golang.org/x/oauth2 v0.33.0 // indirect
-	golang.org/x/sync v0.18.0 // indirect
-	golang.org/x/sys v0.37.0 // indirect
-	golang.org/x/text v0.30.0 // indirect
+	golang.org/x/sync v0.22.0 // indirect
+	golang.org/x/sys v0.47.0 // indirect
+	golang.org/x/text v0.40.0 // indirect
 	golang.org/x/time v0.14.0 // indirect
 	google.golang.org/genproto v0.0.0-20250603155806-513f23925822 // indirect
 	google.golang.org/genproto/googleapis/api v0.0.0-20251111163417-95abcf5c77ba // indirect

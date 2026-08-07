@@ -19,7 +19,7 @@ storytelling — purely for fun, learning, and engagement.
 | Frontend | React 19, Vite, TypeScript, Tailwind CSS |
 | Backend  | Go 1.25 (mostly standard library)   |
 | Database | Supabase (PostgreSQL) — `odyssey_*` tables |
-| Auth     | Gatekeeper (BOTH login mode) via adapter |
+| Auth     | Local Authentication (prototype)    |
 
 ## Project Structure
 
@@ -34,8 +34,16 @@ storytelling — purely for fun, learning, and engagement.
 ## Getting Started
 
 1. Copy `.env.example` to `.env` and fill in the values.
-2. **Backend:** `go run api/dev/main.go`
+2. **Backend:** `cd api/dev && go run main.go`
 3. **Frontend:** `cd web && npm install && npm run dev`
+
+### Prototype Login
+
+The current prototype uses Local Authentication for demonstration purposes. Use any of the following accounts:
+
+- **demo1** / `odyssey123` (Leo - Seeker)
+- **demo2** / `odyssey123` (Maya - Guide)
+- **demo3** / `odyssey123` (Sam - Builder)
 
 ## CI Status
 

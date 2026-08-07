@@ -53,6 +53,7 @@ export interface Explorer {
   role: Role
   level: number
   xp: number
+  coins: number
   created_at: string
   updated_at: string
 }
@@ -425,9 +426,20 @@ export interface PlayerSection {
   role: Role
   level: number
   xp: number
+  coins: number
   created_at: string
   updated_at: string
   xp_to_next: number
+}
+
+export interface RewardLedgerEntry {
+  id: string
+  user_id: string
+  source: string
+  amount: number
+  reward_type: string
+  metadata?: string | null
+  created_at: string
 }
 
 export interface QuestsSection {

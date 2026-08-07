@@ -165,6 +165,12 @@ type ActivityStore interface {
 	GetStreak(ctx context.Context, uid string) (int, error)
 }
 
+// RewardLedgerStore manages reward history.
+type RewardLedgerStore interface {
+	CreateLedger(ctx context.Context, ledger *RewardLedger) error
+	ListByUser(ctx context.Context, userID string) ([]RewardLedger, error)
+}
+
 // Repository groups all persistence interfaces for convenient dependency injection.
 type Repository struct {
 	Users               UserStore
@@ -186,6 +192,7 @@ type Repository struct {
 	Config              ConfigStore
 	Reactions           ReactionStore
 	Activity            ActivityStore
+	RewardLedgers       RewardLedgerStore
 }
 
 // BuildRepository is a package placeholder. Concrete repository construction

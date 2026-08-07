@@ -77,7 +77,13 @@ export function HomePage() {
               style={{ width: `${xpPercent}%` }}
             />
           </div>
-          <p className="mt-1 text-xs text-muted-foreground">{home?.player.xp ?? 0} XP</p>
+          <div className="mt-1 flex items-center justify-between text-xs text-muted-foreground">
+            <span>{home?.player.xp ?? 0} XP</span>
+            <span className="flex items-center gap-1">
+              <span>🪙</span>
+              <span>{home?.player.coins ?? 0} Coins</span>
+            </span>
+          </div>
         </div>
       </section>
 

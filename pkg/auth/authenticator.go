@@ -31,7 +31,7 @@ type DevicePayload struct {
 // The bool return indicates whether the device was newly bound during
 // this verification (true = newly bound, false = already bound).
 type Authenticator interface {
-	Verify(ctx context.Context, uid, credential string, device DevicePayload) (bool, error)
+	Verify(ctx context.Context, identifier, credential string, device DevicePayload) (string, bool, error)
 }
 
 // SessionConfig carries optional claims to embed in an issued session token.

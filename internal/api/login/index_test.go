@@ -18,8 +18,8 @@ type mockAuthenticator struct {
 	newlyBound bool
 }
 
-func (m *mockAuthenticator) Verify(ctx context.Context, uid, credential string, device auth.DevicePayload) (bool, error) {
-	return m.newlyBound, m.err
+func (m *mockAuthenticator) Verify(ctx context.Context, uid, credential string, device auth.DevicePayload) (string, bool, error) {
+	return uid, m.newlyBound, m.err
 }
 
 type mockIssuer struct {

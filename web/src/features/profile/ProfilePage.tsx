@@ -1,8 +1,11 @@
+import { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import { ExplorerIcon } from '../../shared/components/atoms/ExplorerIcon'
 import { Badge } from '../../shared/components/atoms/Badge'
 import { Button } from '../../shared/components/atoms/Button'
 import { useSession } from '../../shared/hooks/useSession'
+import { apiClient } from '../../shared/lib/api'
+import type { RewardLedgerEntry } from '../../shared/types'
 
 const ROLE_DESCRIPTIONS: Record<string, string> = {
   SEEKER: 'Curious explorer who seeks out hidden details, riddles, and lore.',
@@ -12,6 +15,15 @@ const ROLE_DESCRIPTIONS: Record<string, string> = {
 
 export function ProfilePage() {
   const { profile, session, loading, error, logout } = useSession()
+  const [ledgers, setLedgers] = useState<RewardLedgerEntry[]>([])
+
+  useEffect(() => {
+    if (profile) {
+      apiClient.get<RewardLedgerEntry[]>('/api/rewards')
+        .then(setLedgers)
+        .catch(console.error)
+    }
+  }, [profile])
 
   if (loading) {
     return (
@@ -106,6 +118,27 @@ export function ProfilePage() {
           <span className="text-muted-foreground">Crew ID</span>
           <span className="font-mono text-xs">{profile.crew_id || session?.crew_id || 'Shared Crew'}</span>
         </div>
+      </section>
+
+      <section className="rounded-lg border border-border bg-surface p-4 space-y-3">
+        <h3 className="text-sm font-medium text-muted-foreground">Reward History</h3>
+        {ledgers.length === 0 ? (
+          <p className="text-xs text-muted-foreground text-center py-2">No reward history yet.</p>
+        ) : (
+          <div className="flex flex-col gap-2">
+            {ledgers.slice(0, 10).map((l) => (
+              <div key={l.id} className="flex justify-between items-center border-b border-border pb-2 last:border-0 last:pb-0">
+                <div className="flex flex-col">
+                  <span className="text-sm">{l.source.replace(/_/g, ' ')}</span>
+                  <span className="text-xs text-muted-foreground">{new Date(l.created_at).toLocaleDateString()}</span>
+                </div>
+                <div className="text-sm font-medium text-primary">
+                  +{l.amount} {l.reward_type === 'COINS' ? '🪙' : l.reward_type}
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
       </section>
 
       <Button variant="ghost" onClick={logout} className="w-full text-error border border-error/50 hover:bg-error/10">

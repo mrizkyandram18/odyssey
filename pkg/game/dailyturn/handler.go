@@ -33,6 +33,12 @@ type DailyTurnAPIHandler struct {
 	metrics   *observability.Metrics
 	logger    *observability.Logger
 	activity  game.ActivityStore
+	rewards   RewardGateway
+}
+
+// RewardGateway provides reward logic
+type RewardGateway interface {
+	GrantDailyReward(ctx context.Context, uid string) error
 }
 
 // SetMetrics attaches an optional metrics sink. Safe to call with nil.
@@ -49,6 +55,11 @@ func (h *DailyTurnAPIHandler) SetLogger(l *observability.Logger) {
 // SetActivityStore attaches an ActivityStore to record daily turns as generic activity.
 func (h *DailyTurnAPIHandler) SetActivityStore(s game.ActivityStore) {
 	h.activity = s
+}
+
+// SetRewardService attaches a reward service.
+func (h *DailyTurnAPIHandler) SetRewardService(r RewardGateway) {
+	h.rewards = r
 }
 
 // NewDailyTurnAPIHandler constructs a DailyTurnAPIHandler from its collaborators.
@@ -137,6 +148,10 @@ func (h *DailyTurnAPIHandler) Consume(ctx context.Context, uid string, questSlug
 		if err == nil {
 			streak = s
 		}
+	}
+
+	if h.rewards != nil {
+		_ = h.rewards.GrantDailyReward(ctx, uid)
 	}
 
 	h.publisher.Publish(ctx, events.DailyTurnCompletedEvent{

@@ -132,7 +132,7 @@ func handleSubmit(w http.ResponseWriter, r *http.Request, claims *auth.SessionCl
 
 func handleList(w http.ResponseWriter, r *http.Request, claims *auth.SessionClaims) {
 	questIDStr := r.URL.Query().Get("quest_id")
-	
+
 	if questIDStr != "" {
 		if !isReviewer(claims) {
 			shared.WriteForbidden(w)

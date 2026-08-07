@@ -34,6 +34,7 @@ func BuildRepository(client SupabaseClient) (*game.Repository, error) {
 		Config:              NewConfigStore(client),
 		Reactions:           NewReactionStore(client),
 		Activity:            NewActivityStore(client),
+		RewardLedgers:       NewRewardLedgerStore(client),
 	}, nil
 }
 

@@ -1,6 +1,6 @@
 import { test, expect } from '@playwright/test';
 import { login } from './helpers/auth';
-import { navigateToJournal, verifyJournalEntryExists } from './helpers/journal';
+import { navigateToJournal } from './helpers/journal';
 
 test.describe('Journal Domain', () => {
   const TEST_USER = 'family-test@example.com';

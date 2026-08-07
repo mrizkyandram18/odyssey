@@ -8,10 +8,6 @@ export function FamilyTimeline() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
-  useEffect(() => {
-    loadTimeline()
-  }, [])
-
   const loadTimeline = async () => {
     setLoading(true)
     setError(null)
@@ -26,6 +22,10 @@ export function FamilyTimeline() {
       setLoading(false)
     }
   }
+
+  useEffect(() => {
+    loadTimeline()
+  }, [])
 
   if (loading && submissions.length === 0) {
     return (

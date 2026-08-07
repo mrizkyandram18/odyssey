@@ -42,6 +42,7 @@ var allowedTables = map[string]bool{
 	"odyssey_schema_version":              true,
 	"odyssey_reactions":                   true,
 	"odyssey_daily_activity":              true,
+	"odyssey_local_users":                 true,
 }
 
 func validateTable(table string) error {

@@ -46,6 +46,7 @@ func (s *supabaseUserStore) GetUser(ctx context.Context, uid string) (*game.Play
 		Role:         p.Role,
 		Level:        p.Level,
 		XP:           p.XP,
+		Coins:        p.Coins,
 		Version:      p.Version,
 		CreatedAt:    p.CreatedAt,
 		UpdatedAt:    p.UpdatedAt,
@@ -60,6 +61,7 @@ func (s *supabaseUserStore) CreateUser(ctx context.Context, p *game.Player) erro
 		Role:         p.Role,
 		Level:        p.Level,
 		XP:           p.XP,
+		Coins:        p.Coins,
 		Version:      1,
 	}
 	_, err := s.client.Mutate(ctx, "POST", "odyssey_user_profiles", payload, "")
@@ -122,6 +124,7 @@ func (s *supabaseUserStore) ListUsersByCrew(ctx context.Context, crewID string) 
 			Role:         p.Role,
 			Level:        p.Level,
 			XP:           p.XP,
+			Coins:        p.Coins,
 			Version:      p.Version,
 			CreatedAt:    p.CreatedAt,
 			UpdatedAt:    p.UpdatedAt,

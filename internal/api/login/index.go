@@ -18,7 +18,7 @@ type loginRequest struct {
 
 type loginResponse struct {
 	Status     string `json:"status"`
-	Session    string `json:"-"`
+	Session    string `json:"session,omitempty"`
 	SetupToken string `json:"setup_token,omitempty"`
 	UID        string `json:"uid,omitempty"`
 	CrewID     string `json:"crew_id,omitempty"`
@@ -60,13 +60,13 @@ func Handler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	ctx := r.Context()
-	_, err := authenticator.Verify(ctx, req.UID, req.Credential, req.Device)
+	resolvedUID, _, err := authenticator.Verify(ctx, req.UID, req.Credential, req.Device)
 	if err != nil {
 		writeError(w, r, req.UID, err)
 		return
 	}
 
-	writeSuccess(w, r, ctx, req.UID)
+	writeSuccess(w, r, ctx, resolvedUID)
 }
 
 func writeSuccess(w http.ResponseWriter, r *http.Request, ctx context.Context, uid string) {
@@ -90,6 +90,7 @@ func writeSuccess(w http.ResponseWriter, r *http.Request, ctx context.Context, u
 
 	shared.WriteJSON(w, http.StatusOK, loginResponse{
 		Status:  "success",
+		Session: token,
 		UID:     uid,
 		CrewID:  claims.CrewID,
 		Kind:    "user",

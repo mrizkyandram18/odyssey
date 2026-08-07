@@ -386,7 +386,7 @@ func (s *QuestService) AssignNextChallengeOwner(ctx context.Context, crewID, com
 			break
 		}
 	}
-	
+
 	if idx == -1 || idx == len(players)-1 {
 		return players[0].UID
 	}

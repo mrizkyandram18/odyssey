@@ -91,51 +91,51 @@ func NewFirestoreAuthenticator(parentID, minBuildNumber string, hasher PasswordH
 //
 // Returns (newlyBound, error): true if no prior device binding existed and
 // the device is being registered; false if the device was already bound.
-func (a *FirestoreAuthenticator) Verify(ctx context.Context, uid, credential string, device DevicePayload) (bool, error) {
+func (a *FirestoreAuthenticator) Verify(ctx context.Context, uid, credential string, device DevicePayload) (string, bool, error) {
 	uid = strings.TrimSpace(uid)
 	if uid == "" {
-		return false, ErrUIDRequired
+		return "", false, ErrUIDRequired
 	}
 
 	method := NormalizeLoginMethod(device.LoginMethod)
 	if method == "" {
-		return false, ErrLoginMethodInvalid
+		return "", false, ErrLoginMethodInvalid
 	}
 
 	// Device ID is required for all modes — it identifies the client device
 	// for binding purposes.
 	if strings.TrimSpace(device.DeviceID) == "" {
-		return false, ErrDeviceRequired
+		return "", false, ErrDeviceRequired
 	}
 
 	// Gatekeeper compliance: GATEKEEPER and BOTH require a compliant device.
 	if method.RequiresGatekeeperCompliance() {
 		identity, err := a.readGatekeeperDevice(ctx, uid, method)
 		if err != nil {
-			return false, err
+			return "", false, err
 		}
 		if err := validateCompliance(identity, a.minBuildNumber); err != nil {
-			return false, err
+			return "", false, err
 		}
 	}
 
 	// Credential verification: PASSWORD and BOTH require a valid credential.
 	if method.RequiresCredential() {
 		if strings.TrimSpace(credential) == "" {
-			return false, ErrCredentialRequired
+			return "", false, ErrCredentialRequired
 		}
 		if err := a.verifyCredential(ctx, uid, credential); err != nil {
-			return false, err
+			return "", false, err
 		}
 	}
 
 	// Device binding: validate the incoming device against any existing binding.
 	newlyBound, err := a.validateDeviceBinding(ctx, uid, device.DeviceID)
 	if err != nil {
-		return false, err
+		return "", false, err
 	}
 
-	return newlyBound, nil
+	return uid, newlyBound, nil
 }
 
 // readGatekeeperDevice reads the Gatekeeper Firestore document and maps it

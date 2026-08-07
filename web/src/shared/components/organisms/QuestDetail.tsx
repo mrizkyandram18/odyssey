@@ -89,6 +89,9 @@ export function QuestDetail({
           <p className="text-sm font-bold text-accent">
             + {lastResult.xp} XP Earned!
           </p>
+          <p className="text-sm font-bold text-primary">
+            + 5 🪙 Coins Earned!
+          </p>
           {lastResult.level_up && (
             <p className="text-xs font-semibold text-primary">
               🎉 Level Up! You are now Explorer Level {lastResult.new_level}!

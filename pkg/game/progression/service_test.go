@@ -426,4 +426,6 @@ func (m *mockBalanceStore) ListOverrides(ctx context.Context) ([]balance.Overrid
 	}
 	return result, nil
 }
-func (m *mockUserStore) ListUsersByCrew(ctx context.Context, crewID string) ([]game.Player, error) { return nil, nil }
+func (m *mockUserStore) ListUsersByCrew(ctx context.Context, crewID string) ([]game.Player, error) {
+	return nil, nil
+}

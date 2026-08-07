@@ -66,4 +66,6 @@ func TestProgression_SetMetricsNilSafe(t *testing.T) {
 		t.Fatalf("AwardXP error: %v", err)
 	}
 }
-func (m conflictUserStore) ListUsersByCrew(ctx context.Context, crewID string) ([]game.Player, error) { return nil, nil }
+func (m conflictUserStore) ListUsersByCrew(ctx context.Context, crewID string) ([]game.Player, error) {
+	return nil, nil
+}

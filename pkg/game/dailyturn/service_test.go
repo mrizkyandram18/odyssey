@@ -599,4 +599,6 @@ func (m *mockBalanceStoreForDailyTurn) ListOverrides(ctx context.Context) ([]bal
 		{Key: "daily_turn_xp", Value: m.xpOverride},
 	}, nil
 }
-func (m *mockUserStoreForDailyTurn) ListUsersByCrew(ctx context.Context, crewID string) ([]game.Player, error) { return nil, nil }
+func (m *mockUserStoreForDailyTurn) ListUsersByCrew(ctx context.Context, crewID string) ([]game.Player, error) {
+	return nil, nil
+}

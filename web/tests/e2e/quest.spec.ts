@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { test } from '@playwright/test';
 import { login } from './helpers/auth';
 import { verifyHomeLoaded } from './helpers/home';
 import { startQuest, completeChallenge, verifyXpIncreased } from './helpers/quest';

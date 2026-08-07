@@ -15,6 +15,7 @@ type Player struct {
 	Role         string    `json:"role"`
 	Level        int       `json:"level"`
 	XP           int64     `json:"xp"`
+	Coins        int64     `json:"coins"`
 	Version      int       `json:"version"`
 	CreatedAt    time.Time `json:"created_at"`
 	UpdatedAt    time.Time `json:"updated_at"`
@@ -294,4 +295,15 @@ type DailyActivity struct {
 	ActivityDate string    `json:"activity_date"`
 	ActivityType string    `json:"activity_type"`
 	CreatedAt    time.Time `json:"created_at"`
+}
+
+// RewardLedger tracks a user's reward history.
+type RewardLedger struct {
+	ID         string    `json:"id"`
+	UserID     string    `json:"user_id"`
+	Source     string    `json:"source"`
+	Amount     int64     `json:"amount"`
+	RewardType string    `json:"reward_type"`
+	Metadata   *string   `json:"metadata"`
+	CreatedAt  time.Time `json:"created_at"`
 }
