@@ -31,7 +31,7 @@ strategy, and reward integration deferral.
 
 ## Phase 1 — MVP: The First Adventure (Weeks 1—4)
 
-**Status:** In Progress (Development)
+**Status:** Release Candidate (Conditional GO / Pending Live Verification)
 
 **Goal:** Ship the smallest complete cooperative loop that delivers a real
 "aha" moment.
@@ -41,7 +41,7 @@ strategy, and reward integration deferral.
 - Gatekeeper BOTH login (device trust via auth adapter + credential) → Odyssey session.
 - A single **home screen** showing the family's crew level, daily turn, and active quests.
 - **One realm** ("The Whispering Woods") with a short introductory story.
-- **3 quests** in that realm, each with 2–3 challenges:
+- **6 quests** in that realm, each with 2–3 challenges:
   - One solo quest (observation/research).
   - One relay quest (sequential legs).
   - One **Creative Quest** (a group Story submission).
@@ -66,9 +66,17 @@ strategy, and reward integration deferral.
 - Family Reward integration or reward signals.
 - Role mastery mechanics.
 
-**Exit criteria:** A family of 3–4 can play through all 3 quests, complete
-daily turns for a week, and see meaningful progression — entirely on a phone,
-PWA installed.
+**Exit criteria:** A family of 3–4 can play through all 6 quests, complete
+daily turns for a week, dan melihat progresi secara nyata.
+
+### Phase 1 Release Engineering (Micro-Phases)
+Untuk memastikan kualitas rilis, Phase 1 dipecah menjadi beberapa fase kecil sebelum Tag `v0.1.0` dibuat:
+
+- **Phase 1 (MVP)**: Implementasi Core Loop.
+- **Phase 1.1 (Testing Infrastructure)**: Setup Playwright E2E, PWA Checklist, Test Data Strategy, dan pemisahan Job di CI. *(Current)*
+- **Phase 1.2 (CI Runtime Automation)**: Menghubungkan GitHub Actions ke *ephemeral database*, *seeding* otomatis, dan eksekusi Playwright melawan *backend* sungguhan.
+- **Phase 1.3 (Production Validation)**: *Smoke testing* terhadap *staging*, konfirmasi PWA dan fungsional manual.
+- **Tag v0.1.0**: Rilis resmi dilakukan, status berubah menjadi GO.
 
 ---
 

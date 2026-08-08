@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { DailyTurnBanner } from '../../shared/components/molecules/DailyTurnBanner'
 import { QuestCard } from '../../shared/components/molecules/QuestCard'
 import { StreakBadge } from '../../shared/components/molecules/StreakBadge'
@@ -51,6 +51,10 @@ export function HomePage() {
     }
   }
 
+  useEffect(() => {
+    loadHome()
+  }, [])
+
   if (loading && !home) {
     return <p className="p-4 text-sm text-muted-foreground">Loading...</p>
   }
@@ -73,7 +77,13 @@ export function HomePage() {
               style={{ width: `${xpPercent}%` }}
             />
           </div>
-          <p className="mt-1 text-xs text-muted-foreground">{home?.player.xp ?? 0} XP</p>
+          <div className="mt-1 flex items-center justify-between text-xs text-muted-foreground">
+            <span>{home?.player.xp ?? 0} XP</span>
+            <span className="flex items-center gap-1">
+              <span>🪙</span>
+              <span>{home?.player.coins ?? 0} Coins</span>
+            </span>
+          </div>
         </div>
       </section>
 
@@ -210,12 +220,23 @@ export function HomePage() {
         ) : (
           home?.active_quests && home.active_quests.length > 0 ? (
             home.active_quests.map((q: QuestView) => (
-              <QuestCard key={q.id} quest={q} />
+              <QuestCard key={q.id} quest={q} isMyTurn={q.active_challenge_assigned_to === home?.player.uid} />
             ))
           ) : (
             <p className="text-sm text-muted-foreground">No active quests. Check back soon!</p>
           )
         )}
+      </section>
+
+      <section className="mt-4 flex gap-2">
+        <Link to="/creative" className="flex-1 rounded-lg bg-surface border border-border p-3 text-center transition-colors hover:border-primary">
+          <p className="text-sm font-semibold text-primary">Family Journal</p>
+          <p className="text-xs text-muted-foreground mt-1">Read your stories</p>
+        </Link>
+        <Link to="/journal" className="flex-1 rounded-lg bg-surface border border-border p-3 text-center transition-colors hover:border-accent">
+          <p className="text-sm font-semibold text-accent">Milestones</p>
+          <p className="text-xs text-muted-foreground mt-1">Lore & Achievements</p>
+        </Link>
       </section>
     </div>
   )

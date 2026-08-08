@@ -265,3 +265,6 @@ func TestProgressReader_GetPlayerLevel_NilUser(t *testing.T) {
 		t.Errorf("expected level 0 for nil user, got %d", level)
 	}
 }
+func (m *mockPRUserStore) ListUsersByCrew(ctx context.Context, crewID string) ([]game.Player, error) {
+	return nil, nil
+}

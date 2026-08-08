@@ -40,8 +40,9 @@ type QuestWithChallenges struct {
 // QuestView is the quest summary used for list responses.
 type QuestView struct {
 	game.Quest
-	ChallengeCount int `json:"challenge_count"`
-	CompletedCount int `json:"completed_count"`
+	ChallengeCount            int     `json:"challenge_count"`
+	CompletedCount            int     `json:"completed_count"`
+	ActiveChallengeAssignedTo *string `json:"active_challenge_assigned_to,omitempty"`
 }
 
 // QuestService owns quest lifecycle and business logic.
@@ -50,6 +51,7 @@ type QuestService struct {
 	store   game.QuestStore
 	gate    QuestGate
 	content ContentGateway
+	users   game.UserStore
 }
 
 // NewQuestService constructs a QuestService with the given quest store.
@@ -61,6 +63,11 @@ func NewQuestService(store game.QuestStore) *QuestService {
 // filtering enabled via the given gate and content gateway.
 func NewQuestServiceWithGate(store game.QuestStore, gate QuestGate, content ContentGateway) *QuestService {
 	return &QuestService{store: store, gate: gate, content: content}
+}
+
+// SetUserStore injects the UserStore for cooperative assignment.
+func (s *QuestService) SetUserStore(users game.UserStore) {
+	s.users = users
 }
 
 // IsPrerequisiteMet checks whether a quest definition's prerequisites
@@ -142,15 +149,19 @@ func (s *QuestService) List(ctx context.Context, crewID string) ([]QuestView, er
 			return nil, fmt.Errorf("failed to fetch challenges for quest %d: %w", q.ID, err)
 		}
 		done := 0
+		var activeAssignedTo *string
 		for _, c := range challenges {
 			if c.Status == string(ChallengeStatusDone) {
 				done++
+			} else if c.Status == string(ChallengeStatusPending) && activeAssignedTo == nil {
+				activeAssignedTo = c.AssignedTo
 			}
 		}
 		views = append(views, QuestView{
-			Quest:          q,
-			ChallengeCount: len(challenges),
-			CompletedCount: done,
+			Quest:                     q,
+			ChallengeCount:            len(challenges),
+			CompletedCount:            done,
+			ActiveChallengeAssignedTo: activeAssignedTo,
 		})
 	}
 	return views, nil
@@ -201,7 +212,12 @@ func (s *QuestService) getWithChallenges(ctx context.Context, q *game.Quest) (*Q
 		Quest:      *q,
 		Challenges: challenges,
 	}
-	result.Status = string(s.ComputeStatus(challenges))
+	computed := string(s.ComputeStatus(challenges))
+	if computed == string(QuestStatusPending) && (q.Status == string(QuestStatusActive) || q.StartedAt != nil) {
+		result.Status = string(QuestStatusActive)
+	} else {
+		result.Status = computed
+	}
 	return result, nil
 }
 
@@ -297,6 +313,11 @@ func (s *QuestService) CompleteChallengeForQuest(ctx context.Context, questID, c
 		return "", false, err
 	}
 	oldStatus := computeStatus(before)
+	if qBefore, err := s.store.GetQuest(ctx, questID); err == nil && qBefore != nil {
+		if oldStatus == QuestStatusPending && (qBefore.Status == string(QuestStatusActive) || qBefore.StartedAt != nil) {
+			oldStatus = QuestStatusActive
+		}
+	}
 
 	challengePatch := map[string]any{
 		"status":       string(ChallengeStatusDone),
@@ -337,8 +358,49 @@ func (s *QuestService) CompleteChallengeForQuest(ctx context.Context, questID, c
 		}
 	}
 
+	// Assign next challenge if quest is still active
+	if newStatus == QuestStatusActive {
+		q, qErr := s.store.GetQuest(ctx, questID)
+		if qErr == nil && q != nil {
+			for _, c := range challenges {
+				if c.Status == string(ChallengeStatusPending) {
+					nextOwner := s.AssignNextChallengeOwner(ctx, q.CrewID, uid)
+					if nextOwner != "" {
+						_ = s.store.UpdateChallenge(ctx, c.ID, map[string]any{"assigned_to": nextOwner})
+					}
+					break
+				}
+			}
+		}
+	}
+
 	completed := oldStatus != QuestStatusDone && newStatus == QuestStatusDone
 	return newStatus, completed, nil
+}
+
+// AssignNextChallengeOwner determines the next user for a challenge round-robin.
+func (s *QuestService) AssignNextChallengeOwner(ctx context.Context, crewID, completedBy string) string {
+	if s.users == nil {
+		return completedBy
+	}
+	players, err := s.users.ListUsersByCrew(ctx, crewID)
+	if err != nil || len(players) == 0 {
+		return completedBy
+	}
+
+	// Round robin: find index of completedBy, return next index.
+	idx := -1
+	for i, p := range players {
+		if p.UID == completedBy {
+			idx = i
+			break
+		}
+	}
+
+	if idx == -1 || idx == len(players)-1 {
+		return players[0].UID
+	}
+	return players[idx+1].UID
 }
 
 // sortQuestsByCreatedAt sorts quests newest-first for display.

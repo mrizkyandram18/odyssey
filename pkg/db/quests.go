@@ -136,6 +136,7 @@ func (s *supabaseQuestStore) CreateChallenge(ctx context.Context, c *game.Challe
 		Slug:        c.Slug,
 		Description: c.Description,
 		Status:      c.Status,
+		AssignedTo:  c.AssignedTo,
 		CompletedBy: c.CompletedBy,
 		CompletedAt: c.CompletedAt,
 	}
@@ -177,6 +178,7 @@ func mapChallenge(c Challenge) *game.Challenge {
 		Slug:        c.Slug,
 		Description: c.Description,
 		Status:      c.Status,
+		AssignedTo:  c.AssignedTo,
 		CompletedBy: c.CompletedBy,
 		CompletedAt: c.CompletedAt,
 		CreatedAt:   c.CreatedAt,

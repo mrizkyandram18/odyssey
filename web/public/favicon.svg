@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" fill="none">
+  <!-- Minimal Premium North Star / Compass for Odyssey (Favicon) -->
+  <circle cx="256" cy="256" r="240" fill="#0B132B" />
+  <path d="M256 60 L276 236 L452 256 L276 276 L256 452 L236 276 L60 256 L236 236 Z" fill="#F6E05E" />
+  <path d="M256 110 L266 246 L402 256 L266 266 L256 402 L246 266 L110 256 L246 246 Z" fill="#FFFAF0" opacity="0.9"/>
+  <polygon points="256,60 276,236 256,256" fill="#D69E2E" />
+  <polygon points="452,256 276,276 256,256" fill="#D69E2E" />
+  <polygon points="256,452 236,276 256,256" fill="#B7791F" />
+  <polygon points="60,256 236,236 256,256" fill="#B7791F" />
+  <circle cx="256" cy="256" r="16" fill="#FFFFFF" />
+</svg>

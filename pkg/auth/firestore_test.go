@@ -165,7 +165,7 @@ func TestVerify_EmptyUID(t *testing.T) {
 	t.Parallel()
 	auth := newTestAuthenticator(t, &mockFirestoreReader{}, &mockProfileReader{}, &mockPasswordHasher{})
 	device := DevicePayload{LoginMethod: "BOTH", DeviceID: "dev-1"}
-	_, err := auth.Verify(context.Background(), "", "secret", device)
+	_, _, err := auth.Verify(context.Background(), "", "secret", device)
 	if !errors.Is(err, ErrUIDRequired) {
 		t.Fatalf("expected ErrUIDRequired, got %v", err)
 	}
@@ -175,7 +175,7 @@ func TestVerify_WhitespaceUID(t *testing.T) {
 	t.Parallel()
 	auth := newTestAuthenticator(t, &mockFirestoreReader{}, &mockProfileReader{}, &mockPasswordHasher{})
 	device := DevicePayload{LoginMethod: "BOTH", DeviceID: "dev-1"}
-	_, err := auth.Verify(context.Background(), "   ", "secret", device)
+	_, _, err := auth.Verify(context.Background(), "   ", "secret", device)
 	if !errors.Is(err, ErrUIDRequired) {
 		t.Fatalf("expected ErrUIDRequired, got %v", err)
 	}
@@ -185,7 +185,7 @@ func TestVerify_InvalidLoginMethod(t *testing.T) {
 	t.Parallel()
 	auth := newTestAuthenticator(t, &mockFirestoreReader{}, &mockProfileReader{}, &mockPasswordHasher{})
 	device := DevicePayload{LoginMethod: "OAUTH", DeviceID: "dev-1"}
-	_, err := auth.Verify(context.Background(), "user-1", "secret", device)
+	_, _, err := auth.Verify(context.Background(), "user-1", "secret", device)
 	if !errors.Is(err, ErrLoginMethodInvalid) {
 		t.Fatalf("expected ErrLoginMethodInvalid, got %v", err)
 	}
@@ -195,7 +195,7 @@ func TestVerify_EmptyLoginMethod(t *testing.T) {
 	t.Parallel()
 	auth := newTestAuthenticator(t, &mockFirestoreReader{}, &mockProfileReader{}, &mockPasswordHasher{})
 	device := DevicePayload{DeviceID: "dev-1"}
-	_, err := auth.Verify(context.Background(), "user-1", "secret", device)
+	_, _, err := auth.Verify(context.Background(), "user-1", "secret", device)
 	if !errors.Is(err, ErrLoginMethodInvalid) {
 		t.Fatalf("expected ErrLoginMethodInvalid, got %v", err)
 	}
@@ -205,7 +205,7 @@ func TestVerify_MissingDeviceID(t *testing.T) {
 	t.Parallel()
 	auth := newTestAuthenticator(t, &mockFirestoreReader{}, &mockProfileReader{}, &mockPasswordHasher{})
 	device := DevicePayload{LoginMethod: "BOTH"}
-	_, err := auth.Verify(context.Background(), "user-1", "secret", device)
+	_, _, err := auth.Verify(context.Background(), "user-1", "secret", device)
 	if !errors.Is(err, ErrDeviceRequired) {
 		t.Fatalf("expected ErrDeviceRequired, got %v", err)
 	}
@@ -215,7 +215,7 @@ func TestVerify_EmptyCredential_PASSWORD(t *testing.T) {
 	t.Parallel()
 	auth := newTestAuthenticator(t, &mockFirestoreReader{}, &mockProfileReader{passwordHash: "abc_hashed"}, &mockPasswordHasher{})
 	device := DevicePayload{LoginMethod: "PASSWORD", DeviceID: "dev-1"}
-	_, err := auth.Verify(context.Background(), "user-1", "", device)
+	_, _, err := auth.Verify(context.Background(), "user-1", "", device)
 	if !errors.Is(err, ErrCredentialRequired) {
 		t.Fatalf("expected ErrCredentialRequired, got %v", err)
 	}
@@ -225,7 +225,7 @@ func TestVerify_EmptyCredential_BOTH(t *testing.T) {
 	t.Parallel()
 	auth := newTestAuthenticator(t, &mockFirestoreReader{data: validGatekeeperDoc()}, &mockProfileReader{passwordHash: "abc_hashed"}, &mockPasswordHasher{})
 	device := DevicePayload{LoginMethod: "BOTH", DeviceID: "dev-1"}
-	_, err := auth.Verify(context.Background(), "user-1", "", device)
+	_, _, err := auth.Verify(context.Background(), "user-1", "", device)
 	if !errors.Is(err, ErrCredentialRequired) {
 		t.Fatalf("expected ErrCredentialRequired, got %v", err)
 	}
@@ -237,7 +237,7 @@ func TestVerify_PASSWORD_ValidCredential(t *testing.T) {
 	t.Parallel()
 	auth := newTestAuthenticator(t, &mockFirestoreReader{}, &mockProfileReader{passwordHash: "secret_hashed"}, &mockPasswordHasher{})
 	device := DevicePayload{LoginMethod: "PASSWORD", DeviceID: "dev-1"}
-	newlyBound, err := auth.Verify(context.Background(), "user-1", "secret", device)
+	_, newlyBound, err := auth.Verify(context.Background(), "user-1", "secret", device)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -250,7 +250,7 @@ func TestVerify_PASSWORD_InvalidCredential(t *testing.T) {
 	t.Parallel()
 	auth := newTestAuthenticator(t, &mockFirestoreReader{}, &mockProfileReader{passwordHash: "secret_hashed"}, &mockPasswordHasher{})
 	device := DevicePayload{LoginMethod: "PASSWORD", DeviceID: "dev-1"}
-	_, err := auth.Verify(context.Background(), "user-1", "wrong", device)
+	_, _, err := auth.Verify(context.Background(), "user-1", "wrong", device)
 	if !errors.Is(err, ErrCredentialInvalid) {
 		t.Fatalf("expected ErrCredentialInvalid, got %v", err)
 	}
@@ -260,7 +260,7 @@ func TestVerify_PASSWORD_HasherError(t *testing.T) {
 	t.Parallel()
 	auth := newTestAuthenticator(t, &mockFirestoreReader{}, &mockProfileReader{passwordHash: "secret_hashed"}, &mockPasswordHasher{err: errors.New("internal")})
 	device := DevicePayload{LoginMethod: "PASSWORD", DeviceID: "dev-1"}
-	_, err := auth.Verify(context.Background(), "user-1", "secret", device)
+	_, _, err := auth.Verify(context.Background(), "user-1", "secret", device)
 	if !errors.Is(err, ErrCredentialInvalid) {
 		t.Fatalf("expected ErrCredentialInvalid, got %v", err)
 	}
@@ -270,7 +270,7 @@ func TestVerify_PASSWORD_NoStoredHash(t *testing.T) {
 	t.Parallel()
 	auth := newTestAuthenticator(t, &mockFirestoreReader{}, &mockProfileReader{passwordHash: ""}, &mockPasswordHasher{})
 	device := DevicePayload{LoginMethod: "PASSWORD", DeviceID: "dev-1"}
-	_, err := auth.Verify(context.Background(), "user-1", "secret", device)
+	_, _, err := auth.Verify(context.Background(), "user-1", "secret", device)
 	if !errors.Is(err, ErrCredentialNotSet) {
 		t.Fatalf("expected ErrCredentialNotSet, got %v", err)
 	}
@@ -280,7 +280,7 @@ func TestVerify_PASSWORD_ProfileReaderError(t *testing.T) {
 	t.Parallel()
 	auth := newTestAuthenticator(t, &mockFirestoreReader{}, &mockProfileReader{hashErr: errors.New("db error")}, &mockPasswordHasher{})
 	device := DevicePayload{LoginMethod: "PASSWORD", DeviceID: "dev-1"}
-	_, err := auth.Verify(context.Background(), "user-1", "secret", device)
+	_, _, err := auth.Verify(context.Background(), "user-1", "secret", device)
 	if !errors.Is(err, ErrProfileUnavailable) {
 		t.Fatalf("expected ErrProfileUnavailable, got %v", err)
 	}
@@ -291,7 +291,7 @@ func TestVerify_PASSWORD_DoesNotReadFirestore(t *testing.T) {
 	store := &mockFirestoreReader{}
 	auth := newTestAuthenticator(t, store, &mockProfileReader{passwordHash: "secret_hashed"}, &mockPasswordHasher{})
 	device := DevicePayload{LoginMethod: "PASSWORD", DeviceID: "dev-1"}
-	_, err := auth.Verify(context.Background(), "user-1", "secret", device)
+	_, _, err := auth.Verify(context.Background(), "user-1", "secret", device)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -306,7 +306,7 @@ func TestVerify_PASSWORD_AlreadyBound(t *testing.T) {
 	t.Parallel()
 	auth := newTestAuthenticator(t, &mockFirestoreReader{}, &mockProfileReader{passwordHash: "secret_hashed", boundDevice: "dev-1"}, &mockPasswordHasher{})
 	device := DevicePayload{LoginMethod: "PASSWORD", DeviceID: "dev-1"}
-	newlyBound, err := auth.Verify(context.Background(), "user-1", "secret", device)
+	_, newlyBound, err := auth.Verify(context.Background(), "user-1", "secret", device)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -319,7 +319,7 @@ func TestVerify_PASSWORD_DeviceMismatch(t *testing.T) {
 	t.Parallel()
 	auth := newTestAuthenticator(t, &mockFirestoreReader{}, &mockProfileReader{passwordHash: "secret_hashed", boundDevice: "dev-1"}, &mockPasswordHasher{})
 	device := DevicePayload{LoginMethod: "PASSWORD", DeviceID: "dev-2"}
-	_, err := auth.Verify(context.Background(), "user-1", "secret", device)
+	_, _, err := auth.Verify(context.Background(), "user-1", "secret", device)
 	if !errors.Is(err, ErrDeviceMismatch) {
 		t.Fatalf("expected ErrDeviceMismatch, got %v", err)
 	}
@@ -331,7 +331,7 @@ func TestVerify_GATEKEEPER_ValidCompliance(t *testing.T) {
 	t.Parallel()
 	auth := newTestAuthenticator(t, &mockFirestoreReader{data: validGatekeeperDoc()}, &mockProfileReader{}, &mockPasswordHasher{})
 	device := DevicePayload{LoginMethod: "GATEKEEPER", DeviceID: "dev-1"}
-	newlyBound, err := auth.Verify(context.Background(), "user-1", "", device)
+	_, newlyBound, err := auth.Verify(context.Background(), "user-1", "", device)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -344,7 +344,7 @@ func TestVerify_GATEKEEPER_IgnoresCredential(t *testing.T) {
 	t.Parallel()
 	auth := newTestAuthenticator(t, &mockFirestoreReader{data: validGatekeeperDoc()}, &mockProfileReader{boundDevice: "dev-1"}, &mockPasswordHasher{})
 	device := DevicePayload{LoginMethod: "GATEKEEPER", DeviceID: "dev-1"}
-	_, err := auth.Verify(context.Background(), "user-1", "ignored", device)
+	_, _, err := auth.Verify(context.Background(), "user-1", "ignored", device)
 	if err != nil {
 		t.Fatalf("GATEKEEPER mode should not verify credential: %v", err)
 	}
@@ -355,7 +355,7 @@ func TestVerify_GATEKEEPER_DeviceNotFound(t *testing.T) {
 	store := &mockFirestoreReader{err: status.Error(codes.NotFound, "document not found")}
 	auth := newTestAuthenticator(t, store, &mockProfileReader{}, &mockPasswordHasher{})
 	device := DevicePayload{LoginMethod: "GATEKEEPER", DeviceID: "dev-1"}
-	_, err := auth.Verify(context.Background(), "user-1", "", device)
+	_, _, err := auth.Verify(context.Background(), "user-1", "", device)
 	if !errors.Is(err, ErrGatekeeperNotFound) {
 		t.Fatalf("expected ErrGatekeeperNotFound, got %v", err)
 	}
@@ -366,7 +366,7 @@ func TestVerify_GATEKEEPER_FirestoreUnavailable(t *testing.T) {
 	store := &mockFirestoreReader{err: status.Error(codes.ResourceExhausted, "quota exceeded")}
 	auth := newTestAuthenticator(t, store, &mockProfileReader{}, &mockPasswordHasher{})
 	device := DevicePayload{LoginMethod: "GATEKEEPER", DeviceID: "dev-1"}
-	_, err := auth.Verify(context.Background(), "user-1", "", device)
+	_, _, err := auth.Verify(context.Background(), "user-1", "", device)
 	if !errors.Is(err, ErrFirestoreUnavailable) {
 		t.Fatalf("expected ErrFirestoreUnavailable, got %v", err)
 	}
@@ -377,7 +377,7 @@ func TestVerify_GATEKEEPER_PermissionDenied(t *testing.T) {
 	store := &mockFirestoreReader{err: status.Error(codes.PermissionDenied, "denied")}
 	auth := newTestAuthenticator(t, store, &mockProfileReader{}, &mockPasswordHasher{})
 	device := DevicePayload{LoginMethod: "GATEKEEPER", DeviceID: "dev-1"}
-	_, err := auth.Verify(context.Background(), "user-1", "", device)
+	_, _, err := auth.Verify(context.Background(), "user-1", "", device)
 	if !errors.Is(err, ErrFirestoreUnavailable) {
 		t.Fatalf("expected ErrFirestoreUnavailable, got %v", err)
 	}
@@ -388,7 +388,7 @@ func TestVerify_GATEKEEPER_Unavailable(t *testing.T) {
 	store := &mockFirestoreReader{err: status.Error(codes.Unavailable, "server down")}
 	auth := newTestAuthenticator(t, store, &mockProfileReader{}, &mockPasswordHasher{})
 	device := DevicePayload{LoginMethod: "GATEKEEPER", DeviceID: "dev-1"}
-	_, err := auth.Verify(context.Background(), "user-1", "", device)
+	_, _, err := auth.Verify(context.Background(), "user-1", "", device)
 	if !errors.Is(err, ErrFirestoreUnavailable) {
 		t.Fatalf("expected ErrFirestoreUnavailable, got %v", err)
 	}
@@ -399,7 +399,7 @@ func TestVerify_GATEKEEPER_NonGRPCError(t *testing.T) {
 	store := &mockFirestoreReader{err: errors.New("some network error")}
 	auth := newTestAuthenticator(t, store, &mockProfileReader{}, &mockPasswordHasher{})
 	device := DevicePayload{LoginMethod: "GATEKEEPER", DeviceID: "dev-1"}
-	_, err := auth.Verify(context.Background(), "user-1", "", device)
+	_, _, err := auth.Verify(context.Background(), "user-1", "", device)
 	if !errors.Is(err, ErrFirestoreUnavailable) {
 		t.Fatalf("expected ErrFirestoreUnavailable, got %v", err)
 	}
@@ -411,7 +411,7 @@ func TestVerify_GATEKEEPER_DeviceOffline(t *testing.T) {
 	doc["isOnline"] = false
 	auth := newTestAuthenticator(t, &mockFirestoreReader{data: doc}, &mockProfileReader{}, &mockPasswordHasher{})
 	device := DevicePayload{LoginMethod: "GATEKEEPER", DeviceID: "dev-1"}
-	_, err := auth.Verify(context.Background(), "user-1", "", device)
+	_, _, err := auth.Verify(context.Background(), "user-1", "", device)
 	if !errors.Is(err, ErrDeviceOffline) {
 		t.Fatalf("expected ErrDeviceOffline, got %v", err)
 	}
@@ -423,7 +423,7 @@ func TestVerify_GATEKEEPER_DeviceStale(t *testing.T) {
 	doc["lastSeen"] = time.Now().Add(-10 * time.Minute)
 	auth := newTestAuthenticator(t, &mockFirestoreReader{data: doc}, &mockProfileReader{}, &mockPasswordHasher{})
 	device := DevicePayload{LoginMethod: "GATEKEEPER", DeviceID: "dev-1"}
-	_, err := auth.Verify(context.Background(), "user-1", "", device)
+	_, _, err := auth.Verify(context.Background(), "user-1", "", device)
 	if !errors.Is(err, ErrDeviceOffline) {
 		t.Fatalf("expected ErrDeviceOffline for stale device, got %v", err)
 	}
@@ -440,7 +440,7 @@ func TestVerify_GATEKEEPER_MissingLastSeen(t *testing.T) {
 	}
 	auth := newTestAuthenticator(t, &mockFirestoreReader{data: doc}, &mockProfileReader{}, &mockPasswordHasher{})
 	device := DevicePayload{LoginMethod: "GATEKEEPER", DeviceID: "dev-1"}
-	_, err := auth.Verify(context.Background(), "user-1", "", device)
+	_, _, err := auth.Verify(context.Background(), "user-1", "", device)
 	if !errors.Is(err, ErrDeviceOffline) {
 		t.Fatalf("expected ErrDeviceOffline for missing lastSeen, got %v", err)
 	}
@@ -452,7 +452,7 @@ func TestVerify_GATEKEEPER_BuildTooOld(t *testing.T) {
 	doc["details"].(map[string]any)["appBuildNumber"] = "47"
 	auth := newTestAuthenticator(t, &mockFirestoreReader{data: doc}, &mockProfileReader{}, &mockPasswordHasher{})
 	device := DevicePayload{LoginMethod: "GATEKEEPER", DeviceID: "dev-1"}
-	_, err := auth.Verify(context.Background(), "user-1", "", device)
+	_, _, err := auth.Verify(context.Background(), "user-1", "", device)
 	if !errors.Is(err, ErrBuildTooOld) {
 		t.Fatalf("expected ErrBuildTooOld, got %v", err)
 	}
@@ -464,7 +464,7 @@ func TestVerify_GATEKEEPER_BuildPrefixV(t *testing.T) {
 	doc["details"].(map[string]any)["appBuildNumber"] = "v49"
 	auth := newTestAuthenticator(t, &mockFirestoreReader{data: doc}, &mockProfileReader{}, &mockPasswordHasher{})
 	device := DevicePayload{LoginMethod: "GATEKEEPER", DeviceID: "dev-1"}
-	_, err := auth.Verify(context.Background(), "user-1", "", device)
+	_, _, err := auth.Verify(context.Background(), "user-1", "", device)
 	if err != nil {
 		t.Fatalf("expected no error for v49, got %v", err)
 	}
@@ -476,7 +476,7 @@ func TestVerify_GATEKEEPER_BuildHigherThanMin(t *testing.T) {
 	doc["details"].(map[string]any)["appBuildNumber"] = "50"
 	auth := newTestAuthenticator(t, &mockFirestoreReader{data: doc}, &mockProfileReader{}, &mockPasswordHasher{})
 	device := DevicePayload{LoginMethod: "GATEKEEPER", DeviceID: "dev-1"}
-	_, err := auth.Verify(context.Background(), "user-1", "", device)
+	_, _, err := auth.Verify(context.Background(), "user-1", "", device)
 	if err != nil {
 		t.Fatalf("expected no error for build 50 >= 49, got %v", err)
 	}
@@ -488,7 +488,7 @@ func TestVerify_GATEKEEPER_BuildNonNumeric(t *testing.T) {
 	doc["details"].(map[string]any)["appBuildNumber"] = "abc"
 	auth := newTestAuthenticator(t, &mockFirestoreReader{data: doc}, &mockProfileReader{}, &mockPasswordHasher{})
 	device := DevicePayload{LoginMethod: "GATEKEEPER", DeviceID: "dev-1"}
-	_, err := auth.Verify(context.Background(), "user-1", "", device)
+	_, _, err := auth.Verify(context.Background(), "user-1", "", device)
 	if !errors.Is(err, ErrBuildTooOld) {
 		t.Fatalf("expected ErrBuildTooOld for non-numeric build, got %v", err)
 	}
@@ -500,7 +500,7 @@ func TestVerify_GATEKEEPER_PermissionsMissing(t *testing.T) {
 	doc["details"].(map[string]any)["permissions"].(map[string]any)["camera"] = false
 	auth := newTestAuthenticator(t, &mockFirestoreReader{data: doc}, &mockProfileReader{}, &mockPasswordHasher{})
 	device := DevicePayload{LoginMethod: "GATEKEEPER", DeviceID: "dev-1"}
-	_, err := auth.Verify(context.Background(), "user-1", "", device)
+	_, _, err := auth.Verify(context.Background(), "user-1", "", device)
 	if !errors.Is(err, ErrPermissionsMissing) {
 		t.Fatalf("expected ErrPermissionsMissing, got %v", err)
 	}
@@ -512,7 +512,7 @@ func TestVerify_GATEKEEPER_PermissionsMissingKey(t *testing.T) {
 	delete(doc["details"].(map[string]any)["permissions"].(map[string]any), "camera")
 	auth := newTestAuthenticator(t, &mockFirestoreReader{data: doc}, &mockProfileReader{}, &mockPasswordHasher{})
 	device := DevicePayload{LoginMethod: "GATEKEEPER", DeviceID: "dev-1"}
-	_, err := auth.Verify(context.Background(), "user-1", "", device)
+	_, _, err := auth.Verify(context.Background(), "user-1", "", device)
 	if !errors.Is(err, ErrPermissionsMissing) {
 		t.Fatalf("expected ErrPermissionsMissing, got %v", err)
 	}
@@ -529,7 +529,7 @@ func TestVerify_GATEKEEPER_NilPermissions(t *testing.T) {
 	}
 	auth := newTestAuthenticator(t, &mockFirestoreReader{data: doc}, &mockProfileReader{}, &mockPasswordHasher{})
 	device := DevicePayload{LoginMethod: "GATEKEEPER", DeviceID: "dev-1"}
-	_, err := auth.Verify(context.Background(), "user-1", "", device)
+	_, _, err := auth.Verify(context.Background(), "user-1", "", device)
 	if !errors.Is(err, ErrPermissionsMissing) {
 		t.Fatalf("expected ErrPermissionsMissing, got %v", err)
 	}
@@ -542,7 +542,7 @@ func TestVerify_GATEKEEPER_ExplicitFalseNonRequiredPermission(t *testing.T) {
 	perms["accessibility"] = false
 	auth := newTestAuthenticator(t, &mockFirestoreReader{data: doc}, &mockProfileReader{}, &mockPasswordHasher{})
 	device := DevicePayload{LoginMethod: "GATEKEEPER", DeviceID: "dev-1"}
-	_, err := auth.Verify(context.Background(), "user-1", "", device)
+	_, _, err := auth.Verify(context.Background(), "user-1", "", device)
 	if !errors.Is(err, ErrPermissionsMissing) {
 		t.Fatalf("expected ErrPermissionsMissing for explicit false non-required permission, got %v", err)
 	}
@@ -554,7 +554,7 @@ func TestVerify_GATEKEEPER_FalseNotificationAllowed(t *testing.T) {
 	doc["details"].(map[string]any)["permissions"].(map[string]any)["notification"] = false
 	auth := newTestAuthenticator(t, &mockFirestoreReader{data: doc}, &mockProfileReader{}, &mockPasswordHasher{})
 	device := DevicePayload{LoginMethod: "GATEKEEPER", DeviceID: "dev-1"}
-	_, err := auth.Verify(context.Background(), "user-1", "", device)
+	_, _, err := auth.Verify(context.Background(), "user-1", "", device)
 	if err != nil {
 		t.Fatalf("notification false should be allowed: %v", err)
 	}
@@ -564,7 +564,7 @@ func TestVerify_GATEKEEPER_NilDocument(t *testing.T) {
 	t.Parallel()
 	auth := newTestAuthenticator(t, &mockFirestoreReader{data: nil}, &mockProfileReader{}, &mockPasswordHasher{})
 	device := DevicePayload{LoginMethod: "GATEKEEPER", DeviceID: "dev-1"}
-	_, err := auth.Verify(context.Background(), "user-1", "", device)
+	_, _, err := auth.Verify(context.Background(), "user-1", "", device)
 	if !errors.Is(err, ErrGatekeeperNotFound) {
 		t.Fatalf("expected ErrGatekeeperNotFound, got %v", err)
 	}
@@ -576,7 +576,7 @@ func TestVerify_BOTH_ValidComplianceAndCredential(t *testing.T) {
 	t.Parallel()
 	auth := newTestAuthenticator(t, &mockFirestoreReader{data: validGatekeeperDoc()}, &mockProfileReader{passwordHash: "secret_hashed"}, &mockPasswordHasher{})
 	device := DevicePayload{LoginMethod: "BOTH", DeviceID: "dev-1"}
-	newlyBound, err := auth.Verify(context.Background(), "user-1", "secret", device)
+	_, newlyBound, err := auth.Verify(context.Background(), "user-1", "secret", device)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -591,7 +591,7 @@ func TestVerify_BOTH_ComplianceFails(t *testing.T) {
 	doc["isOnline"] = false
 	auth := newTestAuthenticator(t, &mockFirestoreReader{data: doc}, &mockProfileReader{passwordHash: "secret_hashed"}, &mockPasswordHasher{})
 	device := DevicePayload{LoginMethod: "BOTH", DeviceID: "dev-1"}
-	_, err := auth.Verify(context.Background(), "user-1", "secret", device)
+	_, _, err := auth.Verify(context.Background(), "user-1", "secret", device)
 	if !errors.Is(err, ErrDeviceOffline) {
 		t.Fatalf("expected ErrDeviceOffline, got %v", err)
 	}
@@ -601,7 +601,7 @@ func TestVerify_BOTH_CredentialFails(t *testing.T) {
 	t.Parallel()
 	auth := newTestAuthenticator(t, &mockFirestoreReader{data: validGatekeeperDoc()}, &mockProfileReader{passwordHash: "secret_hashed"}, &mockPasswordHasher{err: errors.New("hash mismatch")})
 	device := DevicePayload{LoginMethod: "BOTH", DeviceID: "dev-1"}
-	_, err := auth.Verify(context.Background(), "user-1", "wrong", device)
+	_, _, err := auth.Verify(context.Background(), "user-1", "wrong", device)
 	if !errors.Is(err, ErrCredentialInvalid) {
 		t.Fatalf("expected ErrCredentialInvalid, got %v", err)
 	}
@@ -611,7 +611,7 @@ func TestVerify_BOTH_NoStoredHash(t *testing.T) {
 	t.Parallel()
 	auth := newTestAuthenticator(t, &mockFirestoreReader{data: validGatekeeperDoc()}, &mockProfileReader{passwordHash: ""}, &mockPasswordHasher{})
 	device := DevicePayload{LoginMethod: "BOTH", DeviceID: "dev-1"}
-	_, err := auth.Verify(context.Background(), "user-1", "secret", device)
+	_, _, err := auth.Verify(context.Background(), "user-1", "secret", device)
 	if !errors.Is(err, ErrCredentialNotSet) {
 		t.Fatalf("expected ErrCredentialNotSet, got %v", err)
 	}
@@ -627,7 +627,7 @@ func TestVerify_BOTH_CompliesBeforeCredential(t *testing.T) {
 	profile := &mockProfileReader{passwordHash: "secret_hashed"}
 	auth := newTestAuthenticator(t, store, profile, &mockPasswordHasher{err: errors.New("should not be called")})
 	device := DevicePayload{LoginMethod: "BOTH", DeviceID: "dev-1"}
-	_, err := auth.Verify(context.Background(), "user-1", "secret", device)
+	_, _, err := auth.Verify(context.Background(), "user-1", "secret", device)
 	if !errors.Is(err, ErrDeviceOffline) {
 		t.Fatalf("expected ErrDeviceOffline, got %v", err)
 	}
@@ -637,7 +637,7 @@ func TestVerify_BOTH_AlreadyBound(t *testing.T) {
 	t.Parallel()
 	auth := newTestAuthenticator(t, &mockFirestoreReader{data: validGatekeeperDoc()}, &mockProfileReader{passwordHash: "secret_hashed", boundDevice: "dev-1"}, &mockPasswordHasher{})
 	device := DevicePayload{LoginMethod: "BOTH", DeviceID: "dev-1"}
-	newlyBound, err := auth.Verify(context.Background(), "user-1", "secret", device)
+	_, newlyBound, err := auth.Verify(context.Background(), "user-1", "secret", device)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -650,7 +650,7 @@ func TestVerify_BOTH_DeviceMismatch(t *testing.T) {
 	t.Parallel()
 	auth := newTestAuthenticator(t, &mockFirestoreReader{data: validGatekeeperDoc()}, &mockProfileReader{passwordHash: "secret_hashed", boundDevice: "dev-1"}, &mockPasswordHasher{})
 	device := DevicePayload{LoginMethod: "BOTH", DeviceID: "dev-2"}
-	_, err := auth.Verify(context.Background(), "user-1", "secret", device)
+	_, _, err := auth.Verify(context.Background(), "user-1", "secret", device)
 	if !errors.Is(err, ErrDeviceMismatch) {
 		t.Fatalf("expected ErrDeviceMismatch, got %v", err)
 	}
@@ -661,7 +661,7 @@ func TestVerify_BOTH_FirestoreErrorMapping(t *testing.T) {
 	store := &mockFirestoreReader{err: status.Error(codes.NotFound, "not found")}
 	auth := newTestAuthenticator(t, store, &mockProfileReader{passwordHash: "secret_hashed"}, &mockPasswordHasher{})
 	device := DevicePayload{LoginMethod: "BOTH", DeviceID: "dev-1"}
-	_, err := auth.Verify(context.Background(), "user-1", "secret", device)
+	_, _, err := auth.Verify(context.Background(), "user-1", "secret", device)
 	if !errors.Is(err, ErrGatekeeperNotFound) {
 		t.Fatalf("expected ErrGatekeeperNotFound, got %v", err)
 	}
@@ -681,7 +681,7 @@ func TestVerify_LoginMethodCaseInsensitive(t *testing.T) {
 			profile := &mockProfileReader{}
 			auth := newTestAuthenticator(t, store, profile, &mockPasswordHasher{})
 			device := DevicePayload{LoginMethod: method, DeviceID: "dev-1"}
-			_, err := auth.Verify(context.Background(), "user-1", "secret", device)
+			_, _, err := auth.Verify(context.Background(), "user-1", "secret", device)
 			switch upper {
 			case "GATEKEEPER":
 				// Compliance passes, credential is skipped, device is newly bound.
@@ -1068,7 +1068,7 @@ func TestVerify_GATEKEEPER_AlreadyBoundMatching(t *testing.T) {
 	t.Parallel()
 	auth := newTestAuthenticator(t, &mockFirestoreReader{data: validGatekeeperDoc()}, &mockProfileReader{boundDevice: "dev-1"}, &mockPasswordHasher{})
 	device := DevicePayload{LoginMethod: "GATEKEEPER", DeviceID: "dev-1"}
-	newlyBound, err := auth.Verify(context.Background(), "user-1", "", device)
+	_, newlyBound, err := auth.Verify(context.Background(), "user-1", "", device)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -1081,7 +1081,7 @@ func TestVerify_GATEKEEPER_AlreadyBoundMismatch(t *testing.T) {
 	t.Parallel()
 	auth := newTestAuthenticator(t, &mockFirestoreReader{data: validGatekeeperDoc()}, &mockProfileReader{boundDevice: "dev-1"}, &mockPasswordHasher{})
 	device := DevicePayload{LoginMethod: "GATEKEEPER", DeviceID: "dev-2"}
-	_, err := auth.Verify(context.Background(), "user-1", "", device)
+	_, _, err := auth.Verify(context.Background(), "user-1", "", device)
 	if !errors.Is(err, ErrDeviceMismatch) {
 		t.Fatalf("expected ErrDeviceMismatch, got %v", err)
 	}
@@ -1091,7 +1091,7 @@ func TestVerify_GATEKEEPER_ProfileReaderError(t *testing.T) {
 	t.Parallel()
 	auth := newTestAuthenticator(t, &mockFirestoreReader{data: validGatekeeperDoc()}, &mockProfileReader{bindErr: errors.New("db down")}, &mockPasswordHasher{})
 	device := DevicePayload{LoginMethod: "GATEKEEPER", DeviceID: "dev-1"}
-	_, err := auth.Verify(context.Background(), "user-1", "", device)
+	_, _, err := auth.Verify(context.Background(), "user-1", "", device)
 	if !errors.Is(err, ErrProfileUnavailable) {
 		t.Fatalf("expected ErrProfileUnavailable, got %v", err)
 	}
@@ -1104,7 +1104,7 @@ func TestVerify_FirestorePathConstruction(t *testing.T) {
 	store := &mockFirestoreReader{data: validGatekeeperDoc()}
 	auth := newTestAuthenticator(t, store, &mockProfileReader{passwordHash: "secret_hashed"}, &mockPasswordHasher{})
 	device := DevicePayload{LoginMethod: "BOTH", DeviceID: "dev-1"}
-	_, _ = auth.Verify(context.Background(), "user-1", "secret", device)
+	_, _, _ = auth.Verify(context.Background(), "user-1", "secret", device)
 
 	if len(store.pathArgs) != 1 {
 		t.Fatalf("expected 1 Firestore call, got %d", len(store.pathArgs))
@@ -1167,7 +1167,7 @@ func TestVerify_BOTH_CompliancePasses_BeforeBindingCheck(t *testing.T) {
 	}
 	auth := newTestAuthenticator(t, store, profile, &mockPasswordHasher{})
 	device := DevicePayload{LoginMethod: "BOTH", DeviceID: "dev-1"}
-	_, err := auth.Verify(context.Background(), "user-1", "secret", device)
+	_, _, err := auth.Verify(context.Background(), "user-1", "secret", device)
 	if !errors.Is(err, ErrProfileUnavailable) {
 		t.Fatalf("expected ErrProfileUnavailable from binding error, got %v", err)
 	}
@@ -1180,7 +1180,7 @@ func TestVerify_MinuteBoundary(t *testing.T) {
 	doc["lastSeen"] = time.Now().Add(-(5*time.Minute - 2*time.Second))
 	auth := newTestAuthenticator(t, &mockFirestoreReader{data: doc}, &mockProfileReader{}, &mockPasswordHasher{})
 	device := DevicePayload{LoginMethod: "GATEKEEPER", DeviceID: "dev-1"}
-	_, err := auth.Verify(context.Background(), "user-1", "", device)
+	_, _, err := auth.Verify(context.Background(), "user-1", "", device)
 	if err != nil {
 		t.Fatalf("expected no error at 5min boundary, got %v", err)
 	}
@@ -1193,7 +1193,7 @@ func TestVerify_JustPastBoundary(t *testing.T) {
 	doc["lastSeen"] = time.Now().Add(-(5*time.Minute + time.Second))
 	auth := newTestAuthenticator(t, &mockFirestoreReader{data: doc}, &mockProfileReader{}, &mockPasswordHasher{})
 	device := DevicePayload{LoginMethod: "GATEKEEPER", DeviceID: "dev-1"}
-	_, err := auth.Verify(context.Background(), "user-1", "", device)
+	_, _, err := auth.Verify(context.Background(), "user-1", "", device)
 	if !errors.Is(err, ErrDeviceOffline) {
 		t.Fatalf("expected ErrDeviceOffline past boundary, got %v", err)
 	}

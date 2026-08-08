@@ -12,11 +12,23 @@ type UserProfile struct {
 	Role         string    `json:"role"`
 	Level        int       `json:"level"`
 	XP           int64     `json:"xp"`
+	Coins        int64     `json:"coins"`
 	Version      int       `json:"version"`
 	PasswordHash string    `json:"-"`
 	DeviceID     string    `json:"device_id,omitempty"`
 	CreatedAt    time.Time `json:"created_at"`
 	UpdatedAt    time.Time `json:"updated_at"`
+}
+
+// RewardLedger is the DB representation of a reward transaction.
+type RewardLedger struct {
+	ID         string    `db:"id"`
+	UserID     string    `db:"user_id"`
+	Source     string    `db:"source"`
+	Amount     int64     `db:"amount"`
+	RewardType string    `db:"reward_type"`
+	Metadata   *string   `db:"metadata"`
+	CreatedAt  time.Time `db:"created_at"`
 }
 
 type Crew struct {
@@ -43,6 +55,7 @@ type Challenge struct {
 	Slug        string     `json:"slug"`
 	Description string     `json:"description"`
 	Status      string     `json:"status"`
+	AssignedTo  *string    `json:"assigned_to,omitempty"`
 	CompletedBy string     `json:"completed_by,omitempty"`
 	CompletedAt *time.Time `json:"completed_at"`
 	CreatedAt   time.Time  `json:"created_at"`

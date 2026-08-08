@@ -53,6 +53,7 @@ export interface Explorer {
   role: Role
   level: number
   xp: number
+  coins: number
   created_at: string
   updated_at: string
 }
@@ -353,6 +354,7 @@ export interface QuestView {
   created_at: string
   challenge_count: number
   completed_count: number
+  active_challenge_assigned_to?: string
 }
 
 export interface QuestWithChallenges {
@@ -365,6 +367,15 @@ export interface QuestWithChallenges {
   completed_at?: string | null
   created_at: string
   challenges: Challenge[]
+}
+
+export interface CompleteChallengeResult {
+  quest?: QuestWithChallenges | null
+  quest_completed: boolean
+  next_action?: string
+  xp: number
+  new_level: number
+  level_up: boolean
 }
 
 export interface DailyTurnView {
@@ -415,9 +426,20 @@ export interface PlayerSection {
   role: Role
   level: number
   xp: number
+  coins: number
   created_at: string
   updated_at: string
   xp_to_next: number
+}
+
+export interface RewardLedgerEntry {
+  id: string
+  user_id: string
+  source: string
+  amount: number
+  reward_type: string
+  metadata?: string | null
+  created_at: string
 }
 
 export interface QuestsSection {

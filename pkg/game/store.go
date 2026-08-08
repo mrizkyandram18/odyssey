@@ -16,12 +16,13 @@ var ErrNotFound = errors.New("not found")
 // At runtime, the api/handlers wire a concrete implementation into each
 // interactor. For now, these interfaces stand alone — no import of pkg/db.
 
-// UserStore provides persistence operations for player (explorer) data.
+// UserStore manages player identities.
 type UserStore interface {
 	GetUser(ctx context.Context, uid string) (*Player, error)
 	CreateUser(ctx context.Context, p *Player) error
 	UpdateUser(ctx context.Context, uid string, patch map[string]any) error
 	UpdateUserIfMatch(ctx context.Context, uid string, version int, patch map[string]any) (bool, error)
+	ListUsersByCrew(ctx context.Context, crewID string) ([]Player, error)
 }
 
 // CrewStore provides persistence operations for crew (family group) data.
@@ -152,6 +153,24 @@ type ConfigStore interface {
 	GetSystemConfig(ctx context.Context, key string) (string, error)
 }
 
+// ReactionStore provides persistence for peer reactions.
+type ReactionStore interface {
+	CreateReaction(ctx context.Context, r *Reaction) (*Reaction, error)
+	GetReactionsForTarget(ctx context.Context, targetUserID string) ([]Reaction, error)
+}
+
+// ActivityStore provides persistence for daily user activity and streak calculation.
+type ActivityStore interface {
+	RecordActivity(ctx context.Context, act *DailyActivity) (*DailyActivity, error)
+	GetStreak(ctx context.Context, uid string) (int, error)
+}
+
+// RewardLedgerStore manages reward history.
+type RewardLedgerStore interface {
+	CreateLedger(ctx context.Context, ledger *RewardLedger) error
+	ListByUser(ctx context.Context, userID string) ([]RewardLedger, error)
+}
+
 // Repository groups all persistence interfaces for convenient dependency injection.
 type Repository struct {
 	Users               UserStore
@@ -171,11 +190,13 @@ type Repository struct {
 	LoreUnlocks         LoreUnlockStore
 	Achievements        AchievementStore
 	Config              ConfigStore
+	Reactions           ReactionStore
+	Activity            ActivityStore
+	RewardLedgers       RewardLedgerStore
 }
 
-// BuildRepository constructs a Repository from a concrete adapter.
-// The wiring logic lives in pkg/db/wire.go to avoid an import cycle.
-// This function is a placeholder that returns an error until wired.
+// BuildRepository is a package placeholder. Concrete repository construction
+// is implemented in pkg/db/wire.go (BuildRepository) to avoid an import cycle.
 func BuildRepository(_ any) (*Repository, error) {
-	return nil, fmt.Errorf("repository wiring not implemented")
+	return nil, fmt.Errorf("use pkg/db.BuildRepository for repository construction")
 }

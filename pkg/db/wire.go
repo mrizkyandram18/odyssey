@@ -32,6 +32,9 @@ func BuildRepository(client SupabaseClient) (*game.Repository, error) {
 		LoreUnlocks:         NewLoreUnlockStore(client),
 		Achievements:        NewAchievementStore(client),
 		Config:              NewConfigStore(client),
+		Reactions:           NewReactionStore(client),
+		Activity:            NewActivityStore(client),
+		RewardLedgers:       NewRewardLedgerStore(client),
 	}, nil
 }
 

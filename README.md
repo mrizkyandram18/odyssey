@@ -19,7 +19,7 @@ storytelling — purely for fun, learning, and engagement.
 | Frontend | React 19, Vite, TypeScript, Tailwind CSS |
 | Backend  | Go 1.25 (mostly standard library)   |
 | Database | Supabase (PostgreSQL) — `odyssey_*` tables |
-| Auth     | Gatekeeper (BOTH login mode) via adapter |
+| Auth     | Local Authentication (prototype)    |
 
 ## Project Structure
 
@@ -27,15 +27,23 @@ storytelling — purely for fun, learning, and engagement.
 - `cmd/` - CLI tools and utilities
 - `docs/` - Project documentation
 - `pkg/` - Core domain logic and integrations
-- `scripts/` - Development and deployment scripts
-- `supabase/` - Database migrations and configuration
+- `scripts/` - Local dev/deploy scripts and database migrations (`scripts/migrations/`)
+- `supabase/` - Supabase project configuration (`config.toml`)
 - `web/` - React frontend application
 
 ## Getting Started
 
 1. Copy `.env.example` to `.env` and fill in the values.
-2. **Backend:** `go run api/dev/main.go`
+2. **Backend:** `cd api/dev && go run main.go`
 3. **Frontend:** `cd web && npm install && npm run dev`
+
+### Prototype Login
+
+The current prototype uses Local Authentication for demonstration purposes. Use any of the following accounts:
+
+- **demo1** / `odyssey123` (Leo - Seeker)
+- **demo2** / `odyssey123` (Maya - Guide)
+- **demo3** / `odyssey123` (Sam - Builder)
 
 ## CI Status
 
@@ -51,7 +59,7 @@ Start at `CLAUDE.md`, then read `docs/vision.md` → `docs/principles.md` →
 | Phase | Scope | Status |
 |-------|-------|--------|
 | 0 — Foundation | Vision, ADRs, architecture, coding standards | Complete |
-| 1 — MVP | One realm, 3 quests, daily turns, basic progression | In Progress |
+| 1 — MVP | One realm, 6 quests, daily turns, basic progression | Release Candidate (Conditional GO) |
 | 2 — Social Fabric | Peer reactions, coin currency, expanded creative tools | Future |
 | 3 — Deeper Storytelling | Branching quests, second realm, achievement log | Future |
 | 4 — Richer Creation | Comic mode, expanded creative tools, trading | Future |

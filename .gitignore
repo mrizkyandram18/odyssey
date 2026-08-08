@@ -36,3 +36,6 @@ web/dist/
 
 # OS
 Thumbs.db
+
+.vercel
+.env*

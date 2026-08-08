@@ -16,7 +16,7 @@ RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build \
       -X odyssey/pkg/observability.BuildDate=${BUILD_DATE:-dev} \
       -X odyssey/pkg/observability.Version=${VERSION:-dev} \
       -X odyssey/pkg/observability.SchemaVersion=${SCHEMA_VERSION:-12}" \
-    -o /odyssey ./api/dev
+    -o /odyssey ./internal/api/dev
 
 # Frontend build stage
 FROM node:20-alpine AS frontend

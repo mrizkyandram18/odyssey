@@ -15,6 +15,7 @@ type Player struct {
 	Role         string    `json:"role"`
 	Level        int       `json:"level"`
 	XP           int64     `json:"xp"`
+	Coins        int64     `json:"coins"`
 	Version      int       `json:"version"`
 	CreatedAt    time.Time `json:"created_at"`
 	UpdatedAt    time.Time `json:"updated_at"`
@@ -48,6 +49,7 @@ type Challenge struct {
 	Slug        string     `json:"slug"`
 	Description string     `json:"description"`
 	Status      string     `json:"status"`
+	AssignedTo  *string    `json:"assigned_to,omitempty"`
 	CompletedBy string     `json:"completed_by,omitempty"`
 	CompletedAt *time.Time `json:"completed_at"`
 	CreatedAt   time.Time  `json:"created_at"`
@@ -274,4 +276,34 @@ type PlayerAchievement struct {
 	Count     int       `json:"count"`
 	AwardedAt time.Time `json:"awarded_at"`
 	CreatedAt time.Time `json:"created_at"`
+}
+
+// Reaction represents a peer reaction to a crew's action (e.g. quest, submission).
+type Reaction struct {
+	ID           string    `json:"id"`
+	CreatorID    string    `json:"creator_id"`
+	TargetUserID string    `json:"target_user_id"`
+	QuestID      *string   `json:"quest_id,omitempty"`
+	EmojiCode    string    `json:"emoji_code"`
+	CreatedAt    time.Time `json:"created_at"`
+}
+
+// DailyActivity tracks a user's activity for streaks and history.
+type DailyActivity struct {
+	ID           string    `json:"id"`
+	UserID       string    `json:"user_id"`
+	ActivityDate string    `json:"activity_date"`
+	ActivityType string    `json:"activity_type"`
+	CreatedAt    time.Time `json:"created_at"`
+}
+
+// RewardLedger tracks a user's reward history.
+type RewardLedger struct {
+	ID         string    `json:"id"`
+	UserID     string    `json:"user_id"`
+	Source     string    `json:"source"`
+	Amount     int64     `json:"amount"`
+	RewardType string    `json:"reward_type"`
+	Metadata   *string   `json:"metadata"`
+	CreatedAt  time.Time `json:"created_at"`
 }

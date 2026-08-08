@@ -20,6 +20,7 @@ import (
 type CompleteChallengeResult struct {
 	Quest          *QuestWithChallenges `json:"quest"`
 	QuestCompleted bool                 `json:"quest_completed"`
+	NextAction     string               `json:"next_action,omitempty"`
 	XP             int64                `json:"xp"`
 	NewLevel       int                  `json:"new_level"`
 	LevelUp        bool                 `json:"level_up"`
@@ -39,10 +40,16 @@ type QuestAPIHandler struct {
 	realmCfg  *world.RealmCatalog
 	progCfg   *progression.ProgressionConfig
 	publisher events.Publisher
+	rewards   RewardGateway
 	content   ContentGateway
 	balance   *balance.Service
 	metrics   *observability.Metrics
 	logger    *observability.Logger
+}
+
+// RewardGateway provides reward logic
+type RewardGateway interface {
+	GrantQuestReward(ctx context.Context, uid string, questID int64, xp int64) error
 }
 
 // NewQuestAPIHandler constructs a QuestAPIHandler from its collaborators.
@@ -55,6 +62,11 @@ func NewQuestAPIHandler(qs *QuestService, prog *progression.ProgressionService, 
 // When set, a QuestCompleted event is published on quest completion.
 func (h *QuestAPIHandler) SetPublisher(p events.Publisher) {
 	h.publisher = p
+}
+
+// SetRewardService attaches a reward service.
+func (h *QuestAPIHandler) SetRewardService(r RewardGateway) {
+	h.rewards = r
 }
 
 // SetContentGateway attaches a content gateway for quest definition lookups.
@@ -155,12 +167,14 @@ func (h *QuestAPIHandler) CompleteChallenge(ctx context.Context, questID, challe
 
 	result = &CompleteChallengeResult{
 		QuestCompleted: questCompleted,
+		NextAction:     "",
 		XP:             challengeXP,
 		NewLevel:       player.Level,
 		LevelUp:        levelUp,
 	}
 
 	if questCompleted {
+		result.NextAction = "CREATE_MEMORY"
 		qd := (*gamecontent.QuestDefinition)(nil)
 		if h.content != nil {
 			qd, _ = h.content.GetQuest(ctx, qwc.TemplateSlug)
@@ -187,6 +201,10 @@ func (h *QuestAPIHandler) CompleteChallenge(ctx context.Context, questID, challe
 			if err := h.advanceRealm(ctx, crewID, realm); err != nil {
 				return nil, fmt.Errorf("advance realm: %w", err)
 			}
+		}
+
+		if h.rewards != nil {
+			_ = h.rewards.GrantQuestReward(ctx, uid, questID, questRewardXP)
 		}
 
 		h.publishQuestCompleted(ctx, qwc, uid)

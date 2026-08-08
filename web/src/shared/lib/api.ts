@@ -1,4 +1,15 @@
-import type { ApiError, ChestView, OpenResult, InventoryItem, RelicDefinition } from '../types'
+import type {
+  ApiError,
+  ChestView,
+  OpenResult,
+  InventoryItem,
+  RelicDefinition,
+  QuestView,
+  QuestWithChallenges,
+  CompleteChallengeResult,
+  AchievementView,
+  LoreView,
+} from '../types'
 import { getSession, isSessionExpired } from './session'
 
 const API_BASE = import.meta.env.DEV ? '' : ''
@@ -71,4 +82,20 @@ export const relicsApi = {
   list: () => apiClient.get<InventoryItem[]>('/api/relics'),
   get: (slug: string) => apiClient.get<RelicDefinition>(`/api/relics/${slug}`),
   inventory: () => apiClient.get<InventoryItem[]>('/api/relics/inventory'),
+}
+
+export const questsApi = {
+  list: () => apiClient.get<QuestView[]>('/api/quests'),
+  get: (id: number) => apiClient.get<QuestWithChallenges>(`/api/quests/${id}`),
+  start: (id: number) => apiClient.post<{ started: boolean }>(`/api/quests/${id}/start`, {}),
+  completeChallenge: (questId: number, challengeId: number) =>
+    apiClient.post<CompleteChallengeResult>(`/api/quests/${questId}/challenges/${challengeId}/complete`, {}),
+}
+
+export const achievementsApi = {
+  list: () => apiClient.get<AchievementView[]>('/api/achievements'),
+}
+
+export const loreApi = {
+  list: () => apiClient.get<LoreView[]>('/api/lore'),
 }
