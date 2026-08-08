@@ -12,8 +12,8 @@ export async function login(page: Page, username: string = 'demo1') {
     // Retry once after a 2-second delay to handle Vercel API rate limiting / cold start
     await page.waitForTimeout(2500);
     const signInBtn = page.locator('button:has-text("Sign In")');
-    if (await signInBtn.isVisible()) {
-      await signInBtn.click();
+    if (await signInBtn.isVisible() && await signInBtn.isEnabled()) {
+      await signInBtn.click({ timeout: 2000 }).catch(() => {});
     }
     await expect(page).toHaveURL(/.*#\/$/, { timeout: 10000 });
   }
