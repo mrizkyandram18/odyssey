@@ -16,7 +16,7 @@ import (
 )
 
 func main() {
-	_ = godotenv.Load("../../.env")
+	_ = godotenv.Load(".env", "../../../.env")
 
 	srvHandler, err := server.BuildHandler()
 	if err != nil {

@@ -3,7 +3,7 @@ import { login } from './helpers/auth';
 import { navigateToJournal } from './helpers/journal';
 
 test.describe('Journal Domain', () => {
-  const TEST_USER = 'family-test@example.com';
+  const TEST_USER = 'demo1';
 
   test.beforeEach(async ({ page }) => {
     await login(page, TEST_USER);
@@ -13,6 +13,6 @@ test.describe('Journal Domain', () => {
     await navigateToJournal(page);
     // Note: Depends on test data strategy to ensure entries exist for this user
     // await verifyJournalEntryExists(page, 'Morning Light');
-    await expect(page.locator('.journal-container, .journal-list')).toBeVisible();
+    await expect(page.locator('h1:has-text("Family Journal")')).toBeVisible();
   });
 });

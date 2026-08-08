@@ -212,7 +212,12 @@ func (s *QuestService) getWithChallenges(ctx context.Context, q *game.Quest) (*Q
 		Quest:      *q,
 		Challenges: challenges,
 	}
-	result.Status = string(s.ComputeStatus(challenges))
+	computed := string(s.ComputeStatus(challenges))
+	if computed == string(QuestStatusPending) && (q.Status == string(QuestStatusActive) || q.StartedAt != nil) {
+		result.Status = string(QuestStatusActive)
+	} else {
+		result.Status = computed
+	}
 	return result, nil
 }
 
@@ -308,6 +313,11 @@ func (s *QuestService) CompleteChallengeForQuest(ctx context.Context, questID, c
 		return "", false, err
 	}
 	oldStatus := computeStatus(before)
+	if qBefore, err := s.store.GetQuest(ctx, questID); err == nil && qBefore != nil {
+		if oldStatus == QuestStatusPending && (qBefore.Status == string(QuestStatusActive) || qBefore.StartedAt != nil) {
+			oldStatus = QuestStatusActive
+		}
+	}
 
 	challengePatch := map[string]any{
 		"status":       string(ChallengeStatusDone),

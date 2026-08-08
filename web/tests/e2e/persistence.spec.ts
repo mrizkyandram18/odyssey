@@ -3,12 +3,12 @@ import { login, logout } from './helpers/auth';
 import { navigateToJournal } from './helpers/journal';
 
 test.describe('Persistence Domain', () => {
-  const TEST_USER = 'family-test@example.com';
+  const TEST_USER = 'demo1';
 
   test('session persists after reload', async ({ page }) => {
     await login(page, TEST_USER);
     await page.reload();
-    await expect(page).toHaveURL(/.*home|^\/$/);
+    await expect(page).toHaveURL(/.*#\/$/);
   });
 
   test('state persists after logout and login', async ({ page }) => {
@@ -20,6 +20,6 @@ test.describe('Persistence Domain', () => {
     
     // verify we can still navigate and data is there
     await navigateToJournal(page);
-    await expect(page.locator('.journal-container, .journal-list')).toBeVisible();
+    await expect(page.locator('h1:has-text("Family Journal")')).toBeVisible();
   });
 });

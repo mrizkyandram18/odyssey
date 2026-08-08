@@ -1,14 +1,18 @@
 import { test, expect } from '@playwright/test';
 import { login, logout } from './helpers/auth';
 import { verifyHomeLoaded, verifyQuestExists } from './helpers/home';
-import { startQuest, completeChallenge, verifyXpIncreased } from './helpers/quest';
+import { startQuest, completeChallenge, verifyXpIncreased, resetQuestState } from './helpers/quest';
 import { navigateToJournal, verifyJournalEntryExists } from './helpers/journal';
 
 test.describe('Golden Path', () => {
   // Test data strategy: Ephemeral DB is seeded before this test runs in CI.
-  const TEST_USER = 'family-test@example.com';
-  const QUEST_TITLE = 'Morning Light'; // Using a seed quest
-  const CHALLENGE_TITLE = 'Spot the Green'; 
+  const TEST_USER = 'demo1';
+  const QUEST_TITLE = 'Riddle of the Stones'; 
+  const CHALLENGE_TITLE = 'Find a stone or brick and describe its shape.'; 
+
+  test.beforeEach(async () => {
+    await resetQuestState();
+  });
 
   test('Test 1: Login -> Home -> Quest list appears', async ({ page }) => {
     await login(page, TEST_USER);
@@ -33,17 +37,13 @@ test.describe('Golden Path', () => {
     await login(page, TEST_USER);
     await verifyHomeLoaded(page);
     
-    // Check initial state (assuming test 2 already ran or seed state gives progress)
-    // Wait, the tests should be independent. If they are independent, Test 3 should just verify that after a logout/login cycle, some state remains.
-    // For now, just logging in and out to verify session persistence.
     await navigateToJournal(page);
-    // Observe state
     
     await logout(page);
     
     await login(page, TEST_USER);
     await navigateToJournal(page);
     // Verify state persists (stubbed)
-    await expect(page).toHaveURL(/.*journal/);
+    await expect(page).toHaveURL(/.*#\/journal$/);
   });
 });

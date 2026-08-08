@@ -8,7 +8,6 @@ import (
 	"io"
 	"net/http"
 	"net/url"
-	"strings"
 )
 
 var allowedTables = map[string]bool{
@@ -143,6 +142,12 @@ func (c *supabaseClient) mutate(ctx context.Context, method, table string, paylo
 		if err != nil {
 			return nil, fmt.Errorf("parse params: %w", err)
 		}
+		if q.Has("return") {
+			if prefer == "" {
+				prefer = "return=" + q.Get("return")
+			}
+			q.Del("return")
+		}
 		u.RawQuery = q.Encode()
 	}
 	var bodyReader io.Reader
@@ -163,9 +168,6 @@ func (c *supabaseClient) mutate(ctx context.Context, method, table string, paylo
 	req.Header.Set("Accept", "application/json")
 	if prefer != "" {
 		req.Header.Set("Prefer", prefer)
-	}
-	if strings.Contains(params, "return=representation") {
-		req.Header.Set("Prefer", "return=representation")
 	}
 	resp, err := c.client.Do(req)
 	if err != nil {
