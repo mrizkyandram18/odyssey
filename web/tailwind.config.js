@@ -7,13 +7,13 @@ export default {
   theme: {
     extend: {
       colors: {
-        primary: "var(--color-primary)",
-        secondary: "var(--color-secondary)",
-        background: "var(--color-background)",
-        surface: "var(--color-surface)",
-        accent: "var(--color-accent)",
-        success: "var(--color-success)",
-        error: "var(--color-error)",
+        primary: "rgb(var(--color-primary))",
+        secondary: "rgb(var(--color-secondary))",
+        background: "rgb(var(--color-background))",
+        surface: "rgb(var(--color-surface))",
+        accent: "rgb(var(--color-accent))",
+        success: "rgb(var(--color-success))",
+        error: "rgb(var(--color-error))",
       },
       fontFamily: {
         body: ['-apple-system', 'BlinkMacSystemFont', 'Segoe UI', 'Roboto', 'sans-serif'],
