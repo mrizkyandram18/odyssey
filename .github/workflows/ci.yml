@@ -155,7 +155,7 @@ jobs:
         run: |
           CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build \
             -ldflags "-s -w -X odyssey/pkg/observability.Version=ci" \
-            -o /tmp/odyssey ./api/dev
+            -o /tmp/odyssey ./internal/api/dev
       - name: Upload backend binary
         uses: actions/upload-artifact@v4
         with:
