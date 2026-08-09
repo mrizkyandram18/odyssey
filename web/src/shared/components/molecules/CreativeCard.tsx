@@ -1,4 +1,5 @@
 import type { CreativeSubmission } from '../../types'
+import { ConnectedReactionBar } from './ConnectedReactionBar'
 
 export interface CreativeCardProps {
   submission: CreativeSubmission
@@ -30,10 +31,8 @@ export function CreativeCard({ submission }: CreativeCardProps) {
 
       <div className="mt-2 flex items-center justify-between border-t border-border/50 pt-3">
         <span className="text-xs font-medium text-muted-foreground">Quest #{submission.quest_id}</span>
-        {/* Placeholder for Epic 1 Reactions Component */}
-        <div className="flex gap-1 text-muted-foreground text-xs">
-           Reaction Count
-        </div>
+        {/* Live reactions — target_type=JOURNAL maps to CreativeSubmission in backend */}
+        <ConnectedReactionBar targetType="JOURNAL" targetId={submission.id} />
       </div>
     </div>
   )

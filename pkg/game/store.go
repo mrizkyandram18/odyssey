@@ -155,8 +155,8 @@ type ConfigStore interface {
 
 // ReactionStore provides persistence for peer reactions.
 type ReactionStore interface {
-	CreateReaction(ctx context.Context, r *Reaction) (*Reaction, error)
-	GetReactionsForTarget(ctx context.Context, targetUserID string) ([]Reaction, error)
+	UpsertReaction(ctx context.Context, r *Reaction) (*Reaction, error)
+	ListReactionsForTarget(ctx context.Context, crewID, targetType string, targetID int64) ([]Reaction, error)
 }
 
 // ActivityStore provides persistence for daily user activity and streak calculation.

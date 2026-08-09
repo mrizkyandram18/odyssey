@@ -1,7 +1,7 @@
 import { useSessionContext } from '../../app/SessionProvider'
 
 export function useSession() {
-  const { session, profile, loading, error, login, logout } = useSessionContext()
+  const { session, profile, loading, error, login, logout, refreshProfile } = useSessionContext()
 
   return {
     session,
@@ -10,5 +10,6 @@ export function useSession() {
     error,
     login,
     logout,
+    refreshProfile,
   }
 }

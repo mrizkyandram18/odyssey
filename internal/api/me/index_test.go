@@ -1,6 +1,7 @@
 package me
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"net/http"
@@ -32,6 +33,17 @@ func (m *mockProfileStore) GetBoundDeviceID(ctx context.Context, uid string) (st
 		return m.profile.DeviceID, nil
 	}
 	return "", nil
+}
+
+func (m *mockProfileStore) UpdateAvatar(ctx context.Context, uid string, style, seed string) error {
+	if m.err != nil {
+		return m.err
+	}
+	if m.profile != nil {
+		m.profile.AvatarStyle = style
+		m.profile.AvatarSeed = seed
+	}
+	return nil
 }
 
 func makeProfile() *db.UserProfile {
@@ -211,3 +223,31 @@ var errTestProfile = errProfile{}
 type errProfile struct{}
 
 func (errProfile) Error() string { return "test profile error" }
+
+func TestMeHandler_PatchAvatar(t *testing.T) {
+	mockStore := &mockProfileStore{profile: makeProfile()}
+	Setup(mockStore)
+	issuer := auth.NewSessionIssuer("test-secret")
+	mw := auth.NewMiddleware(issuer)
+	token := makeUserToken(t, issuer)
+
+	payload := `{"avatar_style": "adventurer", "avatar_seed": "my-seed"}`
+	req := httptest.NewRequest(http.MethodPatch, "/api/me/avatar", bytes.NewReader([]byte(payload)))
+	req.Header.Set("Authorization", "Bearer "+token)
+	req.Header.Set("Content-Type", "application/json")
+	
+	w := httptest.NewRecorder()
+	mw.RequireAuth(Handler)(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d: %s", w.Code, w.Body.String())
+	}
+
+	if mockStore.profile.AvatarStyle != "adventurer" {
+		t.Errorf("expected avatar_style adventurer, got %s", mockStore.profile.AvatarStyle)
+	}
+	if mockStore.profile.AvatarSeed != "my-seed" {
+		t.Errorf("expected avatar_seed my-seed, got %s", mockStore.profile.AvatarSeed)
+	}
+}
+

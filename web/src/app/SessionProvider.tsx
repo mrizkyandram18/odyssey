@@ -11,6 +11,7 @@ interface SessionContextValue {
     error: string | null
     login: (uid: string, credential: string, device: DevicePayload) => Promise<void>
     logout: () => void
+    refreshProfile: () => Promise<void>
 }
 
 export const SessionContext = createContext<SessionContextValue | undefined>(undefined)
@@ -77,8 +78,15 @@ export function SessionProvider({ children, authClient }: SessionProviderProps) 
         setError(null)
     }
 
+    const refreshProfile = async (): Promise<void> => {
+        const currentProfile = await authClient.current()
+        if (currentProfile) {
+            setProfile(currentProfile)
+        }
+    }
+
     return (
-        <SessionContext.Provider value={{ session, profile, loading, error, login, logout }}>
+        <SessionContext.Provider value={{ session, profile, loading, error, login, logout, refreshProfile }}>
             {children}
         </SessionContext.Provider>
     )
