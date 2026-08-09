@@ -12,6 +12,18 @@
     <meta property="og:description" content="A cooperative adventure platform for private family groups." />
     <meta property="og:image" content="/social-preview.png" />
     <title>Odyssey</title>
+    <script>
+      if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.getRegistrations().then(function(regs) {
+          regs.forEach(function(r) { r.unregister(); });
+        });
+      }
+      if ('caches' in window) {
+        caches.keys().then(function(keys) {
+          keys.forEach(function(k) { caches.delete(k); });
+        });
+      }
+    </script>
   </head>
   <body>
     <div id="root"></div>
