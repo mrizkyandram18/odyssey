@@ -8,6 +8,7 @@ const KIND_LABELS: Record<SubmissionKind, string> = {
   COMIC: 'Comic',
   PHOTO: 'Photo',
   VIDEO: 'Video',
+  DRAWING: 'Drawing',
 }
 
 const STATUS_VARIANT: Record<string, 'default' | 'primary' | 'secondary' | 'success' | 'warning' | 'error'> = {

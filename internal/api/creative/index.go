@@ -119,7 +119,11 @@ func handleSubmit(w http.ResponseWriter, r *http.Request, claims *auth.SessionCl
 			shared.WriteJSONError(w, err.Error(), http.StatusConflict)
 		case err == creative.ErrChallengeDone:
 			shared.WriteJSONError(w, err.Error(), http.StatusConflict)
-		case err == creative.ErrInvalidKind, err == creative.ErrContentTooShort:
+		case err == creative.ErrInvalidKind, err == creative.ErrContentTooShort,
+			err == creative.ErrSVGEmpty, err == creative.ErrSVGTooLarge,
+			err == creative.ErrSVGMalformed, err == creative.ErrSVGRootMissing,
+			err == creative.ErrSVGMultipleRoots, err == creative.ErrSVGDisallowedTag,
+			err == creative.ErrSVGDisallowedAttr, err == creative.ErrSVGDisallowedURI:
 			shared.WriteJSONError(w, err.Error(), http.StatusBadRequest)
 		default:
 			shared.WriteJSONError(w, "failed to submit creative", http.StatusInternalServerError)

@@ -4,16 +4,16 @@ export async function startQuest(page: Page, questTitle: string) {
   await page.click(`text="${questTitle}"`);
   // Wait for the Quest Detail page to render (title, badge, or buttons)
   await page.locator('h1').waitFor({ state: 'visible' });
-  const startBtn = page.locator('button:has-text("Start"), button:has-text("Begin")');
+  const startBtn = page.locator('button:has-text("Embark on Quest")');
   if (await startBtn.count() > 0 && await startBtn.first().isVisible().catch(() => false)) {
     await startBtn.first().click();
-    await page.locator('button:has-text("Complete")').first().waitFor({ state: 'visible' }).catch(() => {});
+    await page.locator('button:has-text("Selesaikan")').first().waitFor({ state: 'visible' }).catch(() => {});
   }
 }
 
 export async function completeChallenge(page: Page, challengeName: string) {
   const challengeDiv = page.locator('div').filter({ hasText: challengeName }).first();
-  const completeBtn = challengeDiv.locator('button:has-text("Complete")');
+  const completeBtn = challengeDiv.locator('button:has-text("Selesaikan")');
   if (await completeBtn.isVisible().catch(() => false)) {
     await completeBtn.click();
     await page.waitForTimeout(500);

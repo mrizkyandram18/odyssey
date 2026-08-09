@@ -7,8 +7,8 @@ import { navigateToJournal, verifyJournalEntryExists } from './helpers/journal';
 test.describe('Golden Path', () => {
   // Test data strategy: Ephemeral DB is seeded before this test runs in CI.
   const TEST_USER = 'demo1';
-  const QUEST_TITLE = 'Riddle of the Stones'; 
-  const CHALLENGE_TITLE = 'Find a stone or brick and describe its shape.'; 
+  const QUEST_TITLE = 'Bab 2: Jejak Kaki Raksasa'; 
+  const CHALLENGE_TITLE = 'Peran 1 (Seeker): Ukur telapak kakimu dengan sebuah benda (seperti buku atau pensil).'; 
 
   test.beforeEach(async () => {
     await resetQuestState();

@@ -13,6 +13,6 @@ test.describe('Journal Domain', () => {
     await navigateToJournal(page);
     // Note: Depends on test data strategy to ensure entries exist for this user
     // await verifyJournalEntryExists(page, 'Morning Light');
-    await expect(page.locator('h1:has-text("Family Journal")')).toBeVisible();
+    await expect(page.locator('h1:has-text("Milestones")').first()).toBeVisible();
   });
 });

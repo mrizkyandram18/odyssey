@@ -101,7 +101,7 @@ export interface RealmProgress {
   updated_at: string
 }
 
-export type SubmissionKind = 'STORY' | 'COMIC' | 'PHOTO' | 'VIDEO'
+export type SubmissionKind = 'STORY' | 'COMIC' | 'PHOTO' | 'VIDEO' | 'DRAWING'
 export type SubmissionStatus = 'PENDING' | 'APPROVED' | 'REJECTED'
 
 export interface CreativeItem {

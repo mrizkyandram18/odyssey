@@ -1,4 +1,5 @@
 import type { CreativeSubmission } from '../../types'
+import { toSvgDataUri } from '../../utils/svg'
 import { ConnectedReactionBar } from './ConnectedReactionBar'
 
 export interface CreativeCardProps {
@@ -25,8 +26,16 @@ export function CreativeCard({ submission }: CreativeCardProps) {
         </div>
       </div>
       
-      <div className="rounded-lg bg-background/50 p-4 text-sm leading-relaxed">
-        {submission.content}
+      <div className="rounded-lg bg-background/50 p-4 text-sm leading-relaxed overflow-hidden">
+        {submission.kind === 'DRAWING' ? (
+          <img
+            src={toSvgDataUri(submission.content)}
+            alt={`Drawing by ${submission.author_uid}`}
+            className="w-full h-auto bg-white/5 rounded"
+          />
+        ) : (
+          submission.content
+        )}
       </div>
 
       <div className="mt-2 flex items-center justify-between border-t border-border/50 pt-3">

@@ -83,6 +83,12 @@ func (s *CreativeService) Submit(ctx context.Context, sub *game.Submission) (*ga
 		return nil, ErrContentTooShort
 	}
 
+	if sub.Kind == game.SubmissionDrawing {
+		if err := ValidateSVG(sub.Content); err != nil {
+			return nil, err
+		}
+	}
+
 	sub.Status = game.SubmissionStatusPending
 	sub.CreatedAt = time.Now().UTC()
 	sub.UpdatedAt = sub.CreatedAt
@@ -167,7 +173,7 @@ func (s *CreativeService) Reject(ctx context.Context, submissionID int64, review
 // isValidKind reports whether kind is a recognized submission kind.
 func isValidKind(kind game.SubmissionKind) bool {
 	switch kind {
-	case game.SubmissionStory, game.SubmissionComic, game.SubmissionPhoto, game.SubmissionVideo:
+	case game.SubmissionStory, game.SubmissionComic, game.SubmissionPhoto, game.SubmissionVideo, game.SubmissionDrawing:
 		return true
 	}
 	return false

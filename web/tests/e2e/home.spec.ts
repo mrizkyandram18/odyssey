@@ -11,6 +11,6 @@ test.describe('Home Domain', () => {
 
   test('displays home dashboard and quests', async ({ page }) => {
     await verifyHomeLoaded(page);
-    await verifyQuestExists(page, 'Riddle of the Stones');
+    await verifyQuestExists(page, 'Bab 1: Panggilan Pertama');
   });
 });
