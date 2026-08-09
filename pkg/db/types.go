@@ -13,6 +13,8 @@ type UserProfile struct {
 	Level        int       `json:"level"`
 	XP           int64     `json:"xp"`
 	Coins        int64     `json:"coins"`
+	AvatarStyle  string    `json:"avatar_style"`
+	AvatarSeed   string    `json:"avatar_seed"`
 	Version      int       `json:"version"`
 	PasswordHash string    `json:"-"`
 	DeviceID     string    `json:"device_id,omitempty"`

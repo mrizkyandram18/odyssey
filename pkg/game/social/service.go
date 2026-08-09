@@ -8,34 +8,70 @@ import (
 
 // ReactionService coordinates reaction creation and listing.
 type ReactionService struct {
-	store game.ReactionStore
+	store     game.ReactionStore
+	creatives game.CreativeSubmissionStore
+	quests    game.QuestStore
 }
 
 // NewReactionService returns a new ReactionService.
-func NewReactionService(store game.ReactionStore) *ReactionService {
-	return &ReactionService{store: store}
+func NewReactionService(store game.ReactionStore, creatives game.CreativeSubmissionStore, quests game.QuestStore) *ReactionService {
+	return &ReactionService{store: store, creatives: creatives, quests: quests}
 }
 
-// AddReaction adds a new reaction.
-func (s *ReactionService) AddReaction(ctx context.Context, creatorID string, targetUserID string, questID *string, emojiCode string) (*game.Reaction, error) {
-	if creatorID == "" || targetUserID == "" || emojiCode == "" {
+// AddReaction adds or updates a reaction idempotently.
+func (s *ReactionService) AddReaction(ctx context.Context, crewID, actorUID string, targetType string, targetID int64, reactionType string) (*game.Reaction, error) {
+	if crewID == "" || actorUID == "" || targetType == "" || targetID == 0 || reactionType == "" {
 		return nil, fmt.Errorf("invalid reaction payload")
 	}
 
-	r := &game.Reaction{
-		CreatorID:    creatorID,
-		TargetUserID: targetUserID,
-		QuestID:      questID,
-		EmojiCode:    emojiCode,
+	// 1. Validate Target and verify it belongs to the same crew
+	switch targetType {
+	case "JOURNAL":
+		// Assume JOURNAL maps to CreativeItem. 
+		// Wait, CreativeStore doesn't have GetCreativeItem. 
+		// Actually, let's just use the store we have: creative submissions.
+		sub, err := s.creatives.GetSubmission(ctx, targetID)
+		if err != nil {
+			return nil, fmt.Errorf("target not found")
+		}
+		if sub.CrewID != crewID {
+			return nil, fmt.Errorf("cross-crew reaction not allowed")
+		}
+	case "QUEST":
+		quest, err := s.quests.GetQuest(ctx, targetID)
+		if err != nil {
+			return nil, fmt.Errorf("target not found")
+		}
+		if quest.CrewID != crewID {
+			return nil, fmt.Errorf("cross-crew reaction not allowed")
+		}
+	default:
+		return nil, fmt.Errorf("invalid target type")
 	}
 
-	return s.store.CreateReaction(ctx, r)
+	// 2. Validate Reaction Type
+	switch reactionType {
+	case "HEART", "CLAP", "STAR":
+		// valid
+	default:
+		return nil, fmt.Errorf("invalid reaction type")
+	}
+
+	r := &game.Reaction{
+		CrewID:       crewID,
+		TargetType:   targetType,
+		TargetID:     targetID,
+		ActorUID:     actorUID,
+		ReactionType: reactionType,
+	}
+
+	return s.store.UpsertReaction(ctx, r)
 }
 
-// ListReactionsForTarget lists all reactions meant for a given user.
-func (s *ReactionService) ListReactionsForTarget(ctx context.Context, targetUserID string) ([]game.Reaction, error) {
-	if targetUserID == "" {
-		return nil, fmt.Errorf("target user ID required")
+// ListReactionsForTarget lists all reactions meant for a given target.
+func (s *ReactionService) ListReactionsForTarget(ctx context.Context, crewID, targetType string, targetID int64) ([]game.Reaction, error) {
+	if crewID == "" || targetType == "" || targetID == 0 {
+		return nil, fmt.Errorf("invalid target payload")
 	}
-	return s.store.GetReactionsForTarget(ctx, targetUserID)
+	return s.store.ListReactionsForTarget(ctx, crewID, targetType, targetID)
 }

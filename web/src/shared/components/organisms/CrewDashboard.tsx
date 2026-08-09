@@ -1,5 +1,7 @@
 import type { Crew, Explorer } from '../../types'
 
+import { Avatar } from '../atoms/Avatar'
+
 export interface CrewDashboardProps {
   crew: Crew
   members: Explorer[]
@@ -15,7 +17,10 @@ export function CrewDashboard({ crew, members }: CrewDashboardProps) {
       <ul className="flex flex-col gap-2">
         {members.map((m) => (
           <li key={m.uid} className="flex items-center justify-between">
-            <span>{m.explorer_name}</span>
+            <div className="flex items-center gap-2">
+              <Avatar seed={m.avatar_seed || m.uid} style={m.avatar_style || 'adventurer'} size="sm" />
+              <span>{m.explorer_name}</span>
+            </div>
             <span className="text-sm text-muted-foreground">
               Level {m.level}
             </span>

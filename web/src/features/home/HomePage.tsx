@@ -1,51 +1,39 @@
 import { useState, useEffect } from 'react'
-import { DailyTurnBanner } from '../../shared/components/molecules/DailyTurnBanner'
-import { QuestCard } from '../../shared/components/molecules/QuestCard'
-import { StreakBadge } from '../../shared/components/molecules/StreakBadge'
-import { apiClient } from '../../shared/lib/api'
-import { chestsApi } from '../../shared/lib/api'
-import type { HomeResponse, QuestView, RealmProgress, ChestView } from '../../shared/types'
-import { Link } from 'react-router-dom'
+import { useNavigate } from 'react-router-dom'
+import { motion } from 'framer-motion'
+import { Card } from '../../shared/components/atoms/Card'
+import { Button } from '../../shared/components/atoms/Button'
+import { ProgressBar } from '../../shared/components/atoms/ProgressBar'
+import { apiClient, chestsApi } from '../../shared/lib/api'
+import type { HomeResponse } from '../../shared/types'
+
+const containerVariants = {
+  hidden: { opacity: 0 },
+  show: {
+    opacity: 1,
+    transition: { staggerChildren: 0.05 }
+  }
+}
+
+const itemVariants = {
+  hidden: { opacity: 0, y: 20 },
+  show: { opacity: 1, y: 0 }
+}
 
 export function HomePage() {
+  const navigate = useNavigate()
   const [home, setHome] = useState<HomeResponse | null>(null)
   const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
   const [takingTurn, setTakingTurn] = useState(false)
-
-  const xpPercent = home ? Math.min(100, (home.player.xp % 100)) : 0
-
-  const takeTurn = async () => {
-    setTakingTurn(true)
-    setError(null)
-    try {
-      await apiClient.post('/api/daily_turns/consume', { quest_slug: 'daily-turn' })
-      await loadHome()
-    } catch (e) {
-      setError(e instanceof Error ? e.message : 'failed to take turn')
-    } finally {
-      setTakingTurn(false)
-    }
-  }
-
-  const openChest = async (chestId: number) => {
-    setError(null)
-    try {
-      await chestsApi.open(chestId)
-      await loadHome()
-    } catch (e) {
-      setError(e instanceof Error ? e.message : 'failed to open chest')
-    }
-  }
+  const [openingChestId, setOpeningChestId] = useState<number | null>(null)
 
   const loadHome = async () => {
     setLoading(true)
-    setError(null)
     try {
       const data = await apiClient.get<HomeResponse>('/api/home')
       setHome(data)
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'failed to load home')
+      console.error('Gagal memuat data beranda', e)
     } finally {
       setLoading(false)
     }
@@ -55,189 +43,186 @@ export function HomePage() {
     loadHome()
   }, [])
 
-  if (loading && !home) {
-    return <p className="p-4 text-sm text-muted-foreground">Loading...</p>
+  const takeTurn = async () => {
+    setTakingTurn(true)
+    try {
+      await apiClient.post('/api/daily_turns/consume', { quest_slug: 'daily-turn' })
+      await loadHome()
+    } catch (e) {
+      console.error('Gagal mengambil giliran', e)
+    } finally {
+      setTakingTurn(false)
+    }
   }
 
-  const greeting = `Hello, ${home?.player.explorer_name || 'Explorer'}`
+  const openChest = async (chestId: number) => {
+    setOpeningChestId(chestId)
+    try {
+      await chestsApi.open(chestId)
+      await loadHome()
+    } catch (e) {
+      console.error('Gagal membuka peti', e)
+    } finally {
+      setOpeningChestId(null)
+    }
+  }
+
+  if (loading && !home) {
+    return (
+      <div className="flex h-64 w-full items-center justify-center">
+        <div className="flex flex-col items-center gap-4 animate-pulse">
+          <div className="text-4xl">🧭</div>
+          <p className="text-sm text-text-secondary">Memuat dunia...</p>
+        </div>
+      </div>
+    )
+  }
+
+  if (!home) return null
+
+  const activeRealm = home.realm_progress.find(r => r.status === 'ACTIVE') || home.realm_progress[0]
+  const activeQuests = home.active_quests || []
+  const completedToday = home.completed_quests_today || []
+  const availableChests = home.available_chests || []
 
   return (
-    <div className="flex flex-col gap-4 p-4 pb-safe">
-      <header className="flex items-center justify-between">
-        <h1 className="text-xl font-semibold">{greeting}</h1>
-        <StreakBadge days={home?.daily_turn.streak_days ?? 0} />
-      </header>
+    <motion.div 
+      className="flex flex-col gap-6 max-w-md mx-auto pb-8"
+      variants={containerVariants}
+      initial="hidden"
+      animate="show"
+    >
+      {/* 1. Sapaan - Odyssey Vibe */}
+      <motion.section variants={itemVariants} className="mt-2 text-center md:text-left">
+        <h1 className="font-heading text-3xl text-text-primary mb-1">Halo, Keluarga Starseekers!</h1>
+        <p className="text-text-secondary text-sm italic">
+          Setiap langkah yang kita ambil bersama akan menuliskan bab baru dalam legenda kita.
+        </p>
+      </motion.section>
 
-      <section className="flex items-center gap-3 rounded-lg border border-border bg-surface p-3">
-        <div className="flex-1">
-          <p className="text-xs text-muted-foreground">Level {home?.player.level ?? 1} Explorer</p>
-          <div className="mt-1 h-2 w-full rounded-full bg-border">
-            <div
-              className="h-2 rounded-full bg-primary transition-all"
-              style={{ width: `${xpPercent}%` }}
-            />
-          </div>
-          <div className="mt-1 flex items-center justify-between text-xs text-muted-foreground">
-            <span>{home?.player.xp ?? 0} XP</span>
-            <span className="flex items-center gap-1">
-              <span>🪙</span>
-              <span>{home?.player.coins ?? 0} Coins</span>
+      {/* 2. Progres Dunia */}
+      <motion.section variants={itemVariants} className="relative overflow-hidden rounded-2xl border border-accent-magic/30 bg-surface shadow-xl">
+        <div className="absolute inset-0 bg-gradient-to-t from-accent-magic/10 to-transparent"></div>
+        <div className="relative z-10 p-5 flex flex-col gap-4">
+          <div className="flex justify-between items-center">
+            <span className="text-accent-magic text-xs font-bold tracking-wider uppercase flex items-center gap-2">
+              <span>🌍</span> Ranah Cerita Saat Ini
             </span>
+            <span className="text-accent-magic font-bold">{activeRealm ? activeRealm.progress : 0}%</span>
           </div>
-        </div>
-      </section>
-
-      <DailyTurnBanner
-        remaining={home?.daily_turn.remaining_turns ?? 0}
-        onTakeTurn={takeTurn}
-        loading={takingTurn}
-      />
-      {error && <p className="text-xs text-red-500">{error}</p>}
-
-      {home?.realm_progress && home.realm_progress.length > 0 && (
-        <section className="flex flex-col gap-2">
-          <h2 className="text-sm font-medium text-muted-foreground">Realm Progress</h2>
-          {home.realm_progress.map((realm: RealmProgress) => (
-            <div key={realm.realm} className="rounded-lg border border-border bg-surface p-3">
-              <div className="flex items-center justify-between">
-                <h3 className="font-semibold capitalize">{realm.realm.replace(/-/g, ' ')}</h3>
-                <span className="text-xs text-muted-foreground">{realm.status}</span>
-              </div>
-              <div className="mt-1 h-2 w-full rounded-full bg-border">
-                <div
-                  className="h-2 rounded-full bg-primary transition-all"
-                  style={{ width: `${realm.progress}%` }}
-                />
-              </div>
-              <p className="mt-1 text-xs text-muted-foreground">{realm.progress}% complete</p>
-            </div>
-          ))}
-        </section>
-      )}
-
-      {home?.available_chests && home.available_chests.length > 0 && (
-        <section className="flex flex-col gap-2">
-          <h2 className="text-sm font-medium text-muted-foreground">Available Chests</h2>
-          {home.available_chests.map((chest: ChestView) => (
-            <button
-              key={chest.id}
-              onClick={() => openChest(chest.id)}
-              className="rounded-lg border border-border bg-surface p-3 text-left transition hover:border-accent"
-            >
-              <div className="flex items-center gap-3">
-                <span className="text-2xl">{chest.icon}</span>
-                <div className="flex-1">
-                  <p className="font-medium">{chest.name}</p>
-                  <p className="text-xs text-muted-foreground">{chest.description}</p>
-                </div>
-                <span className="text-xs text-accent">Open</span>
-              </div>
-            </button>
-          ))}
-        </section>
-      )}
-
-      {home?.latest_relic && (
-        <section className="flex flex-col gap-2">
-          <div className="flex items-center justify-between">
-            <h2 className="text-sm font-medium text-muted-foreground">Latest Relic</h2>
-            <Link to="/relics" className="text-xs text-accent">View all</Link>
-          </div>
-          <div className="rounded-lg border border-border bg-surface p-3">
-            <div className="flex items-center gap-3">
-              <span className="text-3xl">{home.latest_relic.image}</span>
-              <div className="flex-1">
-                <p className="font-medium">{home.latest_relic.name}</p>
-                <p className="text-xs text-muted-foreground">{home.latest_relic.description}</p>
-              </div>
-            </div>
-          </div>
-        </section>
-      )}
-
-      <section className="flex flex-col gap-2">
-        <div className="flex items-center justify-between">
-          <h2 className="text-sm font-medium text-muted-foreground">Collection Progress</h2>
-          <Link to="/relics" className="text-xs text-accent">View all</Link>
-        </div>
-        <div className="rounded-lg border border-border bg-surface p-3">
-          <div className="flex items-center justify-between">
-            <span className="text-sm font-medium">
-              {home?.collection_progress.collected ?? 0} / {home?.collection_progress.total ?? 0}
-            </span>
-            <span className="text-xs text-muted-foreground">Relics</span>
-          </div>
-          <div className="mt-2 h-2 w-full rounded-full bg-border">
-            <div
-              className="h-2 rounded-full bg-accent transition-all"
-              style={{
-                width: home?.collection_progress.total
-                  ? `${(home.collection_progress.collected / home.collection_progress.total) * 100}%`
-                  : '0%',
-              }}
-            />
-          </div>
-        </div>
-      </section>
-
-      {home?.completed_quests_today && home.completed_quests_today.length > 0 && (
-        <section className="flex flex-col gap-2">
-          <h2 className="text-sm font-medium text-muted-foreground">Completed Today</h2>
-          {home.completed_quests_today.map((q: QuestView) => (
-            <QuestCard key={q.id} quest={q} />
-          ))}
-        </section>
-      )}
-
-      {(home?.pending_creative_review ?? 0) > 0 && (
-        <section className="flex flex-col gap-2">
-          <h2 className="text-sm font-medium text-muted-foreground">Pending Creative Review</h2>
-          <p className="text-sm text-muted-foreground">
-            {home!.pending_creative_review} submission{home!.pending_creative_review === 1 ? '' : 's'} awaiting review
+          <h2 className="font-heading text-3xl text-text-primary capitalize">
+            {activeRealm ? activeRealm.realm.replace(/-/g, ' ') : 'Misteri Belum Terungkap'}
+          </h2>
+          <ProgressBar progress={activeRealm ? activeRealm.progress : 0} colorClass="bg-accent-magic" />
+          <p className="text-xs text-text-secondary text-center mt-2">
+            Selesaikan tantangan bersama untuk mengungkap cerita selanjutnya.
           </p>
-        </section>
-      )}
+        </div>
+      </motion.section>
 
-      {home?.last_submission && (
-        <section className="flex flex-col gap-2">
-          <h2 className="text-sm font-medium text-muted-foreground">Last Submission</h2>
-          <div className="rounded-lg border border-border bg-surface p-3">
-            <div className="flex items-center justify-between">
-              <span className="text-sm font-medium">{home.last_submission.kind}</span>
-              <span className="text-xs text-muted-foreground">{home.last_submission.status}</span>
-            </div>
-            <p className="mt-1 text-sm text-muted-foreground line-clamp-2">
-              {home.last_submission.content}
-            </p>
+      {/* 3. Giliran Harian */}
+      <motion.section variants={itemVariants} className="flex flex-col mt-2">
+        <h2 className="font-heading text-xl text-text-primary mb-3 flex items-center gap-2">
+          <span>✍️</span> Tugas Harian
+        </h2>
+        <Card className="flex flex-row items-center justify-between p-4 bg-surface border-l-4 border-l-accent-nature">
+          <div className="flex flex-col gap-1">
+            <h3 className="font-medium text-text-primary text-sm">Giliran Hari Ini</h3>
+            <p className="text-xs text-text-secondary">Runtutan: {home.daily_turn.streak_days} Hari 🔥</p>
           </div>
-        </section>
+          <Button 
+            variant="secondary" 
+            size="sm"
+            onClick={takeTurn}
+            isLoading={takingTurn}
+            disabled={!home.daily_turn.available}
+          >
+            {home.daily_turn.available ? 'Kerjakan' : 'Selesai'}
+          </Button>
+        </Card>
+      </motion.section>
+
+      {/* 4. Petualangan Aktif Keluarga */}
+      <motion.section variants={itemVariants} className="flex flex-col gap-3 mt-2">
+        <div className="flex items-center justify-between">
+          <h2 className="font-heading text-xl text-text-primary flex items-center gap-2">
+            <span className="text-accent-reward">📜</span> Buku Misi Aktif
+          </h2>
+          <Button variant="ghost" size="sm" onClick={() => navigate('/quests')}>Lihat Semua</Button>
+        </div>
+        
+        {activeQuests.length > 0 ? (
+          <div className="flex flex-col gap-3">
+            {activeQuests.map(quest => (
+              <Card 
+                key={quest.id} 
+                className="flex justify-between items-center p-5 bg-surface-elevated border border-border-subtle cursor-pointer hover:border-accent-reward/50 transition-colors shadow-sm hover:shadow-md"
+                onClick={() => navigate(`/quests/${quest.id}`)}
+              >
+                <div>
+                  <h3 className="font-medium text-text-primary text-lg mb-1">{quest.title}</h3>
+                  <p className="text-xs text-text-secondary">
+                    {quest.completed_count}/{quest.challenge_count} Tantangan Selesai
+                  </p>
+                </div>
+                <div className="text-accent-reward text-xl">➡️</div>
+              </Card>
+            ))}
+          </div>
+        ) : (
+          <Card className="p-6 text-center border-dashed border-border-subtle bg-surface/50">
+            <p className="text-text-secondary text-sm">Tidak ada cerita yang aktif saat ini. Beristirahatlah sejenak dan bicarakan petualangan esok hari!</p>
+          </Card>
+        )}
+      </motion.section>
+
+      {/* 5. Peti Harta */}
+      {availableChests.length > 0 && (
+        <motion.section variants={itemVariants} className="flex flex-col mt-2 gap-3">
+          <h2 className="font-heading text-xl text-text-primary flex items-center gap-2">
+            <span>🎁</span> Harta Karun Tersedia
+          </h2>
+          <div className="grid grid-cols-2 gap-3">
+            {availableChests.map(chest => (
+              <Card key={chest.id} className="flex flex-col items-center justify-center p-4 bg-surface gap-2 text-center border-accent-reward/30">
+                <span className="text-4xl drop-shadow-md">📦</span>
+                <span className="text-xs text-text-secondary font-medium">Dari {chest.source.replace('_', ' ')}</span>
+                <Button 
+                  size="sm" 
+                  className="w-full mt-2"
+                  onClick={() => openChest(chest.id)}
+                  isLoading={openingChestId === chest.id}
+                >
+                  Buka
+                </Button>
+              </Card>
+            ))}
+          </div>
+        </motion.section>
       )}
 
-      <section className="flex flex-col gap-2">
-        <h2 className="text-sm font-medium text-muted-foreground">Active Quests</h2>
-        {loading ? (
-          <p className="text-sm text-muted-foreground">Loading quests...</p>
-        ) : (
-          home?.active_quests && home.active_quests.length > 0 ? (
-            home.active_quests.map((q: QuestView) => (
-              <QuestCard key={q.id} quest={q} isMyTurn={q.active_challenge_assigned_to === home?.player.uid} />
-            ))
-          ) : (
-            <p className="text-sm text-muted-foreground">No active quests. Check back soon!</p>
-          )
-        )}
-      </section>
+      {/* 6. Aktivitas Keluarga Hari Ini */}
+      {completedToday.length > 0 && (
+        <motion.section variants={itemVariants} className="flex flex-col mt-2 gap-3">
+          <h2 className="font-heading text-xl text-text-primary flex items-center gap-2">
+            <span>🏆</span> Jejak Hari Ini
+          </h2>
+          <div className="flex flex-col gap-2">
+            {completedToday.map(quest => (
+              <Card key={quest.id} className="flex items-center gap-3 p-3 bg-surface/50 border-border-subtle">
+                <div className="bg-accent-reward/20 text-accent-reward p-2 rounded-full">
+                  ✓
+                </div>
+                <div>
+                  <h4 className="text-sm font-medium text-text-primary">{quest.title}</h4>
+                  <p className="text-xs text-text-secondary">Telah diselesaikan oleh kru</p>
+                </div>
+              </Card>
+            ))}
+          </div>
+        </motion.section>
+      )}
 
-      <section className="mt-4 flex gap-2">
-        <Link to="/creative" className="flex-1 rounded-lg bg-surface border border-border p-3 text-center transition-colors hover:border-primary">
-          <p className="text-sm font-semibold text-primary">Family Journal</p>
-          <p className="text-xs text-muted-foreground mt-1">Read your stories</p>
-        </Link>
-        <Link to="/journal" className="flex-1 rounded-lg bg-surface border border-border p-3 text-center transition-colors hover:border-accent">
-          <p className="text-sm font-semibold text-accent">Milestones</p>
-          <p className="text-xs text-muted-foreground mt-1">Lore & Achievements</p>
-        </Link>
-      </section>
-    </div>
+    </motion.div>
   )
 }

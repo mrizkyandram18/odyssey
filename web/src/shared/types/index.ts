@@ -54,6 +54,8 @@ export interface Explorer {
   level: number
   xp: number
   coins: number
+  avatar_style: string
+  avatar_seed: string
   created_at: string
   updated_at: string
 }
@@ -427,6 +429,8 @@ export interface PlayerSection {
   level: number
   xp: number
   coins: number
+  avatar_style: string
+  avatar_seed: string
   created_at: string
   updated_at: string
   xp_to_next: number

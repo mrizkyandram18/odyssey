@@ -280,11 +280,12 @@ type PlayerAchievement struct {
 
 // Reaction represents a peer reaction to a crew's action (e.g. quest, submission).
 type Reaction struct {
-	ID           string    `json:"id"`
-	CreatorID    string    `json:"creator_id"`
-	TargetUserID string    `json:"target_user_id"`
-	QuestID      *string   `json:"quest_id,omitempty"`
-	EmojiCode    string    `json:"emoji_code"`
+	ID           int64     `json:"id"`
+	CrewID       string    `json:"crew_id"`
+	TargetType   string    `json:"target_type"`
+	TargetID     int64     `json:"target_id"`
+	ActorUID     string    `json:"actor_uid"`
+	ReactionType string    `json:"reaction_type"`
 	CreatedAt    time.Time `json:"created_at"`
 }
 

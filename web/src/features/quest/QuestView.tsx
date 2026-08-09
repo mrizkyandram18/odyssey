@@ -2,31 +2,43 @@ import { Link } from 'react-router-dom'
 import { QuestDetail } from '../../shared/components/organisms/QuestDetail'
 import { useQuest } from '../../shared/hooks/useQuest'
 
+
 export function QuestView({ questId }: { questId: number }) {
   const { quest, challenges, loading, error, startQuest, completeChallenge } = useQuest(questId)
 
   if (loading) {
     return (
-      <div className="flex flex-col gap-4 p-4 pb-safe">
-        <Link to="/" className="text-sm text-muted-foreground">← Back to Home</Link>
-        <p className="text-sm text-muted-foreground">Loading quest details...</p>
+      <div className="flex flex-col max-w-4xl mx-auto py-8">
+        <Link to="/quests" className="text-sm font-medium text-text-secondary hover:text-text-primary transition-colors mb-8 inline-flex items-center gap-2">
+          <span>←</span> Back to Quests
+        </Link>
+        <div className="flex h-64 w-full items-center justify-center">
+          <div className="flex flex-col items-center gap-4 animate-pulse">
+            <div className="text-4xl">📜</div>
+            <p className="text-sm text-text-secondary">Unrolling the scroll...</p>
+          </div>
+        </div>
       </div>
     )
   }
 
   if (error || !quest) {
     return (
-      <div className="flex flex-col gap-4 p-4 pb-safe">
-        <Link to="/" className="text-sm text-muted-foreground">← Back to Home</Link>
-        <p className="text-sm text-error">{error || 'Quest not found.'}</p>
+      <div className="flex flex-col max-w-4xl mx-auto py-8">
+        <Link to="/quests" className="text-sm font-medium text-text-secondary hover:text-text-primary transition-colors mb-8 inline-flex items-center gap-2">
+          <span>←</span> Back to Quests
+        </Link>
+        <div className="bg-accent-danger/10 border border-accent-danger/30 p-6 rounded-lg text-center">
+          <p className="text-lg font-medium text-accent-danger">{error || 'Quest not found.'}</p>
+        </div>
       </div>
     )
   }
 
   return (
-    <div className="flex flex-col gap-4 p-4 pb-safe">
-      <Link to="/" className="text-sm text-muted-foreground hover:text-primary transition-colors">
-        ← Back to Home
+    <div className="flex flex-col max-w-4xl mx-auto py-4">
+      <Link to="/quests" className="text-sm font-medium text-text-secondary hover:text-text-primary transition-colors mb-6 inline-flex items-center gap-2">
+        <span>←</span> Back to Quests
       </Link>
       <QuestDetail
         quest={quest}

@@ -14,6 +14,7 @@ type ProfileStore interface {
 	GetUserProfile(ctx context.Context, uid string) (*UserProfile, error)
 	GetPasswordHash(ctx context.Context, uid string) (string, error)
 	GetBoundDeviceID(ctx context.Context, uid string) (string, error)
+	UpdateAvatar(ctx context.Context, uid string, style, seed string) error
 }
 
 type supabaseProfileStore struct {
@@ -86,4 +87,17 @@ func (s *supabaseProfileStore) GetBoundDeviceID(ctx context.Context, uid string)
 		return "", nil
 	}
 	return rows[0].DeviceID, nil
+}
+
+func (s *supabaseProfileStore) UpdateAvatar(ctx context.Context, uid string, style, seed string) error {
+	payload := map[string]string{
+		"avatar_style": style,
+		"avatar_seed":  seed,
+	}
+	params := s.buildFilter(uid)
+	_, err := s.client.Mutate(ctx, "PATCH", "odyssey_user_profiles", payload, params)
+	if err != nil {
+		return fmt.Errorf("update avatar: %w", err)
+	}
+	return nil
 }

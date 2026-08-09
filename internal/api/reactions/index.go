@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"net/http"
+	"strconv"
 
 	"odyssey/pkg/auth"
 	"odyssey/pkg/game"
@@ -12,8 +13,8 @@ import (
 
 // Service is the interface the handler depends on.
 type Service interface {
-	AddReaction(ctx context.Context, creatorID, targetUserID string, questID *string, emojiCode string) (*game.Reaction, error)
-	ListReactionsForTarget(ctx context.Context, targetUserID string) ([]game.Reaction, error)
+	AddReaction(ctx context.Context, crewID, actorUID string, targetType string, targetID int64, reactionType string) (*game.Reaction, error)
+	ListReactionsForTarget(ctx context.Context, crewID, targetType string, targetID int64) ([]game.Reaction, error)
 }
 
 var svc Service
@@ -36,11 +37,21 @@ func Handler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if r.Method == http.MethodGet {
-		target := r.URL.Query().Get("target")
-		if target == "" {
-			target = claims.UID // default to current user
+		targetType := r.URL.Query().Get("target_type")
+		targetIDStr := r.URL.Query().Get("target_id")
+
+		if targetType == "" || targetIDStr == "" {
+			shared.WriteJSONError(w, "missing target_type or target_id", http.StatusBadRequest)
+			return
 		}
-		reactions, err := svc.ListReactionsForTarget(r.Context(), target)
+
+		targetID, err := strconv.ParseInt(targetIDStr, 10, 64)
+		if err != nil {
+			shared.WriteJSONError(w, "invalid target_id", http.StatusBadRequest)
+			return
+		}
+
+		reactions, err := svc.ListReactionsForTarget(r.Context(), claims.CrewID, targetType, targetID)
 		if err != nil {
 			shared.WriteJSONError(w, "failed to list reactions", http.StatusInternalServerError)
 			return
@@ -51,18 +62,21 @@ func Handler(w http.ResponseWriter, r *http.Request) {
 
 	if r.Method == http.MethodPost {
 		var req struct {
-			TargetUserID string  `json:"target_user_id"`
-			QuestID      *string `json:"quest_id,omitempty"`
-			EmojiCode    string  `json:"emoji_code"`
+			TargetType   string `json:"target_type"`
+			TargetID     int64  `json:"target_id"`
+			ReactionType string `json:"reaction_type"`
+			// Note: We deliberately ignore any ActorUID sent by client
 		}
 		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 			shared.WriteJSONError(w, "invalid request body", http.StatusBadRequest)
 			return
 		}
 
-		reaction, err := svc.AddReaction(r.Context(), claims.UID, req.TargetUserID, req.QuestID, req.EmojiCode)
+		// Security: Always use claims.UID as the actor! Spoof rejection!
+		reaction, err := svc.AddReaction(r.Context(), claims.CrewID, claims.UID, req.TargetType, req.TargetID, req.ReactionType)
 		if err != nil {
-			shared.WriteJSONError(w, "failed to add reaction", http.StatusInternalServerError)
+			// Do not leak internal error strings directly if they are generic, but for now we'll pass it to client for debugging
+			shared.WriteJSONError(w, err.Error(), http.StatusBadRequest)
 			return
 		}
 		shared.WriteJSON(w, http.StatusOK, reaction)

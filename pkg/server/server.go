@@ -240,7 +240,7 @@ func BuildHandler() (*Server, error) {
 	apiLore.Setup(loreSvc)
 	apiAchievements.Setup(achieveSvc)
 
-	reactionSvc := social.NewReactionService(repo.Reactions)
+	reactionSvc := social.NewReactionService(repo.Reactions, repo.CreativeSubmissions, repo.Quests)
 	apiReactions.Setup(reactionSvc)
 
 	crews.Setup(repo.Crews)

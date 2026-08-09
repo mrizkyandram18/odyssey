@@ -32,6 +32,13 @@ export class ApiClient {
     })
   }
 
+  async patch<T>(path: string, body: unknown): Promise<T> {
+    return this.request<T>(path, {
+      method: 'PATCH',
+      body: JSON.stringify(body),
+    })
+  }
+
   async request<T>(path: string, options: RequestInit = {}): Promise<T> {
     const session = getSession()
     const isAuthenticated = session !== null && !isSessionExpired(session)
@@ -98,4 +105,56 @@ export const achievementsApi = {
 
 export const loreApi = {
   list: () => apiClient.get<LoreView[]>('/api/lore'),
+}
+
+export type ReactionType = 'HEART' | 'CLAP' | 'STAR'
+export type TargetType = 'JOURNAL' | 'QUEST'
+
+export interface ReactionRow {
+  id: number
+  crew_id: string
+  target_type: TargetType
+  target_id: number
+  actor_uid: string
+  reaction_type: ReactionType
+  created_at: string
+}
+
+export interface ReactionsResponse {
+  reactions: ReactionRow[]
+}
+
+/** Derived state computed client-side from the raw API response.
+ *  The backend returns full rows including actor_uid. We derive counts
+ *  and myReaction by matching actor_uid == session UID.
+ *  We NEVER send actor_uid to the backend — only receive it here for display.
+ */
+export interface ReactionState {
+  counts: Record<ReactionType, number>
+  myReaction: ReactionType | null
+}
+
+export function deriveReactionState(rows: ReactionRow[], myUID: string): ReactionState {
+  const counts: Record<ReactionType, number> = { HEART: 0, CLAP: 0, STAR: 0 }
+  let myReaction: ReactionType | null = null
+  for (const r of rows) {
+    if (r.reaction_type in counts) {
+      counts[r.reaction_type as ReactionType]++
+    }
+    if (r.actor_uid === myUID) {
+      myReaction = r.reaction_type as ReactionType
+    }
+  }
+  return { counts, myReaction }
+}
+
+export const reactionsApi = {
+  list: (targetType: TargetType, targetId: number): Promise<ReactionsResponse> =>
+    apiClient.get<ReactionsResponse>(`/api/reactions?target_type=${targetType}&target_id=${targetId}`),
+  upsert: (targetType: TargetType, targetId: number, reactionType: ReactionType): Promise<ReactionRow> =>
+    apiClient.post<ReactionRow>('/api/reactions', {
+      target_type: targetType,
+      target_id: targetId,
+      reaction_type: reactionType,
+    }),
 }

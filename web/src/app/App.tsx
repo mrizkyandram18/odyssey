@@ -3,6 +3,7 @@ import { ProtectedRoute } from '../shared/components/ProtectedRoute'
 import { PublicRoute } from '../shared/components/PublicRoute'
 import { LoginPage } from '../features/login/LoginPage'
 import { HomePage } from '../features/home/HomePage'
+import { QuestsPage } from '../features/quest/QuestsPage'
 import { QuestView } from '../features/quest/QuestView'
 import { FamilyTimeline } from '../features/creative/FamilyTimeline'
 import { JournalPage } from '../features/journal/JournalPage'
@@ -21,6 +22,7 @@ export function App() {
 
       <Route element={<ProtectedRoute />}>
         <Route index element={<HomePage />} />
+        <Route path="/quests" element={<QuestsPage />} />
         <Route path="/quests/:questId" element={<QuestRoute />} />
         <Route path="/creative" element={<FamilyTimeline />} />
         <Route path="/journal" element={<JournalPage />} />

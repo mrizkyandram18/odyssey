@@ -1,6 +1,7 @@
 package me
 
 import (
+	"encoding/json"
 	"errors"
 	"net/http"
 
@@ -18,7 +19,7 @@ func Setup(p db.ProfileStore) {
 func Handler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 
-	if r.Method != http.MethodGet {
+	if r.Method != http.MethodGet && r.Method != http.MethodPatch {
 		shared.WriteJSONError(w, "method not allowed", http.StatusMethodNotAllowed)
 		return
 	}
@@ -36,6 +37,35 @@ func Handler(w http.ResponseWriter, r *http.Request) {
 
 	if profiles == nil {
 		shared.WriteJSONError(w, "server not configured", http.StatusServiceUnavailable)
+		return
+	}
+
+	if r.Method == http.MethodPatch {
+		if r.URL.Path != "/api/me/avatar" && r.URL.Path != "/api/me/avatar/" {
+			shared.WriteJSONError(w, "not found", http.StatusNotFound)
+			return
+		}
+
+		var req struct {
+			Style string `json:"avatar_style"`
+			Seed  string `json:"avatar_seed"`
+		}
+		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+			shared.WriteJSONError(w, "invalid request body", http.StatusBadRequest)
+			return
+		}
+
+		if req.Style == "" || req.Seed == "" {
+			shared.WriteJSONError(w, "style and seed are required", http.StatusBadRequest)
+			return
+		}
+
+		if err := profiles.UpdateAvatar(r.Context(), claims.UID, req.Style, req.Seed); err != nil {
+			shared.WriteJSONError(w, "failed to update avatar", http.StatusInternalServerError)
+			return
+		}
+
+		shared.WriteJSON(w, http.StatusOK, map[string]string{"status": "success"})
 		return
 	}
 
