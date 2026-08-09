@@ -80,7 +80,7 @@ export function ProfilePage() {
           <div className="flex flex-col items-center gap-3 shrink-0">
             <Avatar seed={profile.avatar_seed || profile.uid} style={profile.avatar_style || 'adventurer'} size="xl" />
             <Button 
-              variant="outline" 
+              variant="ghost" 
               className="text-xs py-1 px-3 flex items-center gap-1 opacity-70 hover:opacity-100"
               onClick={async () => {
                 const newSeed = Math.random().toString(36).substring(2, 10);

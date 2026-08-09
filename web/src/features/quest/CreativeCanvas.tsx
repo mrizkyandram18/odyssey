@@ -1,5 +1,5 @@
-import React, { useRef, useState } from 'react'
-import { ReactSketchCanvas, ReactSketchCanvasRef } from 'react-sketch-canvas'
+import { useRef, useState } from 'react'
+import { ReactSketchCanvas, type ReactSketchCanvasRef } from 'react-sketch-canvas'
 
 export interface CreativeCanvasProps {
   onSubmit: (svg: string) => void
