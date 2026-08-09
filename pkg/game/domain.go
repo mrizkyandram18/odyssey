@@ -86,6 +86,7 @@ const (
 	SubmissionComic SubmissionKind = "COMIC"
 	SubmissionPhoto SubmissionKind = "PHOTO"
 	SubmissionVideo SubmissionKind = "VIDEO"
+	SubmissionDrawing SubmissionKind = "DRAWING"
 )
 
 // SubmissionStatus is the review state of a creative submission.
