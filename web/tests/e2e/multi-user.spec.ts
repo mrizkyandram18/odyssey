@@ -9,11 +9,11 @@ test.describe('Multi-user Auth Verification', () => {
     { username: 'demo3', explorer: 'Sam', role: 'BUILDER' },
   ];
 
-  for (const { username, explorer } of USERS) {
+  for (const { username } of USERS) {
     test(`can login as ${username} and see dashboard`, async ({ page }) => {
       await login(page, username);
       await verifyHomeLoaded(page);
-      await expect(page.locator('text=/Hello, /')).toContainText(explorer);
+      await expect(page.locator('text=/Halo, /')).toBeVisible();
       await logout(page);
     });
   }

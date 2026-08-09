@@ -17,14 +17,14 @@ export async function verifyHomeLoaded(page: Page) {
       )
       .catch(() => null),
     page
-      .locator('text="Loading..."')
+      .locator('text="Memuat dunia..."')
       .waitFor({ state: 'hidden', timeout: HOME_LOAD_TIMEOUT_MS })
       .catch(() => null),
   ]);
 
-  await expect(page.locator('text="Loading..."')).toBeHidden({ timeout: HOME_LOAD_TIMEOUT_MS });
+  await expect(page.locator('text="Memuat dunia..."')).toBeHidden({ timeout: HOME_LOAD_TIMEOUT_MS });
   await expect(
-    page.locator('text="Active Quests"').or(page.locator('text="Quests"')),
+    page.locator('text="Buku Misi Aktif"').or(page.locator('text="Quests"')),
   ).toBeVisible({ timeout: HOME_LOAD_TIMEOUT_MS });
 }
 
