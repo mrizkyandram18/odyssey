@@ -1,6 +1,5 @@
 import { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
-import { ExplorerIcon } from '../../shared/components/atoms/ExplorerIcon'
 import { Button } from '../../shared/components/atoms/Button'
 import { ProgressBar } from '../../shared/components/atoms/ProgressBar'
 import { Card } from '../../shared/components/atoms/Card'

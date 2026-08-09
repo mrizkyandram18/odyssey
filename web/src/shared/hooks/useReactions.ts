@@ -16,8 +16,6 @@ interface UseReactionsResult {
   react: (reactionType: ReactionType) => Promise<void>
 }
 
-const EMPTY_STATE: ReactionState = { counts: { HEART: 0, CLAP: 0, STAR: 0 }, myReaction: null }
-
 /**
  * useReactions — canonical hook for reading and writing peer reactions.
  *

@@ -5,6 +5,52 @@ import { Button } from '../../shared/components/atoms/Button'
 import { questsApi } from '../../shared/lib/api'
 import type { QuestView } from '../../shared/types'
 
+const QuestList = ({ title, list, emptyMsg }: { title: string, list: QuestView[], emptyMsg: string }) => (
+  <section className="mb-10">
+    <h2 className="font-heading text-2xl text-text-primary mb-4 border-b border-border-subtle pb-2">{title}</h2>
+    {list.length === 0 ? (
+      <Card className="text-center py-8 opacity-60 bg-transparent border-dashed">
+        <p className="text-text-secondary">{emptyMsg}</p>
+      </Card>
+    ) : (
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        {list.map(quest => (
+          <Card key={quest.id} hoverable className="flex flex-col">
+            <div className="flex justify-between items-start mb-3">
+              <div>
+                <h3 className="font-heading text-xl text-text-primary">{quest.title}</h3>
+                <p className="text-xs text-accent-magic uppercase tracking-wider">{quest.template_slug.replace(/-/g, ' ')}</p>
+              </div>
+              {quest.status === 'ACTIVE' && <span className="text-xs font-bold bg-accent-magic/20 text-accent-magic px-2 py-1 rounded">ACTIVE</span>}
+              {quest.status === 'DONE' && <span className="text-xs font-bold bg-accent-nature/20 text-accent-nature px-2 py-1 rounded">DONE</span>}
+            </div>
+            
+            <div className="flex items-center gap-2 mb-6">
+              <div className="h-1.5 flex-1 bg-surface-elevated rounded-full overflow-hidden">
+                <div 
+                  className={`h-full rounded-full transition-all ${quest.status === 'DONE' ? 'bg-accent-nature' : 'bg-accent-magic'}`}
+                  style={{ width: `${quest.challenge_count > 0 ? (quest.completed_count / quest.challenge_count) * 100 : 0}%` }}
+                />
+              </div>
+              <span className="text-xs text-text-secondary whitespace-nowrap">
+                {quest.completed_count} / {quest.challenge_count}
+              </span>
+            </div>
+            
+            <div className="mt-auto">
+              <Link to={`/quests/${quest.id}`} className="block">
+                <Button variant={quest.status === 'ACTIVE' ? 'primary' : 'secondary'} className="w-full">
+                  {quest.status === 'DONE' ? 'Review Quest' : 'View Details'}
+                </Button>
+              </Link>
+            </div>
+          </Card>
+        ))}
+      </div>
+    )}
+  </section>
+)
+
 export function QuestsPage() {
   const [quests, setQuests] = useState<QuestView[]>([])
   const [loading, setLoading] = useState(true)
@@ -39,51 +85,7 @@ export function QuestsPage() {
   const pendingQuests = quests.filter(q => q.status === 'PENDING')
   const completedQuests = quests.filter(q => q.status === 'DONE')
 
-  const QuestList = ({ title, list, emptyMsg }: { title: string, list: QuestView[], emptyMsg: string }) => (
-    <section className="mb-10">
-      <h2 className="font-heading text-2xl text-text-primary mb-4 border-b border-border-subtle pb-2">{title}</h2>
-      {list.length === 0 ? (
-        <Card className="text-center py-8 opacity-60 bg-transparent border-dashed">
-          <p className="text-text-secondary">{emptyMsg}</p>
-        </Card>
-      ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {list.map(quest => (
-            <Card key={quest.id} hoverable className="flex flex-col">
-              <div className="flex justify-between items-start mb-3">
-                <div>
-                  <h3 className="font-heading text-xl text-text-primary">{quest.title}</h3>
-                  <p className="text-xs text-accent-magic uppercase tracking-wider">{quest.template_slug.replace(/-/g, ' ')}</p>
-                </div>
-                {quest.status === 'ACTIVE' && <span className="text-xs font-bold bg-accent-magic/20 text-accent-magic px-2 py-1 rounded">ACTIVE</span>}
-                {quest.status === 'DONE' && <span className="text-xs font-bold bg-accent-nature/20 text-accent-nature px-2 py-1 rounded">DONE</span>}
-              </div>
-              
-              <div className="flex items-center gap-2 mb-6">
-                <div className="h-1.5 flex-1 bg-surface-elevated rounded-full overflow-hidden">
-                  <div 
-                    className={`h-full rounded-full transition-all ${quest.status === 'DONE' ? 'bg-accent-nature' : 'bg-accent-magic'}`}
-                    style={{ width: `${quest.challenge_count > 0 ? (quest.completed_count / quest.challenge_count) * 100 : 0}%` }}
-                  />
-                </div>
-                <span className="text-xs text-text-secondary whitespace-nowrap">
-                  {quest.completed_count} / {quest.challenge_count}
-                </span>
-              </div>
-              
-              <div className="mt-auto">
-                <Link to={`/quests/${quest.id}`} className="block">
-                  <Button variant={quest.status === 'ACTIVE' ? 'primary' : 'secondary'} className="w-full">
-                    {quest.status === 'DONE' ? 'Review Quest' : 'View Details'}
-                  </Button>
-                </Link>
-              </div>
-            </Card>
-          ))}
-        </div>
-      )}
-    </section>
-  )
+
 
   return (
     <div className="max-w-5xl mx-auto flex flex-col gap-6">
