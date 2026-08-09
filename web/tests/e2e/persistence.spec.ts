@@ -20,6 +20,6 @@ test.describe('Persistence Domain', () => {
     
     // verify we can still navigate and data is there
     await navigateToJournal(page);
-    await expect(page.locator('h1:has-text("Milestones")')).toBeVisible();
+    await expect(page.locator('h1:has-text("Milestones")').first()).toBeVisible();
   });
 });

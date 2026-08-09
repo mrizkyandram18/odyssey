@@ -13,8 +13,8 @@ test.describe('Quest Domain', () => {
   });
 
   test('can complete a challenge in a quest', async ({ page }) => {
-    await startQuest(page, 'Riddle of the Stones');
-    await completeChallenge(page, 'Find a stone or brick and describe its shape.');
+    await startQuest(page, 'Bab 6: Gerbang Roda Gigi');
+    await completeChallenge(page, 'Peran 1 (Builder): Gambar sebuah lingkaran roda gigi di kertas.');
     await verifyXpIncreased(page);
   });
 });

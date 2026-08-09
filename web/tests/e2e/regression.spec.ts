@@ -11,7 +11,7 @@ test.describe('Regression: Routing & Navigation', () => {
 
     await page.goto('/#/quests/103');
     await expect(page).toHaveURL(/.*#\/quests\/103$/);
-    await expect(page.locator('h1')).toContainText('Riddle of the Stones');
+    await expect(page.locator('h1')).toContainText('Bab 3: Melodi dari Dedaunan');
   });
 
   test('browser back and forward navigation', async ({ page }) => {
