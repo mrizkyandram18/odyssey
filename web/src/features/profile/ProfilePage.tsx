@@ -114,6 +114,15 @@ export function ProfilePage() {
                 <span className="text-text-secondary">{profile.xp} XP</span>
               </div>
               <ProgressBar progress={xpPercent} colorClass="bg-accent-reward shadow-[0_0_10px_rgba(245,158,11,0.5)]" />
+              <div
+                className="mt-3 flex items-center justify-between rounded-md border border-accent-reward/20 bg-accent-reward/5 px-3 py-2"
+                data-testid="profile-coin-balance"
+              >
+                <span className="text-xs font-bold uppercase tracking-wider text-text-secondary">Coins</span>
+                <span className="text-sm font-bold text-accent-reward tabular-nums">
+                  🪙 {profile.coins ?? 0}
+                </span>
+              </div>
             </div>
           </div>
         </div>
@@ -138,18 +147,25 @@ export function ProfilePage() {
                 {profile.uid}
               </span>
             </div>
+            <div className="flex justify-between items-center py-2 border-b border-border-subtle/50">
+              <span className="text-sm text-text-secondary font-medium">Coin balance</span>
+              <span className="text-sm font-bold text-accent-reward tabular-nums">🪙 {profile.coins ?? 0}</span>
+            </div>
           </div>
         </Card>
 
-        {/* Ledger */}
+        {/* Ledger — earn history (Slice 2.1: no spending yet) */}
         <Card className="p-6 flex flex-col max-h-[300px]">
-          <h3 className="font-heading text-xl text-text-primary mb-4 flex items-center gap-2">
-            <span>🪙</span> Spoils
+          <h3 className="font-heading text-xl text-text-primary mb-1 flex items-center gap-2">
+            <span>🪙</span> Coin ledger
           </h3>
+          <p className="text-xs text-text-secondary mb-4">
+            Earn history only. Quest +5 · Daily turn +1. Spending not available yet.
+          </p>
           
           <div className="flex-1 overflow-y-auto pr-2 custom-scrollbar space-y-3">
             {ledgers.length === 0 ? (
-              <p className="text-sm text-text-secondary italic text-center py-8">No treasures claimed yet.</p>
+              <p className="text-sm text-text-secondary italic text-center py-8">No coin rewards yet. Complete a quest or daily turn.</p>
             ) : (
               ledgers.slice(0, 15).map((l) => (
                 <div key={l.id} className="flex justify-between items-center bg-surface p-3 rounded border border-border-subtle hover:border-accent-reward/30 transition-colors">

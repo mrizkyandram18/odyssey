@@ -26,15 +26,28 @@ for real money.
 There is **no** exchange rate between any resource and real money. There is
 **no** shop that accepts real payment. There is **no** paywall.
 
+## Coins (Slice 2.1 — earn only)
+
+| Event | Amount | Ledger source | Notes |
+|---|---:|---|---|
+| Quest completed | **+5** | `QUEST_COMPLETED` | Once per quest instance (`quest_id` in metadata) |
+| Daily turn completed | **+1** | `DAILY_STREAK` | Once per successful daily consume |
+
+- Balance lives on `odyssey_user_profiles.coins`.
+- Earn history lives on `odyssey_reward_ledgers`.
+- **Spending, trade, gift, and premium unlocks are not available in Slice 2.1.**
+- Coins are fictional only — never real money.
+
 ## Earning
 
 Resources are earned through the core loop:
 
 - **Daily turn completion:** A small, fixed XP reward. Enough to feel
-  meaningful but not enough to skip other activities.
+  meaningful but not enough to skip other activities. Also grants **+1 Coin**
+  (Slice 2.1).
 - **Quest completion:** XP + a **Chest** (with known contents) scaled by quest
   difficulty and number of participants. Group quests reward slightly more
-  per person to incentivize cooperation.
+  per person to incentivize cooperation. Also grants **+5 Coins** (Slice 2.1).
 - **Creative contributions:** Inspiration is awarded when a family member
   contributes to a creative space and receives peer reactions.
 - **First Discovery:** The first family member to complete a challenge type or

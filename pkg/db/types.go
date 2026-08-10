@@ -23,14 +23,15 @@ type UserProfile struct {
 }
 
 // RewardLedger is the DB representation of a reward transaction.
+// Metadata is RawMessage so both JSON objects and strings from PostgREST parse cleanly.
 type RewardLedger struct {
-	ID         string    `db:"id"`
-	UserID     string    `db:"user_id"`
-	Source     string    `db:"source"`
-	Amount     int64     `db:"amount"`
-	RewardType string    `db:"reward_type"`
-	Metadata   *string   `db:"metadata"`
-	CreatedAt  time.Time `db:"created_at"`
+	ID         string          `json:"id" db:"id"`
+	UserID     string          `json:"user_id" db:"user_id"`
+	Source     string          `json:"source" db:"source"`
+	Amount     int64           `json:"amount" db:"amount"`
+	RewardType string          `json:"reward_type" db:"reward_type"`
+	Metadata   json.RawMessage `json:"metadata" db:"metadata"`
+	CreatedAt  time.Time       `json:"created_at" db:"created_at"`
 }
 
 type Crew struct {

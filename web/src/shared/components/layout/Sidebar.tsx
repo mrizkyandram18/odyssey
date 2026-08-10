@@ -34,7 +34,10 @@ export function Sidebar() {
             <Avatar seed={profile.avatar_seed || profile.uid} style={profile.avatar_style || 'adventurer'} size="xl" />
           </div>
           <h2 className="font-semibold text-lg text-text-primary">{profile.explorer_name}</h2>
-          <p className="text-xs text-text-secondary mb-3">Level {profile.level} {profile.role}</p>
+          <p className="text-xs text-text-secondary mb-1">Level {profile.level} {profile.role}</p>
+          <p className="text-xs font-semibold text-accent-reward mb-3 tabular-nums" data-testid="sidebar-coin-balance">
+            🪙 {profile.coins ?? 0} coins
+          </p>
           
           <div className="w-full relative group">
             <ProgressBar progress={xpPercent} colorClass="bg-accent-nature" />

@@ -387,6 +387,8 @@ func BuildHandler() (*Server, error) {
 	mux.HandleFunc("/api/achievements/", secure(mw.RequireAuth(apiAchievements.Handler)))
 	mux.HandleFunc("/api/reactions", secure(mw.RequireAuth(apiReactions.Handler)))
 	mux.HandleFunc("/api/reactions/", secure(mw.RequireAuth(apiReactions.Handler)))
+	mux.HandleFunc("/api/rewards", secure(mw.RequireAuth(rewards.Handler)))
+	mux.HandleFunc("/api/rewards/", secure(mw.RequireAuth(rewards.Handler)))
 	mux.HandleFunc("/api/admin", secure(rateLimit(adminLimiter, mw.RequireRole(auth.RoleAdmin)(admin.Handler))))
 	mux.HandleFunc("/api/admin/", secure(rateLimit(adminLimiter, mw.RequireRole(auth.RoleAdmin)(admin.Handler))))
 

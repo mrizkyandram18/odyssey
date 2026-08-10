@@ -1,8 +1,10 @@
 import { useState, useEffect, useCallback } from 'react'
 import { questsApi } from '../lib/api'
 import type { QuestWithChallenges, CompleteChallengeResult } from '../types'
+import { useSession } from './useSession'
 
 export function useQuest(questId?: number) {
+  const { refreshProfile } = useSession()
   const [data, setData] = useState<QuestWithChallenges | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -49,6 +51,11 @@ export function useQuest(questId?: number) {
         setData(result.quest)
       } else {
         await fetchQuest()
+      }
+      // Quest completion grants +5 coins server-side; refresh session profile so
+      // Home/Profile/Sidebar balance is not stale after CREATE_MEMORY / navigate away.
+      if (result?.quest_completed) {
+        await refreshProfile()
       }
       return result
     } catch (e) {

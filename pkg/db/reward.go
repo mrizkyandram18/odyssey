@@ -26,7 +26,13 @@ func (s *RewardLedgerStore) CreateLedger(ctx context.Context, ledger *game.Rewar
 		"created_at":  ledger.CreatedAt,
 	}
 	if ledger.Metadata != nil {
-		payload["metadata"] = ledger.Metadata
+		// Store as JSON value (object/array) when possible so JSONB stays structured.
+		var raw any
+		if err := json.Unmarshal([]byte(*ledger.Metadata), &raw); err == nil {
+			payload["metadata"] = raw
+		} else {
+			payload["metadata"] = *ledger.Metadata
+		}
 	}
 
 	_, err := s.client.Mutate(ctx, "POST", "odyssey_reward_ledgers", payload, "")
@@ -50,13 +56,18 @@ func (s *RewardLedgerStore) ListByUser(ctx context.Context, userID string) ([]ga
 
 	result := make([]game.RewardLedger, len(ledgers))
 	for i, l := range ledgers {
+		var meta *string
+		if len(l.Metadata) > 0 && string(l.Metadata) != "null" {
+			s := string(l.Metadata)
+			meta = &s
+		}
 		result[i] = game.RewardLedger{
 			ID:         l.ID,
 			UserID:     l.UserID,
 			Source:     l.Source,
 			Amount:     l.Amount,
 			RewardType: l.RewardType,
-			Metadata:   l.Metadata,
+			Metadata:   meta,
 			CreatedAt:  l.CreatedAt,
 		}
 	}
