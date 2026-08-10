@@ -61,7 +61,7 @@ test.describe('Completion Gate (quest 102 → DONE, exactly-once, realm unlock f
 
     // Final challenge completes the quest -> no 500 (realm unlock via UPSERT fix).
     expect(completeStatuses).toContain(200);
-    await expect(page.locator('span:has-text("DANGER")')).toBeVisible({ timeout: 15_000 });
+    await expect(page.locator('span:has-text("COMPLETED")')).toBeVisible({ timeout: 15_000 });
     await expect(page.locator('.text-accent-danger')).toBeHidden();
 
     const xp1 = await meXP(page);
