@@ -31,7 +31,8 @@ strategy, and reward integration deferral.
 
 ## Phase 1 — MVP: The First Adventure (Weeks 1—4)
 
-**Status:** Complete (UI/UX Finished, Vercel Deployed)
+**Status:** **COMPLETE** (2026-08-10) — code + demo DB seed + ops smoke  
+**Evidence:** [docs/release/mvp_phase1_ops_verification.md](release/mvp_phase1_ops_verification.md) · tag `v0.1.0`
 
 **Goal:** Ship the smallest complete cooperative loop that delivers a real
 "aha" moment.
