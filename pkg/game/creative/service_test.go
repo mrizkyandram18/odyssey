@@ -441,8 +441,9 @@ func TestSubmit_PublishesCreativeSubmissionEvent(t *testing.T) {
 	if ev.UID != "user-1" {
 		t.Errorf("expected UID user-1, got %s", ev.UID)
 	}
-	if ev.CrewID != "crew-1" {
-		t.Errorf("expected CrewID crew-1, got %s", ev.CrewID)
+	// CrewID is taken from the quest row (c1), not the request payload.
+	if ev.CrewID != "c1" {
+		t.Errorf("expected CrewID c1, got %s", ev.CrewID)
 	}
 	if ev.QuestID != 1 {
 		t.Errorf("expected QuestID 1, got %d", ev.QuestID)

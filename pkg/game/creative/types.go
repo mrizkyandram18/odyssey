@@ -25,10 +25,10 @@ type SubmissionView struct {
 
 // SubmitRequest is the incoming payload for creating a submission.
 type SubmitRequest struct {
-	QuestID     int64
-	ChallengeID int64
-	Kind        game.SubmissionKind
-	Content     string
+	QuestID     int64               `json:"quest_id"`
+	ChallengeID int64               `json:"challenge_id"`
+	Kind        game.SubmissionKind `json:"kind"`
+	Content     string              `json:"content"`
 }
 
 // ListByQuestResult holds the result of a ListByQuest call.
