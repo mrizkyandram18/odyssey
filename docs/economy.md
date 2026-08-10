@@ -26,16 +26,26 @@ for real money.
 There is **no** exchange rate between any resource and real money. There is
 **no** shop that accepts real payment. There is **no** paywall.
 
-## Coins (Slice 2.1 — earn only)
+## Coins (Slice 2.1 earn + Slice 2.2 spend)
+
+### Earn (unchanged)
 
 | Event | Amount | Ledger source | Notes |
 |---|---:|---|---|
 | Quest completed | **+5** | `QUEST_COMPLETED` | Once per quest instance (`quest_id` in metadata) |
 | Daily turn completed | **+1** | `DAILY_STREAK` | Once per successful daily consume |
 
+### Spend (Slice 2.2 — one cosmetic)
+
+| Item | Price | Ledger source | Notes |
+|---|---:|---|---|
+| **Gold Avatar Frame** (`avatar_frame_gold`) | **−3** | `COSMETIC_PURCHASE` | Once per explorer; unique ownership |
+
 - Balance lives on `odyssey_user_profiles.coins`.
-- Earn history lives on `odyssey_reward_ledgers`.
-- **Spending, trade, gift, and premium unlocks are not available in Slice 2.1.**
+- History lives on `odyssey_reward_ledgers` (earns positive, spends negative).
+- Ownership: `odyssey_cosmetic_unlocks` with `UNIQUE (uid, cosmetic_id)` (retry-safe).
+- Equipped frame: `odyssey_user_profiles.avatar_frame` (`none` \| `gold`).
+- **No trade, gift, marketplace, or premium real-money path.**
 - Coins are fictional only — never real money.
 
 ## Earning
@@ -57,6 +67,8 @@ Resources are earned through the core loop:
 
 ## Spending
 
+- **Slice 2.2 Gold Avatar Frame:** costs **3 Coins** once; unlocks a gold
+  portrait ring. Idempotent (cannot double-charge).
 - **Chests:** Contain known, fixed contents (Relics, cosmetics, creative
   tool unlocks). Contents are revealed before opening; there is no
   randomization that simulates gambling.
@@ -64,9 +76,8 @@ Resources are earned through the core loop:
   types, sticker packs, custom colors) cost Inspiration.
 - **Story reveals:** Occasionally a story scene is unlocked through a
   milestone rather than a cost, creating a sense of earned discovery.
-- **Cosmetics:** Outfits, effects, and realm themes are unlocked through
-  Explorer Levels and milestones. Rare cosmetics are high-XP goals, never
-  purchases.
+- **Other cosmetics:** Further outfits/effects remain progression or future
+  slices — not a large shop in 2.2.
 
 ## Balance Philosophy
 

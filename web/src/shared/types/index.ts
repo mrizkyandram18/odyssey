@@ -56,8 +56,35 @@ export interface Explorer {
   coins: number
   avatar_style: string
   avatar_seed: string
+  /** Slice 2.2 equipped frame: none | gold */
+  avatar_frame?: string
   created_at: string
   updated_at: string
+}
+
+export interface CosmeticCatalogItem {
+  id: string
+  name: string
+  description: string
+  price: number
+  kind: string
+  value: string
+  unlocked: boolean
+}
+
+export interface CosmeticsResponse {
+  coins: number
+  items: CosmeticCatalogItem[]
+  avatar_frame: string
+}
+
+export interface CosmeticPurchaseResult {
+  status: 'purchased' | 'already_owned' | string
+  cosmetic_id: string
+  price: number
+  coins: number
+  avatar_frame: string
+  already_owned: boolean
 }
 
 export type MeResponse = Explorer

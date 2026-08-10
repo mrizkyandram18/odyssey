@@ -31,7 +31,12 @@ export function Sidebar() {
       {profile && (
         <div className="mb-8 px-2 flex flex-col items-center text-center">
           <div className="w-20 h-20 rounded-full border-2 border-accent-nature p-1 bg-surface-glass mb-3 relative overflow-hidden">
-            <Avatar seed={profile.avatar_seed || profile.uid} style={profile.avatar_style || 'adventurer'} size="xl" />
+            <Avatar
+              seed={profile.avatar_seed || profile.uid}
+              style={profile.avatar_style || 'adventurer'}
+              frame={profile.avatar_frame || 'none'}
+              size="xl"
+            />
           </div>
           <h2 className="font-semibold text-lg text-text-primary">{profile.explorer_name}</h2>
           <p className="text-xs text-text-secondary mb-1">Level {profile.level} {profile.role}</p>
