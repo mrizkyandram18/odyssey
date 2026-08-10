@@ -1,6 +1,12 @@
 import { useState } from 'react'
 import { apiClient } from '../../lib/api'
 
+/**
+ * STALE (Phase 2a superseded): posts legacy fields (target_user_id / emoji_code)
+ * that no longer match /api/reactions (target_type / target_id / reaction_type).
+ * Prefer ConnectedReactionBar + useReactions for JOURNAL reactions.
+ * Kept for reference only — do not wire into new UI.
+ */
 export interface ReactionPickerProps {
   targetUserId: string
   questId?: string
