@@ -6,13 +6,16 @@ package cosmetic
 const (
 	// CosmeticAvatarFrameGold is the only paid cosmetic in Slice 2.2.
 	CosmeticAvatarFrameGold = "avatar_frame_gold"
+	CosmeticAvatarFrameSilver = "avatar_frame_silver"
 
 	// PriceAvatarFrameGold is the fixed coin price for the gold frame.
 	PriceAvatarFrameGold int64 = 3
+	PriceAvatarFrameSilver int64 = 2
 
 	// Frame values stored on odyssey_user_profiles.avatar_frame.
 	FrameNone = "none"
 	FrameGold = "gold"
+	FrameSilver = "silver"
 
 	SourceCosmeticPurchase = "COSMETIC_PURCHASE"
 	RewardTypeCoins        = "COINS"
@@ -37,6 +40,14 @@ var Catalog = []Item{
 		Price:       PriceAvatarFrameGold,
 		Kind:        "avatar_frame",
 		Value:       FrameGold,
+	},
+	{
+		ID:          CosmeticAvatarFrameSilver,
+		Name:        "Silver Avatar Frame",
+		Description: "A sleek silver ring around your explorer portrait.",
+		Price:       PriceAvatarFrameSilver,
+		Kind:        "avatar_frame",
+		Value:       FrameSilver,
 	},
 }
 

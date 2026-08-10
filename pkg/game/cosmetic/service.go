@@ -16,6 +16,7 @@ var (
 	ErrUnknownCosmetic   = errors.New("unknown cosmetic")
 	ErrInsufficientCoins = errors.New("insufficient coins")
 	ErrConcurrent        = errors.New("concurrent modification")
+	ErrNotOwned          = errors.New("not owned")
 )
 
 // UnlockStore persists cosmetic ownership.
@@ -85,10 +86,9 @@ func (s *Service) ListForUser(ctx context.Context, uid string) (*ListResult, err
 	for _, it := range Catalog {
 		items = append(items, CatalogItemView{Item: it, Unlocked: ownedSet[it.ID]})
 	}
-	frame := FrameNone
-	// Prefer equipped frame from unlock of gold if we only equip via purchase.
-	if ownedSet[CosmeticAvatarFrameGold] {
-		frame = FrameGold
+	frame := player.AvatarFrame
+	if frame == "" {
+		frame = FrameNone
 	}
 	return &ListResult{Coins: player.Coins, Items: items, Frame: frame}, nil
 }
@@ -201,4 +201,35 @@ func (s *Service) Purchase(ctx context.Context, uid, cosmeticID string) (*Purcha
 		AvatarFrame:  item.Value,
 		AlreadyOwned: false,
 	}, nil
+}
+
+// Equip sets the user's equipped cosmetic, verifying ownership if not "none".
+func (s *Service) Equip(ctx context.Context, uid, cosmeticID string) error {
+	if cosmeticID == "none" {
+		if s.frames != nil {
+			return s.frames.SetAvatarFrame(ctx, uid, "none")
+		}
+		return nil
+	}
+
+	item, ok := Lookup(cosmeticID)
+	if !ok {
+		return ErrUnknownCosmetic
+	}
+	if item.Kind != "avatar_frame" {
+		return fmt.Errorf("cosmetic is not a frame")
+	}
+
+	has, err := s.unlocks.Has(ctx, uid, cosmeticID)
+	if err != nil {
+		return fmt.Errorf("check ownership: %w", err)
+	}
+	if !has {
+		return ErrNotOwned
+	}
+
+	if s.frames != nil {
+		return s.frames.SetAvatarFrame(ctx, uid, item.Value)
+	}
+	return nil
 }

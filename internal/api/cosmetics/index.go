@@ -15,6 +15,7 @@ import (
 type Service interface {
 	ListForUser(ctx context.Context, uid string) (*cosmetic.ListResult, error)
 	Purchase(ctx context.Context, uid, cosmeticID string) (*cosmetic.PurchaseResult, error)
+	Equip(ctx context.Context, uid, cosmeticID string) error
 }
 
 var svc Service
@@ -45,6 +46,8 @@ func Handler(w http.ResponseWriter, r *http.Request) {
 		handleList(w, r, claims.UID)
 	case r.Method == http.MethodPost && (path == "/api/cosmetics/purchase" || path == "/api/cosmetics/purchase/"):
 		handlePurchase(w, r, claims.UID)
+	case r.Method == http.MethodPost && (path == "/api/cosmetics/equip" || path == "/api/cosmetics/equip/"):
+		handleEquip(w, r, claims.UID)
 	default:
 		shared.WriteJSONError(w, "method not allowed", http.StatusMethodNotAllowed)
 	}
@@ -83,4 +86,28 @@ func handlePurchase(w http.ResponseWriter, r *http.Request, uid string) {
 		return
 	}
 	shared.WriteJSON(w, http.StatusOK, res)
+}
+
+func handleEquip(w http.ResponseWriter, r *http.Request, uid string) {
+	var req struct {
+		CosmeticID string `json:"cosmetic_id"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil || req.CosmeticID == "" {
+		shared.WriteJSONError(w, "cosmetic_id is required", http.StatusBadRequest)
+		return
+	}
+
+	err := svc.Equip(r.Context(), uid, req.CosmeticID)
+	if err != nil {
+		switch {
+		case errors.Is(err, cosmetic.ErrUnknownCosmetic):
+			shared.WriteJSONError(w, err.Error(), http.StatusBadRequest)
+		case errors.Is(err, cosmetic.ErrNotOwned):
+			shared.WriteJSONError(w, err.Error(), http.StatusForbidden)
+		default:
+			shared.WriteJSONError(w, "equip failed", http.StatusInternalServerError)
+		}
+		return
+	}
+	shared.WriteJSON(w, http.StatusOK, map[string]string{"status": "equipped"})
 }

@@ -57,7 +57,7 @@ export function ProfilePage() {
         coins: number
         avatar_frame: string
       }>('/api/cosmetics/purchase', { cosmetic_id: item.id })
-      setFrame(res.avatar_frame || 'gold')
+      setFrame(res.avatar_frame || item.value)
       setShopMsg(res.already_owned ? 'Already unlocked — no charge.' : `Unlocked! Spent ${item.price} coins.`)
       await Promise.all([refreshProfile(), loadCosmetics()])
       const led = await apiClient.get<RewardLedgerEntry[]>('/api/rewards')
@@ -66,6 +66,18 @@ export function ProfilePage() {
       setShopError(e instanceof Error ? e.message : 'Purchase failed')
     } finally {
       setBuying(false)
+    }
+  }
+
+  const equipCosmetic = async (cosmeticId: string) => {
+    setShopError(null)
+    setShopMsg(null)
+    try {
+      await apiClient.post('/api/cosmetics/equip', { cosmetic_id: cosmeticId })
+      await Promise.all([refreshProfile(), loadCosmetics()])
+      setShopMsg(cosmeticId === 'none' ? 'Frame unequipped.' : 'Frame equipped.')
+    } catch (e) {
+      setShopError(e instanceof Error ? e.message : 'Equip failed')
     }
   }
 
@@ -214,22 +226,40 @@ export function ProfilePage() {
                   </p>
                 </div>
               </div>
-              {item.unlocked ? (
-                <span className="text-xs font-bold uppercase tracking-wider text-accent-nature self-start sm:self-center">
-                  Equipped
-                </span>
-              ) : (
-                <Button
-                  size="sm"
-                  variant="secondary"
-                  isLoading={buying}
-                  disabled={buying || (profile.coins ?? 0) < item.price}
-                  onClick={() => void purchaseGoldFrame(item)}
-                  data-testid="buy-gold-frame"
-                >
-                  {(profile.coins ?? 0) < item.price ? 'Need more coins' : `Buy for ${item.price} 🪙`}
-                </Button>
-              )}
+              <div className="flex gap-2 self-start sm:self-center">
+                {item.unlocked ? (
+                  frame === item.value ? (
+                    <Button
+                      size="sm"
+                      variant="secondary"
+                      onClick={() => void equipCosmetic('none')}
+                      data-testid={`unequip-${item.id}`}
+                    >
+                      Unequip
+                    </Button>
+                  ) : (
+                    <Button
+                      size="sm"
+                      variant="primary"
+                      onClick={() => void equipCosmetic(item.id)}
+                      data-testid={`equip-${item.id}`}
+                    >
+                      Equip
+                    </Button>
+                  )
+                ) : (
+                  <Button
+                    size="sm"
+                    variant="secondary"
+                    isLoading={buying}
+                    disabled={buying || (profile.coins ?? 0) < item.price}
+                    onClick={() => void purchaseGoldFrame(item)}
+                    data-testid={`buy-${item.id}`}
+                  >
+                    {(profile.coins ?? 0) < item.price ? 'Need more coins' : `Buy for ${item.price} 🪙`}
+                  </Button>
+                )}
+              </div>
             </div>
           ))}
           {cosmetics.length === 0 && (

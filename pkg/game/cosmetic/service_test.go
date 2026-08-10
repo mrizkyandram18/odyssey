@@ -112,17 +112,21 @@ func (m *mockUnlocks) Delete(ctx context.Context, uid, cosmeticID string) error 
 
 type mockFrames struct {
 	frame string
+	users *mockUsers
 }
 
 func (m *mockFrames) SetAvatarFrame(ctx context.Context, uid, frame string) error {
 	m.frame = frame
+	if m.users != nil && m.users.player != nil && m.users.player.UID == uid {
+		m.users.player.AvatarFrame = frame
+	}
 	return nil
 }
 
 func newSvc(coins int64, unlocks *mockUnlocks) (*Service, *mockUsers, *mockLedgers, *mockFrames) {
 	users := &mockUsers{player: &game.Player{UID: "u1", Coins: coins, Version: 1}}
 	ledgers := &mockLedgers{}
-	frames := &mockFrames{}
+	frames := &mockFrames{users: users}
 	if unlocks == nil {
 		unlocks = &mockUnlocks{owned: map[string]bool{}}
 	}
@@ -222,7 +226,7 @@ func TestListForUser_ShowsUnlockAndBalance(t *testing.T) {
 	if err != nil {
 		t.Fatalf("List: %v", err)
 	}
-	if list.Coins != 6 || len(list.Items) != 1 || list.Items[0].Unlocked {
+	if list.Coins != 6 || len(list.Items) != 2 || list.Items[0].Unlocked {
 		t.Fatalf("unexpected list: %+v", list)
 	}
 	// after purchase
@@ -250,4 +254,48 @@ func TestPurchase_LedgerBalanceConsistency(t *testing.T) {
 		t.Fatalf("balance inconsistency: before=%d ledgerSum=%d coins=%d", before, ledgerSum, users.player.Coins)
 	}
 	_ = time.Now()
+}
+
+func TestEquip_Success(t *testing.T) {
+	unlocks := &mockUnlocks{owned: map[string]bool{key("u1", CosmeticAvatarFrameGold): true}}
+	svc, _, _, frames := newSvc(10, unlocks)
+	
+	err := svc.Equip(context.Background(), "u1", CosmeticAvatarFrameGold)
+	if err != nil {
+		t.Fatalf("Equip failed: %v", err)
+	}
+	if frames.frame != FrameGold {
+		t.Fatalf("expected gold frame equipped, got %s", frames.frame)
+	}
+}
+
+func TestEquip_NotOwned(t *testing.T) {
+	svc, _, _, _ := newSvc(10, nil)
+	
+	err := svc.Equip(context.Background(), "u1", CosmeticAvatarFrameGold)
+	if err != ErrNotOwned {
+		t.Fatalf("expected ErrNotOwned, got %v", err)
+	}
+}
+
+func TestEquip_Unknown(t *testing.T) {
+	svc, _, _, _ := newSvc(10, nil)
+	
+	err := svc.Equip(context.Background(), "u1", "unknown")
+	if err != ErrUnknownCosmetic {
+		t.Fatalf("expected ErrUnknownCosmetic, got %v", err)
+	}
+}
+
+func TestEquip_None(t *testing.T) {
+	svc, _, _, frames := newSvc(10, nil)
+	frames.frame = FrameGold // pretend it was gold
+	
+	err := svc.Equip(context.Background(), "u1", "none")
+	if err != nil {
+		t.Fatalf("Equip none failed: %v", err)
+	}
+	if frames.frame != "none" {
+		t.Fatalf("expected none frame equipped, got %s", frames.frame)
+	}
 }

@@ -16,6 +16,7 @@ type Player struct {
 	Level        int       `json:"level"`
 	XP           int64     `json:"xp"`
 	Coins        int64     `json:"coins"`
+	AvatarFrame  string    `json:"avatar_frame"`
 	Version      int       `json:"version"`
 	CreatedAt    time.Time `json:"created_at"`
 	UpdatedAt    time.Time `json:"updated_at"`
