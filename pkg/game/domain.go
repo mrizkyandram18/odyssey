@@ -309,3 +309,12 @@ type RewardLedger struct {
 	Metadata   *string   `json:"metadata"`
 	CreatedAt  time.Time `json:"created_at"`
 }
+
+// CosmeticUnlock is ownership of a paid cosmetic for one explorer.
+type CosmeticUnlock struct {
+	ID          int64     `json:"id"`
+	UID         string    `json:"uid"`
+	CosmeticID  string    `json:"cosmetic_id"`
+	PricePaid   int64     `json:"price_paid"`
+	PurchasedAt time.Time `json:"purchased_at"`
+}

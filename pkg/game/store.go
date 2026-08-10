@@ -172,6 +172,14 @@ type RewardLedgerStore interface {
 	ListByUser(ctx context.Context, userID string) ([]RewardLedger, error)
 }
 
+// CosmeticUnlockStore manages paid cosmetic ownership.
+type CosmeticUnlockStore interface {
+	ListByUser(ctx context.Context, uid string) ([]CosmeticUnlock, error)
+	Has(ctx context.Context, uid, cosmeticID string) (bool, error)
+	CreateIfAbsent(ctx context.Context, uid, cosmeticID string, pricePaid int64) (created bool, err error)
+	Delete(ctx context.Context, uid, cosmeticID string) error
+}
+
 // Repository groups all persistence interfaces for convenient dependency injection.
 type Repository struct {
 	Users               UserStore
@@ -194,6 +202,7 @@ type Repository struct {
 	Reactions           ReactionStore
 	Activity            ActivityStore
 	RewardLedgers       RewardLedgerStore
+	CosmeticUnlocks     CosmeticUnlockStore
 }
 
 // BuildRepository is a package placeholder. Concrete repository construction

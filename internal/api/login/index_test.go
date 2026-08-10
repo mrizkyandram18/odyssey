@@ -59,6 +59,10 @@ func (m *mockProfileStore) GetBoundDeviceID(ctx context.Context, uid string) (st
 	return "", nil
 }
 
+func (m *mockProfileStore) SetAvatarFrame(_ context.Context, _, _ string) error {
+	return nil
+}
+
 func (m *mockProfileStore) UpdateAvatar(_ context.Context, _ string, _, _ string) error {
 	return nil
 }

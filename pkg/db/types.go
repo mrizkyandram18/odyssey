@@ -15,6 +15,7 @@ type UserProfile struct {
 	Coins        int64     `json:"coins"`
 	AvatarStyle  string    `json:"avatar_style"`
 	AvatarSeed   string    `json:"avatar_seed"`
+	AvatarFrame  string    `json:"avatar_frame"`
 	Version      int       `json:"version"`
 	PasswordHash string    `json:"-"`
 	DeviceID     string    `json:"device_id,omitempty"`

@@ -11,6 +11,7 @@ import (
 	"odyssey/internal/api/admin"
 	apiChapters "odyssey/internal/api/chapters"
 	"odyssey/internal/api/chests"
+	apiCosmetics "odyssey/internal/api/cosmetics"
 	"odyssey/internal/api/creative"
 	"odyssey/internal/api/crews"
 	"odyssey/internal/api/daily_turns"
@@ -32,6 +33,7 @@ import (
 	"odyssey/pkg/game/balance"
 	"odyssey/pkg/game/chapter"
 	"odyssey/pkg/game/chest"
+	"odyssey/pkg/game/cosmetic"
 	gamecreative "odyssey/pkg/game/creative"
 	"odyssey/pkg/game/dailyturn"
 	"odyssey/pkg/game/events"
@@ -233,6 +235,8 @@ func BuildHandler() (*Server, error) {
 	quests.Setup(questAPIHandler)
 	daily_turns.Setup(dailyTurnAPIHandler)
 	rewards.Setup(rewardSvc)
+	cosmeticSvc := cosmetic.NewService(repo.Users, repo.RewardLedgers, repo.CosmeticUnlocks, profileStore)
+	apiCosmetics.Setup(cosmeticSvc)
 	creative.Setup(creativeHandler)
 	apiHome.Setup(homeSvc)
 
@@ -389,6 +393,8 @@ func BuildHandler() (*Server, error) {
 	mux.HandleFunc("/api/reactions/", secure(mw.RequireAuth(apiReactions.Handler)))
 	mux.HandleFunc("/api/rewards", secure(mw.RequireAuth(rewards.Handler)))
 	mux.HandleFunc("/api/rewards/", secure(mw.RequireAuth(rewards.Handler)))
+	mux.HandleFunc("/api/cosmetics", secure(mw.RequireAuth(apiCosmetics.Handler)))
+	mux.HandleFunc("/api/cosmetics/", secure(mw.RequireAuth(apiCosmetics.Handler)))
 	mux.HandleFunc("/api/admin", secure(rateLimit(adminLimiter, mw.RequireRole(auth.RoleAdmin)(admin.Handler))))
 	mux.HandleFunc("/api/admin/", secure(rateLimit(adminLimiter, mw.RequireRole(auth.RoleAdmin)(admin.Handler))))
 
