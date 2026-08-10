@@ -1,43 +1,61 @@
 # Phase 1 MVP — Ops Verification Evidence
 
 **Date:** 2026-08-10  
-**Main tip:** `f19cceb`  
-**Verdict:** **COMPLETE** (demo DB + code path verified; see notes)
+**Main tip / expected commit:** `206a8ac` (`v0.1.0`)  
+**Verdict:** **COMPLETE** — demo DB + **production parity PASS**
 
-## Scope verified
+## Production parity (post-redeploy)
+
+| Item | Value |
+| --- | --- |
+| Expected commit | `206a8acadb80dfd05a42b60ffacb1ececaa67cc0` (`v0.1.0` / `origin/main`) |
+| Includes #15 / #16 | **Yes** (ancestors of tag) |
+| Prior production deploy | `dpl_Ck4aexJNsAWwKp1sf3WperoAXGVP` — **2026-08-10 13:00 +0700** (before #15/#16) |
+| Redeploy | **PASS** — `vercel deploy --prod` from `main@206a8ac` |
+| Deployed revision | `dpl_2RXRXs2mDoFZbkfKchWbuZaH6vCd` |
+| Deployment URL | `https://odyssey-iu3ibsr6y-muhammad-rizky-andra-muchliss-projects.vercel.app` |
+| Production alias | `https://odyssey-beta-nine.vercel.app` |
+| Deploy created | **2026-08-10 20:16:14 +0700** |
+| boot_time after redeploy | **2026-08-10T13:16:51Z** (changed vs pre-redeploy `13:14:58Z` / older `12:29:24Z`) |
+| schema_version | `022_mvp_six_quests` |
+
+### Why production lagged
+
+- Vercel project **is not GitHub-auto-deploying** this repo (GitHub Deployments API count = 0).
+- Prior production binary came from a **manual CLI deploy** at 13:00 +0700, before PRs #14–#16 landed.
+- Fixes #15/#16 therefore never reached `odyssey-beta-nine` until explicit `vercel deploy --prod`.
+
+### Production smoke (`https://odyssey-beta-nine.vercel.app`)
+
+| Check | Result | Evidence |
+| --- | --- | --- |
+| Login demo1 | **PASS** | `uid=demo-uid-1` crew `demo-crew-1` |
+| Quest load (6 WW) | **PASS** | count=6; types SOLO×4, RELAY, CREATIVE |
+| SOLO complete | **PASS** | Quest 102 DONE type=SOLO |
+| RELAY + assignment | **PASS** | Quest 104 DONE; leg2 `assigned_to=demo-uid-3` completed by demo3 |
+| CREATIVE + Story | **PASS** | Quest 105 DONE type=CREATIVE; `next=CREATE_MEMORY`; POST `/api/creative` **201** |
+| Daily turn | **PASS** | POST consume **200**, xp=10, date=2026-08-10 |
+| Progression | **PASS** | L39/3890 → L43/4200 (**+310 XP**) |
+
+## Earlier local+DB verification (pre-parity)
 
 | Item | Result | Evidence |
 | --- | --- | --- |
-| Apply `022` MVP seed (6 WW quests) | **PASS** | Scoped REST apply on `demo-crew-1` only; schema `022_mvp_six_quests` |
-| Login `demo1` | **PASS** | Local Auth `uid=demo-uid-1`, crew `demo-crew-1` |
-| Exactly 6 Whispering Woods quests | **PASS** | API list count=6; titles match matrix below |
-| SOLO start+complete | **PASS** | Quest 103 (and earlier 102 on production API) |
-| RELAY 2 legs + assignment | **PASS** | Quest 104; leg2 `assigned_to` → demo-uid-2/3; completed by other user |
-| CREATIVE + Story memory | **PASS** | Quest 105 `CREATE_MEMORY`; POST `/api/creative` **201** with CSRF |
-| Daily turn consume once | **PASS** | POST `/api/daily_turns/consume` **200**, XP awarded |
-| Progression XP delta | **PASS** | e.g. level 36→39, xp +330 during smoke (includes quests + daily) |
+| Apply `022` MVP seed (6 WW quests) | **PASS** | Scoped REST on `demo-crew-1`; schema `022_mvp_six_quests` |
+| Local binary smoke of #15/#16 | **PASS** | `go run ./internal/api/dev` against live Supabase |
 
 ## Quest matrix (demo-crew-1)
 
-| ID | Title | Type | Notes |
-| ---: | --- | --- | --- |
-| 101 | Morning Light | SOLO | PENDING at end of smoke (playable) |
-| 102 | Gather Herbs | SOLO | Completed in production API smoke |
-| 103 | Riddle of the Stones | SOLO | Completed local+live DB |
-| 104 | Shadow Trail | RELAY | Assignment handoff verified |
-| 105 | The Old Growth | CREATIVE | Story submission id=3 |
-| 106 | Forest Riddle | SOLO | PENDING (playable) |
+| ID | Title | Type |
+| ---: | --- | --- |
+| 101 | Morning Light | SOLO |
+| 102 | Gather Herbs | SOLO |
+| 103 | Riddle of the Stones | SOLO |
+| 104 | Shadow Trail | RELAY |
+| 105 | The Old Growth | CREATIVE |
+| 106 | Forest Riddle | SOLO |
 
-## Environment
-
-| Layer | Target |
-| --- | --- |
-| Database | Supabase project `hmrkssfhcxlvjzyigufd` (demo/prod shared prototype) |
-| Seed | Migration semantics of `supabase/migrations/022_seed_demo_quests.sql` applied via scoped REST (no non-demo crews touched) |
-| API for full smoke after fixes | **Local** `go run ./internal/api/dev` on `:8080` against live Supabase |
-| Production URL | `https://odyssey-beta-nine.vercel.app` — quest list/SOLO/RELAY verified; daily/creative fixes need redeploy of `f19cceb` |
-
-## Bugs found & fixed during ops (small MVP blockers)
+## Bugs fixed during MVP ops (shipped in #15/#16)
 
 | Bug | Fix | PR |
 | --- | --- | --- |
@@ -48,14 +66,14 @@
 | Missing `crew_id` on submit | Set from quest before insert | #16 |
 | Creative insert `id:0` payload | Map without identity id | #16 |
 
-## Errors / residual notes
+## Residual backlog (not release blockers)
 
-- Production Vercel instance **did not auto-redeploy** within ops window (`boot_time` stuck). Full daily/creative path verified on **local binary + live DB**. Redeploy production to pick up #15/#16.
-- `/api/home` PowerShell client hit `HOME` env var name collision (client-side only); not an app bug.
-- Phase 2 leftovers remain **untracked** and were **not** committed (`release_report_phase2b.md`, `021_seed_phase2a.sql`, extra e2e specs).
-- Gatekeeper BOTH, heavy E2E CI, multi-realm: still deferred (MVP backlog).
+- Enable Vercel **Git integration** / auto-deploy on `main` so future merges promote without manual CLI.
+- Phase 2 leftovers remain untracked (not committed): `release_report_phase2b.md`, `021_seed_phase2a.sql`, extra e2e specs.
+- Gatekeeper BOTH, heavy E2E CI, multi-realm: deferred.
 
 ## Release tag
 
-- Tag: `v0.1.0` on `main` @ `f19cceb` after this verification.
-- CI minimal (Lint / Unit / Build) green on merge PRs #14–#16.
+- Tag: **`v0.1.0`** → commit **`206a8ac`**
+- Production alias serves deployment built from that tip (manual prod redeploy after tag)
+- CI minimal (Lint / Unit / Build) green on PRs #14–#17
