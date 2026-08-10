@@ -46,6 +46,8 @@ export function QuestView({ questId }: { questId: number }) {
       <QuestDetail
         quest={quest}
         challenges={challenges}
+        members={quest.members}
+        myUID={session?.uid}
         onStartQuest={startQuest}
         onCompleteChallenge={completeChallenge}
         isMyTurn={isMyRelayTurn(quest, session?.uid)}

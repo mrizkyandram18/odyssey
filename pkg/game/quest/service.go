@@ -38,12 +38,25 @@ type ChallengeBatchReader interface {
 	ListChallengesByQuestIDs(ctx context.Context, questIDs []int64) ([]game.Challenge, error)
 }
 
+// CrewMember is the minimal explorer identity exposed in quest detail so the
+// relay rotation UI can render names instead of raw UIDs. Read-only, no
+// sensitive fields.
+type CrewMember struct {
+	UID          string `json:"uid"`
+	ExplorerName string `json:"explorer_name"`
+	Role         string `json:"role,omitempty"`
+	Level        int    `json:"level,omitempty"`
+}
+
 // QuestWithChallenges is a quest returned together with its challenge list.
 type QuestWithChallenges struct {
 	game.Quest
 	QuestType                 string           `json:"quest_type,omitempty"`
 	Challenges                []game.Challenge `json:"challenges"`
 	ActiveChallengeAssignedTo *string          `json:"active_challenge_assigned_to,omitempty"`
+	// Members is a best-effort roster of the crew (UID -> name/role) used to
+	// render relay leg ownership. Omitted when the user store is unavailable.
+	Members []CrewMember `json:"members,omitempty"`
 }
 
 // QuestView is the quest summary used for list responses.
@@ -274,7 +287,28 @@ func (s *QuestService) getWithChallenges(ctx context.Context, q *game.Quest) (*Q
 	} else {
 		result.Status = computed
 	}
+	// Best-effort crew roster for name resolution in the relay rotation UI.
+	// Never fails the request when the user store is missing or unreachable.
+	if s.users != nil {
+		if players, err := s.users.ListUsersByCrew(ctx, q.CrewID); err == nil {
+			result.Members = toCrewMembers(players)
+		}
+	}
 	return result, nil
+}
+
+// toCrewMembers maps player rows to the minimal CrewMember view.
+func toCrewMembers(players []game.Player) []CrewMember {
+	members := make([]CrewMember, 0, len(players))
+	for _, p := range players {
+		members = append(members, CrewMember{
+			UID:          p.UID,
+			ExplorerName: p.ExplorerName,
+			Role:         p.Role,
+			Level:        p.Level,
+		})
+	}
+	return members
 }
 
 // ComputeStatus determines the quest's lifecycle status from its challenges.

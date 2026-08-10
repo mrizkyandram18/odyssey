@@ -1,14 +1,18 @@
 import { useState } from 'react'
 import confetti from 'canvas-confetti'
-import type { Challenge, Quest, CompleteChallengeResult } from '../../types'
+import type { Challenge, Quest, CompleteChallengeResult, CrewMember } from '../../types'
 import { Card } from '../atoms/Card'
 import { Button } from '../atoms/Button'
 import { YourTurnBadge } from '../molecules/YourTurnBadge'
+import { RelayRotation } from '../molecules/RelayRotation'
+import { memberName } from '../../utils/relayRotation'
 import { SubmissionForm } from '../../../features/creative/SubmissionForm'
 
 export interface QuestDetailProps {
   quest: Quest
   challenges: Challenge[]
+  members?: CrewMember[]
+  myUID?: string | null
   onStartQuest?: () => Promise<void>
   onCompleteChallenge?: (challengeId: number) => Promise<CompleteChallengeResult | null>
   isMyTurn?: boolean
@@ -17,6 +21,8 @@ export interface QuestDetailProps {
 export function QuestDetail({
   quest,
   challenges,
+  members,
+  myUID,
   onStartQuest,
   onCompleteChallenge,
   isMyTurn,
@@ -144,6 +150,11 @@ export function QuestDetail({
         </Button>
       )}
 
+      {/* Relay rotation panel */}
+      {quest.quest_type === 'RELAY' && (
+        <RelayRotation quest={quest} challenges={challenges} members={members} myUID={myUID} />
+      )}
+
       {/* Challenges List */}
       <div className="mt-4">
         <h2 className="font-heading text-2xl text-text-primary mb-6">Mission Objectives</h2>
@@ -175,7 +186,9 @@ export function QuestDetail({
                         {c.description}
                       </p>
                       {isDone && c.completed_by && (
-                        <p className="text-xs text-text-secondary mt-1">Completed by {c.completed_by}</p>
+                        <p className="text-xs text-text-secondary mt-1">
+                          Completed by {memberName(members, c.completed_by)}
+                        </p>
                       )}
                     </div>
                   </div>

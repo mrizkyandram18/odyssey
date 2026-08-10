@@ -398,6 +398,92 @@ func TestGetByCrewAndID_AllDoneHasNoAssignee(t *testing.T) {
 	}
 }
 
+type mockQuestUsersStore struct {
+	players []game.Player
+	err     error
+}
+
+func (m *mockQuestUsersStore) GetUser(ctx context.Context, uid string) (*game.Player, error) {
+	return nil, m.err
+}
+func (m *mockQuestUsersStore) CreateUser(ctx context.Context, p *game.Player) error {
+	return m.err
+}
+func (m *mockQuestUsersStore) UpdateUser(ctx context.Context, uid string, patch map[string]any) error {
+	return m.err
+}
+func (m *mockQuestUsersStore) UpdateUserIfMatch(ctx context.Context, uid string, version int, patch map[string]any) (bool, error) {
+	return false, m.err
+}
+func (m *mockQuestUsersStore) ListUsersByCrew(ctx context.Context, crewID string) ([]game.Player, error) {
+	return m.players, m.err
+}
+
+func TestGetByCrewAndID_EnrichesMembers(t *testing.T) {
+	store := newMockQuestStore()
+	store.quests[1] = makeQuest(string(QuestStatusActive))
+	store.challenges[1] = []game.Challenge{
+		makeChallenge(1, string(ChallengeStatusDone)),
+		makeChallenge(2, string(ChallengeStatusPending)),
+	}
+	assigned := "user-2"
+	store.challenges[1][1].AssignedTo = &assigned
+	svc := NewQuestService(store)
+	svc.SetUserStore(&mockQuestUsersStore{players: []game.Player{
+		{UID: "user-1", ExplorerName: "Leo", Role: "SEEKER", Level: 2},
+		{UID: "user-2", ExplorerName: "Maya", Role: "GUIDE", Level: 2},
+		{UID: "user-3", ExplorerName: "Sam", Role: "BUILDER", Level: 1},
+	}})
+
+	result, err := svc.GetByCrewAndID(context.Background(), 1, "crew-1")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if len(result.Members) != 3 {
+		t.Fatalf("expected 3 members, got %d", len(result.Members))
+	}
+	if result.Members[1].UID != "user-2" || result.Members[1].ExplorerName != "Maya" || result.Members[1].Role != "GUIDE" {
+		t.Errorf("unexpected member: %+v", result.Members[1])
+	}
+}
+
+func TestGetByCrewAndID_NoUserStoreOmitsMembers(t *testing.T) {
+	store := newMockQuestStore()
+	store.quests[1] = makeQuest(string(QuestStatusActive))
+	store.challenges[1] = []game.Challenge{
+		makeChallenge(1, string(ChallengeStatusDone)),
+		makeChallenge(2, string(ChallengeStatusPending)),
+	}
+	svc := NewQuestService(store)
+
+	result, err := svc.GetByCrewAndID(context.Background(), 1, "crew-1")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if result.Members != nil {
+		t.Errorf("expected members to be omitted when no user store, got %+v", result.Members)
+	}
+}
+
+func TestGetByCrewAndID_MemberEnrichmentFailureIsBestEffort(t *testing.T) {
+	store := newMockQuestStore()
+	store.quests[1] = makeQuest(string(QuestStatusActive))
+	store.challenges[1] = []game.Challenge{
+		makeChallenge(1, string(ChallengeStatusDone)),
+		makeChallenge(2, string(ChallengeStatusPending)),
+	}
+	svc := NewQuestService(store)
+	svc.SetUserStore(&mockQuestUsersStore{err: errors.New("unreachable")})
+
+	result, err := svc.GetByCrewAndID(context.Background(), 1, "crew-1")
+	if err != nil {
+		t.Fatalf("user store failure must not fail quest detail: %v", err)
+	}
+	if result.Members != nil {
+		t.Errorf("expected members nil on store failure, got %+v", result.Members)
+	}
+}
+
 func TestCompleteChallengeForQuest_TransitionsToActive(t *testing.T) {
 	store := newMockQuestStore()
 	store.quests[1] = makeQuest(string(QuestStatusPending))

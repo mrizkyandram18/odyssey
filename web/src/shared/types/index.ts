@@ -114,6 +114,7 @@ export interface Challenge {
   slug: string
   description: string
   status: ChallengeStatus
+  assigned_to?: string | null
   completed_by?: string | null
   completed_at?: string | null
   created_at: string
@@ -390,6 +391,13 @@ export interface QuestView {
   active_challenge_assigned_to?: string
 }
 
+export interface CrewMember {
+  uid: string
+  explorer_name: string
+  role?: string
+  level?: number
+}
+
 export interface QuestWithChallenges {
   id: number
   crew_id: string
@@ -397,10 +405,12 @@ export interface QuestWithChallenges {
   title: string
   status: QuestStatus
   quest_type?: QuestType | string
+  active_challenge_assigned_to?: string
   started_at?: string | null
   completed_at?: string | null
   created_at: string
   challenges: Challenge[]
+  members?: CrewMember[]
 }
 
 export interface CompleteChallengeResult {
