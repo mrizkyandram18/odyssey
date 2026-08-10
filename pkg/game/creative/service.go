@@ -94,6 +94,8 @@ func (s *CreativeService) Submit(ctx context.Context, sub *game.Submission) (*ga
 		}
 	}
 
+	// crew_id is NOT NULL on odyssey_creative_submissions; always bind to quest crew.
+	sub.CrewID = q.CrewID
 	sub.Status = game.SubmissionStatusPending
 	sub.CreatedAt = time.Now().UTC()
 	sub.UpdatedAt = sub.CreatedAt

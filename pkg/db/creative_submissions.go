@@ -22,17 +22,16 @@ func NewCreativeSubmissionStore(client SupabaseClient) game.CreativeSubmissionSt
 }
 
 func (s *supabaseCreativeSubmissionStore) CreateSubmission(ctx context.Context, sub *game.Submission) (*game.Submission, error) {
-	now := time.Now().UTC()
-	payload := CreativeSubmission{
-		QuestID:     sub.QuestID,
-		ChallengeID: sub.ChallengeID,
-		CrewID:      sub.CrewID,
-		AuthorUID:   sub.AuthorUID,
-		Kind:        string(sub.Kind),
-		Content:     sub.Content,
-		Status:      string(sub.Status),
-		CreatedAt:   now,
-		UpdatedAt:   now,
+	// Omit id so PostgREST assigns the identity column (explicit id=0 creates
+	// invalid zero-id rows and can break subsequent serial inserts).
+	payload := map[string]any{
+		"quest_id":     sub.QuestID,
+		"challenge_id": sub.ChallengeID,
+		"crew_id":      sub.CrewID,
+		"author_uid":   sub.AuthorUID,
+		"kind":         string(sub.Kind),
+		"content":      sub.Content,
+		"status":       string(sub.Status),
 	}
 	raw, err := s.client.Mutate(ctx, "POST", "odyssey_creative_submissions", payload, "return=representation")
 	if err != nil {
