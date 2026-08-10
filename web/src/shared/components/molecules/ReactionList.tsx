@@ -1,3 +1,8 @@
+/**
+ * STALE (Phase 2a superseded): displays legacy reaction rows (emoji_code).
+ * Live UI uses ReactionBar + deriveReactionState (HEART/CLAP/STAR).
+ * Kept for reference only — do not wire into new UI.
+ */
 export interface ReactionData {
   id: string
   creator_id: string

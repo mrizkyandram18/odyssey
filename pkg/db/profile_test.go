@@ -9,9 +9,14 @@ import (
 )
 
 type mockSupabaseClient struct {
-	data     []byte
-	err      error
-	getCalls []string
+	data              []byte
+	err               error
+	getCalls          []string
+	lastMutatePayload any
+	lastMutateTable   string
+	lastMutatePrefer  string
+	lastMutateParams  string
+	lastMutateMethod  string
 }
 
 func (m *mockSupabaseClient) Get(ctx context.Context, table string, params string) ([]byte, error) {
@@ -20,10 +25,19 @@ func (m *mockSupabaseClient) Get(ctx context.Context, table string, params strin
 }
 
 func (m *mockSupabaseClient) Mutate(ctx context.Context, method, table string, payload any, params string) ([]byte, error) {
+	m.lastMutateMethod = method
+	m.lastMutateTable = table
+	m.lastMutatePayload = payload
+	m.lastMutateParams = params
 	return m.data, m.err
 }
 
 func (m *mockSupabaseClient) MutateAtomic(ctx context.Context, method, table string, payload any, params string, prefer string) ([]byte, error) {
+	m.lastMutateMethod = method
+	m.lastMutateTable = table
+	m.lastMutatePayload = payload
+	m.lastMutateParams = params
+	m.lastMutatePrefer = prefer
 	return m.data, m.err
 }
 
