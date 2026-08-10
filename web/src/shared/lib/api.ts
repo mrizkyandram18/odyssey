@@ -16,6 +16,7 @@ const API_BASE = import.meta.env.DEV ? '' : ''
 
 export class ApiClient {
   private baseURL: string
+  private csrfToken: string | null = null
 
   constructor(baseURL: string = API_BASE) {
     this.baseURL = baseURL
@@ -39,6 +40,28 @@ export class ApiClient {
     })
   }
 
+  /** Fetch CSRF token once per session for state-changing creative routes. */
+  private async ensureCsrfToken(): Promise<string | null> {
+    if (this.csrfToken && this.csrfToken.length >= 32) {
+      return this.csrfToken
+    }
+    try {
+      const resp = await fetch(this.baseURL + '/api/csrf', {
+        method: 'GET',
+        credentials: 'include',
+      })
+      if (!resp.ok) return null
+      const data = (await resp.json()) as { csrf_token?: string }
+      if (data.csrf_token && data.csrf_token.length >= 32) {
+        this.csrfToken = data.csrf_token
+        return this.csrfToken
+      }
+    } catch {
+      // Best-effort: server may still accept cookie-based CSRF if set.
+    }
+    return this.csrfToken
+  }
+
   async request<T>(path: string, options: RequestInit = {}): Promise<T> {
     const session = getSession()
     const isAuthenticated = session !== null && !isSessionExpired(session)
@@ -51,11 +74,23 @@ export class ApiClient {
       headers['X-User-Session'] = session.token
     }
 
+    const method = (options.method || 'GET').toUpperCase()
+    // Creative write routes require X-CSRF-Token (see pkg/server CSRF middleware).
+    if (method !== 'GET' && method !== 'HEAD' && method !== 'OPTIONS') {
+      if (path.startsWith('/api/creative')) {
+        const csrf = await this.ensureCsrfToken()
+        if (csrf) {
+          headers['X-CSRF-Token'] = csrf
+        }
+      }
+    }
+
     const existingHeaders = (options.headers as Record<string, string> | undefined) ?? {}
     const mergedHeaders = { ...headers, ...existingHeaders }
 
     const resp = await fetch(this.baseURL + path, {
       ...options,
+      credentials: 'include',
       headers: mergedHeaders,
     })
 
