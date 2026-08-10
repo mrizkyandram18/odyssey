@@ -7,20 +7,21 @@ import (
 )
 
 // SubmissionView is the API-safe view of a Submission.
+// JSON tags are snake_case to match the frontend CreativeSubmission contract.
 type SubmissionView struct {
-	ID              int64
-	QuestID         int64
-	ChallengeID     int64
-	CrewID          string
-	AuthorUID       string
-	Kind            game.SubmissionKind
-	Content         string
-	Status          game.SubmissionStatus
-	ReviewedBy      string
-	ReviewedAt      *time.Time
-	RejectionReason string
-	CreatedAt       time.Time
-	UpdatedAt       time.Time
+	ID              int64                 `json:"id"`
+	QuestID         int64                 `json:"quest_id"`
+	ChallengeID     int64                 `json:"challenge_id"`
+	CrewID          string                `json:"crew_id"`
+	AuthorUID       string                `json:"author_uid"`
+	Kind            game.SubmissionKind   `json:"kind"`
+	Content         string                `json:"content"`
+	Status          game.SubmissionStatus `json:"status"`
+	ReviewedBy      string                `json:"reviewed_by,omitempty"`
+	ReviewedAt      *time.Time            `json:"reviewed_at,omitempty"`
+	RejectionReason string                `json:"rejection_reason,omitempty"`
+	CreatedAt       time.Time             `json:"created_at"`
+	UpdatedAt       time.Time             `json:"updated_at"`
 }
 
 // SubmitRequest is the incoming payload for creating a submission.
