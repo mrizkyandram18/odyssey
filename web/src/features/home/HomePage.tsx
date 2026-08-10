@@ -24,17 +24,34 @@ export function HomePage() {
   const navigate = useNavigate()
   const [home, setHome] = useState<HomeResponse | null>(null)
   const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
   const [takingTurn, setTakingTurn] = useState(false)
   const [openingChestId, setOpeningChestId] = useState<number | null>(null)
 
+  // Production's serverless /api/home is a heavy aggregate (~8s warm, slower on
+  // cold start). Bound the wait so the UI never appears stuck "Memuat dunia".
+  const HOME_TIMEOUT_MS = 15_000
+
   const loadHome = async () => {
     setLoading(true)
+    setError(null)
+    const controller = new AbortController()
+    const timer = setTimeout(() => controller.abort(), HOME_TIMEOUT_MS)
     try {
-      const data = await apiClient.get<HomeResponse>('/api/home')
+      const data = await apiClient.request<HomeResponse>('/api/home', {
+        method: 'GET',
+        signal: controller.signal,
+      })
       setHome(data)
-    } catch (e) {
+    } catch (e: any) {
+      if (e?.name === 'AbortError') {
+        setError('Beranda membutuhkan waktu terlalu lama. Cek koneksi dan coba lagi.')
+      } else {
+        setError(e?.message || 'Gagal memuat data beranda.')
+      }
       console.error('Gagal memuat data beranda', e)
     } finally {
+      clearTimeout(timer)
       setLoading(false)
     }
   }
@@ -78,7 +95,18 @@ export function HomePage() {
     )
   }
 
-  if (!home) return null
+  if (!home) {
+    return (
+      <div className="flex h-64 w-full items-center justify-center max-w-md mx-auto">
+        <div className="text-center">
+          <p className="text-accent-danger mb-4">{error}</p>
+          <Button size="sm" variant="secondary" onClick={loadHome}>
+            Coba Lagi
+          </Button>
+        </div>
+      </div>
+    )
+  }
 
   const activeRealm = home.realm_progress.find(r => r.status === 'ACTIVE') || home.realm_progress[0]
   const activeQuests = home.active_quests || []
