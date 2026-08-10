@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { apiClient } from '../../shared/lib/api'
 import type { CreativeSubmission } from '../../shared/types'
 import { CreativeCard } from '../../shared/components/molecules/CreativeCard'
+import { SharedTextBoard } from './SharedTextBoard'
 
 export function FamilyTimeline() {
   const [submissions, setSubmissions] = useState<CreativeSubmission[]>([])
@@ -27,44 +28,46 @@ export function FamilyTimeline() {
     loadTimeline()
   }, [])
 
-  if (loading && submissions.length === 0) {
-    return (
-      <div className="flex h-40 items-center justify-center">
-        <p className="text-sm text-muted-foreground animate-pulse">Loading timeline...</p>
-      </div>
-    )
-  }
-
-  if (error) {
-    return (
-      <div className="flex flex-col items-center gap-2 p-8">
-        <p className="text-sm text-red-500">{error}</p>
-        <button onClick={loadTimeline} className="text-sm text-primary underline">Retry</button>
-      </div>
-    )
-  }
-
   return (
-    <div className="flex flex-col gap-6 p-4 pb-safe max-w-2xl mx-auto w-full">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold">Family Journal</h1>
-          <p className="text-sm text-muted-foreground">Stories and memories from your adventures.</p>
-        </div>
+    <div className="flex flex-col gap-8 p-4 pb-safe max-w-2xl mx-auto w-full">
+      <div>
+        <h1 className="text-2xl font-bold">Family Journal</h1>
+        <p className="text-sm text-muted-foreground">
+          Shared board notes and quest memories from your adventures.
+        </p>
       </div>
 
-      {submissions.length === 0 ? (
-        <div className="flex flex-col items-center justify-center rounded-xl border border-dashed border-border bg-surface/50 p-12 text-center">
-          <p className="text-muted-foreground">No memories yet.</p>
-          <p className="mt-1 text-sm text-muted-foreground">Complete quests to start writing your family story!</p>
+      {/* Slice 2.3: shared crew text board (append-only posts, not live collab) */}
+      <SharedTextBoard />
+
+      <section className="flex flex-col gap-4">
+        <div>
+          <h2 className="text-xl font-bold">Quest memories</h2>
+          <p className="text-sm text-muted-foreground">STORY and DRAWING submissions from completed quests.</p>
         </div>
-      ) : (
-        <div className="flex flex-col gap-4">
-          {submissions.map((sub) => (
-            <CreativeCard key={sub.id} submission={sub} />
-          ))}
-        </div>
-      )}
+
+        {loading && submissions.length === 0 ? (
+          <div className="flex h-32 items-center justify-center">
+            <p className="text-sm text-muted-foreground animate-pulse">Loading memories…</p>
+          </div>
+        ) : error ? (
+          <div className="flex flex-col items-center gap-2 p-6">
+            <p className="text-sm text-red-500">{error}</p>
+            <button onClick={loadTimeline} className="text-sm text-primary underline">Retry</button>
+          </div>
+        ) : submissions.length === 0 ? (
+          <div className="flex flex-col items-center justify-center rounded-xl border border-dashed border-border bg-surface/50 p-12 text-center">
+            <p className="text-muted-foreground">No quest memories yet.</p>
+            <p className="mt-1 text-sm text-muted-foreground">Complete quests to start writing your family story!</p>
+          </div>
+        ) : (
+          <div className="flex flex-col gap-4">
+            {submissions.map((sub) => (
+              <CreativeCard key={sub.id} submission={sub} />
+            ))}
+          </div>
+        )}
+      </section>
     </div>
   )
 }

@@ -87,6 +87,24 @@ func (m *mockQuestStore) UpdateChallengeIfMatch(ctx context.Context, challengeID
 	return true, nil
 }
 
+type mockItemsStore struct {
+	item *game.CreativeItem
+	err  error
+}
+
+func (m *mockItemsStore) CreateCreativeItem(ctx context.Context, item *game.CreativeItem) (*game.CreativeItem, error) {
+	return nil, nil
+}
+func (m *mockItemsStore) GetCreativeItem(ctx context.Context, id int64) (*game.CreativeItem, error) {
+	if m.err != nil {
+		return nil, m.err
+	}
+	return m.item, nil
+}
+func (m *mockItemsStore) ListCreativeItemsByCrew(ctx context.Context, crewID, kind string) ([]game.CreativeItem, error) {
+	return nil, nil
+}
+
 func TestReactionService_AddReaction_Valid(t *testing.T) {
 	rs := &mockReactionStore{}
 	cs := &mockCreativeStore{sub: &game.Submission{ID: 10, CrewID: "crew-A"}}
@@ -100,6 +118,32 @@ func TestReactionService_AddReaction_Valid(t *testing.T) {
 	}
 	if r.TargetType != "JOURNAL" || r.ReactionType != "STAR" {
 		t.Errorf("wrong reaction returned: %+v", r)
+	}
+}
+
+func TestReactionService_AddReaction_TextBoard(t *testing.T) {
+	rs := &mockReactionStore{}
+	cs := &mockCreativeStore{}
+	items := &mockItemsStore{item: &game.CreativeItem{ID: 7, CrewID: "crew-A", Kind: game.KindSharedText}}
+	qs := &mockQuestStore{}
+	svc := NewReactionServiceWithItems(rs, cs, items, qs)
+
+	r, err := svc.AddReaction(context.Background(), "crew-A", "user-1", game.ReactionTargetTextBoard, 7, "HEART")
+	if err != nil {
+		t.Fatalf("unexpected err: %v", err)
+	}
+	if r.TargetType != game.ReactionTargetTextBoard || r.TargetID != 7 {
+		t.Fatalf("wrong reaction: %+v", r)
+	}
+}
+
+func TestReactionService_AddReaction_TextBoardCrossCrew(t *testing.T) {
+	rs := &mockReactionStore{}
+	items := &mockItemsStore{item: &game.CreativeItem{ID: 7, CrewID: "crew-B", Kind: game.KindSharedText}}
+	svc := NewReactionServiceWithItems(rs, &mockCreativeStore{}, items, &mockQuestStore{})
+	_, err := svc.AddReaction(context.Background(), "crew-A", "user-1", game.ReactionTargetTextBoard, 7, "HEART")
+	if err == nil || err.Error() != "cross-crew reaction not allowed" {
+		t.Fatalf("expected cross-crew error, got %v", err)
 	}
 }
 

@@ -3,6 +3,7 @@ package social
 import (
 	"context"
 	"fmt"
+
 	"odyssey/pkg/game"
 )
 
@@ -10,12 +11,18 @@ import (
 type ReactionService struct {
 	store     game.ReactionStore
 	creatives game.CreativeSubmissionStore
+	items     game.CreativeStore
 	quests    game.QuestStore
 }
 
 // NewReactionService returns a new ReactionService.
 func NewReactionService(store game.ReactionStore, creatives game.CreativeSubmissionStore, quests game.QuestStore) *ReactionService {
 	return &ReactionService{store: store, creatives: creatives, quests: quests}
+}
+
+// NewReactionServiceWithItems includes creative_items for TEXT_BOARD reactions.
+func NewReactionServiceWithItems(store game.ReactionStore, creatives game.CreativeSubmissionStore, items game.CreativeStore, quests game.QuestStore) *ReactionService {
+	return &ReactionService{store: store, creatives: creatives, items: items, quests: quests}
 }
 
 // AddReaction adds or updates a reaction idempotently.
@@ -26,10 +33,8 @@ func (s *ReactionService) AddReaction(ctx context.Context, crewID, actorUID stri
 
 	// 1. Validate Target and verify it belongs to the same crew
 	switch targetType {
-	case "JOURNAL":
-		// Assume JOURNAL maps to CreativeItem. 
-		// Wait, CreativeStore doesn't have GetCreativeItem. 
-		// Actually, let's just use the store we have: creative submissions.
+	case game.ReactionTargetJournal:
+		// JOURNAL maps to quest-bound creative submissions.
 		sub, err := s.creatives.GetSubmission(ctx, targetID)
 		if err != nil {
 			return nil, fmt.Errorf("target not found")
@@ -37,12 +42,23 @@ func (s *ReactionService) AddReaction(ctx context.Context, crewID, actorUID stri
 		if sub.CrewID != crewID {
 			return nil, fmt.Errorf("cross-crew reaction not allowed")
 		}
-	case "QUEST":
+	case game.ReactionTargetQuest:
 		quest, err := s.quests.GetQuest(ctx, targetID)
 		if err != nil {
 			return nil, fmt.Errorf("target not found")
 		}
 		if quest.CrewID != crewID {
+			return nil, fmt.Errorf("cross-crew reaction not allowed")
+		}
+	case game.ReactionTargetTextBoard:
+		if s.items == nil {
+			return nil, fmt.Errorf("target not found")
+		}
+		item, err := s.items.GetCreativeItem(ctx, targetID)
+		if err != nil {
+			return nil, fmt.Errorf("target not found")
+		}
+		if item.CrewID != crewID || item.Kind != game.KindSharedText {
 			return nil, fmt.Errorf("cross-crew reaction not allowed")
 		}
 	default:

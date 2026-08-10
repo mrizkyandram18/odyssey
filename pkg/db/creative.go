@@ -4,6 +4,8 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"net/url"
+	"strconv"
 
 	"odyssey/pkg/game"
 )
@@ -19,12 +21,13 @@ func NewCreativeStore(client SupabaseClient) game.CreativeStore {
 }
 
 func (s *supabaseCreativeStore) CreateCreativeItem(ctx context.Context, item *game.CreativeItem) (*game.CreativeItem, error) {
-	payload := CreativeItem{
-		CrewID:    item.CrewID,
-		Realm:     item.Realm,
-		AuthorUID: item.AuthorUID,
-		Kind:      item.Kind,
-		Payload:   item.Payload,
+	// Omit id so identity is assigned by PostgREST.
+	payload := map[string]any{
+		"crew_id":    item.CrewID,
+		"realm":      item.Realm,
+		"author_uid": item.AuthorUID,
+		"kind":       item.Kind,
+		"payload":    item.Payload,
 	}
 	raw, err := s.client.Mutate(ctx, "POST", "odyssey_creative_items", payload, "return=representation")
 	if err != nil {
@@ -39,6 +42,46 @@ func (s *supabaseCreativeStore) CreateCreativeItem(ctx context.Context, item *ga
 		return item, nil
 	}
 	return mapCreativeItem(items[0]), nil
+}
+
+func (s *supabaseCreativeStore) GetCreativeItem(ctx context.Context, id int64) (*game.CreativeItem, error) {
+	v := url.Values{}
+	v.Set("id", "eq."+strconv.FormatInt(id, 10))
+	v.Set("limit", "1")
+	raw, err := s.client.Get(ctx, "odyssey_creative_items", v.Encode())
+	if err != nil {
+		return nil, fmt.Errorf("get creative item: %w", err)
+	}
+	var items []CreativeItem
+	if err := json.Unmarshal(raw, &items); err != nil {
+		return nil, fmt.Errorf("parse creative item: %w", err)
+	}
+	if len(items) == 0 {
+		return nil, game.ErrNotFound
+	}
+	return mapCreativeItem(items[0]), nil
+}
+
+func (s *supabaseCreativeStore) ListCreativeItemsByCrew(ctx context.Context, crewID, kind string) ([]game.CreativeItem, error) {
+	v := url.Values{}
+	v.Set("crew_id", "eq."+crewID)
+	if kind != "" {
+		v.Set("kind", "eq."+kind)
+	}
+	v.Set("order", "created_at.desc")
+	raw, err := s.client.Get(ctx, "odyssey_creative_items", v.Encode())
+	if err != nil {
+		return nil, fmt.Errorf("list creative items: %w", err)
+	}
+	var items []CreativeItem
+	if err := json.Unmarshal(raw, &items); err != nil {
+		return nil, fmt.Errorf("parse creative items: %w", err)
+	}
+	out := make([]game.CreativeItem, 0, len(items))
+	for _, it := range items {
+		out = append(out, *mapCreativeItem(it))
+	}
+	return out, nil
 }
 
 func mapCreativeItem(i CreativeItem) *game.CreativeItem {

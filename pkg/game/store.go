@@ -59,6 +59,8 @@ type RealmProgressStore interface {
 // Items are append-only.
 type CreativeStore interface {
 	CreateCreativeItem(ctx context.Context, item *CreativeItem) (*CreativeItem, error)
+	GetCreativeItem(ctx context.Context, id int64) (*CreativeItem, error)
+	ListCreativeItemsByCrew(ctx context.Context, crewID, kind string) ([]CreativeItem, error)
 }
 
 // CreativeSubmissionStore provides persistence for creative quest submissions.
