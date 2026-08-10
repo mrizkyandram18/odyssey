@@ -69,14 +69,28 @@ type RealmProgress struct {
 
 // CreativeItem is an append-only contribution to a creative space.
 type CreativeItem struct {
-	ID        int64
-	CrewID    string
-	Realm     string
-	AuthorUID string
-	Kind      string
-	Payload   string
-	CreatedAt time.Time
+	ID        int64     `json:"id"`
+	CrewID    string    `json:"crew_id"`
+	Realm     string    `json:"realm"`
+	AuthorUID string    `json:"author_uid"`
+	Kind      string    `json:"kind"`
+	Payload   string    `json:"payload"`
+	CreatedAt time.Time `json:"created_at"`
 }
+
+// KindSharedText is the Slice 2.3 shared crew text board post kind
+// (odyssey_creative_items). Not a real-time collaborative editor.
+const KindSharedText = "SHARED_TEXT"
+
+// Realm shared board posts use a fixed realm tag (not quest-bound).
+const RealmSharedBoard = "shared-board"
+
+// Reaction target types (odyssey_reactions.target_type).
+const (
+	ReactionTargetJournal   = "JOURNAL"
+	ReactionTargetQuest     = "QUEST"
+	ReactionTargetTextBoard = "TEXT_BOARD"
+)
 
 // SubmissionKind is the type of creative submission.
 type SubmissionKind string

@@ -90,7 +90,9 @@ Untuk memastikan kualitas rilis, Phase 1 dipecah menjadi beberapa fase kecil seb
 - **Peer reactions** (stickers) on creative contributions and quest logs.
 - **Quest handoff notifications** for relay quests ("your turn").
 - **Crew streak** tracking and Realm Progress milestones.
-- **Expanded creative space:** drawing tools, color palettes, a shared text canvas.
+- **Expanded creative space:** drawing tools, color palettes, a shared text canvas
+  (Slice 2.3: append-only **shared crew text board** — multi-entry notes, not a
+  real-time collaborative editor).
 - **Role rotation** UI and role-mastery flavor text (no stat bonuses).
 - **Coin currency** — a soft currency for family trading (gifting Relics between
   Explorers) and premium unlocks.

@@ -77,7 +77,7 @@ export class ApiClient {
     const method = (options.method || 'GET').toUpperCase()
     // Creative write routes require X-CSRF-Token (see pkg/server CSRF middleware).
     if (method !== 'GET' && method !== 'HEAD' && method !== 'OPTIONS') {
-      if (path.startsWith('/api/creative')) {
+      if (path.startsWith('/api/creative') || path.startsWith('/api/board')) {
         const csrf = await this.ensureCsrfToken()
         if (csrf) {
           headers['X-CSRF-Token'] = csrf
@@ -143,7 +143,24 @@ export const loreApi = {
 }
 
 export type ReactionType = 'HEART' | 'CLAP' | 'STAR'
-export type TargetType = 'JOURNAL' | 'QUEST'
+export type TargetType = 'JOURNAL' | 'QUEST' | 'TEXT_BOARD'
+
+export interface BoardPost {
+  id: number
+  crew_id: string
+  realm: string
+  author_uid: string
+  kind: string
+  payload: string
+  created_at: string
+}
+
+export const boardApi = {
+  list: (): Promise<{ posts: BoardPost[] }> =>
+    apiClient.get<{ posts: BoardPost[] }>('/api/board'),
+  post: (content: string): Promise<BoardPost> =>
+    apiClient.post<BoardPost>('/api/board', { content }),
+}
 
 export interface ReactionRow {
   id: number

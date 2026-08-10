@@ -11,6 +11,7 @@ import (
 	"odyssey/internal/api/admin"
 	apiChapters "odyssey/internal/api/chapters"
 	"odyssey/internal/api/chests"
+	apiBoard "odyssey/internal/api/board"
 	apiCosmetics "odyssey/internal/api/cosmetics"
 	"odyssey/internal/api/creative"
 	"odyssey/internal/api/crews"
@@ -31,6 +32,7 @@ import (
 	"odyssey/pkg/game/achievement"
 	"odyssey/pkg/game/audit"
 	"odyssey/pkg/game/balance"
+	"odyssey/pkg/game/board"
 	"odyssey/pkg/game/chapter"
 	"odyssey/pkg/game/chest"
 	"odyssey/pkg/game/cosmetic"
@@ -244,8 +246,11 @@ func BuildHandler() (*Server, error) {
 	apiLore.Setup(loreSvc)
 	apiAchievements.Setup(achieveSvc)
 
-	reactionSvc := social.NewReactionService(repo.Reactions, repo.CreativeSubmissions, repo.Quests)
+	reactionSvc := social.NewReactionServiceWithItems(repo.Reactions, repo.CreativeSubmissions, repo.Creatives, repo.Quests)
 	apiReactions.Setup(reactionSvc)
+
+	boardSvc := board.NewService(repo.Creatives)
+	apiBoard.Setup(boardSvc)
 
 	crews.Setup(repo.Crews)
 	realm_progress.Setup(repo.RealmProgress)
@@ -395,6 +400,8 @@ func BuildHandler() (*Server, error) {
 	mux.HandleFunc("/api/rewards/", secure(mw.RequireAuth(rewards.Handler)))
 	mux.HandleFunc("/api/cosmetics", secure(mw.RequireAuth(apiCosmetics.Handler)))
 	mux.HandleFunc("/api/cosmetics/", secure(mw.RequireAuth(apiCosmetics.Handler)))
+	mux.HandleFunc("/api/board", secure(mw.RequireAuth(csrf(apiBoard.Handler))))
+	mux.HandleFunc("/api/board/", secure(mw.RequireAuth(csrf(apiBoard.Handler))))
 	mux.HandleFunc("/api/admin", secure(rateLimit(adminLimiter, mw.RequireRole(auth.RoleAdmin)(admin.Handler))))
 	mux.HandleFunc("/api/admin/", secure(rateLimit(adminLimiter, mw.RequireRole(auth.RoleAdmin)(admin.Handler))))
 
