@@ -6,6 +6,7 @@ import { Button } from '../../shared/components/atoms/Button'
 import { ProgressBar } from '../../shared/components/atoms/ProgressBar'
 import { apiClient, chestsApi } from '../../shared/lib/api'
 import type { HomeResponse } from '../../shared/types'
+import { useSession } from '../../shared/hooks/useSession'
 
 const containerVariants = {
   hidden: { opacity: 0 },
@@ -22,6 +23,7 @@ const itemVariants = {
 
 export function HomePage() {
   const navigate = useNavigate()
+  const { refreshProfile } = useSession()
   const [home, setHome] = useState<HomeResponse | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -64,7 +66,8 @@ export function HomePage() {
     setTakingTurn(true)
     try {
       await apiClient.post('/api/daily_turns/consume', { quest_slug: 'daily-turn' })
-      await loadHome()
+      // Refresh home + session profile so coin balance is not stale after +1 daily earn.
+      await Promise.all([loadHome(), refreshProfile()])
     } catch (e) {
       console.error('Gagal mengambil giliran', e)
     } finally {
@@ -122,10 +125,29 @@ export function HomePage() {
     >
       {/* 1. Sapaan - Odyssey Vibe */}
       <motion.section variants={itemVariants} className="mt-2 text-center md:text-left">
-        <h1 className="font-heading text-3xl text-text-primary mb-1">Halo, Keluarga Starseekers!</h1>
-        <p className="text-text-secondary text-sm italic">
-          Setiap langkah yang kita ambil bersama akan menuliskan bab baru dalam legenda kita.
-        </p>
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+          <div>
+            <h1 className="font-heading text-3xl text-text-primary mb-1">
+              Halo, {home.player?.explorer_name || 'Explorer'}!
+            </h1>
+            <p className="text-text-secondary text-sm italic">
+              Setiap langkah yang kita ambil bersama akan menuliskan bab baru dalam legenda kita.
+            </p>
+          </div>
+          <div
+            className="inline-flex items-center gap-2 self-center sm:self-start rounded-full border border-accent-reward/30 bg-accent-reward/10 px-3 py-1.5 shadow-sm"
+            data-testid="home-coin-balance"
+            title="Coin balance (fictional — no real money)"
+          >
+            <span className="text-sm" aria-hidden>🪙</span>
+            <span className="text-sm font-bold text-accent-reward tabular-nums">
+              {home.player?.coins ?? 0}
+            </span>
+            <span className="text-[10px] font-semibold uppercase tracking-wider text-text-secondary">
+              Coins
+            </span>
+          </div>
+        </div>
       </motion.section>
 
       {/* 2. Progres Dunia */}
