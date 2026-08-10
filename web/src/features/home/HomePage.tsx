@@ -6,6 +6,7 @@ import { Button } from '../../shared/components/atoms/Button'
 import { ProgressBar } from '../../shared/components/atoms/ProgressBar'
 import { apiClient, chestsApi } from '../../shared/lib/api'
 import type { HomeResponse } from '../../shared/types'
+import { ConnectedReactionBar } from '../../shared/components/molecules/ConnectedReactionBar'
 import { useSession } from '../../shared/hooks/useSession'
 
 const containerVariants = {
@@ -259,13 +260,18 @@ export function HomePage() {
           </h2>
           <div className="flex flex-col gap-2">
             {completedToday.map(quest => (
-              <Card key={quest.id} className="flex items-center gap-3 p-3 bg-surface/50 border-border-subtle">
-                <div className="bg-accent-reward/20 text-accent-reward p-2 rounded-full">
-                  ✓
+              <Card key={quest.id} className="flex flex-col gap-3 p-3 bg-surface/50 border-border-subtle">
+                <div className="flex items-center gap-3">
+                  <div className="bg-accent-reward/20 text-accent-reward p-2 rounded-full">
+                    ✓
+                  </div>
+                  <div className="flex-1">
+                    <h4 className="text-sm font-medium text-text-primary">{quest.title}</h4>
+                    <p className="text-xs text-text-secondary">Telah diselesaikan oleh kru</p>
+                  </div>
                 </div>
-                <div>
-                  <h4 className="text-sm font-medium text-text-primary">{quest.title}</h4>
-                  <p className="text-xs text-text-secondary">Telah diselesaikan oleh kru</p>
+                <div className="flex justify-end border-t border-border-subtle/50 pt-2">
+                  <ConnectedReactionBar targetType="QUEST" targetId={quest.id} />
                 </div>
               </Card>
             ))}
