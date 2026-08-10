@@ -2,6 +2,7 @@ package quest
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"time"
 
@@ -144,11 +145,27 @@ func (h *QuestAPIHandler) CompleteChallenge(ctx context.Context, questID, challe
 		return nil, err
 	}
 
-	status, questCompleted, err := h.qs.CompleteChallengeForQuest(ctx, questID, challengeID, uid)
+	status, progressed, questCompleted, err := h.qs.CompleteChallengeForQuest(ctx, questID, challengeID, uid)
 	if err != nil {
 		return nil, fmt.Errorf("complete challenge: %w", err)
 	}
 	_ = status
+
+	result = &CompleteChallengeResult{
+		QuestCompleted: questCompleted,
+		NextAction:     "",
+	}
+
+	if !progressed {
+		// Replay of an already-completed challenge (double-tap or client retry):
+		// no XP, no rewards — return the fresh quest state.
+		updated, err := h.qs.GetByCrewAndID(ctx, questID, crewID)
+		if err != nil {
+			return nil, fmt.Errorf("reload quest: %w", err)
+		}
+		result.Quest = updated
+		return result, nil
+	}
 
 	challengeXP := ChallengeXP
 	completionBonusXP := CompletionBonusXP
@@ -165,13 +182,9 @@ func (h *QuestAPIHandler) CompleteChallenge(ctx context.Context, questID, challe
 		return nil, fmt.Errorf("award challenge xp: %w", err)
 	}
 
-	result = &CompleteChallengeResult{
-		QuestCompleted: questCompleted,
-		NextAction:     "",
-		XP:             challengeXP,
-		NewLevel:       player.Level,
-		LevelUp:        levelUp,
-	}
+	result.XP = challengeXP
+	result.NewLevel = player.Level
+	result.LevelUp = levelUp
 
 	if questCompleted {
 		result.NextAction = "CREATE_MEMORY"
@@ -275,13 +288,7 @@ func (h *QuestAPIHandler) advanceRealm(ctx context.Context, crewID, realm string
 			nextRealm = h.realmCfg.NextRealm(realm)
 		}
 		if nextRealm != "" {
-			_, err = h.realm.CreateRealmProgress(ctx, &game.RealmProgress{
-				CrewID:   crewID,
-				Realm:    nextRealm,
-				Status:   "ACTIVE",
-				Progress: 0,
-			})
-			if err != nil {
+			if err := h.ensureNextRealmUnlocked(ctx, crewID, nextRealm); err != nil {
 				return fmt.Errorf("unlock next realm: %w", err)
 			}
 		}
@@ -293,6 +300,45 @@ func (h *QuestAPIHandler) advanceRealm(ctx context.Context, crewID, realm string
 		if !matched && h.metrics != nil {
 			h.metrics.RecordLockConflict()
 		}
+	}
+	return nil
+}
+
+// ensureNextRealmUnlocked activates the realm that follows a completed realm.
+//
+// The target realm may already exist as LOCKED (migrations seed locked realm
+// rows so the realm map shows them before they are earned). In that case the
+// existing row is activated via update; otherwise a new row is inserted. If a
+// concurrent completion wins the insert race, the update branch converges, so
+// the unlock is exactly-once without introducing a unique-violation error like
+// a naive INSERT would (see 022 realm-seed interaction).
+func (h *QuestAPIHandler) ensureNextRealmUnlocked(ctx context.Context, crewID, realm string) error {
+	unlock := map[string]any{
+		"status":           "ACTIVE",
+		"progress":         0,
+		"last_unlocked_at": time.Now().UTC(),
+	}
+	rp, err := h.realm.GetRealmProgress(ctx, crewID, realm)
+	if err == nil && rp != nil {
+		return h.realm.UpdateRealmProgress(ctx, crewID, realm, unlock)
+	}
+	if err != nil && !errors.Is(err, game.ErrNotFound) {
+		return err
+	}
+	_, err = h.realm.CreateRealmProgress(ctx, &game.RealmProgress{
+		CrewID:         crewID,
+		Realm:          realm,
+		Status:         "ACTIVE",
+		Progress:       0,
+		LastUnlockedAt: time.Now().UTC(),
+	})
+	if err != nil {
+		// Race: another caller inserted the row between our Get and Create.
+		// Converge by activating the now-existing row.
+		if rp, getErr := h.realm.GetRealmProgress(ctx, crewID, realm); getErr == nil && rp != nil {
+			return h.realm.UpdateRealmProgress(ctx, crewID, realm, unlock)
+		}
+		return err
 	}
 	return nil
 }

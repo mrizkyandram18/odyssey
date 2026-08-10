@@ -40,6 +40,9 @@ func (m *mockPRQuestStore) CreateChallenge(ctx context.Context, c *game.Challeng
 func (m *mockPRQuestStore) UpdateChallenge(ctx context.Context, challengeID int64, patch map[string]any) error {
 	return nil
 }
+func (m *mockPRQuestStore) UpdateChallengeIfMatch(ctx context.Context, challengeID int64, oldStatus string, patch map[string]any) (bool, error) {
+	return true, nil
+}
 
 type mockPRRealmStore struct {
 	progress []game.RealmProgress

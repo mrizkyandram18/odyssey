@@ -42,6 +42,7 @@ type QuestStore interface {
 	GetChallenges(ctx context.Context, questID int64) ([]Challenge, error)
 	CreateChallenge(ctx context.Context, c *Challenge) (*Challenge, error)
 	UpdateChallenge(ctx context.Context, challengeID int64, patch map[string]any) error
+	UpdateChallengeIfMatch(ctx context.Context, challengeID int64, oldStatus string, patch map[string]any) (bool, error)
 }
 
 // RealmProgressStore provides persistence for shared realm progress.

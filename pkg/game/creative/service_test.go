@@ -199,6 +199,26 @@ func (m *mockQuestStore) UpdateChallenge(ctx context.Context, challengeID int64,
 	return game.ErrNotFound
 }
 
+func (m *mockQuestStore) UpdateChallengeIfMatch(ctx context.Context, challengeID int64, oldStatus string, patch map[string]any) (bool, error) {
+	if m.err != nil {
+		return false, m.err
+	}
+	for _, chs := range m.challenges {
+		for i := range chs {
+			if chs[i].ID == challengeID {
+				if chs[i].Status != oldStatus {
+					return false, nil
+				}
+				if status, ok := patch["status"]; ok {
+					chs[i].Status = status.(string)
+				}
+				return true, nil
+			}
+		}
+	}
+	return false, game.ErrNotFound
+}
+
 func makeQuest(id int64, status string, crewID string) *game.Quest {
 	return &game.Quest{
 		ID:        id,

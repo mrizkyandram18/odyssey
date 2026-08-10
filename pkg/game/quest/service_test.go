@@ -49,6 +49,18 @@ func (m *mockQuestStore) ListQuestByCrew(ctx context.Context, crewID string) ([]
 	if m.err != nil {
 		return nil, m.err
 	}
+	// Serve live quest rows so status patches applied via UpdateQuest are visible.
+	if len(m.quests) > 0 {
+		out := make([]game.Quest, 0, len(m.quests))
+		for _, q := range m.quests {
+			if q != nil && q.CrewID == crewID {
+				out = append(out, *q)
+			}
+		}
+		if len(out) > 0 {
+			return out, nil
+		}
+	}
 	return m.questsByCrew[crewID], nil
 }
 
@@ -132,6 +144,26 @@ func (m *mockQuestStore) UpdateChallenge(ctx context.Context, challengeID int64,
 		}
 	}
 	return game.ErrNotFound
+}
+
+func (m *mockQuestStore) UpdateChallengeIfMatch(ctx context.Context, challengeID int64, oldStatus string, patch map[string]any) (bool, error) {
+	if m.err != nil {
+		return false, m.err
+	}
+	for _, chs := range m.challenges {
+		for i := range chs {
+			if chs[i].ID == challengeID {
+				if chs[i].Status != oldStatus {
+					return false, nil
+				}
+				if err := m.UpdateChallenge(ctx, challengeID, patch); err != nil {
+					return false, err
+				}
+				return true, nil
+			}
+		}
+	}
+	return false, game.ErrNotFound
 }
 
 func makeQuest(status string) *game.Quest {
@@ -318,11 +350,14 @@ func TestCompleteChallengeForQuest_TransitionsToActive(t *testing.T) {
 	store.challenges[1] = []game.Challenge{c1, c2}
 	svc := NewQuestService(store)
 
-	status, completed, err := svc.CompleteChallengeForQuest(context.Background(), 1, 1, "user-1")
+	status, progressed, completed, err := svc.CompleteChallengeForQuest(context.Background(), 1, 1, "user-1")
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
 
+	if !progressed {
+		t.Error("expected challenge to be progressed")
+	}
 	if status != QuestStatusActive {
 		t.Errorf("expected status %s, got %s", QuestStatusActive, status)
 	}
@@ -342,11 +377,14 @@ func TestCompleteChallengeForQuest_TransitionsToDone(t *testing.T) {
 	store.challenges[1] = []game.Challenge{c1, c2}
 	svc := NewQuestService(store)
 
-	status, completed, err := svc.CompleteChallengeForQuest(context.Background(), 1, 2, "user-2")
+	status, progressed, completed, err := svc.CompleteChallengeForQuest(context.Background(), 1, 2, "user-2")
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
 
+	if !progressed {
+		t.Error("expected challenge to be progressed")
+	}
 	if status != QuestStatusDone {
 		t.Errorf("expected status %s, got %s", QuestStatusDone, status)
 	}
@@ -371,9 +409,12 @@ func TestCompleteChallengeForQuest_AlreadyDoneNoReReward(t *testing.T) {
 	store.challenges[1] = []game.Challenge{c1, c2}
 	svc := NewQuestService(store)
 
-	status, completed, err := svc.CompleteChallengeForQuest(context.Background(), 1, 1, "user-1")
+	status, progressed, completed, err := svc.CompleteChallengeForQuest(context.Background(), 1, 1, "user-1")
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
+	}
+	if progressed {
+		t.Error("expected challenge replay to report progressed=false (already done)")
 	}
 	if status != QuestStatusDone {
 		t.Errorf("expected status %s, got %s", QuestStatusDone, status)
