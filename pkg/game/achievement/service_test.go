@@ -3,6 +3,7 @@ package achievement
 import (
 	"context"
 	"errors"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -267,6 +268,111 @@ func TestListByPlayer_SoftErrorStillMemoized(t *testing.T) {
 	}
 	if rdr.questCounts != 1 {
 		t.Errorf("expected 1 CountCompletedQuests call on error, got %d", rdr.questCounts)
+	}
+}
+
+// slowProgressReader delays every distinct progress source so ListByPlayer
+// wall time reveals sequential vs parallel prefetch.
+type slowProgressReader struct {
+	delay       time.Duration
+	inFlight    atomic.Int32
+	maxInFlight atomic.Int32
+	calls       atomic.Int32
+}
+
+func (s *slowProgressReader) track() {
+	s.calls.Add(1)
+	cur := s.inFlight.Add(1)
+	for {
+		max := s.maxInFlight.Load()
+		if cur <= max || s.maxInFlight.CompareAndSwap(max, cur) {
+			break
+		}
+	}
+	time.Sleep(s.delay)
+	s.inFlight.Add(-1)
+}
+
+func (s *slowProgressReader) CountCompletedQuests(ctx context.Context, crewID string) (int, error) {
+	s.track()
+	return 1, nil
+}
+func (s *slowProgressReader) CountCompletedRealms(ctx context.Context, crewID string) (int, error) {
+	s.track()
+	return 2, nil
+}
+func (s *slowProgressReader) CountCompletedChapters(ctx context.Context, crewID string) (int, error) {
+	s.track()
+	return 3, nil
+}
+func (s *slowProgressReader) CountCollectedRelics(ctx context.Context, uid string) (int, error) {
+	s.track()
+	return 4, nil
+}
+func (s *slowProgressReader) CountDailyStreak(ctx context.Context, uid string) (int, error) {
+	s.track()
+	return 5, nil
+}
+func (s *slowProgressReader) CountCreativeSubmissions(ctx context.Context, crewID string) (int, error) {
+	s.track()
+	return 6, nil
+}
+func (s *slowProgressReader) GetPlayerLevel(ctx context.Context, uid string) (int, error) {
+	s.track()
+	return 7, nil
+}
+
+func TestListByPlayer_ParallelizesDistinctProgressReads(t *testing.T) {
+	// Seven distinct progress sources — sequential would take ~7*delay;
+	// parallel prefetch should finish near one delay and observe concurrency.
+	const delay = 40 * time.Millisecond
+	const distinct = 7
+	gw := &mockAchievementGateway{
+		defs: []gamecontent.AchievementDefinition{
+			makeAchievementDef("ACH_QUESTS_1", "PERSONAL", "QUEST_COMPLETED", 1),
+			makeAchievementDef("ACH_REALMS_1", "GROUP", "REALM_COMPLETED", 1),
+			makeAchievementDef("ACH_CHAPTER_1", "GROUP", "CHAPTER_COMPLETED", 1),
+			makeAchievementDef("ACH_RELIC_1", "PERSONAL", "RELIC_COLLECTED", 1),
+			makeAchievementDef("ACH_STREAK_1", "PERSONAL", "DAILY_STREAK", 1),
+			makeAchievementDef("ACH_SUBMIT_1", "GROUP", "CREATIVE_SUBMISSION", 1),
+			makeAchievementDef("ACH_LEVEL_1", "PERSONAL", "LEVEL_REACHED", 1),
+			// Duplicate trigger — must still memoize to a single read.
+			makeAchievementDef("ACH_QUESTS_10", "PERSONAL", "QUEST_COMPLETED", 10),
+		},
+	}
+	rdr := &slowProgressReader{delay: delay}
+	svc := NewAchievementService(gw, newMockAchievementStore(), rdr, events.NopPublisher{})
+
+	start := time.Now()
+	result, err := svc.ListByPlayer(context.Background(), "u1")
+	elapsed := time.Since(start)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if len(result) != 8 {
+		t.Fatalf("expected 8 achievements, got %d", len(result))
+	}
+	if got := rdr.calls.Load(); got != distinct {
+		t.Errorf("expected %d progress reads (memoized), got %d", distinct, got)
+	}
+	if max := rdr.maxInFlight.Load(); max < 2 {
+		t.Errorf("expected concurrent progress reads, max in-flight=%d", max)
+	}
+	// Sequential would be ~7*delay (280ms). Allow headroom under 4*delay.
+	if elapsed >= 4*delay {
+		t.Errorf("progress reads look sequential: elapsed=%v delay=%v", elapsed, delay)
+	}
+
+	// Spot-check progress values survive parallel assembly.
+	byCode := map[string]int{}
+	for _, a := range result {
+		byCode[a.Code] = a.Progress
+	}
+	if byCode["ACH_QUESTS_1"] != 1 || byCode["ACH_QUESTS_10"] != 1 {
+		t.Errorf("quest progress not shared correctly: %v", byCode)
+	}
+	if byCode["ACH_LEVEL_1"] != 7 {
+		t.Errorf("expected level progress 7, got %d", byCode["ACH_LEVEL_1"])
 	}
 }
 

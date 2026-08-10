@@ -6,6 +6,8 @@ import (
 	"fmt"
 	"time"
 
+	"golang.org/x/sync/errgroup"
+
 	"odyssey/pkg/game"
 	"odyssey/pkg/game/content"
 	"odyssey/pkg/game/events"
@@ -94,13 +96,15 @@ func (s *AchievementService) ListByPlayer(ctx context.Context, uid string) ([]Ac
 		return nil, fmt.Errorf("list achievement defs: %w", err)
 	}
 
-	// Cache progress by its source key (trigger + scoping) so definitions
-	// sharing a trigger issue a single underlying read per ListByPlayer call.
-	progressCache := make(map[string]int, len(defs))
+	// Prefetch distinct progress sources in parallel (one read per trigger key),
+	// then assemble views. Soft-error → 0 is preserved; memoization remains.
+	const crewID = ""
+	progressCache := s.prefetchProgress(ctx, defs, uid, crewID)
 
 	result := make([]AchievementView, 0, len(defs))
 	for _, def := range defs {
-		progress := s.cachedProgress(ctx, def, uid, "", progressCache)
+		key := progressCacheKey(def.Trigger, uid, crewID)
+		progress := progressCache[key]
 		a, awarded := earnedMap[def.Code]
 		awardedAt := time.Time{}
 		if awarded {
@@ -121,22 +125,56 @@ func (s *AchievementService) ListByPlayer(ctx context.Context, uid string) ([]Ac
 	return result, nil
 }
 
-// cachedProgress returns the progress value for def, reusing the cached value
-// when another definition in the same listing already computed it from the
-// same progress source. Errors keep the soft-error behavior of the caller:
-// a failed count resolves to 0 and is cached so identical failed reads are
-// not repeated.
-func (s *AchievementService) cachedProgress(ctx context.Context, def content.AchievementDefinition, uid, crewID string, cache map[string]int) int {
-	key := string(def.Trigger) + "|" + uid + "|" + crewID
-	if p, ok := cache[key]; ok {
-		return p
+func progressCacheKey(trigger, uid, crewID string) string {
+	return trigger + "|" + uid + "|" + crewID
+}
+
+// prefetchProgress loads progress for each distinct trigger source in parallel.
+// Failed counts soft-error to 0 and are still cached so duplicate defs share
+// one underlying read. Wait completes before any cache map is written.
+func (s *AchievementService) prefetchProgress(
+	ctx context.Context,
+	defs []content.AchievementDefinition,
+	uid, crewID string,
+) map[string]int {
+	type progressJob struct {
+		key string
+		def content.AchievementDefinition
 	}
-	p, err := s.countProgress(ctx, def, uid, crewID)
-	if err != nil {
-		p = 0
+
+	// One job per distinct cache key (trigger + scope).
+	seen := make(map[string]struct{}, len(defs))
+	jobs := make([]progressJob, 0, len(defs))
+	for _, def := range defs {
+		key := progressCacheKey(def.Trigger, uid, crewID)
+		if _, ok := seen[key]; ok {
+			continue
+		}
+		seen[key] = struct{}{}
+		jobs = append(jobs, progressJob{key: key, def: def})
 	}
-	cache[key] = p
-	return p
+
+	// Separate locals per job — never write the shared map from goroutines.
+	values := make([]int, len(jobs))
+	g, gCtx := errgroup.WithContext(ctx)
+	for i := range jobs {
+		i, job := i, jobs[i]
+		g.Go(func() error {
+			p, err := s.countProgress(gCtx, job.def, uid, crewID)
+			if err != nil {
+				p = 0 // soft-error → zero (same as pre-PERF-2)
+			}
+			values[i] = p
+			return nil
+		})
+	}
+	_ = g.Wait() // progress soft-errors never fail the group
+
+	cache := make(map[string]int, len(jobs))
+	for i, job := range jobs {
+		cache[job.key] = values[i]
+	}
+	return cache
 }
 
 func (s *AchievementService) countProgress(ctx context.Context, def content.AchievementDefinition, uid, crewID string) (int, error) {
