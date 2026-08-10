@@ -43,7 +43,9 @@ export function FamilyTimeline() {
       <section className="flex flex-col gap-4">
         <div>
           <h2 className="text-xl font-bold">Quest memories</h2>
-          <p className="text-sm text-muted-foreground">STORY and DRAWING submissions from completed quests.</p>
+          <p className="text-sm text-muted-foreground">
+            STORY, DRAWING, and COMIC submissions from completed quests.
+          </p>
         </div>
 
         {loading && submissions.length === 0 ? (

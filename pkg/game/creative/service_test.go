@@ -329,7 +329,10 @@ func TestListByQuest(t *testing.T) {
 	qs.challenges[1] = []game.Challenge{makeChallenge(1, 1, "PENDING")}
 	svc := NewCreativeService(store, qs)
 	svc.Submit(context.Background(), &game.Submission{QuestID: 1, ChallengeID: 1, Kind: game.SubmissionStory, Content: "story 1"})
-	svc.Submit(context.Background(), &game.Submission{QuestID: 1, ChallengeID: 1, Kind: game.SubmissionComic, Content: "comic 1"})
+	svc.Submit(context.Background(), &game.Submission{
+		QuestID: 1, ChallengeID: 1, Kind: game.SubmissionComic,
+		Content: `{"v":1,"panels":[{"caption":"panel 1"},{"caption":"panel 2"}]}`,
+	})
 
 	subs, err := svc.ListByQuest(context.Background(), 1)
 	if err != nil {
@@ -466,5 +469,40 @@ func TestSubmit_NoPublisher_NoEvent(t *testing.T) {
 	_, err := svc.Submit(context.Background(), &game.Submission{QuestID: 1, ChallengeID: 1, Kind: game.SubmissionStory, Content: "hello world", AuthorUID: "user-1", CrewID: "crew-1"})
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
+	}
+}
+
+func TestSubmit_Comic_Success(t *testing.T) {
+	qs := newMockQuestStore()
+	qs.CreateQuest(context.Background(), makeQuest(1, "ACTIVE", "c1"))
+	qs.challenges[1] = []game.Challenge{makeChallenge(1, 1, "PENDING")}
+	svc := NewCreativeService(newMockSubmissionStore(), qs)
+
+	content := `{"v":1,"panels":[{"caption":"Panel one"},{"caption":"Panel two"}]}`
+	sub, err := svc.Submit(context.Background(), &game.Submission{
+		QuestID: 1, ChallengeID: 1, Kind: game.SubmissionComic, Content: content,
+	})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if sub.Kind != game.SubmissionComic {
+		t.Errorf("expected COMIC, got %s", sub.Kind)
+	}
+	if sub.Content != content {
+		t.Errorf("content mismatch")
+	}
+}
+
+func TestSubmit_Comic_Invalid(t *testing.T) {
+	qs := newMockQuestStore()
+	qs.CreateQuest(context.Background(), makeQuest(1, "ACTIVE", "c1"))
+	qs.challenges[1] = []game.Challenge{makeChallenge(1, 1, "PENDING")}
+	svc := NewCreativeService(newMockSubmissionStore(), qs)
+
+	_, err := svc.Submit(context.Background(), &game.Submission{
+		QuestID: 1, ChallengeID: 1, Kind: game.SubmissionComic, Content: `{"panels":[{"caption":"only one"}]}`,
+	})
+	if !errors.Is(err, ErrComicPanelCount) {
+		t.Fatalf("expected ErrComicPanelCount, got %v", err)
 	}
 }

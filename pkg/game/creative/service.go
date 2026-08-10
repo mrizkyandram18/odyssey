@@ -88,8 +88,13 @@ func (s *CreativeService) Submit(ctx context.Context, sub *game.Submission) (*ga
 		return nil, ErrContentTooShort
 	}
 
-	if sub.Kind == game.SubmissionDrawing {
+	switch sub.Kind {
+	case game.SubmissionDrawing:
 		if err := ValidateSVG(sub.Content); err != nil {
+			return nil, err
+		}
+	case game.SubmissionComic:
+		if err := ValidateComic(sub.Content); err != nil {
 			return nil, err
 		}
 	}

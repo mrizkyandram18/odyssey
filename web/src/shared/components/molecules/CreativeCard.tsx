@@ -1,5 +1,6 @@
 import type { CreativeSubmission } from '../../types'
 import { toSvgDataUri } from '../../utils/svg'
+import { parseComicPayload } from '../../utils/comic'
 import { ConnectedReactionBar } from './ConnectedReactionBar'
 
 export interface CreativeCardProps {
@@ -21,21 +22,14 @@ export function CreativeCard({ submission }: CreativeCardProps) {
             <span className="text-sm font-semibold">{submission.author_uid}</span>
             <span className="text-xs text-muted-foreground">
               {formatter.format(date)}
+              {submission.kind === 'COMIC' ? ' · Comic' : submission.kind === 'DRAWING' ? ' · Drawing' : ''}
             </span>
           </div>
         </div>
       </div>
-      
+
       <div className="rounded-lg bg-background/50 p-4 text-sm leading-relaxed overflow-hidden">
-        {submission.kind === 'DRAWING' ? (
-          <img
-            src={toSvgDataUri(submission.content)}
-            alt={`Drawing by ${submission.author_uid}`}
-            className="w-full h-auto bg-white/5 rounded"
-          />
-        ) : (
-          submission.content
-        )}
+        <CreativeBody submission={submission} />
       </div>
 
       <div className="mt-2 flex items-center justify-between border-t border-border/50 pt-3">
@@ -45,4 +39,46 @@ export function CreativeCard({ submission }: CreativeCardProps) {
       </div>
     </div>
   )
+}
+
+function CreativeBody({ submission }: { submission: CreativeSubmission }) {
+  if (submission.kind === 'DRAWING') {
+    return (
+      <img
+        src={toSvgDataUri(submission.content)}
+        alt={`Drawing by ${submission.author_uid}`}
+        className="w-full h-auto bg-white/5 rounded"
+      />
+    )
+  }
+
+  if (submission.kind === 'COMIC') {
+    const comic = parseComicPayload(submission.content)
+    if (!comic) {
+      return <p className="text-muted-foreground text-xs">Comic could not be displayed.</p>
+    }
+    return (
+      <div className="flex flex-col gap-3">
+        {comic.panels.map((panel, i) => (
+          <div
+            key={i}
+            className="rounded-md border border-border/60 bg-background/40 overflow-hidden"
+          >
+            {panel.svg ? (
+              <img
+                src={toSvgDataUri(panel.svg)}
+                alt={`Comic panel ${i + 1}`}
+                className="w-full h-auto bg-white/5"
+              />
+            ) : null}
+            {panel.caption ? (
+              <p className="px-3 py-2 text-sm leading-snug">{panel.caption}</p>
+            ) : null}
+          </div>
+        ))}
+      </div>
+    )
+  }
+
+  return <>{submission.content}</>
 }

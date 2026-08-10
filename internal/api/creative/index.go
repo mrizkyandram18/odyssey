@@ -123,7 +123,10 @@ func handleSubmit(w http.ResponseWriter, r *http.Request, claims *auth.SessionCl
 			err == creative.ErrSVGEmpty, err == creative.ErrSVGTooLarge,
 			err == creative.ErrSVGMalformed, err == creative.ErrSVGRootMissing,
 			err == creative.ErrSVGMultipleRoots, err == creative.ErrSVGDisallowedTag,
-			err == creative.ErrSVGDisallowedAttr, err == creative.ErrSVGDisallowedURI:
+			err == creative.ErrSVGDisallowedAttr, err == creative.ErrSVGDisallowedURI,
+			err == creative.ErrComicEmpty, err == creative.ErrComicTooLarge,
+			err == creative.ErrComicMalformed, err == creative.ErrComicPanelCount,
+			err == creative.ErrComicPanelEmpty, err == creative.ErrComicCaptionTooLong:
 			shared.WriteJSONError(w, err.Error(), http.StatusBadRequest)
 		default:
 			shared.WriteJSONError(w, "failed to submit creative", http.StatusInternalServerError)
