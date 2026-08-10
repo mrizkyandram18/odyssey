@@ -20,11 +20,13 @@ func NewDailyTurnStore(client SupabaseClient) game.DailyTurnStore {
 }
 
 func (s *supabaseDailyTurnStore) CreateDailyTurn(ctx context.Context, dt *game.DailyTurn) (*game.DailyTurn, error) {
-	payload := DailyTurn{
-		UID:       dt.UID,
-		Date:      dt.Date,
-		QuestSlug: dt.QuestSlug,
-		Completed: dt.Completed,
+	// Build a create payload without id/created_at. PostgREST rejects explicit
+	// id=0 on serial columns, which is what encoding the zero-value DTO did.
+	payload := map[string]any{
+		"uid":        dt.UID,
+		"date":       dt.Date,
+		"quest_slug": dt.QuestSlug,
+		"completed":  dt.Completed,
 	}
 	raw, err := s.client.Mutate(ctx, "POST", "odyssey_daily_turns", payload, "return=representation")
 	if err != nil {

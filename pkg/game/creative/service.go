@@ -42,8 +42,9 @@ func NewCreativeServiceWithPublisher(submissions game.CreativeSubmissionStore, q
 
 // Submit creates a new creative submission.
 // Validation:
-//   - quest must be ACTIVE
-//   - challenge must not be done yet
+//   - quest must be ACTIVE, or DONE (post-quest CREATE_MEMORY form)
+//   - while ACTIVE, challenge must not already be DONE
+//   - when quest is DONE, challenge may already be DONE (memory capture)
 //   - submission kind must be valid
 //   - content must be non-empty (minimal content)
 func (s *CreativeService) Submit(ctx context.Context, sub *game.Submission) (*game.Submission, error) {
@@ -54,7 +55,8 @@ func (s *CreativeService) Submit(ctx context.Context, sub *game.Submission) (*ga
 		}
 		return nil, fmt.Errorf("get quest: %w", err)
 	}
-	if q.Status != "ACTIVE" {
+	// ACTIVE = in-progress creative challenge; DONE = post-completion memory.
+	if q.Status != "ACTIVE" && q.Status != "DONE" {
 		return nil, ErrQuestNotActive
 	}
 
@@ -66,7 +68,10 @@ func (s *CreativeService) Submit(ctx context.Context, sub *game.Submission) (*ga
 	for _, c := range challenges {
 		if c.ID == sub.ChallengeID {
 			found = true
-			if c.Status == "DONE" {
+			// Only block already-done challenges while the quest is still ACTIVE.
+			// After quest completion the UI opens CREATE_MEMORY against the last
+			// challenge, which is already DONE.
+			if q.Status == "ACTIVE" && c.Status == "DONE" {
 				return nil, ErrChallengeDone
 			}
 			break
