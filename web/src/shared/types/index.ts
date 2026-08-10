@@ -99,6 +99,7 @@ export interface Quest {
   title: string
   status: QuestStatus
   quest_type?: QuestType | string
+  active_challenge_assigned_to?: string
   started_at?: string | null
   completed_at?: string | null
   created_at: string

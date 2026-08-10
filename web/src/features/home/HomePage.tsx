@@ -7,7 +7,9 @@ import { ProgressBar } from '../../shared/components/atoms/ProgressBar'
 import { apiClient, chestsApi } from '../../shared/lib/api'
 import type { HomeResponse } from '../../shared/types'
 import { ConnectedReactionBar } from '../../shared/components/molecules/ConnectedReactionBar'
+import { YourTurnBadge } from '../../shared/components/molecules/YourTurnBadge'
 import { useSession } from '../../shared/hooks/useSession'
+import { isMyRelayTurn } from '../../shared/utils/questTurn'
 
 const containerVariants = {
   hidden: { opacity: 0 },
@@ -24,7 +26,7 @@ const itemVariants = {
 
 export function HomePage() {
   const navigate = useNavigate()
-  const { refreshProfile } = useSession()
+  const { session, refreshProfile } = useSession()
   const [home, setHome] = useState<HomeResponse | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -212,9 +214,12 @@ export function HomePage() {
               >
                 <div>
                   <h3 className="font-medium text-text-primary text-lg mb-1">{quest.title}</h3>
-                  <p className="text-xs text-text-secondary">
-                    {quest.completed_count}/{quest.challenge_count} Tantangan Selesai
-                  </p>
+                  <div className="flex items-center gap-2">
+                    <p className="text-xs text-text-secondary">
+                      {quest.completed_count}/{quest.challenge_count} Tantangan Selesai
+                    </p>
+                    {isMyRelayTurn(quest, session?.uid) && <YourTurnBadge />}
+                  </div>
                 </div>
                 <div className="text-accent-reward text-xl">➡️</div>
               </Card>

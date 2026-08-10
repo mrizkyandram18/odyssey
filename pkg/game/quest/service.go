@@ -41,8 +41,9 @@ type ChallengeBatchReader interface {
 // QuestWithChallenges is a quest returned together with its challenge list.
 type QuestWithChallenges struct {
 	game.Quest
-	QuestType  string           `json:"quest_type,omitempty"`
-	Challenges []game.Challenge `json:"challenges"`
+	QuestType                 string           `json:"quest_type,omitempty"`
+	Challenges                []game.Challenge `json:"challenges"`
+	ActiveChallengeAssignedTo *string          `json:"active_challenge_assigned_to,omitempty"`
 }
 
 // QuestView is the quest summary used for list responses.
@@ -160,12 +161,9 @@ func (s *QuestService) List(ctx context.Context, crewID string) ([]QuestView, er
 	for _, q := range quests {
 		challenges := challengesByQuest[q.ID]
 		done := 0
-		var activeAssignedTo *string
 		for _, c := range challenges {
 			if c.Status == string(ChallengeStatusDone) {
 				done++
-			} else if c.Status == string(ChallengeStatusPending) && activeAssignedTo == nil {
-				activeAssignedTo = c.AssignedTo
 			}
 		}
 		views = append(views, QuestView{
@@ -173,10 +171,21 @@ func (s *QuestService) List(ctx context.Context, crewID string) ([]QuestView, er
 			QuestType:                 string(TypeForSlug(q.TemplateSlug)),
 			ChallengeCount:            len(challenges),
 			CompletedCount:            done,
-			ActiveChallengeAssignedTo: activeAssignedTo,
+			ActiveChallengeAssignedTo: firstPendingAssignee(challenges),
 		})
 	}
 	return views, nil
+}
+
+// firstPendingAssignee returns the assigned_to of the first PENDING challenge,
+// or nil when every challenge is done or none is assigned.
+func firstPendingAssignee(challenges []game.Challenge) *string {
+	for _, c := range challenges {
+		if c.Status == string(ChallengeStatusPending) && c.AssignedTo != nil {
+			return c.AssignedTo
+		}
+	}
+	return nil
 }
 
 // challengesByQuestID loads the challenges for all given quests, keyed by
@@ -254,9 +263,10 @@ func (s *QuestService) getWithChallenges(ctx context.Context, q *game.Quest) (*Q
 	}
 
 	result := &QuestWithChallenges{
-		Quest:      *q,
-		QuestType:  string(TypeForSlug(q.TemplateSlug)),
-		Challenges: challenges,
+		Quest:                     *q,
+		QuestType:                 string(TypeForSlug(q.TemplateSlug)),
+		Challenges:                challenges,
+		ActiveChallengeAssignedTo: firstPendingAssignee(challenges),
 	}
 	computed := string(s.ComputeStatus(challenges))
 	if computed == string(QuestStatusPending) && (q.Status == string(QuestStatusActive) || q.StartedAt != nil) {

@@ -1,10 +1,13 @@
 import { Link } from 'react-router-dom'
 import { QuestDetail } from '../../shared/components/organisms/QuestDetail'
 import { useQuest } from '../../shared/hooks/useQuest'
+import { useSession } from '../../shared/hooks/useSession'
+import { isMyRelayTurn } from '../../shared/utils/questTurn'
 
 
 export function QuestView({ questId }: { questId: number }) {
   const { quest, challenges, loading, error, startQuest, completeChallenge } = useQuest(questId)
+  const { session } = useSession()
 
   if (loading) {
     return (
@@ -45,6 +48,7 @@ export function QuestView({ questId }: { questId: number }) {
         challenges={challenges}
         onStartQuest={startQuest}
         onCompleteChallenge={completeChallenge}
+        isMyTurn={isMyRelayTurn(quest, session?.uid)}
       />
     </div>
   )

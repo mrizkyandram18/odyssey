@@ -357,6 +357,47 @@ func TestGetByCrewAndID_ComputesStatus(t *testing.T) {
 	}
 }
 
+func TestGetByCrewAndID_ExposesActiveChallengeAssignee(t *testing.T) {
+	store := newMockQuestStore()
+	store.quests[1] = makeQuest(string(QuestStatusActive))
+	store.challenges[1] = []game.Challenge{
+		makeChallenge(1, string(ChallengeStatusDone)),
+		makeChallenge(2, string(ChallengeStatusPending)),
+	}
+	assigned := "user-2"
+	store.challenges[1][1].AssignedTo = &assigned
+	svc := NewQuestService(store)
+
+	result, err := svc.GetByCrewAndID(context.Background(), 1, "crew-1")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if result.ActiveChallengeAssignedTo == nil {
+		t.Fatal("expected active_challenge_assigned_to to be set")
+	}
+	if *result.ActiveChallengeAssignedTo != "user-2" {
+		t.Errorf("expected assignee user-2, got %s", *result.ActiveChallengeAssignedTo)
+	}
+}
+
+func TestGetByCrewAndID_AllDoneHasNoAssignee(t *testing.T) {
+	store := newMockQuestStore()
+	store.quests[1] = makeQuest(string(QuestStatusDone))
+	store.challenges[1] = []game.Challenge{
+		makeChallenge(1, string(ChallengeStatusDone)),
+		makeChallenge(2, string(ChallengeStatusDone)),
+	}
+	svc := NewQuestService(store)
+
+	result, err := svc.GetByCrewAndID(context.Background(), 1, "crew-1")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if result.ActiveChallengeAssignedTo != nil {
+		t.Errorf("expected nil active assignment, got %v", *result.ActiveChallengeAssignedTo)
+	}
+}
+
 func TestCompleteChallengeForQuest_TransitionsToActive(t *testing.T) {
 	store := newMockQuestStore()
 	store.quests[1] = makeQuest(string(QuestStatusPending))

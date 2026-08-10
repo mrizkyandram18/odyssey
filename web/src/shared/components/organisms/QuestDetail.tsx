@@ -3,6 +3,7 @@ import confetti from 'canvas-confetti'
 import type { Challenge, Quest, CompleteChallengeResult } from '../../types'
 import { Card } from '../atoms/Card'
 import { Button } from '../atoms/Button'
+import { YourTurnBadge } from '../molecules/YourTurnBadge'
 import { SubmissionForm } from '../../../features/creative/SubmissionForm'
 
 export interface QuestDetailProps {
@@ -10,6 +11,7 @@ export interface QuestDetailProps {
   challenges: Challenge[]
   onStartQuest?: () => Promise<void>
   onCompleteChallenge?: (challengeId: number) => Promise<CompleteChallengeResult | null>
+  isMyTurn?: boolean
 }
 
 export function QuestDetail({
@@ -17,6 +19,7 @@ export function QuestDetail({
   challenges,
   onStartQuest,
   onCompleteChallenge,
+  isMyTurn,
 }: QuestDetailProps) {
   const [starting, setStarting] = useState(false)
   const [completingId, setCompletingId] = useState<number | null>(null)
@@ -75,6 +78,7 @@ export function QuestDetail({
           </h1>
           
           <div className="flex items-center gap-3 flex-wrap">
+            {isMyTurn && <YourTurnBadge />}
             {quest.status === 'ACTIVE' && <span className="bg-accent-magic/20 text-accent-magic font-bold px-3 py-1 rounded border border-accent-magic/30">ACTIVE</span>}
             {quest.status === 'DONE' && <span className="bg-accent-nature/20 text-accent-nature font-bold px-3 py-1 rounded border border-accent-nature/30">COMPLETED</span>}
             {quest.status === 'PENDING' && <span className="bg-surface border border-border-subtle text-text-secondary font-bold px-3 py-1 rounded">PENDING</span>}

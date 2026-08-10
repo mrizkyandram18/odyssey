@@ -4,8 +4,11 @@ import { Card } from '../../shared/components/atoms/Card'
 import { Button } from '../../shared/components/atoms/Button'
 import { questsApi } from '../../shared/lib/api'
 import type { QuestView } from '../../shared/types'
+import { YourTurnBadge } from '../../shared/components/molecules/YourTurnBadge'
+import { useSession } from '../../shared/hooks/useSession'
+import { isMyRelayTurn } from '../../shared/utils/questTurn'
 
-const QuestList = ({ title, list, emptyMsg }: { title: string, list: QuestView[], emptyMsg: string }) => (
+const QuestList = ({ title, list, emptyMsg, uid }: { title: string, list: QuestView[], emptyMsg: string, uid?: string | null }) => (
   <section className="mb-10">
     <h2 className="font-heading text-2xl text-text-primary mb-4 border-b border-border-subtle pb-2">{title}</h2>
     {list.length === 0 ? (
@@ -25,6 +28,7 @@ const QuestList = ({ title, list, emptyMsg }: { title: string, list: QuestView[]
                 )}
               </div>
               <div className="flex flex-col items-end gap-1">
+                {isMyRelayTurn(quest, uid) && <YourTurnBadge />}
                 {quest.status === 'ACTIVE' && <span className="text-xs font-bold bg-accent-magic/20 text-accent-magic px-2 py-1 rounded">ACTIVE</span>}
                 {quest.status === 'DONE' && <span className="text-xs font-bold bg-accent-nature/20 text-accent-nature px-2 py-1 rounded">DONE</span>}
                 {quest.status === 'PENDING' && <span className="text-xs font-bold bg-surface border border-border-subtle text-text-secondary px-2 py-1 rounded">PENDING</span>}
@@ -58,6 +62,7 @@ const QuestList = ({ title, list, emptyMsg }: { title: string, list: QuestView[]
 )
 
 export function QuestsPage() {
+  const { session } = useSession()
   const [quests, setQuests] = useState<QuestView[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -106,9 +111,9 @@ export function QuestsPage() {
         </div>
       )}
 
-      <QuestList title="Active Adventures" list={activeQuests} emptyMsg="No active quests right now. Time for a rest!" />
-      <QuestList title="Available Quests" list={pendingQuests} emptyMsg="No new quests available." />
-      <QuestList title="Completed" list={completedQuests} emptyMsg="You haven't completed any quests yet." />
+      <QuestList title="Active Adventures" list={activeQuests} emptyMsg="No active quests right now. Time for a rest!" uid={session?.uid} />
+      <QuestList title="Available Quests" list={pendingQuests} emptyMsg="No new quests available." uid={session?.uid} />
+      <QuestList title="Completed" list={completedQuests} emptyMsg="You haven't completed any quests yet." uid={session?.uid} />
     </div>
   )
 }

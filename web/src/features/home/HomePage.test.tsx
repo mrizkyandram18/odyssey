@@ -36,7 +36,7 @@ describe('HomePage', () => {
   beforeEach(() => {
     vi.resetAllMocks()
     vi.mocked(useSession).mockReturnValue({
-      session: { user: { id: 'u1' } } as any,
+      session: { uid: 'u1' } as any,
       loading: false,
       error: null,
       login: vi.fn(),
@@ -76,6 +76,53 @@ describe('HomePage', () => {
     // Assert the mocked ConnectedReactionBar is rendered with QUEST target and correct ID
     const reactionBar = screen.getByTestId('reaction-bar-QUEST-101')
     expect(reactionBar).toBeInTheDocument()
+  })
+
+  it('renders Your Turn badge on an active relay quest assigned to me', async () => {
+    vi.mocked(apiClient.request).mockResolvedValueOnce({
+      player: { explorer_name: 'Tester', coins: 10 },
+      realm_progress: [{ realm: 'Whispering Woods', progress: 50, status: 'ACTIVE' }],
+      daily_turn: { available: true, streak_days: 1 },
+      active_quests: [
+        { id: 201, title: 'Shadow Trail', challenge_count: 2, completed_count: 1, status: 'ACTIVE', quest_type: 'RELAY', active_challenge_assigned_to: 'u1' },
+      ],
+      completed_quests_today: [],
+      available_chests: [],
+    })
+
+    render(
+      <MemoryRouter>
+        <HomePage />
+      </MemoryRouter>
+    )
+
+    await waitFor(() => {
+      expect(screen.getByText('Your Turn')).toBeInTheDocument()
+    })
+  })
+
+  it('does not render Your Turn badge when the relay turn belongs to someone else', async () => {
+    vi.mocked(apiClient.request).mockResolvedValueOnce({
+      player: { explorer_name: 'Tester', coins: 10 },
+      realm_progress: [{ realm: 'Whispering Woods', progress: 50, status: 'ACTIVE' }],
+      daily_turn: { available: true, streak_days: 1 },
+      active_quests: [
+        { id: 201, title: 'Shadow Trail', challenge_count: 2, completed_count: 1, status: 'ACTIVE', quest_type: 'RELAY', active_challenge_assigned_to: 'u2' },
+      ],
+      completed_quests_today: [],
+      available_chests: [],
+    })
+
+    render(
+      <MemoryRouter>
+        <HomePage />
+      </MemoryRouter>
+    )
+
+    await waitFor(() => {
+      expect(screen.getByText('Shadow Trail')).toBeInTheDocument()
+    })
+    expect(screen.queryByText('Your Turn')).not.toBeInTheDocument()
   })
 
   it('does not render reaction bar if there are no completed quests', async () => {
