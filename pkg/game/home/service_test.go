@@ -94,6 +94,9 @@ func (m *mockQuestStore) CreateChallenge(ctx context.Context, c *game.Challenge)
 func (m *mockQuestStore) UpdateChallenge(ctx context.Context, challengeID int64, patch map[string]any) error {
 	return m.err
 }
+func (m *mockQuestStore) UpdateChallengeIfMatch(ctx context.Context, challengeID int64, oldStatus string, patch map[string]any) (bool, error) {
+	return false, m.err
+}
 
 type mockProgressionStore struct {
 	relicCount int

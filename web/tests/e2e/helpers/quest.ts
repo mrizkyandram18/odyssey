@@ -39,9 +39,20 @@ export async function resetQuestState() {
     'Authorization': `Bearer ${SUPABASE_SERVICE_KEY}`,
     'Content-Type': 'application/json'
   };
-  await fetch(`${SUPABASE_REST_URL}/odyssey_quests?id=eq.103`, { method: 'PATCH', headers, body: JSON.stringify({ status: 'ACTIVE', completed_at: null }) }).catch(() => {});
-  await fetch(`${SUPABASE_REST_URL}/odyssey_challenges?id=eq.5`, { method: 'PATCH', headers, body: JSON.stringify({ status: 'PENDING', completed_by: null, completed_at: null }) }).catch(() => {});
-  await fetch(`${SUPABASE_REST_URL}/odyssey_challenges?id=eq.6`, { method: 'PATCH', headers, body: JSON.stringify({ status: 'PENDING', completed_by: null, completed_at: null }) }).catch(() => {});
+  // Reset quest 102 (Gather Herbs — used by golden-path) to PENDING so Embark works.
+  // Challenge rows identified by slug (not fragile row ids).
+  await fetch(`${SUPABASE_REST_URL}/odyssey_quests?id=eq.102`, {
+    method: 'PATCH', headers,
+    body: JSON.stringify({ status: 'PENDING', started_at: null, completed_at: null }),
+  }).catch(() => {});
+  await fetch(`${SUPABASE_REST_URL}/odyssey_challenges?quest_id=eq.102&slug=eq.spot-the-green`, {
+    method: 'PATCH', headers,
+    body: JSON.stringify({ status: 'PENDING', completed_by: null, completed_at: null }),
+  }).catch(() => {});
+  await fetch(`${SUPABASE_REST_URL}/odyssey_challenges?quest_id=eq.102&slug=eq.herb-lore`, {
+    method: 'PATCH', headers,
+    body: JSON.stringify({ status: 'PENDING', completed_by: null, completed_at: null }),
+  }).catch(() => {});
 }
 
 export async function verifyXpIncreased(page: Page) {

@@ -20,9 +20,15 @@ const QuestList = ({ title, list, emptyMsg }: { title: string, list: QuestView[]
               <div>
                 <h3 className="font-heading text-xl text-text-primary">{quest.title}</h3>
                 <p className="text-xs text-accent-magic uppercase tracking-wider">{quest.template_slug.replace(/-/g, ' ')}</p>
+                {quest.quest_type && (
+                  <p className="text-[10px] text-text-secondary uppercase tracking-widest mt-1">{quest.quest_type}</p>
+                )}
               </div>
-              {quest.status === 'ACTIVE' && <span className="text-xs font-bold bg-accent-magic/20 text-accent-magic px-2 py-1 rounded">ACTIVE</span>}
-              {quest.status === 'DONE' && <span className="text-xs font-bold bg-accent-nature/20 text-accent-nature px-2 py-1 rounded">DONE</span>}
+              <div className="flex flex-col items-end gap-1">
+                {quest.status === 'ACTIVE' && <span className="text-xs font-bold bg-accent-magic/20 text-accent-magic px-2 py-1 rounded">ACTIVE</span>}
+                {quest.status === 'DONE' && <span className="text-xs font-bold bg-accent-nature/20 text-accent-nature px-2 py-1 rounded">DONE</span>}
+                {quest.status === 'PENDING' && <span className="text-xs font-bold bg-surface border border-border-subtle text-text-secondary px-2 py-1 rounded">PENDING</span>}
+              </div>
             </div>
             
             <div className="flex items-center gap-2 mb-6">

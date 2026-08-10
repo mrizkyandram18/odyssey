@@ -74,10 +74,15 @@ export function QuestDetail({
             {quest.title}
           </h1>
           
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-3 flex-wrap">
             {quest.status === 'ACTIVE' && <span className="bg-accent-magic/20 text-accent-magic font-bold px-3 py-1 rounded border border-accent-magic/30">ACTIVE</span>}
             {quest.status === 'DONE' && <span className="bg-accent-nature/20 text-accent-nature font-bold px-3 py-1 rounded border border-accent-nature/30">COMPLETED</span>}
             {quest.status === 'PENDING' && <span className="bg-surface border border-border-subtle text-text-secondary font-bold px-3 py-1 rounded">PENDING</span>}
+            {quest.quest_type && (
+              <span className="bg-surface border border-border-subtle text-text-secondary font-bold px-3 py-1 rounded uppercase tracking-wider text-xs">
+                {quest.quest_type}
+              </span>
+            )}
           </div>
         </div>
       </Card>

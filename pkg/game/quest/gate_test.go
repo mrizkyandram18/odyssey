@@ -100,6 +100,9 @@ func (m *mockGateQuestStore) CreateChallenge(ctx context.Context, c *game.Challe
 func (m *mockGateQuestStore) UpdateChallenge(ctx context.Context, challengeID int64, patch map[string]any) error {
 	return nil
 }
+func (m *mockGateQuestStore) UpdateChallengeIfMatch(ctx context.Context, challengeID int64, oldStatus string, patch map[string]any) (bool, error) {
+	return true, nil
+}
 
 func TestQuestGate_IsChapterUnlocked_TrueWhenActive(t *testing.T) {
 	chapters := &mockGateChapterStore{

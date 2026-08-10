@@ -110,11 +110,45 @@ func (m *concurrentQuestStore) UpdateChallenge(ctx context.Context, challengeID 
 				if status, ok := patch["status"].(string); ok {
 					chs[i].Status = status
 				}
+				if completedBy, ok := patch["completed_by"].(string); ok {
+					chs[i].CompletedBy = completedBy
+				}
+				if ca, ok := patch["completed_at"].(*time.Time); ok {
+					chs[i].CompletedAt = ca
+				}
+				if owner, ok := patch["assigned_to"].(string); ok {
+					chs[i].AssignedTo = &owner
+				}
 				return nil
 			}
 		}
 	}
 	return game.ErrNotFound
+}
+
+func (m *concurrentQuestStore) UpdateChallengeIfMatch(ctx context.Context, challengeID int64, oldStatus string, patch map[string]any) (bool, error) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	for _, chs := range m.challenges {
+		for i := range chs {
+			if chs[i].ID == challengeID {
+				if chs[i].Status != oldStatus {
+					return false, nil
+				}
+				if status, ok := patch["status"].(string); ok {
+					chs[i].Status = status
+				}
+				if completedBy, ok := patch["completed_by"].(string); ok {
+					chs[i].CompletedBy = completedBy
+				}
+				if ca, ok := patch["completed_at"].(*time.Time); ok {
+					chs[i].CompletedAt = ca
+				}
+				return true, nil
+			}
+		}
+	}
+	return false, game.ErrNotFound
 }
 
 type concurrentUserStore struct {

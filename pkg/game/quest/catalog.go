@@ -12,6 +12,7 @@ type QuestTemplate struct {
 	Slug          string
 	Title         string
 	Realm         string
+	Type          QuestType
 	ChallengeDefs []ChallengeDef
 }
 
@@ -51,6 +52,9 @@ const RealmProgressPerQuest = 25
 // Deprecated: use RealmCatalog.Get(realm).MaxProgress.
 const RealmCompletionThreshold = 100
 
+// MVPRealm is the single playable realm for Phase 1.
+const MVPRealm = "whispering-woods"
+
 // realmsOrder defines the sequence in which realms are unlocked.
 // Deprecated: use world.DefaultRealmCatalog.Order() instead.
 var realmsOrder = world.DefaultRealmCatalog.Order()
@@ -67,13 +71,16 @@ func NextRealm(current string) string {
 	return ""
 }
 
-// questCatalog holds the code-embedded quest templates for the MVP.
-// Realms are embedded in code per docs/domain-model.md.
+// questCatalog holds the code-embedded quest templates for Phase 1 MVP.
+// Exactly 6 quests in Whispering Woods with SOLO + RELAY + CREATIVE variety.
+// Future-realm templates live in odyssey_quest_definitions only until later phases.
 var questCatalog = map[string]QuestTemplate{
+	// SOLO — observation / research
 	"morning-light": {
 		Slug:  "morning-light",
 		Title: "Morning Light",
-		Realm: "whispering-woods",
+		Realm: MVPRealm,
+		Type:  QuestTypeSolo,
 		ChallengeDefs: []ChallengeDef{
 			{Slug: "find-the-dew", Description: "Find something glistening outside your door and describe it.", Type: ChallengeObservation},
 			{Slug: "morning-fact", Description: "Look up one fact about morning sunlight and share it.", Type: ChallengeResearch},
@@ -82,7 +89,8 @@ var questCatalog = map[string]QuestTemplate{
 	"gather-herbs": {
 		Slug:  "gather-herbs",
 		Title: "Gather Herbs",
-		Realm: "whispering-woods",
+		Realm: MVPRealm,
+		Type:  QuestTypeSolo,
 		ChallengeDefs: []ChallengeDef{
 			{Slug: "spot-the-green", Description: "Point out three shades of green you can see right now.", Type: ChallengeObservation},
 			{Slug: "herb-lore", Description: "Name one use for a common houseplant.", Type: ChallengeResearch},
@@ -91,10 +99,44 @@ var questCatalog = map[string]QuestTemplate{
 	"riddle-of-the-stones": {
 		Slug:  "riddle-of-the-stones",
 		Title: "Riddle of the Stones",
-		Realm: "whispering-woods",
+		Realm: MVPRealm,
+		Type:  QuestTypeSolo,
 		ChallengeDefs: []ChallengeDef{
 			{Slug: "stone-shape", Description: "Find a stone or brick and describe its shape.", Type: ChallengeObservation},
 			{Slug: "solve-riddle", Description: "Solve: I have no voice, yet I answer every question. What am I?", Type: ChallengePuzzle},
+		},
+	},
+	// RELAY — sequential legs; next leg is assigned round-robin after each completion
+	"shadow-trail": {
+		Slug:  "shadow-trail",
+		Title: "Shadow Trail",
+		Realm: MVPRealm,
+		Type:  QuestTypeRelay,
+		ChallengeDefs: []ChallengeDef{
+			{Slug: "trace-shadow", Description: "Trace the shape of a shadow on the ground and describe it.", Type: ChallengeObservation},
+			{Slug: "shadow-story", Description: "Invent a short story about where the shadow leads.", Type: ChallengeWrite},
+		},
+	},
+	// CREATIVE — group Story submission (CREATE_MEMORY on quest completion)
+	"the-old-growth": {
+		Slug:  "the-old-growth",
+		Title: "The Old Growth",
+		Realm: MVPRealm,
+		Type:  QuestTypeCreative,
+		ChallengeDefs: []ChallengeDef{
+			{Slug: "draw-tree", Description: "Draw or describe the oldest tree you can see.", Type: ChallengeDraw},
+			{Slug: "tree-history", Description: "Write a short paragraph about what this tree has witnessed.", Type: ChallengeWrite},
+		},
+	},
+	// SOLO — puzzle / observation
+	"forest-riddle": {
+		Slug:  "forest-riddle",
+		Title: "Forest Riddle",
+		Realm: MVPRealm,
+		Type:  QuestTypeSolo,
+		ChallengeDefs: []ChallengeDef{
+			{Slug: "riddle-solve", Description: "Solve the riddle: I am always hungry, I must always be fed. The finger I touch will soon turn red. What am I?", Type: ChallengePuzzle},
+			{Slug: "find-marker", Description: "Find a natural marker (stone, stick, leaf) that matches the riddle answer.", Type: ChallengeObservation},
 		},
 	},
 }
@@ -112,4 +154,24 @@ func RealmForSlug(slug string) string {
 		return t.Realm
 	}
 	return ""
+}
+
+// TypeForSlug returns the quest type for a template slug, or empty if unknown.
+func TypeForSlug(slug string) QuestType {
+	if t, ok := LookupTemplate(slug); ok {
+		return t.Type
+	}
+	return ""
+}
+
+// MVPQuestSlugs returns the ordered list of the 6 Phase 1 Whispering Woods quests.
+func MVPQuestSlugs() []string {
+	return []string{
+		"morning-light",
+		"gather-herbs",
+		"riddle-of-the-stones",
+		"shadow-trail",
+		"the-old-growth",
+		"forest-riddle",
+	}
 }

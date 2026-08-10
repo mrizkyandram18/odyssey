@@ -34,12 +34,14 @@ type ContentGateway interface {
 // QuestWithChallenges is a quest returned together with its challenge list.
 type QuestWithChallenges struct {
 	game.Quest
+	QuestType  string           `json:"quest_type,omitempty"`
 	Challenges []game.Challenge `json:"challenges"`
 }
 
 // QuestView is the quest summary used for list responses.
 type QuestView struct {
 	game.Quest
+	QuestType                 string  `json:"quest_type,omitempty"`
 	ChallengeCount            int     `json:"challenge_count"`
 	CompletedCount            int     `json:"completed_count"`
 	ActiveChallengeAssignedTo *string `json:"active_challenge_assigned_to,omitempty"`
@@ -159,6 +161,7 @@ func (s *QuestService) List(ctx context.Context, crewID string) ([]QuestView, er
 		}
 		views = append(views, QuestView{
 			Quest:                     q,
+			QuestType:                 string(TypeForSlug(q.TemplateSlug)),
 			ChallengeCount:            len(challenges),
 			CompletedCount:            done,
 			ActiveChallengeAssignedTo: activeAssignedTo,
@@ -210,6 +213,7 @@ func (s *QuestService) getWithChallenges(ctx context.Context, q *game.Quest) (*Q
 
 	result := &QuestWithChallenges{
 		Quest:      *q,
+		QuestType:  string(TypeForSlug(q.TemplateSlug)),
 		Challenges: challenges,
 	}
 	computed := string(s.ComputeStatus(challenges))
@@ -301,64 +305,87 @@ func (s *QuestService) CompleteChallenge(ctx context.Context, challengeID int64,
 // status based on the new challenge state. This is the full lifecycle
 // transition used when a family member completes a challenge within a quest.
 //
-// Returns the recomputed quest status and whether the quest *just* completed
-// (i.e. it was not DONE before this challenge and is now DONE). When
-// completed is true, callers should trigger quest-completion rewards
-// (XP, realm progress).
-func (s *QuestService) CompleteChallengeForQuest(ctx context.Context, questID, challengeID int64, uid string) (QuestStatus, bool, error) {
+// Returns the recomputed quest status, whether this call transitioned the
+// challenge from PENDING to DONE (progressed), and whether the quest *just*
+// completed (i.e. it was not DONE before this call and is now DONE). When
+// progressed is true, callers award challenge XP. When completed is true,
+// callers trigger quest-completion rewards (XP, realm progress, events).
+//
+// Exactly-once guarantees:
+//   - The challenge is finalized with an atomic CAS (PENDING -> DONE), so a
+//     replay/retry of an already-completed challenge returns progressed=false
+//     and never re-awards.
+//   - The quest row is finalized with an atomic CAS against the current stored
+//     status (with a bounded retry), so concurrent completions converge on
+//     exactly one caller with completed=true.
+func (s *QuestService) CompleteChallengeForQuest(ctx context.Context, questID, challengeID int64, uid string) (QuestStatus, bool, bool, error) {
 	now := time.Now().UTC()
-
-	before, err := s.store.GetChallenges(ctx, questID)
-	if err != nil {
-		return "", false, err
-	}
-	oldStatus := computeStatus(before)
-	if qBefore, err := s.store.GetQuest(ctx, questID); err == nil && qBefore != nil {
-		if oldStatus == QuestStatusPending && (qBefore.Status == string(QuestStatusActive) || qBefore.StartedAt != nil) {
-			oldStatus = QuestStatusActive
-		}
-	}
 
 	challengePatch := map[string]any{
 		"status":       string(ChallengeStatusDone),
 		"completed_by": uid,
 		"completed_at": &now,
 	}
-	if err := s.store.UpdateChallenge(ctx, challengeID, challengePatch); err != nil {
-		return "", false, err
+	matched, err := s.store.UpdateChallengeIfMatch(ctx, challengeID, string(ChallengeStatusPending), challengePatch)
+	if err != nil {
+		return "", false, false, err
 	}
+	progressed := matched
 
 	challenges, err := s.store.GetChallenges(ctx, questID)
 	if err != nil {
-		return "", false, err
+		return "", false, false, err
 	}
 	newStatus := computeStatus(challenges)
 
-	questPatch := map[string]any{
-		"status": string(newStatus),
-	}
-	if newStatus == QuestStatusDone {
-		questPatch["completed_at"] = &now
-	}
-	if newStatus == QuestStatusActive && oldStatus != QuestStatusActive {
-		questPatch["started_at"] = &now
+	if !progressed {
+		// Replay of an already-completed challenge. Never re-award, but
+		// reconcile a drifted stored quest status (e.g. a stuck quest whose
+		// row was left ACTIVE after all challenges were completed).
+		return s.reconcileQuestStatus(ctx, questID, newStatus, &now), false, false, nil
 	}
 
-	if oldStatus != QuestStatusDone {
-		matched, err := s.store.UpdateQuestIfMatch(ctx, questID, string(oldStatus), questPatch)
+	// We completed the challenge. Finalize the quest status with an atomic CAS
+	// against the CURRENT stored status, retrying once if a concurrent
+	// completion wins the race. Exactly one caller transitions non-DONE -> DONE.
+	completed := false
+	for attempt := 0; attempt < 2; attempt++ {
+		stored, err := s.store.GetQuest(ctx, questID)
 		if err != nil {
-			return "", false, err
+			return "", true, false, err
 		}
-		if !matched {
-			return QuestStatusDone, false, nil
+		if stored == nil {
+			return "", true, false, ErrQuestNotFound
 		}
-	} else {
-		if err := s.store.UpdateQuest(ctx, questID, questPatch); err != nil {
-			return "", false, err
+		if stored.Status == string(QuestStatusDone) {
+			return newStatus, true, false, nil
+		}
+		questPatch := map[string]any{"status": string(newStatus)}
+		if newStatus == QuestStatusDone {
+			questPatch["completed_at"] = &now
+		}
+		if stored.StartedAt == nil {
+			questPatch["started_at"] = &now
+		}
+		ok, err := s.store.UpdateQuestIfMatch(ctx, questID, stored.Status, questPatch)
+		if err != nil {
+			return "", true, false, err
+		}
+		if ok {
+			completed = newStatus == QuestStatusDone
+			break
 		}
 	}
 
-	// Assign next challenge if quest is still active
+	if !completed && newStatus == QuestStatusDone {
+		// Two consecutive CAS losses while all challenges are DONE: verify the
+		// stored state before reporting, instead of returning a stale result.
+		if stored, err := s.store.GetQuest(ctx, questID); err == nil && stored != nil && stored.Status == string(QuestStatusDone) {
+			return QuestStatusDone, true, false, nil
+		}
+	}
+
+	// Assign next challenge owner if the quest is still active.
 	if newStatus == QuestStatusActive {
 		q, qErr := s.store.GetQuest(ctx, questID)
 		if qErr == nil && q != nil {
@@ -374,8 +401,31 @@ func (s *QuestService) CompleteChallengeForQuest(ctx context.Context, questID, c
 		}
 	}
 
-	completed := oldStatus != QuestStatusDone && newStatus == QuestStatusDone
-	return newStatus, completed, nil
+	return newStatus, true, completed, nil
+}
+
+// reconcileQuestStatus brings the stored quest status in line with the status
+// computed from its challenges. Used when a challenge completion is a replay
+// (already DONE) — the quest may still hold a stale stored status. The update
+// is best-effort: a lost CAS is ignored because the concurrent writer owns the
+// final state.
+func (s *QuestService) reconcileQuestStatus(ctx context.Context, questID int64, computed QuestStatus, now *time.Time) QuestStatus {
+	stored, err := s.store.GetQuest(ctx, questID)
+	if err != nil || stored == nil {
+		return computed
+	}
+	if stored.Status == string(computed) || stored.Status == string(QuestStatusDone) {
+		return computed
+	}
+	patch := map[string]any{"status": string(computed)}
+	if computed == QuestStatusDone {
+		patch["completed_at"] = now
+	}
+	if stored.StartedAt == nil {
+		patch["started_at"] = now
+	}
+	_, _ = s.store.UpdateQuestIfMatch(ctx, questID, stored.Status, patch)
+	return computed
 }
 
 // AssignNextChallengeOwner determines the next user for a challenge round-robin.

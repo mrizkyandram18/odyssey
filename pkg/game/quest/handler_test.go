@@ -2,6 +2,7 @@ package quest
 
 import (
 	"context"
+	"sync"
 	"testing"
 	"time"
 
@@ -97,8 +98,14 @@ func (m *mockRealmProgressStoreForHandler) UpdateRealmProgress(ctx context.Conte
 	}
 	rp := m.progress[crewID+"|"+realm]
 	if rp != nil {
-		if p, ok := patch["progress"].(int); ok {
-			rp.Progress = p
+		if v, ok := patch["progress"].(int); ok {
+			rp.Progress = v
+		}
+		if v, ok := patch["status"].(string); ok {
+			rp.Status = v
+		}
+		if v, ok := patch["last_unlocked_at"]; ok && v != nil {
+			rp.LastUnlockedAt, _ = patch["last_unlocked_at"].(time.Time)
 		}
 	}
 	return nil
@@ -556,6 +563,179 @@ func (m *mockBalanceStore) ListOverrides(ctx context.Context) ([]balance.Overrid
 	}
 	return result, nil
 }
+
 func (m *mockUserStoreForHandler) ListUsersByCrew(ctx context.Context, crewID string) ([]game.Player, error) {
 	return nil, nil
+}
+
+type countingRewardGateway struct {
+	mu     sync.Mutex
+	grants int
+}
+
+func (g *countingRewardGateway) GrantQuestReward(ctx context.Context, uid string, questID int64, xp int64) error {
+	g.mu.Lock()
+	defer g.mu.Unlock()
+	g.grants++
+	return nil
+}
+
+// --- Realm-unlock regression tests (issue: 022 LOCKED rows + COMPLETE realm) ---
+
+// completes the final challenge of quest 1, completing it and finishing the
+// whispering-woods realm.
+func completeFinalChallengeForQuest1(t *testing.T, h *QuestAPIHandler) *CompleteChallengeResult {
+	t.Helper()
+	result, err := h.CompleteChallenge(context.Background(), 1, 12, "crew-1", "user-1")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	return result
+}
+
+func setupCompleteQuestScenario(t *testing.T, realmProgress map[string]*game.RealmProgress) (*QuestAPIHandler, *mockRealmProgressStoreForHandler) {
+	t.Helper()
+	qStore := newMockQuestStore()
+	q := makeStoredQuest(1, "crew-1", "morning-light", string(QuestStatusActive))
+	q.StartedAt = &time.Time{}
+	qStore.quests[1] = q
+	qStore.questsByCrew["crew-1"] = []game.Quest{*qStore.quests[1]}
+	qStore.challenges[1] = makeStoredChallenges(1, string(ChallengeStatusDone), string(ChallengeStatusPending))
+
+	realm := newMockRealmStore()
+	realm.progress = realmProgress
+
+	h := NewQuestAPIHandler(NewQuestService(qStore),
+		progression.NewProgressionService(&mockUserStoreForHandler{player: makePlayerForHandler(1, 0)}, &defaultProgCfg),
+		realm, defaultRealmCfg, &defaultProgCfg)
+	return h, realm
+}
+
+func TestCompleteChallenge_UnlocksExistingLockedRealm(t *testing.T) {
+	now := time.Date(2026, 8, 3, 12, 0, 0, 0, time.UTC)
+	realmProgress := map[string]*game.RealmProgress{
+		"crew-1|whispering-woods": {CrewID: "crew-1", Realm: "whispering-woods", Status: "COMPLETE", Progress: 100, LastUnlockedAt: now},
+		"crew-1|clockwork-city":   {CrewID: "crew-1", Realm: "clockwork-city", Status: "LOCKED", Progress: 0},
+	}
+	h, realm := setupCompleteQuestScenario(t, realmProgress)
+
+	result := completeFinalChallengeForQuest1(t, h)
+	if !result.QuestCompleted {
+		t.Fatal("expected quest to be completed")
+	}
+
+	cw := realm.progress["crew-1|clockwork-city"]
+	if cw == nil {
+		t.Fatal("expected clockwork-city realm row to exist")
+	}
+	if cw.Status != "ACTIVE" {
+		t.Errorf("expected clockwork-city ACTIVE (locked row activated), got %s", cw.Status)
+	}
+	updates := map[string]bool{}
+	for _, u := range realm.updates {
+		updates[u] = true
+	}
+	if !updates["crew-1|clockwork-city"] {
+		t.Error("expected an update to the existing LOCKED clockwork-city row, not an insert")
+	}
+}
+
+func TestCompleteChallenge_CreatesMissingNextRealm(t *testing.T) {
+	realmProgress := map[string]*game.RealmProgress{
+		"crew-1|whispering-woods": {CrewID: "crew-1", Realm: "whispering-woods", Status: "COMPLETE", Progress: 100},
+	}
+	h, realm := setupCompleteQuestScenario(t, realmProgress)
+
+	result := completeFinalChallengeForQuest1(t, h)
+	if !result.QuestCompleted {
+		t.Fatal("expected quest to be completed")
+	}
+
+	cw := realm.progress["crew-1|clockwork-city"]
+	if cw == nil {
+		t.Fatal("expected clockwork-city realm row to be created")
+	}
+	if cw.Status != "ACTIVE" {
+		t.Errorf("expected clockwork-city ACTIVE, got %s", cw.Status)
+	}
+}
+
+// TestCompleteChallenge_ConcurrentExactlyOnceReward verifies that two
+// concurrent completions of the FINAL challenge — the classic double-tap race —
+// award challenge XP, the quest-completion reward, and the QuestCompleted
+// event exactly once. The loser is treated as a replay (no XP, no reward).
+func TestCompleteChallenge_ConcurrentExactlyOnceReward(t *testing.T) {
+	store := newConcurrentQuestStore()
+	now := time.Now().UTC()
+	q := &game.Quest{
+		ID:           1,
+		CrewID:       "crew-1",
+		TemplateSlug: "morning-light",
+		Title:        "Morning Light",
+		Status:       string(QuestStatusActive),
+		StartedAt:    &now,
+		CreatedAt:    now,
+	}
+	store.quests[1] = q
+	store.challenges[1] = []game.Challenge{
+		{ID: 11, QuestID: 1, Slug: "find-the-dew", Status: string(ChallengeStatusDone), CreatedAt: now},
+		{ID: 12, QuestID: 1, Slug: "morning-fact", Status: string(ChallengeStatusPending), CreatedAt: now},
+	}
+
+	pub := &capturePublisher{}
+	rewards := &countingRewardGateway{}
+	prog := progression.NewProgressionService(
+		&concurrentUserStore{player: &game.Player{UID: "user-1", CrewID: "crew-1", Level: 1, XP: 0, Version: 1}},
+		&defaultProgCfg,
+	)
+	realm := newConcurrentRealmStore()
+	_, _ = realm.CreateRealmProgress(context.Background(), &game.RealmProgress{
+		CrewID: "crew-1", Realm: "whispering-woods", Status: "ACTIVE", Progress: 0,
+	})
+	h := NewQuestAPIHandler(NewQuestService(store), prog, realm, defaultRealmCfg, &defaultProgCfg)
+	h.SetPublisher(pub)
+	h.SetRewardService(rewards)
+
+	var wg sync.WaitGroup
+	results := make([]*CompleteChallengeResult, 2)
+	errs := make([]error, 2)
+	for i := 0; i < 2; i++ {
+		wg.Add(1)
+		go func(idx int) {
+			defer wg.Done()
+			results[idx], errs[idx] = h.CompleteChallenge(context.Background(), 1, 12, "crew-1", "user-1")
+		}(i)
+	}
+	wg.Wait()
+
+	for i, err := range errs {
+		if err != nil {
+			t.Fatalf("call %d error: %v", i, err)
+		}
+	}
+
+	questCompletedEvents := 0
+	for _, ev := range pub.published {
+		if _, ok := ev.(events.QuestCompletedEvent); ok {
+			questCompletedEvents++
+		}
+	}
+	if questCompletedEvents != 1 {
+		t.Errorf("expected exactly 1 QuestCompletedEvent, got %d", questCompletedEvents)
+	}
+
+	if rewards.grants != 1 {
+		t.Errorf("expected exactly 1 reward grant, got %d", rewards.grants)
+	}
+
+	totalXP := results[0].XP + results[1].XP
+	expected := ChallengeXP + CompletionBonusXP
+	if totalXP != expected {
+		t.Errorf("expected total XP %d (challenge+bounty), got %d", expected, totalXP)
+	}
+
+	quest, _ := store.GetQuest(context.Background(), 1)
+	if quest.Status != string(QuestStatusDone) {
+		t.Errorf("expected quest DONE, got %s", quest.Status)
+	}
 }

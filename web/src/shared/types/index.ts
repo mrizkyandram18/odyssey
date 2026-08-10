@@ -63,6 +63,7 @@ export interface Explorer {
 export type MeResponse = Explorer
 
 export type QuestStatus = 'PENDING' | 'ACTIVE' | 'DONE'
+export type QuestType = 'SOLO' | 'RELAY' | 'CREATIVE' | 'GROUP'
 
 export interface Quest {
   id: number
@@ -70,6 +71,7 @@ export interface Quest {
   template_slug: string
   title: string
   status: QuestStatus
+  quest_type?: QuestType | string
   started_at?: string | null
   completed_at?: string | null
   created_at: string
@@ -351,6 +353,7 @@ export interface QuestView {
   template_slug: string
   title: string
   status: QuestStatus
+  quest_type?: QuestType | string
   started_at?: string | null
   completed_at?: string | null
   created_at: string
@@ -365,6 +368,7 @@ export interface QuestWithChallenges {
   template_slug: string
   title: string
   status: QuestStatus
+  quest_type?: QuestType | string
   started_at?: string | null
   completed_at?: string | null
   created_at: string

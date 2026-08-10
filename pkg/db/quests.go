@@ -158,6 +158,23 @@ func (s *supabaseQuestStore) UpdateChallenge(ctx context.Context, challengeID in
 	return nil
 }
 
+func (s *supabaseQuestStore) UpdateChallengeIfMatch(ctx context.Context, challengeID int64, oldStatus string, patch map[string]any) (bool, error) {
+	v := url.Values{}
+	v.Set("id", "eq."+strconv.FormatInt(challengeID, 10))
+	v.Set("status", "eq."+oldStatus)
+	params := v.Encode()
+	raw, err := s.client.Mutate(ctx, "PATCH", "odyssey_challenges", patch, params+"&return=representation")
+	if err != nil {
+		return false, fmt.Errorf("update challenge if match: %w", err)
+	}
+
+	var challenges []Challenge
+	if err := json.Unmarshal(raw, &challenges); err != nil {
+		return false, fmt.Errorf("parse update challenge response: %w", err)
+	}
+	return len(challenges) > 0, nil
+}
+
 func mapQuest(q QuestInstance) *game.Quest {
 	return &game.Quest{
 		ID:           q.ID,
