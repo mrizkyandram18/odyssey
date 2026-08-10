@@ -94,12 +94,13 @@ func (s *AchievementService) ListByPlayer(ctx context.Context, uid string) ([]Ac
 		return nil, fmt.Errorf("list achievement defs: %w", err)
 	}
 
+	// Cache progress by its source key (trigger + scoping) so definitions
+	// sharing a trigger issue a single underlying read per ListByPlayer call.
+	progressCache := make(map[string]int, len(defs))
+
 	result := make([]AchievementView, 0, len(defs))
 	for _, def := range defs {
-		progress, err := s.countProgress(ctx, def, uid, "")
-		if err != nil {
-			progress = 0
-		}
+		progress := s.cachedProgress(ctx, def, uid, "", progressCache)
 		a, awarded := earnedMap[def.Code]
 		awardedAt := time.Time{}
 		if awarded {
@@ -118,6 +119,24 @@ func (s *AchievementService) ListByPlayer(ctx context.Context, uid string) ([]Ac
 		})
 	}
 	return result, nil
+}
+
+// cachedProgress returns the progress value for def, reusing the cached value
+// when another definition in the same listing already computed it from the
+// same progress source. Errors keep the soft-error behavior of the caller:
+// a failed count resolves to 0 and is cached so identical failed reads are
+// not repeated.
+func (s *AchievementService) cachedProgress(ctx context.Context, def content.AchievementDefinition, uid, crewID string, cache map[string]int) int {
+	key := string(def.Trigger) + "|" + uid + "|" + crewID
+	if p, ok := cache[key]; ok {
+		return p
+	}
+	p, err := s.countProgress(ctx, def, uid, crewID)
+	if err != nil {
+		p = 0
+	}
+	cache[key] = p
+	return p
 }
 
 func (s *AchievementService) countProgress(ctx context.Context, def content.AchievementDefinition, uid, crewID string) (int, error) {

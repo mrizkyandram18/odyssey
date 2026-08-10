@@ -4,6 +4,8 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"net/url"
+	"strings"
 	"testing"
 	"time"
 
@@ -83,6 +85,51 @@ func TestQuestStore_GetChallenges(t *testing.T) {
 	}
 	if challenges[0].Status != "DONE" {
 		t.Errorf("expected first challenge DONE, got %s", challenges[0].Status)
+	}
+}
+
+func TestQuestStore_ListChallengesByQuestIDs(t *testing.T) {
+	data, _ := json.Marshal([]Challenge{
+		{ID: 10, QuestID: 1, Slug: "obs", Description: "Observe", Status: "DONE"},
+		{ID: 11, QuestID: 1, Slug: "research", Description: "Research", Status: "PENDING"},
+		{ID: 12, QuestID: 3, Slug: "draw", Description: "Draw", Status: "DONE"},
+	})
+	client := &mockSupabaseClient{data: data}
+	store := NewQuestStore(client).(*supabaseQuestStore)
+	challenges, err := store.ListChallengesByQuestIDs(context.Background(), []int64{1, 3})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if len(challenges) != 3 {
+		t.Fatalf("expected 3 challenges, got %d", len(challenges))
+	}
+	if len(client.getCalls) != 1 {
+		t.Fatalf("expected 1 batched request, got %d", len(client.getCalls))
+	}
+	unescaped, err := url.QueryUnescape(client.getCalls[0])
+	if err != nil {
+		t.Fatalf("parse recorded params: %v", err)
+	}
+	if !strings.Contains(unescaped, "quest_id=in.(1,3)") {
+		t.Errorf("expected in.(1,3) filter, got %q", client.getCalls[0])
+	}
+	if !strings.HasPrefix(client.getCalls[0], "odyssey_challenges?") {
+		t.Errorf("expected odyssey_challenges table, got %q", client.getCalls[0])
+	}
+}
+
+func TestQuestStore_ListChallengesByQuestIDs_Empty(t *testing.T) {
+	client := &mockSupabaseClient{data: []byte("[]")}
+	store := NewQuestStore(client).(*supabaseQuestStore)
+	challenges, err := store.ListChallengesByQuestIDs(context.Background(), nil)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if len(challenges) != 0 {
+		t.Fatalf("expected 0 challenges, got %d", len(challenges))
+	}
+	if len(client.getCalls) != 0 {
+		t.Fatalf("expected no request for empty ids, got %d", len(client.getCalls))
 	}
 }
 

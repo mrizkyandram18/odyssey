@@ -2,6 +2,7 @@ package achievement
 
 import (
 	"context"
+	"errors"
 	"testing"
 	"time"
 
@@ -110,6 +111,24 @@ func (m *mockProgressReader) GetPlayerLevel(ctx context.Context, uid string) (in
 	return m.playerLevel, m.err
 }
 
+// countingProgressReader wraps mockProgressReader and counts how many times
+// each progress source was queried.
+type countingProgressReader struct {
+	mockProgressReader
+	questCounts int
+	relicCounts int
+}
+
+func (c *countingProgressReader) CountCompletedQuests(ctx context.Context, crewID string) (int, error) {
+	c.questCounts++
+	return c.mockProgressReader.CountCompletedQuests(ctx, crewID)
+}
+
+func (c *countingProgressReader) CountCollectedRelics(ctx context.Context, uid string) (int, error) {
+	c.relicCounts++
+	return c.mockProgressReader.CountCollectedRelics(ctx, uid)
+}
+
 func makeAchievementDef(code, kind, trigger string, threshold int) gamecontent.AchievementDefinition {
 	return gamecontent.AchievementDefinition{
 		Code:        code,
@@ -171,6 +190,83 @@ func TestListByPlayer_ShowsProgressAndUnlocked(t *testing.T) {
 	}
 	if a2.Unlocked {
 		t.Error("expected not unlocked")
+	}
+}
+
+func TestListByPlayer_MemoizesProgressByTrigger(t *testing.T) {
+	gw := &mockAchievementGateway{
+		defs: []gamecontent.AchievementDefinition{
+			makeAchievementDef("ACH_QUESTS_10", "PERSONAL", "QUEST_COMPLETED", 10),
+			makeAchievementDef("ACH_QUESTS_50", "PERSONAL", "QUEST_COMPLETED", 50),
+			makeAchievementDef("ACH_RELIC_5", "PERSONAL", "RELIC_COLLECTED", 5),
+			makeAchievementDef("ACH_RELIC_25", "PERSONAL", "RELIC_COLLECTED", 25),
+			makeAchievementDef("ACH_LEVEL_3", "PERSONAL", "LEVEL_REACHED", 3),
+		},
+	}
+	store := newMockAchievementStore()
+	rdr := &countingProgressReader{
+		mockProgressReader: mockProgressReader{
+			completedQuests: 7,
+			collectedRelics: 4,
+			playerLevel:     3,
+		},
+	}
+	svc := NewAchievementService(gw, store, rdr, events.NopPublisher{})
+
+	result, err := svc.ListByPlayer(context.Background(), "u1")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if len(result) != 5 {
+		t.Fatalf("expected 5 achievements, got %d", len(result))
+	}
+
+	progressByCode := map[string]int{}
+	for _, a := range result {
+		progressByCode[a.Code] = a.Progress
+	}
+	if progressByCode["ACH_QUESTS_10"] != 7 || progressByCode["ACH_QUESTS_50"] != 7 {
+		t.Errorf("quest progress reused across defs, got %v", progressByCode)
+	}
+	if progressByCode["ACH_RELIC_5"] != 4 || progressByCode["ACH_RELIC_25"] != 4 {
+		t.Errorf("relic progress reused across defs, got %v", progressByCode)
+	}
+
+	if rdr.questCounts != 1 {
+		t.Errorf("expected 1 CountCompletedQuests call, got %d", rdr.questCounts)
+	}
+	if rdr.relicCounts != 1 {
+		t.Errorf("expected 1 CountCollectedRelics call, got %d", rdr.relicCounts)
+	}
+}
+
+func TestListByPlayer_SoftErrorStillMemoized(t *testing.T) {
+	gw := &mockAchievementGateway{
+		defs: []gamecontent.AchievementDefinition{
+			makeAchievementDef("ACH_QUESTS_10", "PERSONAL", "QUEST_COMPLETED", 10),
+			makeAchievementDef("ACH_QUESTS_50", "PERSONAL", "QUEST_COMPLETED", 50),
+		},
+	}
+	store := newMockAchievementStore()
+	rdr := &countingProgressReader{
+		mockProgressReader: mockProgressReader{err: errors.New("db down")},
+	}
+	svc := NewAchievementService(gw, store, rdr, events.NopPublisher{})
+
+	result, err := svc.ListByPlayer(context.Background(), "u1")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if len(result) != 2 {
+		t.Fatalf("expected 2 achievements, got %d", len(result))
+	}
+	for _, a := range result {
+		if a.Progress != 0 {
+			t.Errorf("expected soft-error progress 0 for %s, got %d", a.Code, a.Progress)
+		}
+	}
+	if rdr.questCounts != 1 {
+		t.Errorf("expected 1 CountCompletedQuests call on error, got %d", rdr.questCounts)
 	}
 }
 

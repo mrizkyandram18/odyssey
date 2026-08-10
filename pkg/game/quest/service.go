@@ -31,6 +31,13 @@ type ContentGateway interface {
 	GetQuest(ctx context.Context, slug string) (*gamecontent.QuestDefinition, error)
 }
 
+// ChallengeBatchReader is an optional capability a QuestStore may implement
+// to fetch challenges for many quests in a single request. QuestService uses
+// it when listing a crew to avoid one sequential challenge read per quest.
+type ChallengeBatchReader interface {
+	ListChallengesByQuestIDs(ctx context.Context, questIDs []int64) ([]game.Challenge, error)
+}
+
 // QuestWithChallenges is a quest returned together with its challenge list.
 type QuestWithChallenges struct {
 	game.Quest
@@ -144,12 +151,14 @@ func (s *QuestService) List(ctx context.Context, crewID string) ([]QuestView, er
 		return nil, err
 	}
 
+	challengesByQuest, err := s.challengesByQuestID(ctx, quests)
+	if err != nil {
+		return nil, err
+	}
+
 	views := make([]QuestView, 0, len(quests))
 	for _, q := range quests {
-		challenges, err := s.store.GetChallenges(ctx, q.ID)
-		if err != nil {
-			return nil, fmt.Errorf("failed to fetch challenges for quest %d: %w", q.ID, err)
-		}
+		challenges := challengesByQuest[q.ID]
 		done := 0
 		var activeAssignedTo *string
 		for _, c := range challenges {
@@ -168,6 +177,39 @@ func (s *QuestService) List(ctx context.Context, crewID string) ([]QuestView, er
 		})
 	}
 	return views, nil
+}
+
+// challengesByQuestID loads the challenges for all given quests, keyed by
+// quest ID. When the store supports batch reads (ChallengeBatchReader), a
+// single request fetches challenges for every quest; otherwise it falls back
+// to one GetChallenges read per quest. Quests without challenges map to nil.
+func (s *QuestService) challengesByQuestID(ctx context.Context, quests []game.Quest) (map[int64][]game.Challenge, error) {
+	ids := make([]int64, 0, len(quests))
+	for _, q := range quests {
+		ids = append(ids, q.ID)
+	}
+
+	if batch, ok := s.store.(ChallengeBatchReader); ok {
+		challenges, err := batch.ListChallengesByQuestIDs(ctx, ids)
+		if err != nil {
+			return nil, fmt.Errorf("failed to fetch challenges: %w", err)
+		}
+		grouped := make(map[int64][]game.Challenge, len(ids))
+		for _, c := range challenges {
+			grouped[c.QuestID] = append(grouped[c.QuestID], c)
+		}
+		return grouped, nil
+	}
+
+	grouped := make(map[int64][]game.Challenge, len(ids))
+	for _, q := range quests {
+		challenges, err := s.store.GetChallenges(ctx, q.ID)
+		if err != nil {
+			return nil, fmt.Errorf("failed to fetch challenges for quest %d: %w", q.ID, err)
+		}
+		grouped[q.ID] = challenges
+	}
+	return grouped, nil
 }
 
 // ActiveQuests filters a list of quests, returning only those that are

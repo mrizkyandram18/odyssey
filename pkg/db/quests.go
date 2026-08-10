@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"net/url"
 	"strconv"
+	"strings"
 
 	"odyssey/pkg/game"
 )
@@ -130,6 +131,34 @@ func (s *supabaseQuestStore) GetChallenges(ctx context.Context, questID int64) (
 	return result, nil
 }
 
+// ListChallengesByQuestIDs fetches challenges for many quests in a single
+// Supabase request using a PostgREST in.(...) filter. Quest IDs that have no
+// challenges simply contribute no entries.
+func (s *supabaseQuestStore) ListChallengesByQuestIDs(ctx context.Context, questIDs []int64) ([]game.Challenge, error) {
+	if len(questIDs) == 0 {
+		return nil, nil
+	}
+	v := url.Values{}
+	v.Set("quest_id", "in.("+joinInt64(questIDs)+")")
+	params := v.Encode()
+
+	raw, err := s.client.Get(ctx, "odyssey_challenges", params)
+	if err != nil {
+		return nil, fmt.Errorf("list challenges: %w", err)
+	}
+
+	var challenges []Challenge
+	if err := json.Unmarshal(raw, &challenges); err != nil {
+		return nil, fmt.Errorf("parse challenges: %w", err)
+	}
+
+	result := make([]game.Challenge, 0, len(challenges))
+	for _, c := range challenges {
+		result = append(result, *mapChallenge(c))
+	}
+	return result, nil
+}
+
 func (s *supabaseQuestStore) CreateChallenge(ctx context.Context, c *game.Challenge) (*game.Challenge, error) {
 	payload := Challenge{
 		QuestID:     c.QuestID,
@@ -200,6 +229,17 @@ func mapChallenge(c Challenge) *game.Challenge {
 		CompletedAt: c.CompletedAt,
 		CreatedAt:   c.CreatedAt,
 	}
+}
+
+func joinInt64(ids []int64) string {
+	var sb strings.Builder
+	for i, id := range ids {
+		if i > 0 {
+			sb.WriteByte(',')
+		}
+		sb.WriteString(strconv.FormatInt(id, 10))
+	}
+	return sb.String()
 }
 
 var _ game.QuestStore = (*supabaseQuestStore)(nil)

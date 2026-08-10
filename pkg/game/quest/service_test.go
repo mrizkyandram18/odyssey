@@ -10,10 +10,12 @@ import (
 )
 
 type mockQuestStore struct {
-	quests       map[int64]*game.Quest
-	questsByCrew map[string][]game.Quest
-	challenges   map[int64][]game.Challenge
-	err          error
+	quests             map[int64]*game.Quest
+	questsByCrew       map[string][]game.Quest
+	challenges         map[int64][]game.Challenge
+	err                error
+	getChallengeCalls  int
+	listChallengeCalls int
 }
 
 func newMockQuestStore() *mockQuestStore {
@@ -109,7 +111,20 @@ func (m *mockQuestStore) GetChallenges(ctx context.Context, questID int64) ([]ga
 	if m.err != nil {
 		return nil, m.err
 	}
+	m.getChallengeCalls++
 	return m.challenges[questID], nil
+}
+
+func (m *mockQuestStore) ListChallengesByQuestIDs(ctx context.Context, questIDs []int64) ([]game.Challenge, error) {
+	if m.err != nil {
+		return nil, m.err
+	}
+	m.listChallengeCalls++
+	var out []game.Challenge
+	for _, id := range questIDs {
+		out = append(out, m.challenges[id]...)
+	}
+	return out, nil
 }
 
 func (m *mockQuestStore) CreateChallenge(ctx context.Context, c *game.Challenge) (*game.Challenge, error) {
@@ -438,5 +453,168 @@ func TestStartQuest(t *testing.T) {
 	}
 	if store.quests[1].StartedAt == nil {
 		t.Error("expected started_at to be set")
+	}
+}
+
+func makeQuestWithID(id int64, status string) game.Quest {
+	q := makeQuest(status)
+	q.ID = id
+	return *q
+}
+
+func makeChallengeForQuest(id, questID int64, status string) game.Challenge {
+	c := makeChallenge(id, status)
+	c.QuestID = questID
+	return c
+}
+
+func TestList_BatchedChallengesAcrossQuests(t *testing.T) {
+	store := newMockQuestStore()
+	store.questsByCrew["crew-1"] = []game.Quest{
+		makeQuestWithID(1, string(QuestStatusActive)),
+		makeQuestWithID(2, string(QuestStatusActive)),
+	}
+	store.challenges[1] = []game.Challenge{
+		makeChallengeForQuest(10, 1, string(ChallengeStatusDone)),
+		makeChallengeForQuest(11, 1, string(ChallengeStatusPending)),
+		makeChallengeForQuest(12, 1, string(ChallengeStatusPending)),
+	}
+	assigned := "user-2"
+	store.challenges[1][1].AssignedTo = &assigned
+	store.challenges[2] = []game.Challenge{
+		makeChallengeForQuest(20, 2, string(ChallengeStatusDone)),
+		makeChallengeForQuest(21, 2, string(ChallengeStatusDone)),
+	}
+	svc := NewQuestService(store)
+
+	views, err := svc.List(context.Background(), "crew-1")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if len(views) != 2 {
+		t.Fatalf("expected 2 views, got %d", len(views))
+	}
+
+	byID := map[int64]QuestView{}
+	for _, v := range views {
+		byID[v.ID] = v
+	}
+
+	v1 := byID[1]
+	if v1.ChallengeCount != 3 || v1.CompletedCount != 1 {
+		t.Errorf("quest 1: expected 3 challenges / 1 done, got %d / %d", v1.ChallengeCount, v1.CompletedCount)
+	}
+	if v1.ActiveChallengeAssignedTo == nil {
+		t.Error("quest 1: expected active challenge assigned_to to be set")
+	}
+
+	v2 := byID[2]
+	if v2.ChallengeCount != 2 || v2.CompletedCount != 2 {
+		t.Errorf("quest 2: expected 2 challenges / 2 done, got %d / %d", v2.ChallengeCount, v2.CompletedCount)
+	}
+
+	if store.listChallengeCalls != 1 {
+		t.Errorf("expected 1 batched challenge read, got %d", store.listChallengeCalls)
+	}
+	if store.getChallengeCalls != 0 {
+		t.Errorf("expected 0 sequential challenge reads, got %d", store.getChallengeCalls)
+	}
+}
+
+func TestList_QuestsWithoutChallenges(t *testing.T) {
+	store := newMockQuestStore()
+	store.questsByCrew["crew-1"] = []game.Quest{
+		makeQuestWithID(1, string(QuestStatusPending)),
+		makeQuestWithID(2, string(QuestStatusDone)),
+	}
+	svc := NewQuestService(store)
+
+	views, err := svc.List(context.Background(), "crew-1")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if len(views) != 2 {
+		t.Fatalf("expected 2 views, got %d", len(views))
+	}
+	for _, v := range views {
+		if v.ChallengeCount != 0 {
+			t.Errorf("quest %d: expected 0 challenges, got %d", v.ID, v.ChallengeCount)
+		}
+		if v.CompletedCount != 0 {
+			t.Errorf("quest %d: expected 0 completed, got %d", v.ID, v.CompletedCount)
+		}
+		if v.ActiveChallengeAssignedTo != nil {
+			t.Errorf("quest %d: expected nil active assignment, got %v", v.ID, v.ActiveChallengeAssignedTo)
+		}
+	}
+}
+
+// sequentialQuestStore wraps mockQuestStore but omits ListChallengesByQuestIDs
+// so it only satisfies game.QuestStore, forcing the per-quest fallback path.
+type sequentialQuestStore struct {
+	inner *mockQuestStore
+}
+
+func (s *sequentialQuestStore) GetQuest(ctx context.Context, questID int64) (*game.Quest, error) {
+	return s.inner.GetQuest(ctx, questID)
+}
+func (s *sequentialQuestStore) CreateQuest(ctx context.Context, q *game.Quest) (*game.Quest, error) {
+	return s.inner.CreateQuest(ctx, q)
+}
+func (s *sequentialQuestStore) ListQuestByCrew(ctx context.Context, crewID string) ([]game.Quest, error) {
+	return s.inner.ListQuestByCrew(ctx, crewID)
+}
+func (s *sequentialQuestStore) UpdateQuest(ctx context.Context, questID int64, patch map[string]any) error {
+	return s.inner.UpdateQuest(ctx, questID, patch)
+}
+func (s *sequentialQuestStore) UpdateQuestIfMatch(ctx context.Context, questID int64, oldStatus string, patch map[string]any) (bool, error) {
+	return s.inner.UpdateQuestIfMatch(ctx, questID, oldStatus, patch)
+}
+func (s *sequentialQuestStore) GetChallenges(ctx context.Context, questID int64) ([]game.Challenge, error) {
+	return s.inner.GetChallenges(ctx, questID)
+}
+func (s *sequentialQuestStore) CreateChallenge(ctx context.Context, c *game.Challenge) (*game.Challenge, error) {
+	return s.inner.CreateChallenge(ctx, c)
+}
+func (s *sequentialQuestStore) UpdateChallenge(ctx context.Context, challengeID int64, patch map[string]any) error {
+	return s.inner.UpdateChallenge(ctx, challengeID, patch)
+}
+func (s *sequentialQuestStore) UpdateChallengeIfMatch(ctx context.Context, challengeID int64, oldStatus string, patch map[string]any) (bool, error) {
+	return s.inner.UpdateChallengeIfMatch(ctx, challengeID, oldStatus, patch)
+}
+
+func TestList_FallbackSequentialWithoutBatchStore(t *testing.T) {
+	inner := newMockQuestStore()
+	inner.questsByCrew["crew-1"] = []game.Quest{
+		makeQuestWithID(1, string(QuestStatusActive)),
+		makeQuestWithID(2, string(QuestStatusActive)),
+	}
+	inner.challenges[1] = []game.Challenge{
+		makeChallengeForQuest(10, 1, string(ChallengeStatusDone)),
+		makeChallengeForQuest(11, 1, string(ChallengeStatusPending)),
+	}
+	store := &sequentialQuestStore{inner: inner}
+	svc := NewQuestService(store)
+
+	views, err := svc.List(context.Background(), "crew-1")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if len(views) != 2 {
+		t.Fatalf("expected 2 views, got %d", len(views))
+	}
+	byID := map[int64]QuestView{}
+	for _, v := range views {
+		byID[v.ID] = v
+	}
+	v1 := byID[1]
+	if v1.ChallengeCount != 2 || v1.CompletedCount != 1 {
+		t.Errorf("quest 1: expected 2 challenges / 1 done for fallback quest, got %d / %d", v1.ChallengeCount, v1.CompletedCount)
+	}
+	if inner.listChallengeCalls != 0 {
+		t.Errorf("expected 0 batched reads in fallback, got %d", inner.listChallengeCalls)
+	}
+	if inner.getChallengeCalls != 2 {
+		t.Errorf("expected 2 sequential reads in fallback, got %d", inner.getChallengeCalls)
 	}
 }
