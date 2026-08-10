@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"time"
 
+	"golang.org/x/sync/errgroup"
+
 	"odyssey/pkg/game"
 	"odyssey/pkg/game/achievement"
 	"odyssey/pkg/game/chapter"
@@ -196,49 +198,194 @@ func isToday(t time.Time, loc *time.Location) bool {
 
 // GetHome builds the aggregated home-screen response for a given user.
 func (s *HomeService) GetHome(ctx context.Context, uid string, crewID string) (*HomeResponse, error) {
-	player, err := s.users.GetUser(ctx, uid)
-	if err != nil {
-		return nil, fmt.Errorf("failed to get player: %w", err)
+	g, gCtx := errgroup.WithContext(ctx)
+
+	var (
+		player             *game.Player
+		quests             []quest.QuestView
+		today              = s.dts.TodayDate()
+		hasCompleted       bool
+		available          bool
+		streak             int
+		realmProgress      []game.RealmProgress
+		relicCount         int
+		availableChests    []chest.ChestView
+		latestRelic        *relic.InventoryItem
+		collectionProgress CollectionProgress
+		pendingCount       int
+		lastSub            *game.Submission
+		chapterProgView    *chapter.ChapterProgressView
+		allChapters        []chapter.ChapterSummary
+		loreSummary        *lore.LoreSummary
+		unlockedLore       []lore.LoreView
+		achievements       []achievement.AchievementView
+	)
+
+	// 1. Player
+	g.Go(func() error {
+		var err error
+		player, err = s.users.GetUser(gCtx, uid)
+		if err != nil {
+			return fmt.Errorf("failed to get player: %w", err)
+		}
+		return nil
+	})
+
+	// 2. Quests
+	g.Go(func() error {
+		var err error
+		quests, err = s.qs.List(gCtx, crewID)
+		if err != nil {
+			return fmt.Errorf("failed to list quests: %w", err)
+		}
+		return nil
+	})
+
+	// 3. Daily Turn
+	g.Go(func() error {
+		var err error
+		hasCompleted, err = s.dts.HasCompletedToday(gCtx, uid, today)
+		if err != nil {
+			return fmt.Errorf("failed to check daily turn completion: %w", err)
+		}
+		return nil
+	})
+
+	g.Go(func() error {
+		var err error
+		available, err = s.dts.IsAvailableToday(gCtx, uid, today)
+		if err != nil {
+			return fmt.Errorf("failed to check daily turn availability: %w", err)
+		}
+		return nil
+	})
+
+	g.Go(func() error {
+		var err error
+		streak, err = s.dts.ComputeStreak(gCtx, uid)
+		if err != nil {
+			return fmt.Errorf("failed to compute streak: %w", err)
+		}
+		return nil
+	})
+
+	// 4. Realm Progress
+	g.Go(func() error {
+		var err error
+		realmProgress, err = s.realm.ListRealmProgressByCrew(gCtx, crewID)
+		if err != nil {
+			return fmt.Errorf("failed to list realm progress: %w", err)
+		}
+		if s.chapterSvc != nil {
+			activeRealm := firstActiveRealm(realmProgress)
+			if activeRealm != "" {
+				_ = s.chapterSvc.EnsureFirstChapterUnlocked(gCtx, crewID, activeRealm)
+			}
+		}
+		return nil
+	})
+
+	// 5. Relics count
+	g.Go(func() error {
+		var err error
+		relicCount, err = s.prog.CountRelics(gCtx, uid)
+		if err != nil {
+			return fmt.Errorf("failed to count relics: %w", err)
+		}
+		return nil
+	})
+
+	// 6. Chests
+	if s.chests != nil {
+		g.Go(func() error {
+			allChests, err := s.chests.ListChestsByUser(gCtx, uid)
+			if err != nil {
+				return fmt.Errorf("failed to list chests: %w", err)
+			}
+			for _, ch := range allChests {
+				if !ch.Opened {
+					availableChests = append(availableChests, chest.ToChestView(ch))
+				}
+			}
+			return nil
+		})
 	}
 
-	quests, err := s.qs.List(ctx, crewID)
-	if err != nil {
-		return nil, fmt.Errorf("failed to list quests: %w", err)
+	// 7. Relics Service
+	if s.relSvc != nil {
+		g.Go(func() error {
+			latestRelic, _ = s.relSvc.GetLatestRelic(gCtx, uid)
+			return nil
+		})
+		g.Go(func() error {
+			col, tot, err := s.relSvc.GetCollectionProgress(gCtx, uid)
+			if err == nil {
+				collectionProgress = CollectionProgress{Collected: col, Total: tot}
+			}
+			return nil
+		})
 	}
 
-	today := s.dts.TodayDate()
-	hasCompleted, err := s.dts.HasCompletedToday(ctx, uid, today)
-	if err != nil {
-		return nil, fmt.Errorf("failed to check daily turn completion: %w", err)
+	// 8. Creative
+	if s.crea != nil {
+		g.Go(func() error {
+			allSubs, err := s.crea.ListByCrew(gCtx, crewID)
+			if err != nil {
+				return fmt.Errorf("failed to list creative submissions: %w", err)
+			}
+			for i := range allSubs {
+				sub := &allSubs[i]
+				if sub.Status == game.SubmissionStatusPending {
+					pendingCount++
+				}
+				if sub.AuthorUID == uid && (lastSub == nil || sub.CreatedAt.After(lastSub.CreatedAt)) {
+					lastSub = sub
+				}
+			}
+			return nil
+		})
 	}
-	available, err := s.dts.IsAvailableToday(ctx, uid, today)
-	if err != nil {
-		return nil, fmt.Errorf("failed to check daily turn availability: %w", err)
+
+	// 9. Chapter Service
+	if s.chapterSvc != nil {
+		g.Go(func() error {
+			chapterProgView, _ = s.chapterSvc.GetProgressView(gCtx, crewID)
+			return nil
+		})
+		g.Go(func() error {
+			allChapters, _ = s.chapterSvc.ListProgress(gCtx, crewID)
+			return nil
+		})
 	}
+
+	// 10. Lore Service
+	if s.loreSvc != nil {
+		g.Go(func() error {
+			loreSummary, _ = s.loreSvc.GetSummary(gCtx, crewID)
+			return nil
+		})
+		g.Go(func() error {
+			unlockedLore, _ = s.loreSvc.ListUnlocked(gCtx, crewID)
+			return nil
+		})
+	}
+
+	// 11. Achievements Service
+	if s.achieveSvc != nil {
+		g.Go(func() error {
+			achievements, _ = s.achieveSvc.ListByPlayer(gCtx, uid)
+			return nil
+		})
+	}
+
+	if err := g.Wait(); err != nil {
+		return nil, err
+	}
+
+	// Assembly phase
 	remainingTurns := 0
 	if available && !hasCompleted {
 		remainingTurns = 1
-	}
-	streak, err := s.dts.ComputeStreak(ctx, uid)
-	if err != nil {
-		return nil, fmt.Errorf("failed to compute streak: %w", err)
-	}
-
-	realmProgress, err := s.realm.ListRealmProgressByCrew(ctx, crewID)
-	if err != nil {
-		return nil, fmt.Errorf("failed to list realm progress: %w", err)
-	}
-
-	if s.chapterSvc != nil {
-		activeRealm := firstActiveRealm(realmProgress)
-		if activeRealm != "" {
-			_ = s.chapterSvc.EnsureFirstChapterUnlocked(ctx, crewID, activeRealm)
-		}
-	}
-
-	relicCount, err := s.prog.CountRelics(ctx, uid)
-	if err != nil {
-		return nil, fmt.Errorf("failed to count relics: %w", err)
 	}
 
 	tz := s.dts.Config().Timezone
@@ -257,32 +404,6 @@ func (s *HomeService) GetHome(ctx context.Context, uid string, crewID string) (*
 		}
 		if q.CompletedAt != nil && isToday(*q.CompletedAt, tzLoc) {
 			completedToday = append(completedToday, q)
-		}
-	}
-
-	var availableChests []chest.ChestView
-	if s.chests != nil {
-		allChests, err := s.chests.ListChestsByUser(ctx, uid)
-		if err != nil {
-			return nil, fmt.Errorf("failed to list chests: %w", err)
-		}
-		for _, ch := range allChests {
-			if !ch.Opened {
-				availableChests = append(availableChests, chest.ToChestView(ch))
-			}
-		}
-	}
-
-	var latestRelic *relic.InventoryItem
-	var collectionProgress CollectionProgress
-	if s.relSvc != nil {
-		latest, err := s.relSvc.GetLatestRelic(ctx, uid)
-		if err == nil {
-			latestRelic = latest
-		}
-		collected, total, err := s.relSvc.GetCollectionProgress(ctx, uid)
-		if err == nil {
-			collectionProgress = CollectionProgress{Collected: collected, Total: total}
 		}
 	}
 
@@ -335,21 +456,6 @@ func (s *HomeService) GetHome(ctx context.Context, uid string, crewID string) (*
 	}
 
 	if s.crea != nil {
-		allSubs, err := s.crea.ListByCrew(ctx, crewID)
-		if err != nil {
-			return nil, fmt.Errorf("failed to list creative submissions: %w", err)
-		}
-		pendingCount := 0
-		var lastSub *game.Submission
-		for i := range allSubs {
-			sub := &allSubs[i]
-			if sub.Status == game.SubmissionStatusPending {
-				pendingCount++
-			}
-			if sub.AuthorUID == uid && (lastSub == nil || sub.CreatedAt.After(lastSub.CreatedAt)) {
-				lastSub = sub
-			}
-		}
 		creativeSection := CreativeSection{
 			PendingReviewCount: pendingCount,
 		}
@@ -361,52 +467,41 @@ func (s *HomeService) GetHome(ctx context.Context, uid string, crewID string) (*
 		resp.Sections.Creative = creativeSection
 	}
 
-	if s.chapterSvc != nil {
-		progressView, err := s.chapterSvc.GetProgressView(ctx, crewID)
-		if err == nil {
-			resp.ChapterProgress = progressView
-			resp.Sections.World = WorldSection{
-				CurrentChapter:    progressView.CurrentChapter,
-				NextChapter:       progressView.NextChapter,
-				CompletedChapters: progressView.CompletedChapters,
-				UnlockedChapters:  progressView.UnlockedChapters,
-				AllChapters:       progressView.UnlockedChapters,
-			}
-			allChapters, err := s.chapterSvc.ListProgress(ctx, crewID)
-			if err == nil {
-				resp.Sections.World.AllChapters = allChapters
+	if s.chapterSvc != nil && chapterProgView != nil {
+		resp.ChapterProgress = chapterProgView
+		resp.Sections.World = WorldSection{
+			CurrentChapter:    chapterProgView.CurrentChapter,
+			NextChapter:       chapterProgView.NextChapter,
+			CompletedChapters: chapterProgView.CompletedChapters,
+			UnlockedChapters:  chapterProgView.UnlockedChapters,
+			AllChapters:       chapterProgView.UnlockedChapters,
+		}
+		if allChapters != nil {
+			resp.Sections.World.AllChapters = allChapters
+		}
+	}
+
+	if s.loreSvc != nil && loreSummary != nil {
+		resp.LoreSummary = loreSummary
+		if unlockedLore != nil {
+			resp.Sections.Lore = LoreSection{
+				Summary:  loreSummary,
+				Unlocked: unlockedLore,
 			}
 		}
 	}
 
-	if s.loreSvc != nil {
-		loreSummary, err := s.loreSvc.GetSummary(ctx, crewID)
-		if err == nil {
-			resp.LoreSummary = loreSummary
-			unlocked, err := s.loreSvc.ListUnlocked(ctx, crewID)
-			if err == nil {
-				resp.Sections.Lore = LoreSection{
-					Summary:  loreSummary,
-					Unlocked: unlocked,
-				}
+	if s.achieveSvc != nil && achievements != nil {
+		resp.Achievements = achievements
+		count := 0
+		for _, a := range achievements {
+			if a.Unlocked {
+				count++
 			}
 		}
-	}
-
-	if s.achieveSvc != nil {
-		achieves, err := s.achieveSvc.ListByPlayer(ctx, uid)
-		if err == nil {
-			resp.Achievements = achieves
-			count := 0
-			for _, a := range achieves {
-				if a.Unlocked {
-					count++
-				}
-			}
-			resp.Sections.Achievements = AchievementsSection{
-				All:   achieves,
-				Count: count,
-			}
+		resp.Sections.Achievements = AchievementsSection{
+			All:   achievements,
+			Count: count,
 		}
 	}
 
