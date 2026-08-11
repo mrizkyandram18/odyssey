@@ -58,4 +58,15 @@ func (s *supabaseCrewStore) CreateCrew(ctx context.Context, c *game.Crew) error 
 	return nil
 }
 
+func (s *supabaseCrewStore) UpdateCrew(ctx context.Context, crewID string, patch map[string]any) error {
+	v := url.Values{}
+	v.Set("id", "eq."+crewID)
+	params := v.Encode()
+	_, err := s.client.Mutate(ctx, "PATCH", "odyssey_crews", patch, params)
+	if err != nil {
+		return fmt.Errorf("update crew: %w", err)
+	}
+	return nil
+}
+
 var _ game.CrewStore = (*supabaseCrewStore)(nil)

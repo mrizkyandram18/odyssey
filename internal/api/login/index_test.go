@@ -63,6 +63,10 @@ func (m *mockProfileStore) SetAvatarFrame(_ context.Context, _, _ string) error 
 	return nil
 }
 
+func (m *mockProfileStore) SetExplorerEffect(_ context.Context, _, _ string) error {
+	return nil
+}
+
 func (m *mockProfileStore) UpdateAvatar(_ context.Context, _ string, _, _ string) error {
 	return nil
 }

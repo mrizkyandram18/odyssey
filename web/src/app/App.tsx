@@ -6,6 +6,9 @@ import { HomePage } from '../features/home/HomePage'
 import { QuestsPage } from '../features/quest/QuestsPage'
 import { QuestView } from '../features/quest/QuestView'
 import { FamilyTimeline } from '../features/creative/FamilyTimeline'
+import { GalleryPage } from '../features/creative/GalleryPage'
+import { ComicReaderPage } from '../features/creative/ComicReaderPage'
+import { StoryPage } from '../features/creative/StoryPage'
 import { JournalPage } from '../features/journal/JournalPage'
 import { ProfilePage } from '../features/profile/ProfilePage'
 import { ChestPage } from '../features/chests/ChestPage'
@@ -24,8 +27,11 @@ export function App() {
         <Route index element={<HomePage />} />
         <Route path="/quests" element={<QuestsPage />} />
         <Route path="/quests/:questId" element={<QuestRoute />} />
-        <Route path="/creative" element={<FamilyTimeline />} />
-        <Route path="/journal" element={<JournalPage />} />
+      <Route path="/creative" element={<FamilyTimeline />} />
+      <Route path="/gallery" element={<GalleryPage />} />
+      <Route path="/comics/:id" element={<ComicReaderPage />} />
+      <Route path="/stories/:id" element={<StoryPage />} />
+      <Route path="/journal" element={<JournalPage />} />
         <Route path="/profile" element={<ProfilePage />} />
         <Route path="/chests" element={<ChestPage />} />
         <Route path="/chests/open/:chestId" element={<ChestOpeningPage />} />

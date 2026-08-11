@@ -1,5 +1,5 @@
 import { Link, useLocation } from 'react-router-dom'
-import { Home, Scroll, BookOpen, Palette, Sparkles, User } from 'lucide-react'
+import { Home, Scroll, BookOpen, Palette, Sparkles, User, Image } from 'lucide-react'
 
 export function MobileNav() {
   const location = useLocation()
@@ -10,6 +10,7 @@ export function MobileNav() {
     { label: 'Petualangan', path: '/quests', icon: <Scroll size={20} /> },
     { label: 'Jurnal', path: '/journal', icon: <BookOpen size={20} /> },
     { label: 'Kenangan', path: '/creative', icon: <Palette size={20} /> },
+    { label: 'Galeri', path: '/gallery', icon: <Image size={20} /> },
     { label: 'Koleksi', path: '/relics', icon: <Sparkles size={20} /> },
     { label: 'Profil', path: '/profile', icon: <User size={20} /> },
   ]

@@ -9,6 +9,7 @@ import (
 
 	"odyssey/pkg/game"
 	gamecontent "odyssey/pkg/game/content"
+	cosmetic "odyssey/pkg/game/cosmetic"
 	"odyssey/pkg/game/events"
 )
 
@@ -161,7 +162,7 @@ func TestListByPlayer_ShowsProgressAndUnlocked(t *testing.T) {
 		completedQuests: 7,
 		playerLevel:     3,
 	}
-	svc := NewAchievementService(gw, store, rdr, events.NopPublisher{})
+	svc := NewAchievementService(gw, store, rdr, events.NopPublisher{}, nil)
 
 	result, err := svc.ListByPlayer(context.Background(), "u1")
 	if err != nil {
@@ -212,7 +213,7 @@ func TestListByPlayer_MemoizesProgressByTrigger(t *testing.T) {
 			playerLevel:     3,
 		},
 	}
-	svc := NewAchievementService(gw, store, rdr, events.NopPublisher{})
+	svc := NewAchievementService(gw, store, rdr, events.NopPublisher{}, nil)
 
 	result, err := svc.ListByPlayer(context.Background(), "u1")
 	if err != nil {
@@ -252,7 +253,7 @@ func TestListByPlayer_SoftErrorStillMemoized(t *testing.T) {
 	rdr := &countingProgressReader{
 		mockProgressReader: mockProgressReader{err: errors.New("db down")},
 	}
-	svc := NewAchievementService(gw, store, rdr, events.NopPublisher{})
+	svc := NewAchievementService(gw, store, rdr, events.NopPublisher{}, nil)
 
 	result, err := svc.ListByPlayer(context.Background(), "u1")
 	if err != nil {
@@ -341,7 +342,7 @@ func TestListByPlayer_ParallelizesDistinctProgressReads(t *testing.T) {
 		},
 	}
 	rdr := &slowProgressReader{delay: delay}
-	svc := NewAchievementService(gw, newMockAchievementStore(), rdr, events.NopPublisher{})
+	svc := NewAchievementService(gw, newMockAchievementStore(), rdr, events.NopPublisher{}, nil)
 
 	start := time.Now()
 	result, err := svc.ListByPlayer(context.Background(), "u1")
@@ -384,7 +385,7 @@ func TestEvaluate_AwardsAchievementWhenThresholdMet(t *testing.T) {
 	}
 	store := newMockAchievementStore()
 	rdr := &mockProgressReader{completedQuests: 5}
-	svc := NewAchievementService(gw, store, rdr, events.NopPublisher{})
+	svc := NewAchievementService(gw, store, rdr, events.NopPublisher{}, nil)
 
 	err := svc.evaluate(context.Background(), TriggerQuestCompleted, "u1", "c1")
 	if err != nil {
@@ -409,7 +410,7 @@ func TestEvaluate_DoesNotAwardWhenAlreadyEarned(t *testing.T) {
 		UID: "u1", Code: "ACH_QUESTS_5",
 	}
 	rdr := &mockProgressReader{completedQuests: 10}
-	svc := NewAchievementService(gw, store, rdr, events.NopPublisher{})
+	svc := NewAchievementService(gw, store, rdr, events.NopPublisher{}, nil)
 
 	err := svc.evaluate(context.Background(), TriggerQuestCompleted, "u1", "c1")
 	if err != nil {
@@ -428,7 +429,7 @@ func TestEvaluate_DoesNotAwardWhenBelowThreshold(t *testing.T) {
 	}
 	store := newMockAchievementStore()
 	rdr := &mockProgressReader{completedQuests: 3}
-	svc := NewAchievementService(gw, store, rdr, events.NopPublisher{})
+	svc := NewAchievementService(gw, store, rdr, events.NopPublisher{}, nil)
 
 	err := svc.evaluate(context.Background(), TriggerQuestCompleted, "u1", "c1")
 	if err != nil {
@@ -451,7 +452,7 @@ func TestEvaluate_FiltersByTrigger(t *testing.T) {
 		completedQuests: 10,
 		playerLevel:     10,
 	}
-	svc := NewAchievementService(gw, store, rdr, events.NopPublisher{})
+	svc := NewAchievementService(gw, store, rdr, events.NopPublisher{}, nil)
 
 	err := svc.evaluate(context.Background(), TriggerQuestCompleted, "u1", "c1")
 	if err != nil {
@@ -473,7 +474,7 @@ func TestQuestCompletedHandler_TriggersEvaluation(t *testing.T) {
 	}
 	store := newMockAchievementStore()
 	rdr := &mockProgressReader{completedQuests: 1}
-	svc := NewAchievementService(gw, store, rdr, events.NopPublisher{})
+	svc := NewAchievementService(gw, store, rdr, events.NopPublisher{}, nil)
 	handler := NewQuestCompletedHandler(svc)
 
 	err := handler.Handle(context.Background(), events.QuestCompletedEvent{
@@ -496,7 +497,7 @@ func TestChapterCompletedHandler_TriggersEvaluation(t *testing.T) {
 	}
 	store := newMockAchievementStore()
 	rdr := &mockProgressReader{completedChapters: 1}
-	svc := NewAchievementService(gw, store, rdr, events.NopPublisher{})
+	svc := NewAchievementService(gw, store, rdr, events.NopPublisher{}, nil)
 	handler := NewChapterCompletedHandler(svc)
 
 	err := handler.Handle(context.Background(), events.ChapterCompletedEvent{
@@ -519,7 +520,7 @@ func TestRelicCollectedHandler_TriggersEvaluation(t *testing.T) {
 	}
 	store := newMockAchievementStore()
 	rdr := &mockProgressReader{collectedRelics: 1}
-	svc := NewAchievementService(gw, store, rdr, events.NopPublisher{})
+	svc := NewAchievementService(gw, store, rdr, events.NopPublisher{}, nil)
 	handler := NewRelicCollectedHandler(svc)
 
 	err := handler.Handle(context.Background(), events.RelicCollectedEvent{
@@ -542,7 +543,7 @@ func TestLevelReachedHandler_TriggersEvaluation(t *testing.T) {
 	}
 	store := newMockAchievementStore()
 	rdr := &mockProgressReader{playerLevel: 3}
-	svc := NewAchievementService(gw, store, rdr, events.NopPublisher{})
+	svc := NewAchievementService(gw, store, rdr, events.NopPublisher{}, nil)
 	handler := NewLevelReachedHandler(svc)
 
 	err := handler.Handle(context.Background(), events.LevelReachedEvent{
@@ -567,7 +568,7 @@ func TestDailyTurnCompletedHandler_TriggersEvaluation(t *testing.T) {
 	}
 	store := newMockAchievementStore()
 	rdr := &mockProgressReader{dailyStreak: 7}
-	svc := NewAchievementService(gw, store, rdr, events.NopPublisher{})
+	svc := NewAchievementService(gw, store, rdr, events.NopPublisher{}, nil)
 	handler := NewDailyTurnCompletedHandler(svc)
 
 	err := handler.Handle(context.Background(), events.DailyTurnCompletedEvent{
@@ -589,7 +590,7 @@ func TestCreativeSubmissionHandler_TriggersEvaluation(t *testing.T) {
 	}
 	store := newMockAchievementStore()
 	rdr := &mockProgressReader{creativeSubmissions: 3}
-	svc := NewAchievementService(gw, store, rdr, events.NopPublisher{})
+	svc := NewAchievementService(gw, store, rdr, events.NopPublisher{}, nil)
 	handler := NewCreativeSubmissionHandler(svc)
 
 	err := handler.Handle(context.Background(), events.CreativeSubmissionEvent{
@@ -604,7 +605,7 @@ func TestCreativeSubmissionHandler_TriggersEvaluation(t *testing.T) {
 }
 
 func TestHandler_OtherEventIgnored(t *testing.T) {
-	svc := NewAchievementService(&mockAchievementGateway{}, newMockAchievementStore(), &mockProgressReader{}, events.NopPublisher{})
+	svc := NewAchievementService(&mockAchievementGateway{}, newMockAchievementStore(), &mockProgressReader{}, events.NopPublisher{}, nil)
 	handler := NewQuestCompletedHandler(svc)
 
 	err := handler.Handle(context.Background(), events.ChapterCompletedEvent{})
@@ -613,5 +614,57 @@ func TestHandler_OtherEventIgnored(t *testing.T) {
 	}
 	if len(handler.svc.store.(*mockAchievementStore).created) != 0 {
 		t.Error("expected no achievements for wrong event type")
+	}
+}
+
+type mockUnlocksForAchievement struct {
+	created []string
+}
+
+func (m *mockUnlocksForAchievement) ListByUser(ctx context.Context, uid string) ([]game.CosmeticUnlock, error) {
+	return nil, nil
+}
+func (m *mockUnlocksForAchievement) Has(ctx context.Context, uid, cosmeticID string) (bool, error) {
+	return false, nil
+}
+func (m *mockUnlocksForAchievement) CreateIfAbsent(ctx context.Context, uid, cosmeticID string, pricePaid int64) (bool, error) {
+	m.created = append(m.created, cosmeticID)
+	return true, nil
+}
+func (m *mockUnlocksForAchievement) Delete(ctx context.Context, uid, cosmeticID string) error {
+	return nil
+}
+
+func TestEvaluate_GrantsRewardCosmetic(t *testing.T) {
+	gw := &mockAchievementGateway{
+		defs: []gamecontent.AchievementDefinition{
+			{
+				Code:             "FIRST_QUEST",
+				Title:            "First Quest",
+				Description:      "desc",
+				Kind:             "PERSONAL",
+				Trigger:          "QUEST_COMPLETED",
+				Threshold:        1,
+				RewardXP:         0,
+				RewardCosmeticID: cosmetic.EffectSparkle,
+				CreatedAt:        time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC),
+				UpdatedAt:        time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC),
+			},
+		},
+	}
+	store := newMockAchievementStore()
+	unlocks := &mockUnlocksForAchievement{}
+	rdr := &mockProgressReader{completedQuests: 1}
+	svc := NewAchievementService(gw, store, rdr, events.NopPublisher{}, unlocks)
+
+	err := svc.evaluate(context.Background(), TriggerQuestCompleted, "u1", "c1")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if len(store.created) != 1 {
+		t.Fatalf("expected 1 achievement created")
+	}
+	if len(unlocks.created) != 1 || unlocks.created[0] != cosmetic.EffectSparkle {
+		t.Fatalf("expected reward cosmetic %s unlocked, got %v", cosmetic.EffectSparkle, unlocks.created)
 	}
 }

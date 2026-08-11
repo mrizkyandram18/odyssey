@@ -828,3 +828,35 @@ func TestSelectBranch_LinearQuest_NoBranch(t *testing.T) {
 		t.Fatalf("expected ErrNoBranchOptions, got %v", err)
 	}
 }
+
+func TestListAvailable_MapsDefinitionsToViews(t *testing.T) {
+	qStore := newMockQuestStore()
+	cg := &mockContentGatewayForHandler{
+		quests: []gamecontent.QuestDefinition{
+			{Slug: "available-1", Title: "Avail 1", QuestType: "SOLO", ChallengeDefs: []gamecontent.ChallengeDef{{Slug: "c1"}}, CreatedAt: time.Now()},
+			{Slug: "available-2", Title: "Avail 2", QuestType: "RELAY", ChallengeDefs: []gamecontent.ChallengeDef{{Slug: "c1"}, {Slug: "c2"}}, CreatedAt: time.Now()},
+		},
+	}
+	qs := NewQuestServiceWithGate(qStore, &mockQuestGate{seasonActive: true, chapterUnlocked: true, realmActive: true, playerLevel: 10, questCompleted: true}, cg)
+	h := NewQuestAPIHandler(qs, nil, newMockRealmStore(), defaultRealmCfg, &defaultProgCfg)
+
+	views, err := h.ListAvailable(context.Background(), "crew-1", "user-1")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if len(views) != 2 {
+		t.Fatalf("expected 2 available quests, got %d", len(views))
+	}
+	if views[0].TemplateSlug != "available-1" {
+		t.Errorf("expected first quest available-1, got %s", views[0].TemplateSlug)
+	}
+	if views[0].Status != string(QuestStatusPending) {
+		t.Errorf("expected PENDING status, got %s", views[0].Status)
+	}
+	if views[0].ChallengeCount != 1 {
+		t.Errorf("expected 1 challenge, got %d", views[0].ChallengeCount)
+	}
+	if views[1].ChallengeCount != 2 {
+		t.Errorf("expected 2 challenges, got %d", views[1].ChallengeCount)
+	}
+}

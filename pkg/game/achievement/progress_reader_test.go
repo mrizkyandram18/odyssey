@@ -143,6 +143,12 @@ func (m *mockPRCreativeStore) ListByCrew(ctx context.Context, crewID string) ([]
 	}
 	return m.subs, nil
 }
+func (m *mockPRCreativeStore) ListByCrewAndKind(ctx context.Context, crewID, kind string) ([]game.Submission, error) {
+	if m.err != nil {
+		return nil, m.err
+	}
+	return m.subs, nil
+}
 func (m *mockPRCreativeStore) GetSubmission(ctx context.Context, submissionID int64) (*game.Submission, error) {
 	return nil, game.ErrNotFound
 }

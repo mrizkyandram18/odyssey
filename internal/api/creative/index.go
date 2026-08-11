@@ -18,6 +18,7 @@ type CreativeHandler interface {
 	Submit(ctx context.Context, uid string, req *game.Submission) (*creative.SubmissionView, error)
 	ListByQuest(ctx context.Context, questID int64) ([]creative.SubmissionView, error)
 	ListByCrew(ctx context.Context, crewID string) ([]creative.SubmissionView, error)
+	ListByCrewAndKind(ctx context.Context, crewID, kind string) ([]creative.SubmissionView, error)
 	GetSubmission(ctx context.Context, submissionID int64) (*creative.SubmissionView, error)
 	Approve(ctx context.Context, submissionID int64, reviewerUID string) (*creative.SubmissionView, error)
 	Reject(ctx context.Context, submissionID int64, reviewerUID string, reason string) (*creative.SubmissionView, error)
@@ -161,6 +162,17 @@ func handleList(w http.ResponseWriter, r *http.Request, claims *auth.SessionClai
 			return
 		}
 		views, err := handler.ListByQuest(r.Context(), questID)
+		if err != nil {
+			shared.WriteJSONError(w, "failed to list submissions", http.StatusInternalServerError)
+			return
+		}
+		shared.WriteJSON(w, http.StatusOK, views)
+		return
+	}
+
+	kind := r.URL.Query().Get("kind")
+	if kind != "" {
+		views, err := handler.ListByCrewAndKind(r.Context(), claims.CrewID, kind)
 		if err != nil {
 			shared.WriteJSONError(w, "failed to list submissions", http.StatusInternalServerError)
 			return

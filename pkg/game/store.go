@@ -29,6 +29,7 @@ type UserStore interface {
 type CrewStore interface {
 	GetCrew(ctx context.Context, crewID string) (*Crew, error)
 	CreateCrew(ctx context.Context, c *Crew) error
+	UpdateCrew(ctx context.Context, crewID string, patch map[string]any) error
 }
 
 // QuestStore provides persistence operations for quests and their challenges.
@@ -68,6 +69,7 @@ type CreativeSubmissionStore interface {
 	CreateSubmission(ctx context.Context, s *Submission) (*Submission, error)
 	ListByQuest(ctx context.Context, questID int64) ([]Submission, error)
 	ListByCrew(ctx context.Context, crewID string) ([]Submission, error)
+	ListByCrewAndKind(ctx context.Context, crewID, kind string) ([]Submission, error)
 	GetSubmission(ctx context.Context, submissionID int64) (*Submission, error)
 	UpdateSubmission(ctx context.Context, submissionID int64, patch map[string]any) error
 }
@@ -183,6 +185,11 @@ type CosmeticUnlockStore interface {
 	Has(ctx context.Context, uid, cosmeticID string) (bool, error)
 	CreateIfAbsent(ctx context.Context, uid, cosmeticID string, pricePaid int64) (created bool, err error)
 	Delete(ctx context.Context, uid, cosmeticID string) error
+}
+
+// EffectStore manages the equipped explorer effect on a profile.
+type EffectStore interface {
+	SetExplorerEffect(ctx context.Context, uid, effect string) error
 }
 
 // PushSubscriptionStore manages Web Push subscriptions for users.

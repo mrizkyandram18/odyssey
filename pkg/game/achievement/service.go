@@ -30,6 +30,21 @@ const (
 	TriggerLevelReached       AchievementTrigger = "LEVEL_REACHED"
 )
 
+type noopCosmeticUnlockStore struct{}
+
+func (noopCosmeticUnlockStore) ListByUser(ctx context.Context, uid string) ([]game.CosmeticUnlock, error) {
+	return nil, nil
+}
+func (noopCosmeticUnlockStore) Has(ctx context.Context, uid, cosmeticID string) (bool, error) {
+	return false, nil
+}
+func (noopCosmeticUnlockStore) CreateIfAbsent(ctx context.Context, uid, cosmeticID string, pricePaid int64) (bool, error) {
+	return false, nil
+}
+func (noopCosmeticUnlockStore) Delete(ctx context.Context, uid, cosmeticID string) error {
+	return nil
+}
+
 type AchievementView struct {
 	ID        int64     `json:"id"`
 	Code      string    `json:"code"`
@@ -62,6 +77,7 @@ type AchievementService struct {
 	store     game.AchievementStore
 	progress  ProgressReader
 	publisher events.Publisher
+	unlocks   game.CosmeticUnlockStore
 }
 
 func NewAchievementService(
@@ -69,15 +85,20 @@ func NewAchievementService(
 	store game.AchievementStore,
 	progress ProgressReader,
 	publisher events.Publisher,
+	unlocks game.CosmeticUnlockStore,
 ) *AchievementService {
 	if publisher == nil {
 		publisher = events.NopPublisher{}
+	}
+	if unlocks == nil {
+		unlocks = &noopCosmeticUnlockStore{}
 	}
 	return &AchievementService{
 		defs:      defs,
 		store:     store,
 		progress:  progress,
 		publisher: publisher,
+		unlocks:   unlocks,
 	}
 }
 
@@ -235,6 +256,9 @@ func (s *AchievementService) evaluate(ctx context.Context, trigger AchievementTr
 			_, err := s.store.CreateAchievement(ctx, a)
 			if err != nil {
 				return fmt.Errorf("create achievement %s: %w", def.Code, err)
+			}
+			if def.RewardCosmeticID != "" {
+				_, _ = s.unlocks.CreateIfAbsent(ctx, uid, def.RewardCosmeticID, 0)
 			}
 		}
 	}

@@ -85,6 +85,13 @@ func (m *mockQuestHandler) SelectBranch(ctx context.Context, questID int64, crew
 	}, nil
 }
 
+func (m *mockQuestHandler) ListAvailable(ctx context.Context, crewID, uid string) ([]quest.QuestView, error) {
+	if m.err != nil {
+		return nil, m.err
+	}
+	return m.quests, nil
+}
+
 func makeUserToken(t *testing.T, issuer *auth.HMACSessionIssuer) string {
 	t.Helper()
 	token, _, err := issuer.IssueSession(auth.SessionKindUser, "user-1", &auth.SessionConfig{
@@ -467,5 +474,32 @@ func TestQuestsHandler_SelectBranch_Unauthorized(t *testing.T) {
 
 	if w.Code != http.StatusUnauthorized {
 		t.Errorf("expected 401 unauthorized, got %d", w.Code)
+	}
+}
+
+func TestQuestsHandler_ListAvailable(t *testing.T) {
+	Setup(&mockQuestHandler{quests: []quest.QuestView{makeQuestView()}})
+	issuer := auth.NewSessionIssuer("test-secret")
+	mw := auth.NewMiddleware(issuer)
+	token := makeUserToken(t, issuer)
+
+	req := httptest.NewRequest(http.MethodGet, "/api/quests/available", nil)
+	req.Header.Set("Authorization", "Bearer "+token)
+	w := httptest.NewRecorder()
+	mw.RequireAuth(Handler)(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d: %s", w.Code, w.Body.String())
+	}
+
+	var quests []quest.QuestView
+	if err := json.Unmarshal(w.Body.Bytes(), &quests); err != nil {
+		t.Fatalf("unmarshal: %v", err)
+	}
+	if len(quests) != 1 {
+		t.Fatalf("expected 1 available quest, got %d", len(quests))
+	}
+	if quests[0].Status != string(quest.QuestStatusPending) {
+		t.Errorf("expected PENDING status, got %s", quests[0].Status)
 	}
 }

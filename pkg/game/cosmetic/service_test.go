@@ -123,18 +123,32 @@ func (m *mockFrames) SetAvatarFrame(ctx context.Context, uid, frame string) erro
 	return nil
 }
 
-func newSvc(coins int64, unlocks *mockUnlocks) (*Service, *mockUsers, *mockLedgers, *mockFrames) {
+type mockEffects struct {
+	effect string
+	users  *mockUsers
+}
+
+func (m *mockEffects) SetExplorerEffect(ctx context.Context, uid, effect string) error {
+	m.effect = effect
+	if m.users != nil && m.users.player != nil && m.users.player.UID == uid {
+		m.users.player.EquippedExplorerEffect = effect
+	}
+	return nil
+}
+
+func newSvc(coins int64, unlocks *mockUnlocks) (*Service, *mockUsers, *mockLedgers, *mockFrames, *mockEffects) {
 	users := &mockUsers{player: &game.Player{UID: "u1", Coins: coins, Version: 1}}
 	ledgers := &mockLedgers{}
 	frames := &mockFrames{users: users}
+	effects := &mockEffects{users: users}
 	if unlocks == nil {
 		unlocks = &mockUnlocks{owned: map[string]bool{}}
 	}
-	return NewService(users, ledgers, unlocks, frames), users, ledgers, frames
+	return NewService(users, ledgers, unlocks, frames, effects), users, ledgers, frames, effects
 }
 
 func TestPurchase_Success(t *testing.T) {
-	svc, users, ledgers, frames := newSvc(10, nil)
+	svc, users, ledgers, frames, _ := newSvc(10, nil)
 	res, err := svc.Purchase(context.Background(), "u1", CosmeticAvatarFrameGold)
 	if err != nil {
 		t.Fatalf("Purchase: %v", err)
@@ -160,7 +174,7 @@ func TestPurchase_Success(t *testing.T) {
 }
 
 func TestPurchase_InsufficientCoins(t *testing.T) {
-	svc, users, ledgers, _ := newSvc(2, nil)
+	svc, users, ledgers, _, _ := newSvc(2, nil)
 	_, err := svc.Purchase(context.Background(), "u1", CosmeticAvatarFrameGold)
 	if err != ErrInsufficientCoins {
 		t.Fatalf("expected ErrInsufficientCoins, got %v", err)
@@ -175,7 +189,7 @@ func TestPurchase_InsufficientCoins(t *testing.T) {
 
 func TestPurchase_AlreadyUnlocked(t *testing.T) {
 	unlocks := &mockUnlocks{owned: map[string]bool{key("u1", CosmeticAvatarFrameGold): true}}
-	svc, users, ledgers, _ := newSvc(10, unlocks)
+	svc, users, ledgers, _, _ := newSvc(10, unlocks)
 	res, err := svc.Purchase(context.Background(), "u1", CosmeticAvatarFrameGold)
 	if err != nil {
 		t.Fatalf("Purchase: %v", err)
@@ -192,7 +206,7 @@ func TestPurchase_AlreadyUnlocked(t *testing.T) {
 }
 
 func TestPurchase_RetryDoesNotDoubleCharge(t *testing.T) {
-	svc, users, ledgers, _ := newSvc(10, nil)
+	svc, users, ledgers, _, _ := newSvc(10, nil)
 	if _, err := svc.Purchase(context.Background(), "u1", CosmeticAvatarFrameGold); err != nil {
 		t.Fatalf("first: %v", err)
 	}
@@ -212,7 +226,7 @@ func TestPurchase_RetryDoesNotDoubleCharge(t *testing.T) {
 }
 
 func TestPurchase_UnknownCosmetic(t *testing.T) {
-	svc, _, _, _ := newSvc(10, nil)
+	svc, _, _, _, _ := newSvc(10, nil)
 	_, err := svc.Purchase(context.Background(), "u1", "nope")
 	if err != ErrUnknownCosmetic {
 		t.Fatalf("expected unknown, got %v", err)
@@ -221,12 +235,12 @@ func TestPurchase_UnknownCosmetic(t *testing.T) {
 
 func TestListForUser_ShowsUnlockAndBalance(t *testing.T) {
 	unlocks := &mockUnlocks{owned: map[string]bool{}}
-	svc, _, _, _ := newSvc(6, unlocks)
+	svc, _, _, _, _ := newSvc(6, unlocks)
 	list, err := svc.ListForUser(context.Background(), "u1")
 	if err != nil {
 		t.Fatalf("List: %v", err)
 	}
-	if list.Coins != 6 || len(list.Items) != 2 || list.Items[0].Unlocked {
+	if list.Coins != 6 || len(list.Items) != 5 || list.Items[0].Unlocked {
 		t.Fatalf("unexpected list: %+v", list)
 	}
 	// after purchase
@@ -240,7 +254,7 @@ func TestListForUser_ShowsUnlockAndBalance(t *testing.T) {
 }
 
 func TestPurchase_LedgerBalanceConsistency(t *testing.T) {
-	svc, users, ledgers, _ := newSvc(5, nil)
+	svc, users, ledgers, _, _ := newSvc(5, nil)
 	before := users.player.Coins
 	_, err := svc.Purchase(context.Background(), "u1", CosmeticAvatarFrameGold)
 	if err != nil {
@@ -258,8 +272,8 @@ func TestPurchase_LedgerBalanceConsistency(t *testing.T) {
 
 func TestEquip_Success(t *testing.T) {
 	unlocks := &mockUnlocks{owned: map[string]bool{key("u1", CosmeticAvatarFrameGold): true}}
-	svc, _, _, frames := newSvc(10, unlocks)
-	
+	svc, _, _, frames, _ := newSvc(10, unlocks)
+
 	err := svc.Equip(context.Background(), "u1", CosmeticAvatarFrameGold)
 	if err != nil {
 		t.Fatalf("Equip failed: %v", err)
@@ -270,8 +284,8 @@ func TestEquip_Success(t *testing.T) {
 }
 
 func TestEquip_NotOwned(t *testing.T) {
-	svc, _, _, _ := newSvc(10, nil)
-	
+	svc, _, _, _, _ := newSvc(10, nil)
+
 	err := svc.Equip(context.Background(), "u1", CosmeticAvatarFrameGold)
 	if err != ErrNotOwned {
 		t.Fatalf("expected ErrNotOwned, got %v", err)
@@ -279,8 +293,8 @@ func TestEquip_NotOwned(t *testing.T) {
 }
 
 func TestEquip_Unknown(t *testing.T) {
-	svc, _, _, _ := newSvc(10, nil)
-	
+	svc, _, _, _, _ := newSvc(10, nil)
+
 	err := svc.Equip(context.Background(), "u1", "unknown")
 	if err != ErrUnknownCosmetic {
 		t.Fatalf("expected ErrUnknownCosmetic, got %v", err)
@@ -288,14 +302,72 @@ func TestEquip_Unknown(t *testing.T) {
 }
 
 func TestEquip_None(t *testing.T) {
-	svc, _, _, frames := newSvc(10, nil)
-	frames.frame = FrameGold // pretend it was gold
-	
+	svc, _, _, frames, effects := newSvc(10, nil)
+	frames.frame = FrameGold
+	effects.effect = EffectSparkleVal
+
 	err := svc.Equip(context.Background(), "u1", "none")
 	if err != nil {
 		t.Fatalf("Equip none failed: %v", err)
 	}
 	if frames.frame != "none" {
 		t.Fatalf("expected none frame equipped, got %s", frames.frame)
+	}
+	if effects.effect != "none" {
+		t.Fatalf("expected none effect equipped, got %s", effects.effect)
+	}
+}
+
+func TestEquip_Effect_Success(t *testing.T) {
+	unlocks := &mockUnlocks{owned: map[string]bool{key("u1", EffectSparkle): true}}
+	svc, _, _, _, effects := newSvc(10, unlocks)
+
+	err := svc.Equip(context.Background(), "u1", EffectSparkle)
+	if err != nil {
+		t.Fatalf("Equip effect failed: %v", err)
+	}
+	if effects.effect != EffectSparkleVal {
+		t.Fatalf("expected sparkle effect equipped, got %s", effects.effect)
+	}
+}
+
+func TestEquip_Effect_NotOwned(t *testing.T) {
+	svc, _, _, _, _ := newSvc(10, nil)
+
+	err := svc.Equip(context.Background(), "u1", EffectSparkle)
+	if err != ErrNotOwned {
+		t.Fatalf("expected ErrNotOwned, got %v", err)
+	}
+}
+
+func TestPurchase_Effect_AutoEquip(t *testing.T) {
+	svc, _, _, _, effects := newSvc(10, nil)
+	res, err := svc.Purchase(context.Background(), "u1", EffectSparkle)
+	if err != nil {
+		t.Fatalf("Purchase effect: %v", err)
+	}
+	if res.Status != "purchased" {
+		t.Fatalf("expected purchased, got %s", res.Status)
+	}
+	if effects.effect != EffectSparkleVal {
+		t.Fatalf("expected sparkle effect auto-equipped, got %s", effects.effect)
+	}
+	if res.ExplorerEffect != EffectSparkleVal {
+		t.Fatalf("expected result explorer_effect sparkle, got %s", res.ExplorerEffect)
+	}
+}
+
+func TestListForUser_IncludesEffect(t *testing.T) {
+	unlocks := &mockUnlocks{owned: map[string]bool{}}
+	svc, _, _, _, _ := newSvc(6, unlocks)
+	list, err := svc.ListForUser(context.Background(), "u1")
+	if err != nil {
+		t.Fatalf("List: %v", err)
+	}
+	if list.Effect != EffectNone {
+		t.Fatalf("expected default effect none, got %s", list.Effect)
+	}
+	if len(list.Items) != 5 {
+		t.Fatalf("expected 5 catalog items, got %d", len(list.Items))
 	}
 }

@@ -33,16 +33,22 @@ type FrameStore interface {
 	SetAvatarFrame(ctx context.Context, uid, frame string) error
 }
 
+// EffectStore updates the equipped explorer effect on a profile.
+type EffectStore interface {
+	SetExplorerEffect(ctx context.Context, uid, effect string) error
+}
+
 // Service handles listing and purchasing cosmetics.
 type Service struct {
 	users   game.UserStore
 	ledgers game.RewardLedgerStore
 	unlocks UnlockStore
 	frames  FrameStore
+	effects EffectStore
 }
 
-func NewService(users game.UserStore, ledgers game.RewardLedgerStore, unlocks UnlockStore, frames FrameStore) *Service {
-	return &Service{users: users, ledgers: ledgers, unlocks: unlocks, frames: frames}
+func NewService(users game.UserStore, ledgers game.RewardLedgerStore, unlocks UnlockStore, frames FrameStore, effects EffectStore) *Service {
+	return &Service{users: users, ledgers: ledgers, unlocks: unlocks, frames: frames, effects: effects}
 }
 
 // CatalogItemView is a catalog entry with ownership for the caller.
@@ -53,19 +59,21 @@ type CatalogItemView struct {
 
 // ListResult is returned by ListForUser.
 type ListResult struct {
-	Coins int64             `json:"coins"`
-	Items []CatalogItemView `json:"items"`
-	Frame string            `json:"avatar_frame"`
+	Coins  int64             `json:"coins"`
+	Items  []CatalogItemView `json:"items"`
+	Frame  string            `json:"avatar_frame"`
+	Effect string            `json:"explorer_effect"`
 }
 
 // PurchaseResult is returned by Purchase.
 type PurchaseResult struct {
-	Status       string `json:"status"` // purchased | already_owned
-	CosmeticID   string `json:"cosmetic_id"`
-	Price        int64  `json:"price"`
-	Coins        int64  `json:"coins"`
-	AvatarFrame  string `json:"avatar_frame"`
-	AlreadyOwned bool   `json:"already_owned"`
+	Status         string `json:"status"` // purchased | already_owned
+	CosmeticID     string `json:"cosmetic_id"`
+	Price          int64  `json:"price"`
+	Coins          int64  `json:"coins"`
+	AvatarFrame    string `json:"avatar_frame"`
+	ExplorerEffect string `json:"explorer_effect"`
+	AlreadyOwned   bool   `json:"already_owned"`
 }
 
 // ListForUser returns the fixed catalog with unlock flags and current balance.
@@ -90,7 +98,11 @@ func (s *Service) ListForUser(ctx context.Context, uid string) (*ListResult, err
 	if frame == "" {
 		frame = FrameNone
 	}
-	return &ListResult{Coins: player.Coins, Items: items, Frame: frame}, nil
+	effect := player.EquippedExplorerEffect
+	if effect == "" {
+		effect = EffectNone
+	}
+	return &ListResult{Coins: player.Coins, Items: items, Frame: frame, Effect: effect}, nil
 }
 
 // Purchase buys a cosmetic with coins. Safe against double-click:
@@ -111,13 +123,22 @@ func (s *Service) Purchase(ctx context.Context, uid, cosmeticID string) (*Purcha
 		if err != nil {
 			return nil, err
 		}
+		frame := player.AvatarFrame
+		if frame == "" {
+			frame = FrameNone
+		}
+		effect := player.EquippedExplorerEffect
+		if effect == "" {
+			effect = EffectNone
+		}
 		return &PurchaseResult{
-			Status:       "already_owned",
-			CosmeticID:   item.ID,
-			Price:        item.Price,
-			Coins:        player.Coins,
-			AvatarFrame:  item.Value,
-			AlreadyOwned: true,
+			Status:         "already_owned",
+			CosmeticID:     item.ID,
+			Price:          item.Price,
+			Coins:          player.Coins,
+			AvatarFrame:    frame,
+			ExplorerEffect: effect,
+			AlreadyOwned:   true,
 		}, nil
 	}
 
@@ -140,13 +161,22 @@ func (s *Service) Purchase(ctx context.Context, uid, cosmeticID string) (*Purcha
 		if err != nil {
 			return nil, err
 		}
+		frame := player.AvatarFrame
+		if frame == "" {
+			frame = FrameNone
+		}
+		effect := player.EquippedExplorerEffect
+		if effect == "" {
+			effect = EffectNone
+		}
 		return &PurchaseResult{
-			Status:       "already_owned",
-			CosmeticID:   item.ID,
-			Price:        item.Price,
-			Coins:        player.Coins,
-			AvatarFrame:  item.Value,
-			AlreadyOwned: true,
+			Status:         "already_owned",
+			CosmeticID:     item.ID,
+			Price:          item.Price,
+			Coins:          player.Coins,
+			AvatarFrame:    frame,
+			ExplorerEffect: effect,
+			AlreadyOwned:   true,
 		}, nil
 	}
 
@@ -175,9 +205,12 @@ func (s *Service) Purchase(ctx context.Context, uid, cosmeticID string) (*Purcha
 		return nil, ErrConcurrent
 	}
 
-	// Equip frame (best-effort after payment; ownership is source of truth).
-	if s.frames != nil && item.Kind == "avatar_frame" {
+	// Equip cosmetic (best-effort after payment; ownership is source of truth).
+	if item.Kind == "avatar_frame" && s.frames != nil {
 		_ = s.frames.SetAvatarFrame(ctx, uid, item.Value)
+	}
+	if item.Kind == "explorer_effect" && s.effects != nil {
+		_ = s.effects.SetExplorerEffect(ctx, uid, item.Value)
 	}
 
 	// Spend ledger (negative amount).
@@ -193,13 +226,29 @@ func (s *Service) Purchase(ctx context.Context, uid, cosmeticID string) (*Purcha
 		CreatedAt:  time.Now().UTC(),
 	})
 
+	frame := item.Value
+	if item.Kind != "avatar_frame" {
+		frame = FrameNone
+		if player.AvatarFrame != "" {
+			frame = player.AvatarFrame
+		}
+	}
+	effect := item.Value
+	if item.Kind != "explorer_effect" {
+		effect = EffectNone
+		if player.EquippedExplorerEffect != "" {
+			effect = player.EquippedExplorerEffect
+		}
+	}
+
 	return &PurchaseResult{
-		Status:       "purchased",
-		CosmeticID:   item.ID,
-		Price:        item.Price,
-		Coins:        newCoins,
-		AvatarFrame:  item.Value,
-		AlreadyOwned: false,
+		Status:         "purchased",
+		CosmeticID:     item.ID,
+		Price:          item.Price,
+		Coins:          newCoins,
+		AvatarFrame:    frame,
+		ExplorerEffect: effect,
+		AlreadyOwned:   false,
 	}, nil
 }
 
@@ -207,7 +256,10 @@ func (s *Service) Purchase(ctx context.Context, uid, cosmeticID string) (*Purcha
 func (s *Service) Equip(ctx context.Context, uid, cosmeticID string) error {
 	if cosmeticID == "none" {
 		if s.frames != nil {
-			return s.frames.SetAvatarFrame(ctx, uid, "none")
+			_ = s.frames.SetAvatarFrame(ctx, uid, "none")
+		}
+		if s.effects != nil {
+			_ = s.effects.SetExplorerEffect(ctx, uid, "none")
 		}
 		return nil
 	}
@@ -216,8 +268,8 @@ func (s *Service) Equip(ctx context.Context, uid, cosmeticID string) error {
 	if !ok {
 		return ErrUnknownCosmetic
 	}
-	if item.Kind != "avatar_frame" {
-		return fmt.Errorf("cosmetic is not a frame")
+	if item.Kind != "avatar_frame" && item.Kind != "explorer_effect" {
+		return fmt.Errorf("cosmetic is not a frame or effect")
 	}
 
 	has, err := s.unlocks.Has(ctx, uid, cosmeticID)
@@ -228,8 +280,11 @@ func (s *Service) Equip(ctx context.Context, uid, cosmeticID string) error {
 		return ErrNotOwned
 	}
 
-	if s.frames != nil {
+	if item.Kind == "avatar_frame" && s.frames != nil {
 		return s.frames.SetAvatarFrame(ctx, uid, item.Value)
+	}
+	if item.Kind == "explorer_effect" && s.effects != nil {
+		return s.effects.SetExplorerEffect(ctx, uid, item.Value)
 	}
 	return nil
 }

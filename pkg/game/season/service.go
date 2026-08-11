@@ -73,7 +73,7 @@ func (s *SeasonService) IsActive(ctx context.Context, slug string) bool {
 
 func (s *SeasonService) GetState(ctx context.Context, slug string) (SeasonState, error) {
 	if slug == "" {
-		return SeasonStateInactive, nil
+		return SeasonStateActive, nil
 	}
 	def, err := s.content.GetSeason(ctx, slug)
 	if err != nil {
@@ -127,27 +127,5 @@ func (s *SeasonService) ListAll(ctx context.Context) ([]SeasonSummary, error) {
 	sort.Slice(result, func(i, j int) bool {
 		return result[i].Definition.StartAt.Before(result[j].Definition.StartAt)
 	})
-	return result, nil
-}
-
-// FilterBySeason returns only items whose season is currently active.
-// Items with an empty season slug are always included.
-func (s *SeasonService) FilterBySeason(ctx context.Context, slugs []string) ([]string, error) {
-	activeSeasons, err := s.content.ListSeasons(ctx)
-	if err != nil {
-		return nil, err
-	}
-	now := s.now()
-	activeSet := make(map[string]bool)
-	for _, sd := range activeSeasons {
-		if !sd.StartAt.After(now) && !sd.EndAt.Before(now) {
-			activeSet[sd.Slug] = true
-		}
-	}
-	result := make([]string, 0, len(slugs))
-	for _, slug := range slugs {
-		result = append(result, slug)
-	}
-	_ = activeSet
 	return result, nil
 }

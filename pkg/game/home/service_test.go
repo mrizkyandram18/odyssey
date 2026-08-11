@@ -7,9 +7,11 @@ import (
 	"time"
 
 	"odyssey/pkg/game"
+	gamecontent "odyssey/pkg/game/content"
 	"odyssey/pkg/game/crewstreak"
 	"odyssey/pkg/game/dailyturn"
 	"odyssey/pkg/game/quest"
+	"odyssey/pkg/game/season"
 )
 
 type mockDailyTurnStore struct {
@@ -166,6 +168,12 @@ func (m *mockCreativeSubmissionStore) ListByQuest(ctx context.Context, questID i
 	return m.subs, nil
 }
 func (m *mockCreativeSubmissionStore) ListByCrew(ctx context.Context, crewID string) ([]game.Submission, error) {
+	if m.err != nil {
+		return nil, m.err
+	}
+	return m.subs, nil
+}
+func (m *mockCreativeSubmissionStore) ListByCrewAndKind(ctx context.Context, crewID, kind string) ([]game.Submission, error) {
 	if m.err != nil {
 		return nil, m.err
 	}
@@ -430,4 +438,131 @@ func TestGetHome_CrewStreakNilService(t *testing.T) {
 	if resp.DailyTurn.CrewStreak != 0 {
 		t.Errorf("expected crew streak 0 when service not set, got %d", resp.DailyTurn.CrewStreak)
 	}
+}
+
+type mockSeasonService struct {
+	summary *season.SeasonSummary
+	err     error
+}
+
+func (m *mockSeasonService) IsActive(ctx context.Context, slug string) bool {
+	return true
+}
+
+func (m *mockSeasonService) GetState(ctx context.Context, slug string) (season.SeasonState, error) {
+	return season.SeasonStateActive, nil
+}
+
+func (m *mockSeasonService) GetCurrentSeason(ctx context.Context) (*season.SeasonSummary, error) {
+	return m.summary, m.err
+}
+
+func (m *mockSeasonService) ListAll(ctx context.Context) ([]season.SeasonSummary, error) {
+	return nil, m.err
+}
+
+type mockSeasonGateway struct {
+	seasons []gamecontent.SeasonDefinition
+	err     error
+}
+
+func (m *mockSeasonGateway) ListSeasons(ctx context.Context) ([]gamecontent.SeasonDefinition, error) {
+	return m.seasons, m.err
+}
+
+func (m *mockSeasonGateway) GetSeason(ctx context.Context, slug string) (*gamecontent.SeasonDefinition, error) {
+	if m.err != nil {
+		return nil, m.err
+	}
+	for i := range m.seasons {
+		if m.seasons[i].Slug == slug {
+			return &m.seasons[i], nil
+		}
+	}
+	return nil, nil
+}
+
+func TestGetHome_CurrentSeason(t *testing.T) {
+	now := time.Now().UTC()
+	player := &game.Player{UID: "u1", CrewID: "c1", ExplorerName: "Alice", Level: 1, XP: 0}
+	qs := quest.NewQuestService(&mockQuestStore{})
+	dts := dailyturn.NewDailyTurnService(&mockDailyTurnStore{}, &dailyturn.DailyTurnConfig{})
+	svc := NewHomeService(qs, dts, &mockProgressionStore{}, &mockRealmProgressStore{}, &mockUserStore{player: player}, &mockCreativeSubmissionStore{}, &mockChestStore{}, nil)
+
+	seasonSvc := season.NewSeasonService(&mockSeasonGateway{
+		seasons: []gamecontent.SeasonDefinition{
+			{Slug: "season-spring-2026", Name: "Spring 2026", Realm: "whispering-woods", StartAt: now.Add(-24 * time.Hour), EndAt: now.Add(24 * time.Hour), Published: true},
+		},
+	}, nil)
+	svc.SetSeasonService(seasonSvc)
+
+	resp, err := svc.GetHome(context.Background(), "u1", "c1")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if resp.CurrentSeason == nil {
+		t.Fatal("expected current season to be set")
+	}
+	if resp.CurrentSeason.Definition.Slug != "season-spring-2026" {
+		t.Errorf("expected season-spring-2026, got %s", resp.CurrentSeason.Definition.Slug)
+	}
+	if resp.SeasonProgress.SeasonSlug != "season-spring-2026" {
+		t.Errorf("expected season_progress.season_slug season-spring-2026, got %s", resp.SeasonProgress.SeasonSlug)
+	}
+}
+
+func TestGetHome_SeasonProgressQuestsCompleted(t *testing.T) {
+	now := time.Now().UTC()
+	player := &game.Player{UID: "u1", CrewID: "c1", ExplorerName: "Alice", Level: 1, XP: 0}
+
+	qStore := &mockQuestStore{
+		quests: []game.Quest{
+			{ID: 1, CrewID: "c1", TemplateSlug: "seasonal-q1", Title: "SQ1", Status: string(quest.QuestStatusDone), CompletedAt: &now, CreatedAt: now},
+			{ID: 2, CrewID: "c1", TemplateSlug: "plain-q", Title: "Plain", Status: string(quest.QuestStatusDone), CompletedAt: &now, CreatedAt: now},
+		},
+		challenges: map[int64][]game.Challenge{},
+	}
+	content := &mockContentGatewayForHome{
+		quests: []gamecontent.QuestDefinition{
+			{Slug: "seasonal-q1", SeasonSlug: "season-spring-2026"},
+			{Slug: "plain-q", SeasonSlug: ""},
+		},
+	}
+	qs := quest.NewQuestServiceWithGate(qStore, nil, content)
+	dts := dailyturn.NewDailyTurnService(&mockDailyTurnStore{}, &dailyturn.DailyTurnConfig{})
+	svc := NewHomeService(qs, dts, &mockProgressionStore{}, &mockRealmProgressStore{}, &mockUserStore{player: player}, &mockCreativeSubmissionStore{}, &mockChestStore{}, nil)
+
+	seasonSvc := season.NewSeasonService(&mockSeasonGateway{
+		seasons: []gamecontent.SeasonDefinition{
+			{Slug: "season-spring-2026", Name: "Spring 2026", Realm: "whispering-woods", StartAt: now.Add(-24 * time.Hour), EndAt: now.Add(24 * time.Hour), Published: true},
+		},
+	}, nil)
+	svc.SetSeasonService(seasonSvc)
+
+	resp, err := svc.GetHome(context.Background(), "u1", "c1")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if resp.SeasonProgress.QuestsCompleted != 1 {
+		t.Errorf("expected 1 quests_completed for season, got %d", resp.SeasonProgress.QuestsCompleted)
+	}
+}
+
+type mockContentGatewayForHome struct {
+	quests []gamecontent.QuestDefinition
+}
+
+func (m *mockContentGatewayForHome) ListQuests(ctx context.Context) ([]gamecontent.QuestDefinition, error) {
+	return m.quests, nil
+}
+func (m *mockContentGatewayForHome) GetQuest(ctx context.Context, slug string) (*gamecontent.QuestDefinition, error) {
+	for _, q := range m.quests {
+		if q.Slug == slug {
+			return &q, nil
+		}
+	}
+	return nil, nil
+}
+func (m *mockContentGatewayForHome) ListQuestsByRealm(ctx context.Context, realm string) ([]gamecontent.QuestDefinition, error) {
+	return nil, nil
 }

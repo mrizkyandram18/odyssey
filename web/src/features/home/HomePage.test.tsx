@@ -5,7 +5,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { render, screen, waitFor, cleanup } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
 import { HomePage } from './HomePage'
-import { apiClient } from '../../shared/lib/api'
+import { apiClient, crewsApi } from '../../shared/lib/api'
 import { useSession } from '../../shared/hooks/useSession'
 
 // Mock dependencies
@@ -16,6 +16,9 @@ vi.mock('../../shared/lib/api', () => ({
   },
   chestsApi: {
     open: vi.fn(),
+  },
+  crewsApi: {
+    get: vi.fn(),
   },
 }))
 
@@ -193,6 +196,35 @@ describe('HomePage', () => {
 
     await waitFor(() => {
       expect(screen.getByTestId('home-crew-streak')).toHaveTextContent('Runtutan kru: 0 hari bersama')
+    })
+  })
+
+  it('renders crew banner when crew has a banner_url', async () => {
+    vi.mocked(apiClient.request).mockResolvedValueOnce({
+      player: { explorer_name: 'Tester', coins: 10 },
+      realm_progress: [{ realm: 'Whispering Woods', progress: 50, status: 'ACTIVE' }],
+      daily_turn: { available: true, streak_days: 1 },
+      active_quests: [],
+      completed_quests_today: [],
+      available_chests: [],
+    })
+    vi.mocked(crewsApi.get).mockResolvedValueOnce({
+      id: 'crew-1',
+      name: 'Test Crew',
+      banner_url: 'https://example.com/banner.png',
+      theme: 'default',
+      created_at: '',
+      updated_at: '',
+    })
+
+    render(
+      <MemoryRouter>
+        <HomePage />
+      </MemoryRouter>
+    )
+
+    await waitFor(() => {
+      expect(screen.getByTestId('crew-banner')).toBeInTheDocument()
     })
   })
 })

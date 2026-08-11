@@ -147,6 +147,15 @@ func (s *CreativeService) ListByCrew(ctx context.Context, crewID string) ([]game
 	return subs, nil
 }
 
+// ListByCrewAndKind returns all submissions for a given crew filtered by kind.
+func (s *CreativeService) ListByCrewAndKind(ctx context.Context, crewID, kind string) ([]game.Submission, error) {
+	subs, err := s.submissions.ListByCrewAndKind(ctx, crewID, kind)
+	if err != nil {
+		return nil, fmt.Errorf("list submissions by crew and kind: %w", err)
+	}
+	return subs, nil
+}
+
 // GetSubmission returns a single submission by ID.
 func (s *CreativeService) GetSubmission(ctx context.Context, submissionID int64) (*game.Submission, error) {
 	sub, err := s.submissions.GetSubmission(ctx, submissionID)

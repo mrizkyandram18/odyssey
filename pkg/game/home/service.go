@@ -18,6 +18,7 @@ import (
 	"odyssey/pkg/game/progression"
 	"odyssey/pkg/game/quest"
 	"odyssey/pkg/game/relic"
+	"odyssey/pkg/game/season"
 )
 
 // HomeResponse is the aggregated data returned by the Home endpoint.
@@ -37,7 +38,18 @@ type HomeResponse struct {
 	ChapterProgress       *chapter.ChapterProgressView  `json:"chapter_progress,omitempty"`
 	LoreSummary           *lore.LoreSummary             `json:"lore_summary,omitempty"`
 	Achievements          []achievement.AchievementView `json:"achievements,omitempty"`
+	CurrentSeason         *season.SeasonSummary         `json:"current_season,omitempty"`
+	SeasonProgress        SeasonProgress                `json:"season_progress"`
 	Sections              HomeSections                  `json:"sections"`
+}
+
+// SeasonProgress tracks crew progress within the current season.
+type SeasonProgress struct {
+	SeasonSlug      string `json:"season_slug"`
+	SeasonName      string `json:"season_name"`
+	QuestsCompleted int    `json:"quests_completed"`
+	RealmProgress   int    `json:"realm_progress"`
+	RealmStatus     string `json:"realm_status"`
 }
 
 // CollectionProgress tracks relic collection completion.
@@ -155,6 +167,7 @@ type HomeService struct {
 	loreSvc    *lore.LoreService
 	achieveSvc *achievement.AchievementService
 	crewStreak *crewstreak.Service
+	seasonSvc  *season.SeasonService
 }
 
 func (s *HomeService) SetChapterService(cs *chapter.ChapterService) {
@@ -173,6 +186,10 @@ func (s *HomeService) SetAchievementService(as *achievement.AchievementService) 
 // call with nil (crew streak simply stays 0).
 func (s *HomeService) SetCrewStreakService(cs *crewstreak.Service) {
 	s.crewStreak = cs
+}
+
+func (s *HomeService) SetSeasonService(ss *season.SeasonService) {
+	s.seasonSvc = ss
 }
 
 // NewHomeService constructs a HomeService from its collaborators.
@@ -402,6 +419,29 @@ func (s *HomeService) GetHome(ctx context.Context, uid string, crewID string) (*
 		return nil, err
 	}
 
+	var currentSeason *season.SeasonSummary
+	seasonProgress := SeasonProgress{}
+	if s.seasonSvc != nil {
+		summary, err := s.seasonSvc.GetCurrentSeason(gCtx)
+		if err == nil && summary != nil {
+			currentSeason = summary
+			seasonProgress.SeasonSlug = summary.Definition.Slug
+			seasonProgress.SeasonName = summary.Definition.Name
+			for _, rp := range realmProgress {
+				if rp.Realm == summary.Definition.Realm {
+					seasonProgress.RealmProgress = rp.Progress
+					seasonProgress.RealmStatus = rp.Status
+					break
+				}
+			}
+			for _, q := range quests {
+				if q.Status == string(quest.QuestStatusDone) && q.SeasonSlug == summary.Definition.Slug {
+					seasonProgress.QuestsCompleted++
+				}
+			}
+		}
+	}
+
 	// Assembly phase
 	remainingTurns := 0
 	if available && !hasCompleted {
@@ -445,6 +485,8 @@ func (s *HomeService) GetHome(ctx context.Context, uid string, crewID string) (*
 		AvailableChests:      availableChests,
 		LatestRelic:          latestRelic,
 		CollectionProgress:   collectionProgress,
+		CurrentSeason:        currentSeason,
+		SeasonProgress:       seasonProgress,
 		Sections: HomeSections{
 			Player: PlayerSection{
 				Player:   *player,

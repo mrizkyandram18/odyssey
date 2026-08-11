@@ -1,12 +1,13 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import { Card } from '../../shared/components/atoms/Card'
 import { Button } from '../../shared/components/atoms/Button'
-import { apiClient, chestsApi } from '../../shared/lib/api'
-import type { HomeResponse } from '../../shared/types'
+import { apiClient, chestsApi, crewsApi } from '../../shared/lib/api'
+import type { HomeResponse, Crew } from '../../shared/types'
 import { ConnectedReactionBar } from '../../shared/components/molecules/ConnectedReactionBar'
 import { YourTurnBadge } from '../../shared/components/molecules/YourTurnBadge'
+import { SeasonBadge } from '../../shared/components/molecules/SeasonBadge'
 import { useSession } from '../../shared/hooks/useSession'
 import { WorldMap } from '../../shared/components/organisms/WorldMap'
 import { isMyRelayTurn } from '../../shared/utils/questTurn'
@@ -32,12 +33,22 @@ export function HomePage() {
   const [error, setError] = useState<string | null>(null)
   const [takingTurn, setTakingTurn] = useState(false)
   const [openingChestId, setOpeningChestId] = useState<number | null>(null)
+  const [crew, setCrew] = useState<Crew | null>(null)
+
+  const loadCrew = useCallback(async () => {
+    try {
+      const data = await crewsApi.get()
+      setCrew(data)
+    } catch {
+      // best-effort
+    }
+  }, [])
 
   // Production's serverless /api/home is a heavy aggregate (~8s warm, slower on
   // cold start). Bound the wait so the UI never appears stuck "Memuat dunia".
   const HOME_TIMEOUT_MS = 15_000
 
-  const loadHome = async () => {
+  const loadHome = useCallback(async () => {
     setLoading(true)
     setError(null)
     const controller = new AbortController()
@@ -59,11 +70,12 @@ export function HomePage() {
       clearTimeout(timer)
       setLoading(false)
     }
-  }
+  }, [])
 
   useEffect(() => {
     loadHome()
-  }, [])
+    loadCrew()
+  }, [loadHome, loadCrew])
 
   const takeTurn = async () => {
     setTakingTurn(true)
@@ -119,8 +131,9 @@ export function HomePage() {
   const availableChests = home.available_chests || []
 
   return (
-    <motion.div 
+    <motion.div
       className="flex flex-col gap-6 max-w-md mx-auto pb-8"
+      data-theme={crew?.theme || 'default'}
       variants={containerVariants}
       initial="hidden"
       animate="show"
@@ -151,6 +164,39 @@ export function HomePage() {
           </div>
         </div>
       </motion.section>
+
+      {/* Crew Banner — Slice 4.4 */}
+      {crew?.banner_url && (
+        <motion.section variants={itemVariants} className="mt-2">
+          <div
+            className="w-full h-40 md:h-56 rounded-xl overflow-hidden border border-border-subtle shadow-lg"
+            data-testid="crew-banner"
+            style={{
+              backgroundImage: `url(${crew.banner_url})`,
+              backgroundSize: 'cover',
+              backgroundPosition: 'center',
+            }}
+          />
+        </motion.section>
+      )}
+
+      {/* Season Indicator — Slice 5.1 */}
+      {home.current_season && (
+        <motion.section variants={itemVariants}>
+          <SeasonBadge
+            season={home.current_season}
+            progress={
+              home.season_progress
+                ? {
+                    quests_completed: home.season_progress.quests_completed,
+                    realm_progress: home.season_progress.realm_progress,
+                    realm_status: home.season_progress.realm_status,
+                  }
+                : undefined
+            }
+          />
+        </motion.section>
+      )}
 
       {/* 2. Progres & Peta Dunia */}
       <motion.section variants={itemVariants} className="flex flex-col gap-3">

@@ -9,23 +9,26 @@ import "time"
 // Player is a single family member's game identity.
 // Identity is the shared UID from Gatekeeper; game state lives here.
 type Player struct {
-	UID          string    `json:"uid"`
-	CrewID       string    `json:"crew_id"`
-	ExplorerName string    `json:"explorer_name"`
-	Role         string    `json:"role"`
-	Level        int       `json:"level"`
-	XP           int64     `json:"xp"`
-	Coins        int64     `json:"coins"`
-	AvatarFrame  string    `json:"avatar_frame"`
-	Version      int       `json:"version"`
-	CreatedAt    time.Time `json:"created_at"`
-	UpdatedAt    time.Time `json:"updated_at"`
+	UID                    string    `json:"uid"`
+	CrewID                 string    `json:"crew_id"`
+	ExplorerName           string    `json:"explorer_name"`
+	Role                   string    `json:"role"`
+	Level                  int       `json:"level"`
+	XP                     int64     `json:"xp"`
+	Coins                  int64     `json:"coins"`
+	AvatarFrame            string    `json:"avatar_frame"`
+	EquippedExplorerEffect string    `json:"equipped_explorer_effect"`
+	Version                int       `json:"version"`
+	CreatedAt              time.Time `json:"created_at"`
+	UpdatedAt              time.Time `json:"updated_at"`
 }
 
 // Crew is the family group — the shared party for all progression.
 type Crew struct {
 	ID        string
 	Name      string
+	BannerURL string
+	Theme     string
 	CreatedAt time.Time
 	UpdatedAt time.Time
 }

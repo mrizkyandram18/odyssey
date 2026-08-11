@@ -116,3 +116,14 @@ func (s *supabaseProfileStore) SetAvatarFrame(ctx context.Context, uid, frame st
 	}
 	return nil
 }
+
+// SetExplorerEffect equips an explorer effect value on the user profile.
+func (s *supabaseProfileStore) SetExplorerEffect(ctx context.Context, uid, effect string) error {
+	payload := map[string]string{"equipped_explorer_effect": effect}
+	params := s.buildFilter(uid)
+	_, err := s.client.Mutate(ctx, "PATCH", "odyssey_user_profiles", payload, params)
+	if err != nil {
+		return fmt.Errorf("set explorer effect: %w", err)
+	}
+	return nil
+}

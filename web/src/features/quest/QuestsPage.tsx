@@ -110,6 +110,7 @@ export function QuestsPage() {
   const { session } = useSession()
   const [searchParams, setSearchParams] = useSearchParams()
   const [quests, setQuests] = useState<QuestView[]>([])
+  const [availableQuests, setAvailableQuests] = useState<QuestView[]>([])
   const [realms, setRealms] = useState<RealmProgress[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -119,12 +120,14 @@ export function QuestsPage() {
   useEffect(() => {
     const loadData = async () => {
       try {
-        const [questData, realmData] = await Promise.all([
+        const [questData, realmData, availableData] = await Promise.all([
           questsApi.list().catch(() => []),
           realmProgressApi.list().catch(() => []),
+          questsApi.available().catch(() => []),
         ])
         setQuests(questData)
         setRealms(realmData)
+        setAvailableQuests(availableData)
       } catch (e) {
         setError(e instanceof Error ? e.message : 'failed to load quests')
       } finally {
@@ -154,7 +157,6 @@ export function QuestsPage() {
       : quests.filter((q) => getRealmForQuest(q) === selectedRealm)
 
   const activeQuests = filteredQuests.filter((q) => q.status === 'ACTIVE')
-  const pendingQuests = filteredQuests.filter((q) => q.status === 'PENDING')
   const completedQuests = filteredQuests.filter((q) => q.status === 'DONE')
 
   const handleSelectRealm = (slug: string) => {
@@ -273,7 +275,7 @@ export function QuestsPage() {
       />
       <QuestList
         title="Available Quests"
-        list={pendingQuests}
+        list={availableQuests}
         emptyMsg="Tidak ada misi baru tersedia di ranah ini."
         uid={session?.uid}
       />

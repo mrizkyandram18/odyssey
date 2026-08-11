@@ -88,24 +88,25 @@ type CreativePromptDefinition struct {
 }
 
 type AchievementDefinition struct {
-	ID          int64           `json:"id"`
-	Code        string          `json:"code"`
-	Title       string          `json:"title"`
-	Description string          `json:"description"`
-	Kind        string          `json:"kind"`
-	Trigger     string          `json:"trigger"`
-	Threshold   int             `json:"threshold"`
-	RewardXP    int64           `json:"reward_xp"`
-	RewardRelic string          `json:"reward_relic"`
-	SeasonSlug  string          `json:"season_slug"`
-	Published   bool            `json:"published"`
-	Draft       json.RawMessage `json:"draft"`
-	Version     int             `json:"version"`
-	UpdatedBy   string          `json:"updated_by"`
-	PublishedAt *time.Time      `json:"published_at"`
-	DeletedAt   *time.Time      `json:"deleted_at"`
-	CreatedAt   time.Time       `json:"created_at"`
-	UpdatedAt   time.Time       `json:"updated_at"`
+	ID               int64           `json:"id"`
+	Code             string          `json:"code"`
+	Title            string          `json:"title"`
+	Description      string          `json:"description"`
+	Kind             string          `json:"kind"`
+	Trigger          string          `json:"trigger"`
+	Threshold        int             `json:"threshold"`
+	RewardXP         int64           `json:"reward_xp"`
+	RewardRelic      string          `json:"reward_relic"`
+	RewardCosmeticID string          `json:"reward_cosmetic_id"`
+	SeasonSlug       string          `json:"season_slug"`
+	Published        bool            `json:"published"`
+	Draft            json.RawMessage `json:"draft"`
+	Version          int             `json:"version"`
+	UpdatedBy        string          `json:"updated_by"`
+	PublishedAt      *time.Time      `json:"published_at"`
+	DeletedAt        *time.Time      `json:"deleted_at"`
+	CreatedAt        time.Time       `json:"created_at"`
+	UpdatedAt        time.Time       `json:"updated_at"`
 }
 
 type SeasonDefinition struct {

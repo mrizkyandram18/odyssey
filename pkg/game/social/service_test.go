@@ -47,6 +47,9 @@ func (m *mockCreativeStore) ListByQuest(ctx context.Context, questID int64) ([]g
 func (m *mockCreativeStore) ListByCrew(ctx context.Context, crewID string) ([]game.Submission, error) {
 	return nil, nil
 }
+func (m *mockCreativeStore) ListByCrewAndKind(ctx context.Context, crewID, kind string) ([]game.Submission, error) {
+	return nil, nil
+}
 func (m *mockCreativeStore) UpdateSubmission(ctx context.Context, submissionID int64, patch map[string]any) error {
 	return nil
 }

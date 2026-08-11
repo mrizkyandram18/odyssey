@@ -1,4 +1,5 @@
 import type { CreativeSubmission } from '../../types'
+import { Link } from 'react-router-dom'
 import { toSvgDataUri } from '../../utils/svg'
 import { parseComicPayload } from '../../utils/comic'
 import { parsePhotoPayload, parseVideoPayload } from '../../utils/media'
@@ -34,7 +35,14 @@ export function CreativeCard({ submission }: CreativeCardProps) {
       </div>
 
       <div className="mt-2 flex items-center justify-between border-t border-border/50 pt-3">
-        <span className="text-xs font-medium text-muted-foreground">Quest #{submission.quest_id}</span>
+        <div className="flex items-center gap-3">
+          <span className="text-xs font-medium text-muted-foreground">Quest #{submission.quest_id}</span>
+          {submission.kind === 'DRAWING' && (
+            <Link to={`/stories/${submission.id}`} className="text-xs text-primary underline">
+              View Story
+            </Link>
+          )}
+        </div>
         {/* Live reactions — target_type=JOURNAL maps to CreativeSubmission in backend */}
         <ConnectedReactionBar targetType="JOURNAL" targetId={submission.id} />
       </div>

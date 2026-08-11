@@ -21,11 +21,12 @@ import (
 	apiLore "odyssey/internal/api/lore"
 	"odyssey/internal/api/me"
 	apiPush "odyssey/internal/api/push"
-	"odyssey/internal/api/quests"
+	apiQuests "odyssey/internal/api/quests"
 	apiReactions "odyssey/internal/api/reactions"
 	"odyssey/internal/api/realm_progress"
 	"odyssey/internal/api/relics"
 	"odyssey/internal/api/rewards"
+	apiSeasons "odyssey/internal/api/seasons"
 	"odyssey/internal/api/status"
 	apiStoryFragments "odyssey/internal/api/story_fragments"
 	"odyssey/pkg/auth"
@@ -154,7 +155,7 @@ func BuildHandler() (*Server, error) {
 		repo.Quests, realmStore, repo.Users,
 		repo.PlayerRelics, repo.DailyTurns, repo.CreativeSubmissions, chapterStore,
 	)
-	achieveSvc := achievement.NewAchievementService(contentRepo.Achievements, repo.Achievements, achieveRdr, dispatcher)
+	achieveSvc := achievement.NewAchievementService(contentRepo.Achievements, repo.Achievements, achieveRdr, dispatcher, repo.CosmeticUnlocks)
 
 	dispatcher.Subscribe(events.EventTypeQuestCompleted, chapter.NewQuestCompletedHandler(chapterSvc))
 	dispatcher.Subscribe(events.EventTypeQuestCompleted, achievement.NewQuestCompletedHandler(achieveSvc))
@@ -242,13 +243,14 @@ func BuildHandler() (*Server, error) {
 
 	login.Setup(authenticator, issuer, profileStore)
 	me.Setup(profileStore)
-	quests.Setup(questAPIHandler)
+	apiQuests.Setup(questAPIHandler)
 	daily_turns.Setup(dailyTurnAPIHandler)
 	rewards.Setup(rewardSvc)
-	cosmeticSvc := cosmetic.NewService(repo.Users, repo.RewardLedgers, repo.CosmeticUnlocks, profileStore)
+	cosmeticSvc := cosmetic.NewService(repo.Users, repo.RewardLedgers, repo.CosmeticUnlocks, profileStore, profileStore)
 	apiCosmetics.Setup(cosmeticSvc)
 	creative.Setup(creativeHandler)
 	apiHome.Setup(homeSvc)
+	homeSvc.SetSeasonService(seasonSvc)
 
 	apiChapters.Setup(chapterSvc)
 	apiLore.Setup(loreSvc)
@@ -266,6 +268,7 @@ func BuildHandler() (*Server, error) {
 	crews.Setup(repo.Crews)
 	realm_progress.Setup(repo.RealmProgress)
 	apiPush.Setup(repo.PushSubscriptions)
+	apiSeasons.Setup(seasonSvc)
 
 	// Wire Web Push delivery. VAPID keys are optional — server starts normally
 	// without them, but push notifications will not be delivered.
@@ -402,8 +405,8 @@ func BuildHandler() (*Server, error) {
 	mux.HandleFunc("/api/me/", secure(mw.RequireAuth(me.Handler)))
 	mux.HandleFunc("/api/status", secure(status.Handler))
 	mux.HandleFunc("/api/status/", secure(status.Handler))
-	mux.HandleFunc("/api/quests", secure(mw.RequireAuth(quests.Handler)))
-	mux.HandleFunc("/api/quests/", secure(mw.RequireAuth(quests.Handler)))
+	mux.HandleFunc("/api/quests", secure(mw.RequireAuth(apiQuests.Handler)))
+	mux.HandleFunc("/api/quests/", secure(mw.RequireAuth(apiQuests.Handler)))
 	mux.HandleFunc("/api/crews", secure(mw.RequireAuth(crews.Handler)))
 	mux.HandleFunc("/api/crews/", secure(mw.RequireAuth(crews.Handler)))
 	mux.HandleFunc("/api/realm_progress", secure(mw.RequireAuth(realm_progress.Handler)))
@@ -437,6 +440,8 @@ func BuildHandler() (*Server, error) {
 	mux.HandleFunc("/api/board/", secure(mw.RequireAuth(csrf(apiBoard.Handler))))
 	mux.HandleFunc("/api/push/subscribe", secure(mw.RequireAuth(csrf(apiPush.Handler))))
 	mux.HandleFunc("/api/push/subscribe/", secure(mw.RequireAuth(csrf(apiPush.Handler))))
+	mux.HandleFunc("/api/seasons", secure(mw.RequireAuth(apiSeasons.Handler)))
+	mux.HandleFunc("/api/seasons/", secure(mw.RequireAuth(apiSeasons.Handler)))
 	mux.HandleFunc("/api/admin", secure(rateLimit(adminLimiter, mw.RequireRole(auth.RoleAdmin)(admin.Handler))))
 	mux.HandleFunc("/api/admin/", secure(rateLimit(adminLimiter, mw.RequireRole(auth.RoleAdmin)(admin.Handler))))
 

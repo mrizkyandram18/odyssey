@@ -4,7 +4,7 @@ import { Button } from '../../shared/components/atoms/Button'
 import { ProgressBar } from '../../shared/components/atoms/ProgressBar'
 import { Card } from '../../shared/components/atoms/Card'
 import { useSession } from '../../shared/hooks/useSession'
-import { apiClient } from '../../shared/lib/api'
+import { apiClient, crewsApi } from '../../shared/lib/api'
 import type {
   CosmeticCatalogItem,
   CosmeticsResponse,
@@ -25,6 +25,7 @@ export function ProfilePage() {
   const [ledgers, setLedgers] = useState<RewardLedgerEntry[]>([])
   const [cosmetics, setCosmetics] = useState<CosmeticCatalogItem[]>([])
   const [frame, setFrame] = useState('none')
+  const [effect, setEffect] = useState('none')
   const [buying, setBuying] = useState(false)
   const [shopError, setShopError] = useState<string | null>(null)
   const [shopMsg, setShopMsg] = useState<string | null>(null)
@@ -38,11 +39,19 @@ export function ProfilePage() {
   const [giftMsg, setGiftMsg] = useState<string | null>(null)
   const [giftError, setGiftError] = useState<string | null>(null)
 
+  // Crew customization state
+  const [bannerUrl, setBannerUrl] = useState('')
+  const [theme, setTheme] = useState('default')
+  const [savingCrew, setSavingCrew] = useState(false)
+  const [crewSaveMsg, setCrewSaveMsg] = useState<string | null>(null)
+  const [crewSaveError, setCrewSaveError] = useState<string | null>(null)
+
   const loadCosmetics = useCallback(async () => {
     try {
       const data = await apiClient.get<CosmeticsResponse>('/api/cosmetics')
       setCosmetics(data.items ?? [])
       setFrame(data.avatar_frame || 'none')
+      setEffect(data.explorer_effect || 'none')
     } catch (e) {
       console.error('failed to load cosmetics', e)
     }
@@ -69,6 +78,35 @@ export function ProfilePage() {
     }
   }, [])
 
+  const loadCrew = useCallback(async () => {
+    try {
+      const data = await crewsApi.get()
+      setBannerUrl(data.banner_url || '')
+      setTheme(data.theme || 'default')
+    } catch (e) {
+      console.error('failed to load crew', e)
+    }
+  }, [])
+
+  const saveCrewSettings = useCallback(async () => {
+    setSavingCrew(true)
+    setCrewSaveError(null)
+    setCrewSaveMsg(null)
+    try {
+      const data = await crewsApi.patch({
+        banner_url: bannerUrl,
+        theme: theme,
+      })
+      setBannerUrl(data.banner_url || '')
+      setTheme(data.theme || 'default')
+      setCrewSaveMsg('Crew customization saved!')
+    } catch (e) {
+      setCrewSaveError(e instanceof Error ? e.message : 'Save failed')
+    } finally {
+      setSavingCrew(false)
+    }
+  }, [bannerUrl, theme])
+
   useEffect(() => {
     if (profile) {
       apiClient.get<RewardLedgerEntry[]>('/api/rewards')
@@ -77,11 +115,15 @@ export function ProfilePage() {
       void loadCosmetics()
       void loadInventory()
       void loadCrewMembers()
+      void loadCrew()
       if (profile.avatar_frame) {
         setFrame(profile.avatar_frame)
       }
+      if (profile.equipped_explorer_effect) {
+        setEffect(profile.equipped_explorer_effect)
+      }
     }
-  }, [profile, loadCosmetics, loadInventory, loadCrewMembers])
+  }, [profile, loadCosmetics, loadInventory, loadCrewMembers, loadCrew])
 
   const purchaseGoldFrame = async (item: CosmeticCatalogItem) => {
     setBuying(true)
@@ -93,8 +135,13 @@ export function ProfilePage() {
         already_owned: boolean
         coins: number
         avatar_frame: string
+        explorer_effect: string
       }>('/api/cosmetics/purchase', { cosmetic_id: item.id })
-      setFrame(res.avatar_frame || item.value)
+      if (item.kind === 'avatar_frame') {
+        setFrame(res.avatar_frame || item.value)
+      } else if (item.kind === 'explorer_effect') {
+        setEffect(res.explorer_effect || item.value)
+      }
       setShopMsg(res.already_owned ? 'Already unlocked — no charge.' : `Unlocked! Spent ${item.price} coins.`)
       await Promise.all([refreshProfile(), loadCosmetics()])
       const led = await apiClient.get<RewardLedgerEntry[]>('/api/rewards')
@@ -112,7 +159,20 @@ export function ProfilePage() {
     try {
       await apiClient.post('/api/cosmetics/equip', { cosmetic_id: cosmeticId })
       await Promise.all([refreshProfile(), loadCosmetics()])
-      setShopMsg(cosmeticId === 'none' ? 'Frame unequipped.' : 'Frame equipped.')
+      const item = cosmetics.find((c) => c.id === cosmeticId)
+      if (cosmeticId === 'none') {
+        setFrame('none')
+        setEffect('none')
+        setShopMsg('Frame and effect unequipped.')
+      } else if (item?.kind === 'avatar_frame') {
+        setFrame(item.value)
+        setShopMsg('Frame equipped.')
+      } else if (item?.kind === 'explorer_effect') {
+        setEffect(item.value)
+        setShopMsg('Effect equipped.')
+      } else {
+        setShopMsg('Equipped.')
+      }
     } catch (e) {
       setShopError(e instanceof Error ? e.message : 'Equip failed')
     }
@@ -265,7 +325,12 @@ export function ProfilePage() {
           <p className="mb-3 text-sm text-accent-nature" data-testid="cosmetic-shop-msg">{shopMsg}</p>
         )}
         <div className="flex flex-col gap-3">
-          {cosmetics.map((item) => (
+          {cosmetics.map((item) => {
+            const isFrame = item.kind === 'avatar_frame'
+            const isEffect = item.kind === 'explorer_effect'
+            const equippedFrame = isFrame ? (item.unlocked || frame === item.value ? item.value : 'none') : frame
+            const equippedEffect = isEffect ? (item.unlocked || effect === item.value ? item.value : 'none') : 'none'
+            return (
             <div
               key={item.id}
               className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 rounded-lg border border-border-subtle bg-surface p-4"
@@ -275,20 +340,21 @@ export function ProfilePage() {
                 <Avatar
                   seed={profile.avatar_seed || profile.uid}
                   style={profile.avatar_style || 'adventurer'}
-                  frame={item.unlocked || frame === item.value ? item.value : 'none'}
+                  frame={equippedFrame}
+                  effect={equippedEffect}
                   size="md"
                 />
                 <div>
                   <p className="font-medium text-text-primary">{item.name}</p>
                   <p className="text-xs text-text-secondary">{item.description}</p>
                   <p className="text-xs font-semibold text-accent-reward mt-1">
-                    {item.unlocked ? 'Unlocked' : `🔒 ${item.price} coins`}
+                    {item.unlocked ? 'Unlocked' : item.price === 0 ? 'Free reward' : `🔒 ${item.price} coins`}
                   </p>
                 </div>
               </div>
               <div className="flex gap-2 self-start sm:self-center">
                 {item.unlocked ? (
-                  frame === item.value ? (
+                  (isFrame && frame === item.value) || (isEffect && effect === item.value) ? (
                     <Button
                       size="sm"
                       variant="secondary"
@@ -312,16 +378,17 @@ export function ProfilePage() {
                     size="sm"
                     variant="secondary"
                     isLoading={buying}
-                    disabled={buying || (profile.coins ?? 0) < item.price}
+                    disabled={buying || (item.price > 0 && (profile.coins ?? 0) < item.price)}
                     onClick={() => void purchaseGoldFrame(item)}
                     data-testid={`buy-${item.id}`}
                   >
-                    {(profile.coins ?? 0) < item.price ? 'Need more coins' : `Buy for ${item.price} 🪙`}
+                    {item.price === 0 ? 'Claim' : ((profile.coins ?? 0) < item.price ? 'Need more coins' : `Buy for ${item.price} 🪙`)}
                   </Button>
                 )}
               </div>
             </div>
-          ))}
+            )
+          })}
           {cosmetics.length === 0 && (
             <p className="text-sm text-text-secondary italic">Loading cosmetics…</p>
           )}
@@ -444,6 +511,73 @@ export function ProfilePage() {
       )}
 
       <PushNotificationToggle />
+
+      {/* Crew Customization — Slice 4.4 */}
+      <Card className="p-6" data-testid="crew-customization">
+        <h3 className="font-heading text-xl text-text-primary mb-1 flex items-center gap-2">
+          <span>⚓</span> Crew Customization
+        </h3>
+        <p className="text-xs text-text-secondary mb-4">
+          Set a banner URL and shared theme for your crew.
+        </p>
+        {crewSaveError && (
+          <p className="mb-3 text-sm text-accent-danger" data-testid="crew-save-error">{crewSaveError}</p>
+        )}
+        {crewSaveMsg && (
+          <p className="mb-3 text-sm text-accent-nature" data-testid="crew-save-msg">{crewSaveMsg}</p>
+        )}
+        <div className="flex flex-col gap-4">
+          <div>
+            <label htmlFor="banner-url" className="block text-xs font-bold uppercase tracking-wider text-text-secondary mb-2">
+              Banner URL
+            </label>
+            <input
+              id="banner-url"
+              type="url"
+              value={bannerUrl}
+              onChange={(e) => setBannerUrl(e.target.value)}
+              placeholder="https://example.com/banner.png"
+              className="w-full rounded-lg border border-border-subtle bg-surface text-text-primary px-3 py-2 text-sm focus:outline-none focus:border-accent-magic"
+              data-testid="banner-url-input"
+            />
+            {bannerUrl && (
+              <div className="mt-3 rounded-lg border border-border-subtle overflow-hidden h-32 bg-surface">
+                <img
+                  src={bannerUrl}
+                  alt="Crew banner preview"
+                  className="w-full h-full object-cover"
+                  data-testid="banner-preview"
+                />
+              </div>
+            )}
+          </div>
+          <div>
+            <label htmlFor="theme-select" className="block text-xs font-bold uppercase tracking-wider text-text-secondary mb-2">
+              Shared Theme
+            </label>
+            <select
+              id="theme-select"
+              value={theme}
+              onChange={(e) => setTheme(e.target.value)}
+              className="w-full rounded-lg border border-border-subtle bg-surface text-text-primary px-3 py-2 text-sm focus:outline-none focus:border-accent-magic"
+              data-testid="theme-select"
+            >
+              <option value="default">Default (Midnight)</option>
+              <option value="forest">Forest (Emerald)</option>
+              <option value="city">City (Cyan)</option>
+              <option value="library">Library (Violet)</option>
+            </select>
+          </div>
+          <Button
+            variant="primary"
+            onClick={() => void saveCrewSettings()}
+            isLoading={savingCrew}
+            data-testid="save-crew-settings"
+          >
+            Save Crew Settings
+          </Button>
+        </div>
+      </Card>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         {/* Crew Info */}

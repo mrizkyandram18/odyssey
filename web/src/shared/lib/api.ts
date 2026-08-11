@@ -14,6 +14,8 @@ import type {
   StoryFragmentView,
   DiscoverResult,
   ReplayResult,
+  CreativeSubmission,
+  Crew,
 } from '../types'
 import { getSession, isSessionExpired } from './session'
 
@@ -140,6 +142,7 @@ export const relicsApi = {
 
 export const questsApi = {
   list: () => apiClient.get<QuestView[]>('/api/quests'),
+  available: () => apiClient.get<QuestView[]>('/api/quests/available'),
   get: (id: number) => apiClient.get<QuestWithChallenges>(`/api/quests/${id}`),
   start: (id: number) => apiClient.post<{ started: boolean }>(`/api/quests/${id}/start`, {}),
   completeChallenge: (questId: number, challengeId: number) =>
@@ -164,6 +167,12 @@ export const storyFragmentsApi = {
 
 export const realmProgressApi = {
   list: () => apiClient.get<RealmProgress[]>('/api/realm_progress'),
+}
+
+export const crewsApi = {
+  get: () => apiClient.get<Crew>('/api/crews'),
+  patch: (body: { banner_url?: string; theme?: string }) =>
+    apiClient.patch<Crew>('/api/crews', body),
 }
 
 export type ReactionType = 'HEART' | 'CLAP' | 'STAR'
@@ -246,4 +255,8 @@ export interface PushSubscribePayload {
 export const pushApi = {
   subscribe: (payload: PushSubscribePayload) => apiClient.post<{ status: string }>('/api/push/subscribe', payload),
   unsubscribe: (endpoint?: string) => apiClient.delete<{ status: string }>('/api/push/subscribe', endpoint ? { endpoint } : undefined),
+}
+
+export const creativeApi = {
+  get: (id: number) => apiClient.get<CreativeSubmission>(`/api/creative/${id}`),
 }

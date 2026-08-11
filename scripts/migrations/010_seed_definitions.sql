@@ -166,7 +166,8 @@ ON CONFLICT (slug) DO NOTHING;
 -- ============================================================
 INSERT INTO odyssey_season_definitions (slug, name, description, start_at, end_at, realm, published, version)
 VALUES
-  ('season-spring-2026', 'Spring 2026', 'The first season of Odyssey. Explore the Whispering Woods and discover the magic of the forest.', '2026-01-01T00:00:00Z', '2026-12-31T23:59:59Z', 'whispering-woods', true, 1)
+  ('season-spring-2026', 'Spring 2026', 'The first season of Odyssey. Explore the Whispering Woods and discover the magic of the forest.', '2026-01-01T00:00:00Z', '2026-12-31T23:59:59Z', 'whispering-woods', true, 1),
+  ('season-autumn-2026', 'Autumn 2026', 'Autumn arrives in Clockwork City. Unravel the ticking mysteries of gears and steam.', '2026-09-01T00:00:00Z', '2026-11-30T23:59:59Z', 'clockwork-city', true, 1)
 ON CONFLICT (slug) DO NOTHING;
 
 -- ============================================================

@@ -92,6 +92,29 @@ func (s *supabaseCreativeSubmissionStore) ListByCrew(ctx context.Context, crewID
 	return result, nil
 }
 
+func (s *supabaseCreativeSubmissionStore) ListByCrewAndKind(ctx context.Context, crewID, kind string) ([]game.Submission, error) {
+	v := url.Values{}
+	v.Set("crew_id", "eq."+crewID)
+	v.Set("kind", "eq."+kind)
+	params := v.Encode()
+
+	raw, err := s.client.Get(ctx, "odyssey_creative_submissions", params)
+	if err != nil {
+		return nil, fmt.Errorf("list crew creative submissions by kind: %w", err)
+	}
+
+	var subs []CreativeSubmission
+	if err := json.Unmarshal(raw, &subs); err != nil {
+		return nil, fmt.Errorf("parse crew creative submissions by kind: %w", err)
+	}
+
+	result := make([]game.Submission, 0, len(subs))
+	for _, sub := range subs {
+		result = append(result, *mapCreativeSubmission(sub))
+	}
+	return result, nil
+}
+
 func (s *supabaseCreativeSubmissionStore) GetSubmission(ctx context.Context, submissionID int64) (*game.Submission, error) {
 	v := url.Values{}
 	v.Set("id", "eq."+strconv.FormatInt(submissionID, 10))

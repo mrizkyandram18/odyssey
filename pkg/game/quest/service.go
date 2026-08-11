@@ -69,6 +69,7 @@ type QuestView struct {
 	ChallengeCount            int     `json:"challenge_count"`
 	CompletedCount            int     `json:"completed_count"`
 	ActiveChallengeAssignedTo *string `json:"active_challenge_assigned_to,omitempty"`
+	SeasonSlug                string  `json:"season_slug,omitempty"`
 }
 
 // QuestService owns quest lifecycle and business logic.
@@ -182,12 +183,19 @@ func (s *QuestService) List(ctx context.Context, crewID string) ([]QuestView, er
 				done++
 			}
 		}
+		seasonSlug := ""
+		if s.content != nil {
+			if def, err := s.content.GetQuest(ctx, q.TemplateSlug); err == nil && def != nil {
+				seasonSlug = def.SeasonSlug
+			}
+		}
 		views = append(views, QuestView{
 			Quest:                     q,
 			QuestType:                 string(TypeForSlug(q.TemplateSlug)),
 			ChallengeCount:            len(challenges),
 			CompletedCount:            done,
 			ActiveChallengeAssignedTo: firstPendingAssignee(challenges),
+			SeasonSlug:                seasonSlug,
 		})
 	}
 	return views, nil

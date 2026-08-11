@@ -18,6 +18,7 @@ import (
 // the progression and realm-progress collaborators.
 type QuestHandler interface {
 	List(ctx context.Context, crewID string) ([]quest.QuestView, error)
+	ListAvailable(ctx context.Context, crewID, uid string) ([]quest.QuestView, error)
 	GetByCrewAndID(ctx context.Context, questID int64, crewID string) (*quest.QuestWithChallenges, error)
 	StartQuest(ctx context.Context, questID int64, crewID string) error
 	CompleteChallenge(ctx context.Context, questID, challengeID int64, crewID, uid string) (*quest.CompleteChallengeResult, error)
@@ -79,6 +80,8 @@ func Handler(w http.ResponseWriter, r *http.Request) {
 	switch {
 	case r.Method == http.MethodGet && route.idStr == "" && route.action == "":
 		routeFn = func(c *auth.SessionClaims) { handleList(w, r, c) }
+	case r.Method == http.MethodGet && route.idStr == "available" && route.action == "":
+		routeFn = func(c *auth.SessionClaims) { handleListAvailable(w, r, c) }
 	case r.Method == http.MethodGet && route.action == "" && route.idStr != "" && route.cidStr == "":
 		idStr := route.idStr
 		routeFn = func(c *auth.SessionClaims) { handleGetByID(w, r, c, idStr) }
@@ -114,6 +117,15 @@ func handleList(w http.ResponseWriter, r *http.Request, claims *auth.SessionClai
 	quests, err := handler.List(r.Context(), claims.CrewID)
 	if err != nil {
 		shared.WriteJSONError(w, "failed to load quests", http.StatusInternalServerError)
+		return
+	}
+	shared.WriteJSON(w, http.StatusOK, quests)
+}
+
+func handleListAvailable(w http.ResponseWriter, r *http.Request, claims *auth.SessionClaims) {
+	quests, err := handler.ListAvailable(r.Context(), claims.CrewID, claims.UID)
+	if err != nil {
+		shared.WriteJSONError(w, "failed to load available quests", http.StatusInternalServerError)
 		return
 	}
 	shared.WriteJSON(w, http.StatusOK, quests)

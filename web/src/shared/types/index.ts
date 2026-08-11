@@ -42,6 +42,8 @@ export interface LoginResponse {
 export interface Crew {
   id: string
   name?: string
+  banner_url?: string
+  theme?: string
   created_at: string
   updated_at: string
 }
@@ -58,6 +60,8 @@ export interface Explorer {
   avatar_seed: string
   /** Slice 2.2 equipped frame: none | gold */
   avatar_frame?: string
+  /** Slice 4.5 equipped explorer effect: none | sparkle | float | trail */
+  equipped_explorer_effect?: string
   created_at: string
   updated_at: string
 }
@@ -76,6 +80,7 @@ export interface CosmeticsResponse {
   coins: number
   items: CosmeticCatalogItem[]
   avatar_frame: string
+  explorer_effect: string
 }
 
 export interface CosmeticPurchaseResult {
@@ -84,6 +89,7 @@ export interface CosmeticPurchaseResult {
   price: number
   coins: number
   avatar_frame: string
+  explorer_effect: string
   already_owned: boolean
 }
 
@@ -405,6 +411,7 @@ export interface QuestView {
   challenge_count: number
   completed_count: number
   active_challenge_assigned_to?: string
+  season_slug?: string
 }
 
 export interface BranchOption {
@@ -478,6 +485,14 @@ export interface HomeResponse {
   chapter_progress?: ChapterProgressView | null
   lore_summary?: LoreSummary | null
   achievements?: AchievementView[] | null
+  current_season?: SeasonSummary | null
+  season_progress?: {
+    season_slug: string
+    season_name: string
+    quests_completed: number
+    realm_progress: number
+    realm_status: string
+  }
 }
 
 export interface HomeSections {

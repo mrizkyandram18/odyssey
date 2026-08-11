@@ -64,6 +64,21 @@ html.light {
   --text-secondary: 148 163 184;
 }
 
+[data-theme="forest"] {
+  --accent-magic: 16 185 129;
+  --accent-nature: 34 197 94;
+}
+
+[data-theme="city"] {
+  --accent-magic: 6 182 222;
+  --accent-nature: 34 211 238;
+}
+
+[data-theme="library"] {
+  --accent-magic: 139 92 246;
+  --accent-nature: 168 85 247;
+}
+
 *,
 *::before,
 *::after {

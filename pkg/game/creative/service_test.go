@@ -53,6 +53,19 @@ func (m *mockCreativeSubmissionStore) ListByCrew(ctx context.Context, crewID str
 	return m.byCrew[crewID], nil
 }
 
+func (m *mockCreativeSubmissionStore) ListByCrewAndKind(ctx context.Context, crewID, kind string) ([]game.Submission, error) {
+	if m.err != nil {
+		return nil, m.err
+	}
+	var filtered []game.Submission
+	for _, sub := range m.byCrew[crewID] {
+		if string(sub.Kind) == kind {
+			filtered = append(filtered, sub)
+		}
+	}
+	return filtered, nil
+}
+
 func (m *mockCreativeSubmissionStore) GetSubmission(ctx context.Context, submissionID int64) (*game.Submission, error) {
 	if m.err != nil {
 		return nil, m.err

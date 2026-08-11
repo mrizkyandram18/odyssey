@@ -12,6 +12,7 @@ type CreativeHandler interface {
 	Submit(ctx context.Context, uid string, req *game.Submission) (*SubmissionView, error)
 	ListByQuest(ctx context.Context, questID int64) ([]SubmissionView, error)
 	ListByCrew(ctx context.Context, crewID string) ([]SubmissionView, error)
+	ListByCrewAndKind(ctx context.Context, crewID, kind string) ([]SubmissionView, error)
 	GetSubmission(ctx context.Context, submissionID int64) (*SubmissionView, error)
 	Approve(ctx context.Context, submissionID int64, reviewerUID string) (*SubmissionView, error)
 	Reject(ctx context.Context, submissionID int64, reviewerUID string, reason string) (*SubmissionView, error)
@@ -53,6 +54,15 @@ func (h *CreativeAPIHandler) ListByCrew(ctx context.Context, crewID string) ([]S
 		return nil, fmt.Errorf("list crew submissions: %w", err)
 	}
 	return ToViews(allSubs), nil
+}
+
+// ListByCrewAndKind lists all submissions for a crew filtered by kind.
+func (h *CreativeAPIHandler) ListByCrewAndKind(ctx context.Context, crewID, kind string) ([]SubmissionView, error) {
+	subs, err := h.svc.ListByCrewAndKind(ctx, crewID, kind)
+	if err != nil {
+		return nil, fmt.Errorf("list crew submissions by kind: %w", err)
+	}
+	return ToViews(subs), nil
 }
 
 // GetSubmission delegates to CreativeService.GetSubmission.

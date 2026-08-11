@@ -165,8 +165,8 @@ func TestGetState_EmptySlug(t *testing.T) {
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
-	if state != SeasonStateInactive {
-		t.Errorf("expected INACTIVE, got %s", state)
+	if state != SeasonStateActive {
+		t.Errorf("expected ACTIVE, got %s", state)
 	}
 }
 
@@ -249,25 +249,5 @@ func TestListAll_SortedByStartDate(t *testing.T) {
 	}
 	if result[2].Definition.Slug != "future" {
 		t.Errorf("expected future last, got %s", result[2].Definition.Slug)
-	}
-}
-
-func TestFilterBySeason_AlwaysReturnsAllItems(t *testing.T) {
-	now := time.Date(2026, 8, 4, 12, 0, 0, 0, time.UTC)
-	gw := &mockSeasonGateway{
-		seasons: []gamecontent.SeasonDefinition{
-			makeSeason("summer", "Summer",
-				now.Add(-12*time.Hour), now.Add(12*time.Hour)),
-		},
-	}
-	cfg := &SeasonServiceConfig{Now: func() time.Time { return now }}
-	svc := NewSeasonService(gw, cfg)
-
-	result, err := svc.FilterBySeason(context.Background(), []string{"a", "b", "c"})
-	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
-	}
-	if len(result) != 3 {
-		t.Errorf("expected 3 items returned, got %d", len(result))
 	}
 }

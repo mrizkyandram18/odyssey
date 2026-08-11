@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"odyssey/pkg/game"
+	gamecontent "odyssey/pkg/game/content"
 )
 
 type mockQuestStore struct {
@@ -743,5 +744,48 @@ func TestList_FallbackSequentialWithoutBatchStore(t *testing.T) {
 	}
 	if inner.getChallengeCalls != 2 {
 		t.Errorf("expected 2 sequential reads in fallback, got %d", inner.getChallengeCalls)
+	}
+}
+
+func TestList_PopulatesSeasonSlugFromContentGateway(t *testing.T) {
+	store := newMockQuestStore()
+	store.questsByCrew["crew-1"] = []game.Quest{
+		{ID: 1, CrewID: "crew-1", TemplateSlug: "seasonal-quest", Title: "Seasonal Quest", Status: string(QuestStatusDone), CreatedAt: time.Now()},
+	}
+	content := &mockContentGatewayWithQuests{
+		quests: []gamecontent.QuestDefinition{
+			{Slug: "seasonal-quest", SeasonSlug: "season-spring-2026"},
+		},
+	}
+	svc := NewQuestServiceWithGate(store, nil, content)
+
+	views, err := svc.List(context.Background(), "crew-1")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if len(views) != 1 {
+		t.Fatalf("expected 1 view, got %d", len(views))
+	}
+	if views[0].SeasonSlug != "season-spring-2026" {
+		t.Errorf("expected season_slug season-spring-2026, got %s", views[0].SeasonSlug)
+	}
+}
+
+func TestList_EmptySeasonSlugWhenNoContentGateway(t *testing.T) {
+	store := newMockQuestStore()
+	store.questsByCrew["crew-1"] = []game.Quest{
+		{ID: 1, CrewID: "crew-1", TemplateSlug: "plain-quest", Title: "Plain Quest", Status: string(QuestStatusDone), CreatedAt: time.Now()},
+	}
+	svc := NewQuestService(store)
+
+	views, err := svc.List(context.Background(), "crew-1")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if len(views) != 1 {
+		t.Fatalf("expected 1 view, got %d", len(views))
+	}
+	if views[0].SeasonSlug != "" {
+		t.Errorf("expected empty season_slug, got %s", views[0].SeasonSlug)
 	}
 }

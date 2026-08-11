@@ -6,21 +6,22 @@ import (
 )
 
 type UserProfile struct {
-	UID          string    `json:"uid"`
-	CrewID       string    `json:"crew_id"`
-	ExplorerName string    `json:"explorer_name"`
-	Role         string    `json:"role"`
-	Level        int       `json:"level"`
-	XP           int64     `json:"xp"`
-	Coins        int64     `json:"coins"`
-	AvatarStyle  string    `json:"avatar_style"`
-	AvatarSeed   string    `json:"avatar_seed"`
-	AvatarFrame  string    `json:"avatar_frame"`
-	Version      int       `json:"version"`
-	PasswordHash string    `json:"-"`
-	DeviceID     string    `json:"device_id,omitempty"`
-	CreatedAt    time.Time `json:"created_at"`
-	UpdatedAt    time.Time `json:"updated_at"`
+	UID                    string    `json:"uid"`
+	CrewID                 string    `json:"crew_id"`
+	ExplorerName           string    `json:"explorer_name"`
+	Role                   string    `json:"role"`
+	Level                  int       `json:"level"`
+	XP                     int64     `json:"xp"`
+	Coins                  int64     `json:"coins"`
+	AvatarStyle            string    `json:"avatar_style"`
+	AvatarSeed             string    `json:"avatar_seed"`
+	AvatarFrame            string    `json:"avatar_frame"`
+	EquippedExplorerEffect string    `json:"equipped_explorer_effect"`
+	Version                int       `json:"version"`
+	PasswordHash           string    `json:"-"`
+	DeviceID               string    `json:"device_id,omitempty"`
+	CreatedAt              time.Time `json:"created_at"`
+	UpdatedAt              time.Time `json:"updated_at"`
 }
 
 // RewardLedger is the DB representation of a reward transaction.
@@ -38,6 +39,8 @@ type RewardLedger struct {
 type Crew struct {
 	ID        string    `json:"id"`
 	Name      string    `json:"name"`
+	BannerURL string    `json:"banner_url,omitempty"`
+	Theme     string    `json:"theme,omitempty"`
 	CreatedAt time.Time `json:"created_at"`
 	UpdatedAt time.Time `json:"updated_at"`
 }

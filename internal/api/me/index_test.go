@@ -39,6 +39,10 @@ func (m *mockProfileStore) SetAvatarFrame(ctx context.Context, uid, frame string
 	return nil
 }
 
+func (m *mockProfileStore) SetExplorerEffect(ctx context.Context, uid, effect string) error {
+	return nil
+}
+
 func (m *mockProfileStore) UpdateAvatar(ctx context.Context, uid string, style, seed string) error {
 	if m.err != nil {
 		return m.err
@@ -239,7 +243,7 @@ func TestMeHandler_PatchAvatar(t *testing.T) {
 	req := httptest.NewRequest(http.MethodPatch, "/api/me/avatar", bytes.NewReader([]byte(payload)))
 	req.Header.Set("Authorization", "Bearer "+token)
 	req.Header.Set("Content-Type", "application/json")
-	
+
 	w := httptest.NewRecorder()
 	mw.RequireAuth(Handler)(w, req)
 
@@ -254,4 +258,3 @@ func TestMeHandler_PatchAvatar(t *testing.T) {
 		t.Errorf("expected avatar_seed my-seed, got %s", mockStore.profile.AvatarSeed)
 	}
 }
-

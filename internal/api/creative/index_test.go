@@ -59,6 +59,19 @@ func (m *mockCreativeHandler) ListByCrew(ctx context.Context, crewID string) ([]
 	return m.subs, nil
 }
 
+func (m *mockCreativeHandler) ListByCrewAndKind(ctx context.Context, crewID, kind string) ([]creative.SubmissionView, error) {
+	if m.err != nil {
+		return nil, m.err
+	}
+	var filtered []creative.SubmissionView
+	for _, sub := range m.subs {
+		if string(sub.Kind) == kind {
+			filtered = append(filtered, sub)
+		}
+	}
+	return filtered, nil
+}
+
 func (m *mockCreativeHandler) GetSubmission(ctx context.Context, submissionID int64) (*creative.SubmissionView, error) {
 	if m.err != nil {
 		return nil, m.err
@@ -173,6 +186,70 @@ func TestHandler_ListByQuest(t *testing.T) {
 	token := makeReviewerToken(t, issuer)
 
 	req := httptest.NewRequest(http.MethodGet, "/api/creative?quest_id=1", nil)
+	req.Header.Set("Authorization", "Bearer "+token)
+
+	w := httptest.NewRecorder()
+	mw.RequireAuth(Handler)(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("expected status %d, got %d: %s", http.StatusOK, w.Code, w.Body.String())
+	}
+
+	var subs []creative.SubmissionView
+	if err := json.Unmarshal(w.Body.Bytes(), &subs); err != nil {
+		t.Fatalf("failed to parse response: %v", err)
+	}
+	if len(subs) != 2 {
+		t.Fatalf("expected 2 submissions, got %d", len(subs))
+	}
+}
+
+func TestHandler_ListByCrewAndKind(t *testing.T) {
+	Setup(&mockCreativeHandler{
+		subs: []creative.SubmissionView{
+			{ID: 1, CrewID: "crew-1", Kind: game.SubmissionStory, Content: "s1", Status: game.SubmissionStatusPending},
+			{ID: 2, CrewID: "crew-1", Kind: game.SubmissionComic, Content: "c1", Status: game.SubmissionStatusPending},
+			{ID: 3, CrewID: "crew-1", Kind: game.SubmissionPhoto, Content: "p1", Status: game.SubmissionStatusPending},
+		},
+	})
+	issuer := auth.NewSessionIssuer("test-secret")
+	mw := auth.NewMiddleware(issuer)
+	token := makeUserToken(t, issuer, auth.RoleSeeker)
+
+	req := httptest.NewRequest(http.MethodGet, "/api/creative?kind=COMIC", nil)
+	req.Header.Set("Authorization", "Bearer "+token)
+
+	w := httptest.NewRecorder()
+	mw.RequireAuth(Handler)(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("expected status %d, got %d: %s", http.StatusOK, w.Code, w.Body.String())
+	}
+
+	var subs []creative.SubmissionView
+	if err := json.Unmarshal(w.Body.Bytes(), &subs); err != nil {
+		t.Fatalf("failed to parse response: %v", err)
+	}
+	if len(subs) != 1 {
+		t.Fatalf("expected 1 submission, got %d", len(subs))
+	}
+	if subs[0].Kind != game.SubmissionComic {
+		t.Errorf("expected kind COMIC, got %s", subs[0].Kind)
+	}
+}
+
+func TestHandler_ListByCrew_AllWhenKindMissing(t *testing.T) {
+	Setup(&mockCreativeHandler{
+		subs: []creative.SubmissionView{
+			{ID: 1, CrewID: "crew-1", Kind: game.SubmissionStory, Content: "s1", Status: game.SubmissionStatusPending},
+			{ID: 2, CrewID: "crew-1", Kind: game.SubmissionComic, Content: "c1", Status: game.SubmissionStatusPending},
+		},
+	})
+	issuer := auth.NewSessionIssuer("test-secret")
+	mw := auth.NewMiddleware(issuer)
+	token := makeUserToken(t, issuer, auth.RoleSeeker)
+
+	req := httptest.NewRequest(http.MethodGet, "/api/creative", nil)
 	req.Header.Set("Authorization", "Bearer "+token)
 
 	w := httptest.NewRecorder()

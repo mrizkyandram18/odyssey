@@ -98,6 +98,33 @@ func (h *QuestAPIHandler) List(ctx context.Context, crewID string) ([]QuestView,
 	return h.qs.List(ctx, crewID)
 }
 
+// ListAvailable returns season- and prerequisite-filtered quest definitions
+// mapped to QuestView so the frontend can render them as pending opportunities.
+func (h *QuestAPIHandler) ListAvailable(ctx context.Context, crewID, uid string) ([]QuestView, error) {
+	defs, err := h.qs.ListAvailable(ctx, crewID, uid)
+	if err != nil {
+		return nil, err
+	}
+	result := make([]QuestView, 0, len(defs))
+	for _, def := range defs {
+		result = append(result, QuestView{
+			Quest: game.Quest{
+				ID:           def.ID,
+				CrewID:       crewID,
+				TemplateSlug: def.Slug,
+				Title:        def.Title,
+				Status:       string(QuestStatusPending),
+				CreatedAt:    def.CreatedAt,
+			},
+			QuestType:                 def.QuestType,
+			ChallengeCount:            len(def.ChallengeDefs),
+			CompletedCount:            0,
+			ActiveChallengeAssignedTo: nil,
+		})
+	}
+	return result, nil
+}
+
 // GetByCrewAndID delegates to QuestService.
 func (h *QuestAPIHandler) GetByCrewAndID(ctx context.Context, questID int64, crewID string) (*QuestWithChallenges, error) {
 	return h.qs.GetByCrewAndID(ctx, questID, crewID)
