@@ -9,6 +9,7 @@ import type {
   CompleteChallengeResult,
   AchievementView,
   LoreView,
+  RealmProgress,
 } from '../types'
 import { getSession, isSessionExpired } from './session'
 
@@ -147,6 +148,10 @@ export const achievementsApi = {
 
 export const loreApi = {
   list: () => apiClient.get<LoreView[]>('/api/lore'),
+}
+
+export const realmProgressApi = {
+  list: () => apiClient.get<RealmProgress[]>('/api/realm_progress'),
 }
 
 export type ReactionType = 'HEART' | 'CLAP' | 'STAR'

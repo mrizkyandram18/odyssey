@@ -3,12 +3,12 @@ import { useNavigate } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import { Card } from '../../shared/components/atoms/Card'
 import { Button } from '../../shared/components/atoms/Button'
-import { ProgressBar } from '../../shared/components/atoms/ProgressBar'
 import { apiClient, chestsApi } from '../../shared/lib/api'
 import type { HomeResponse } from '../../shared/types'
 import { ConnectedReactionBar } from '../../shared/components/molecules/ConnectedReactionBar'
 import { YourTurnBadge } from '../../shared/components/molecules/YourTurnBadge'
 import { useSession } from '../../shared/hooks/useSession'
+import { WorldMap } from '../../shared/components/organisms/WorldMap'
 import { isMyRelayTurn } from '../../shared/utils/questTurn'
 
 const containerVariants = {
@@ -114,7 +114,6 @@ export function HomePage() {
     )
   }
 
-  const activeRealm = home.realm_progress.find(r => r.status === 'ACTIVE') || home.realm_progress[0]
   const activeQuests = home.active_quests || []
   const completedToday = home.completed_quests_today || []
   const availableChests = home.available_chests || []
@@ -153,24 +152,20 @@ export function HomePage() {
         </div>
       </motion.section>
 
-      {/* 2. Progres Dunia */}
-      <motion.section variants={itemVariants} className="relative overflow-hidden rounded-2xl border border-accent-magic/30 bg-surface shadow-xl">
-        <div className="absolute inset-0 bg-gradient-to-t from-accent-magic/10 to-transparent"></div>
-        <div className="relative z-10 p-5 flex flex-col gap-4">
-          <div className="flex justify-between items-center">
-            <span className="text-accent-magic text-xs font-bold tracking-wider uppercase flex items-center gap-2">
-              <span>🌍</span> Ranah Cerita Saat Ini
-            </span>
-            <span className="text-accent-magic font-bold">{activeRealm ? activeRealm.progress : 0}%</span>
-          </div>
-          <h2 className="font-heading text-3xl text-text-primary capitalize">
-            {activeRealm ? activeRealm.realm.replace(/-/g, ' ') : 'Misteri Belum Terungkap'}
+      {/* 2. Progres & Peta Dunia */}
+      <motion.section variants={itemVariants} className="flex flex-col gap-3">
+        <div className="flex items-center justify-between">
+          <h2 className="font-heading text-xl text-text-primary flex items-center gap-2">
+            <span>🌍</span> Peta Dunia & Ranah
           </h2>
-          <ProgressBar progress={activeRealm ? activeRealm.progress : 0} colorClass="bg-accent-magic" />
-          <p className="text-xs text-text-secondary text-center mt-2">
-            Selesaikan tantangan bersama untuk mengungkap cerita selanjutnya.
-          </p>
+          <Button variant="ghost" size="sm" onClick={() => navigate('/quests')}>
+            Jelajah Misi
+          </Button>
         </div>
+        <WorldMap
+          realms={home.realm_progress}
+          onRealmSelect={(realmSlug) => navigate(`/quests?realm=${realmSlug}`)}
+        />
       </motion.section>
 
       {/* 3. Giliran Harian */}
