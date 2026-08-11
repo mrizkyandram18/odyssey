@@ -75,3 +75,80 @@ export function fileToDataURL(file: File): Promise<string> {
     reader.readAsDataURL(file)
   })
 }
+
+/** Video submission helpers, mirroring the PHOTO contract. */
+
+export interface VideoPayload {
+  v?: number
+  video: string
+  caption?: string
+}
+
+export const MAX_VIDEO_FILE_BYTES = 5 * 1024 * 1024
+export const MAX_VIDEO_CAPTION = 280
+
+export function parseVideoPayload(content: string): VideoPayload | null {
+  if (!content || !content.trim().startsWith('{')) return null
+  try {
+    const parsed = JSON.parse(content) as VideoPayload
+    if (typeof parsed !== 'object' || parsed === null || typeof parsed.video !== 'string') {
+      return null
+    }
+    return {
+      v: parsed.v,
+      video: parsed.video,
+      caption: typeof parsed.caption === 'string' ? parsed.caption : undefined,
+    }
+  } catch {
+    return null
+  }
+}
+
+export function buildVideoPayload(video: string, caption = ''): string {
+  const payload: VideoPayload = {
+    v: 1,
+    video: video.trim(),
+    caption: caption.trim(),
+  }
+  return JSON.stringify(payload)
+}
+
+export function isVideoDataURL(uri: string): boolean {
+  if (!uri || typeof uri !== 'string') return false
+  if (!uri.startsWith('data:video/')) return false
+  return /;base64,/.test(uri)
+}
+
+export function isVideoFile(file: File): boolean {
+  return typeof file?.type === 'string' && file.type.startsWith('video/')
+}
+
+export function isVideoContainerSignature(mime: string, bytes: Uint8Array): boolean {
+  if (bytes.length < 4) return false
+  switch (mime) {
+    case 'video/mp4':
+      return bytes.length >= 8 && String.fromCharCode(bytes[4], bytes[5], bytes[6], bytes[7]) === 'ftyp'
+    case 'video/webm':
+      return bytes[0] === 0x1a && bytes[1] === 0x45 && bytes[2] === 0xdf && bytes[3] === 0xa3
+    case 'video/ogg':
+      return String.fromCharCode(bytes[0], bytes[1], bytes[2], bytes[3]) === 'OggS'
+  }
+  return false
+}
+
+export function fileToVideoDataURL(file: File): Promise<string> {
+  return new Promise<string>((resolve, reject) => {
+    if (!isVideoFile(file)) {
+      reject(new Error('only video files are allowed'))
+      return
+    }
+    if (file.size > MAX_VIDEO_FILE_BYTES) {
+      reject(new Error('video exceeds maximum size'))
+      return
+    }
+    const reader = new FileReader()
+    reader.onload = () => resolve(reader.result as string)
+    reader.onerror = () => reject(reader.error ?? new Error('failed to read file'))
+    reader.readAsDataURL(file)
+  })
+}

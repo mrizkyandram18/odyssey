@@ -3,9 +3,11 @@ package creative
 import (
 	"bytes"
 	"context"
+	"encoding/base64"
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 
 	"odyssey/pkg/auth"
@@ -328,5 +330,74 @@ func TestHandler_MethodNotAllowed(t *testing.T) {
 
 	if w.Code != http.StatusMethodNotAllowed {
 		t.Fatalf("expected status %d, got %d", http.StatusMethodNotAllowed, w.Code)
+	}
+}
+
+func minVideoBytes() []byte {
+	return []byte{0x00, 0x00, 0x00, 0x14, 'f', 't', 'y', 'p', 'i', 's', 'o', 'm', 0x00, 0x00, 0x00, 0x00, 'i', 's', 'o', 'm'}
+}
+
+func videoSubmitBody(t *testing.T, content string) []byte {
+	t.Helper()
+	body, _ := json.Marshal(map[string]any{
+		"quest_id":     1,
+		"challenge_id": 1,
+		"kind":         "VIDEO",
+		"content":      content,
+	})
+	return body
+}
+
+func TestHandler_Submit_Video_Success(t *testing.T) {
+	Setup(&mockCreativeHandler{
+		sub: &creative.SubmissionView{ID: 1, QuestID: 1, Kind: game.SubmissionVideo, Content: "{}", Status: game.SubmissionStatusPending},
+	})
+	issuer := auth.NewSessionIssuer("test-secret")
+	mw := auth.NewMiddleware(issuer)
+	token := makeUserToken(t, issuer, auth.RoleSeeker)
+
+	enc := base64.StdEncoding.EncodeToString(minVideoBytes())
+	content := `{"v":1,"video":"data:video/mp4;base64,` + enc + `","caption":"clip"}`
+	req := httptest.NewRequest(http.MethodPost, "/api/creative", bytes.NewReader(videoSubmitBody(t, content)))
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Authorization", "Bearer "+token)
+
+	w := httptest.NewRecorder()
+	mw.RequireAuth(Handler)(w, req)
+
+	if w.Code != http.StatusCreated {
+		t.Fatalf("expected status %d, got %d: %s", http.StatusCreated, w.Code, w.Body.String())
+	}
+	var resp creative.SubmissionView
+	if err := json.Unmarshal(w.Body.Bytes(), &resp); err != nil {
+		t.Fatalf("failed to parse response: %v", err)
+	}
+	if resp.Kind != game.SubmissionVideo {
+		t.Errorf("expected kind VIDEO, got %s", resp.Kind)
+	}
+}
+
+func TestHandler_Submit_Video_Invalid(t *testing.T) {
+	// The mock surfaces a validator-derived error; the handler layer must map
+	// every ErrVideo* to HTTP 400 (never 500).
+	Setup(&mockCreativeHandler{err: creative.ErrVideoBadMagic})
+	issuer := auth.NewSessionIssuer("test-secret")
+	mw := auth.NewMiddleware(issuer)
+	token := makeUserToken(t, issuer, auth.RoleSeeker)
+
+	enc := base64.StdEncoding.EncodeToString([]byte("not a video"))
+	content := "{\"v\":1,\"video\":\"data:video/mp4;base64," + enc + "\"}"
+	req := httptest.NewRequest(http.MethodPost, "/api/creative", bytes.NewReader(videoSubmitBody(t, content)))
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Authorization", "Bearer "+token)
+
+	w := httptest.NewRecorder()
+	mw.RequireAuth(Handler)(w, req)
+
+	if w.Code != http.StatusBadRequest {
+		t.Fatalf("expected status %d (400), got %d: %s", http.StatusBadRequest, w.Code, w.Body.String())
+	}
+	if !strings.Contains(w.Body.String(), "video") {
+		t.Errorf("expected error body to mention video, got %s", w.Body.String())
 	}
 }

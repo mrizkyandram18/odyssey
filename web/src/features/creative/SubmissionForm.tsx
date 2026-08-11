@@ -15,6 +15,11 @@ import {
   isImageFile,
   isImageDataURL,
   MAX_PHOTO_CAPTION,
+  buildVideoPayload,
+  fileToVideoDataURL,
+  isVideoFile,
+  isVideoDataURL,
+  MAX_VIDEO_CAPTION,
 } from '../../shared/utils/media'
 
 export interface SubmissionFormProps {
@@ -24,7 +29,7 @@ export interface SubmissionFormProps {
   onSkip: () => void
 }
 
-type Mode = 'STORY' | 'DRAWING' | 'COMIC' | 'PHOTO'
+type Mode = 'STORY' | 'DRAWING' | 'COMIC' | 'PHOTO' | 'VIDEO'
 
 const emptyPanels = (): ComicPanel[] => [
   { caption: '' },
@@ -41,6 +46,9 @@ export function SubmissionForm({ questId, challengeId, onComplete, onSkip }: Sub
 
   const [photoURL, setPhotoURL] = useState('')
   const [photoCaption, setPhotoCaption] = useState('')
+
+  const [videoURL, setVideoURL] = useState('')
+  const [videoCaption, setVideoCaption] = useState('')
 
   const handleSubmitText = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -67,7 +75,16 @@ export function SubmissionForm({ questId, challengeId, onComplete, onSkip }: Sub
     await submitCreative('PHOTO', buildPhotoPayload(photoURL, photoCaption))
   }
 
-  const submitCreative = async (kind: 'STORY' | 'DRAWING' | 'COMIC' | 'PHOTO', payload: string) => {
+  const handleVideoSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!videoURL || !isVideoDataURL(videoURL)) {
+      setError('Please select a video')
+      return
+    }
+    await submitCreative('VIDEO', buildVideoPayload(videoURL, videoCaption))
+  }
+
+  const submitCreative = async (kind: 'STORY' | 'DRAWING' | 'COMIC' | 'PHOTO' | 'VIDEO', payload: string) => {
     setSubmitting(true)
     setError(null)
     try {
@@ -134,6 +151,7 @@ export function SubmissionForm({ questId, challengeId, onComplete, onSkip }: Sub
         {modeBtn('DRAWING', 'Draw Canvas')}
         {modeBtn('COMIC', 'Comic Strip')}
         {modeBtn('PHOTO', 'Take Photo')}
+        {modeBtn('VIDEO', 'Record Video')}
       </div>
 
       {error && <p className="text-center text-xs text-red-500">{error}</p>}
@@ -235,6 +253,80 @@ export function SubmissionForm({ questId, challengeId, onComplete, onSkip }: Sub
               className="w-full rounded-lg bg-primary py-3 text-sm font-bold text-primary-foreground transition-all hover:brightness-110 disabled:opacity-50"
             >
               {submitting ? 'Saving...' : 'Save Photo'}
+            </button>
+            <button
+              type="button"
+              onClick={onSkip}
+              disabled={submitting}
+              className="w-full rounded-lg py-3 text-sm font-semibold text-muted-foreground transition-all hover:bg-muted"
+            >
+              Skip for now
+            </button>
+          </div>
+        </form>
+      ) : mode === 'VIDEO' ? (
+        <form onSubmit={handleVideoSubmit} className="flex flex-col gap-4">
+          <div className="flex flex-col gap-2">
+            <label className="text-xs text-muted-foreground">Video</label>
+            {videoURL ? (
+              <div className="relative aspect-video w-full overflow-hidden rounded-lg border border-border bg-background/60">
+                <video src={videoURL} controls className="h-full w-full object-cover" />
+                <button
+                  type="button"
+                  onClick={() => setVideoURL('')}
+                  className="absolute right-1 top-1 rounded bg-black/60 px-2 py-1 text-xs text-white opacity-80 hover:opacity-100"
+                >
+                  Clear
+                </button>
+              </div>
+            ) : (
+              <label className="flex cursor-pointer items-center justify-center gap-2 rounded-lg border border-dashed border-border py-8 text-center hover:bg-muted">
+                <input
+                  type="file"
+                  accept="video/*"
+                  capture="environment"
+                  className="hidden"
+                  onChange={async (e) => {
+                    const file = e.target.files?.[0]
+                    if (!file) return
+                    if (!isVideoFile(file)) {
+                      setError('Only video files are allowed')
+                      return
+                    }
+                    setError(null)
+                    try {
+                      const url = await fileToVideoDataURL(file)
+                      setVideoURL(url)
+                    } catch (err) {
+                      setError(err instanceof Error ? err.message : 'Failed to read video')
+                    }
+                  }}
+                />
+                <span className="text-sm font-medium text-muted-foreground">
+                  Tap to record or choose a video
+                </span>
+              </label>
+            )}
+          </div>
+          <div className="flex flex-col gap-2">
+            <label className="text-xs text-muted-foreground">Caption (optional)</label>
+            <textarea
+              value={videoCaption}
+              onChange={(e) => setVideoCaption(e.target.value.slice(0, MAX_VIDEO_CAPTION))}
+              maxLength={MAX_VIDEO_CAPTION}
+              placeholder="What happened here?"
+              className="w-full resize-none rounded-lg border border-border bg-background p-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+              rows={3}
+              disabled={submitting}
+            />
+          </div>
+          <div className="flex flex-col gap-2 pt-2">
+            <button
+              type="submit"
+              disabled={submitting || !videoURL || !isVideoDataURL(videoURL)}
+              className="w-full rounded-lg bg-primary py-3 text-sm font-bold text-primary-foreground transition-all hover:brightness-110 disabled:opacity-50"
+            >
+              {submitting ? 'Saving...' : 'Save Video'}
             </button>
             <button
               type="button"

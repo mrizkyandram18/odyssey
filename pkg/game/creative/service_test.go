@@ -2,6 +2,7 @@ package creative
 
 import (
 	"context"
+	"encoding/base64"
 	"errors"
 	"testing"
 	"time"
@@ -546,5 +547,48 @@ func TestSubmit_Photo_Invalid(t *testing.T) {
 	})
 	if !errors.Is(err, ErrPhotoBadURI) {
 		t.Fatalf("expected ErrPhotoBadURI, got %v", err)
+	}
+}
+
+func videoContent(t *testing.T, caption string) string {
+	t.Helper()
+	enc := base64.StdEncoding.EncodeToString(minMP4Box())
+	return `{"v":1,"video":"data:video/mp4;base64,` + enc + `","caption":"` + caption + `"}`
+}
+
+func TestSubmit_Video_Success(t *testing.T) {
+	qs := newMockQuestStore()
+	qs.CreateQuest(context.Background(), makeQuest(1, "ACTIVE", "c1"))
+	qs.challenges[1] = []game.Challenge{makeChallenge(1, 1, "PENDING")}
+	svc := NewCreativeService(newMockSubmissionStore(), qs)
+
+	content := videoContent(t, "a sunny clip")
+	sub, err := svc.Submit(context.Background(), &game.Submission{
+		QuestID: 1, ChallengeID: 1, Kind: game.SubmissionVideo, Content: content,
+	})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if sub.Kind != game.SubmissionVideo {
+		t.Errorf("expected VIDEO, got %s", sub.Kind)
+	}
+	if sub.Content != content {
+		t.Errorf("content mismatch")
+	}
+}
+
+func TestSubmit_Video_Invalid(t *testing.T) {
+	qs := newMockQuestStore()
+	qs.CreateQuest(context.Background(), makeQuest(1, "ACTIVE", "c1"))
+	qs.challenges[1] = []game.Challenge{makeChallenge(1, 1, "PENDING")}
+	svc := NewCreativeService(newMockSubmissionStore(), qs)
+
+	enc := base64.StdEncoding.EncodeToString([]byte("not a video"))
+	_, err := svc.Submit(context.Background(), &game.Submission{
+		QuestID: 1, ChallengeID: 1, Kind: game.SubmissionVideo,
+		Content: `{"v":1,"video":"data:video/mp4;base64,` + enc + `"}`,
+	})
+	if !errors.Is(err, ErrVideoBadMagic) {
+		t.Fatalf("expected ErrVideoBadMagic, got %v", err)
 	}
 }

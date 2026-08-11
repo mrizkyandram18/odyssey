@@ -131,7 +131,12 @@ func handleSubmit(w http.ResponseWriter, r *http.Request, claims *auth.SessionCl
 			err == creative.ErrPhotoMalformed, err == creative.ErrPhotoMissing,
 			err == creative.ErrPhotoBadURI, err == creative.ErrPhotoNotImage,
 			err == creative.ErrPhotoDecode, err == creative.ErrPhotoTooBig,
-			err == creative.ErrPhotoCaptionLong:
+			err == creative.ErrPhotoCaptionLong,
+			err == creative.ErrVideoEmpty, err == creative.ErrVideoTooLarge,
+			err == creative.ErrVideoMalformed, err == creative.ErrVideoMissing,
+			err == creative.ErrVideoBadURI, err == creative.ErrVideoNotVideo,
+			err == creative.ErrVideoDecode, err == creative.ErrVideoTooBig,
+			err == creative.ErrVideoCaptionLong, err == creative.ErrVideoBadMagic:
 			shared.WriteJSONError(w, err.Error(), http.StatusBadRequest)
 		default:
 			shared.WriteJSONError(w, "failed to submit creative", http.StatusInternalServerError)
