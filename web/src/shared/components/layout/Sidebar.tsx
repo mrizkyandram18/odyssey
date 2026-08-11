@@ -3,6 +3,7 @@ import { Home, Scroll, Book, Palette, Sparkles, User, Compass } from 'lucide-rea
 import { useSession } from '../../hooks/useSession'
 import { ProgressBar } from '../atoms/ProgressBar'
 import { Avatar } from '../atoms/Avatar'
+import { getRoleMastery } from '../../utils/roleMastery'
 
 export function Sidebar() {
   const { profile } = useSession()
@@ -39,7 +40,7 @@ export function Sidebar() {
             />
           </div>
           <h2 className="font-semibold text-lg text-text-primary">{profile.explorer_name}</h2>
-          <p className="text-xs text-text-secondary mb-1">Level {profile.level} {profile.role}</p>
+          <p className="text-xs text-text-secondary mb-1">Level {profile.level} &bull; {getRoleMastery(profile.role, profile.level).title}</p>
           <p className="text-xs font-semibold text-accent-reward mb-3 tabular-nums" data-testid="sidebar-coin-balance">
             🪙 {profile.coins ?? 0} coins
           </p>

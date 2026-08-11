@@ -9,11 +9,7 @@ import type { CosmeticCatalogItem, CosmeticsResponse, RewardLedgerEntry } from '
 import { Avatar } from '../../shared/components/atoms/Avatar'
 import { Shuffle } from 'lucide-react'
 
-const ROLE_DESCRIPTIONS: Record<string, string> = {
-  SEEKER: 'Curious explorer who seeks out hidden details, riddles, and lore.',
-  BUILDER: 'Creative craftsman who solves puzzles and constructs family artifacts.',
-  GUIDE: 'Seasoned mentor who helps coordinate crew quests and validates discoveries.',
-}
+import { getRoleMastery } from '../../shared/utils/roleMastery'
 
 export function ProfilePage() {
   const { profile, session, loading, error, logout, refreshProfile } = useSession()
@@ -113,6 +109,7 @@ export function ProfilePage() {
   }
 
   const role = profile.role || 'SEEKER'
+  const mastery = getRoleMastery(role, profile.level)
   const xpPercent = Math.min(100, profile.xp % 100)
 
   return (
@@ -163,11 +160,11 @@ export function ProfilePage() {
           <div className="flex-1 text-center md:text-left">
             <div className="flex flex-col md:flex-row md:items-end gap-3 mb-2">
               <h2 className="font-heading text-4xl text-text-primary">{profile.explorer_name}</h2>
-              <span className="text-accent-magic font-bold text-sm tracking-widest uppercase pb-1">{role}</span>
+              <span className="text-accent-magic font-bold text-sm tracking-widest uppercase pb-1">{mastery.title}</span>
             </div>
             
             <p className="text-text-secondary text-sm mb-6 max-w-md mx-auto md:mx-0">
-              {ROLE_DESCRIPTIONS[role] || ROLE_DESCRIPTIONS.SEEKER}
+              {mastery.flavor}
             </p>
             
             <div className="w-full max-w-md bg-surface p-4 rounded-lg border border-border-subtle">
