@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/url"
+	"strings"
 	"time"
 
 	"odyssey/pkg/game"
@@ -93,4 +94,33 @@ func (s *activityStore) GetStreak(ctx context.Context, uid string) (int, error) 
 	}
 
 	return streak, nil
+}
+
+// ListActivityDatesByUsers fetches activity rows for all given users in a
+// single query via an OR filter. An empty uid list returns nothing without
+// touching the database. Used by crew-streak aggregation.
+func (s *activityStore) ListActivityDatesByUsers(ctx context.Context, uids []string) ([]game.DailyActivity, error) {
+	if len(uids) == 0 {
+		return nil, nil
+	}
+
+	conds := make([]string, 0, len(uids))
+	for _, uid := range uids {
+		conds = append(conds, "user_id.eq."+uid)
+	}
+	v := url.Values{}
+	v.Set("or", "("+strings.Join(conds, ",")+")")
+	v.Set("select", "user_id,activity_date")
+	params := v.Encode()
+
+	raw, err := s.client.Get(ctx, "odyssey_daily_activity", params)
+	if err != nil {
+		return nil, fmt.Errorf("list activity by users: %w", err)
+	}
+
+	var acts []game.DailyActivity
+	if err := json.Unmarshal(raw, &acts); err != nil {
+		return nil, fmt.Errorf("parse activity by users: %w", err)
+	}
+	return acts, nil
 }

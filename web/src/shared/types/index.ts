@@ -427,6 +427,7 @@ export interface DailyTurnView {
   completed: boolean
   available: boolean
   streak_days: number
+  crew_streak: number
   remaining_turns: number
   quest_slug?: string
 }
@@ -500,6 +501,7 @@ export interface DailyTurnSection {
   completed: boolean
   available: boolean
   streak_days: number
+  crew_streak: number
   remaining_turns: number
   quest_slug?: string
 }

@@ -166,6 +166,9 @@ type ReactionStore interface {
 type ActivityStore interface {
 	RecordActivity(ctx context.Context, act *DailyActivity) (*DailyActivity, error)
 	GetStreak(ctx context.Context, uid string) (int, error)
+	// ListActivityDatesByUsers returns activity rows for the given users in a
+	// single query. Used for crew-level streak aggregation.
+	ListActivityDatesByUsers(ctx context.Context, uids []string) ([]DailyActivity, error)
 }
 
 // RewardLedgerStore manages reward history.

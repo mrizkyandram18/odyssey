@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"odyssey/pkg/game"
+	"odyssey/pkg/game/crewstreak"
 	"odyssey/pkg/game/dailyturn"
 	"odyssey/pkg/game/quest"
 )
@@ -30,8 +31,9 @@ func (m *mockDailyTurnStore) ListDailyTurns(ctx context.Context, uid string) ([]
 }
 
 type mockUserStore struct {
-	player *game.Player
-	err    error
+	player      *game.Player
+	crewMembers []game.Player
+	err         error
 }
 
 func (m *mockUserStore) GetUser(ctx context.Context, uid string) (*game.Player, error) {
@@ -362,5 +364,70 @@ func TestGetHome_NilChapterLoreAchievementServices(t *testing.T) {
 	}
 }
 func (m *mockUserStore) ListUsersByCrew(ctx context.Context, crewID string) ([]game.Player, error) {
+	if m.crewMembers != nil {
+		return m.crewMembers, nil
+	}
 	return nil, nil
+}
+
+type mockActivityStore struct {
+	acts []game.DailyActivity
+	err  error
+}
+
+func (m *mockActivityStore) RecordActivity(ctx context.Context, act *game.DailyActivity) (*game.DailyActivity, error) {
+	return act, m.err
+}
+
+func (m *mockActivityStore) GetStreak(ctx context.Context, uid string) (int, error) {
+	return 0, m.err
+}
+
+func (m *mockActivityStore) ListActivityDatesByUsers(ctx context.Context, uids []string) ([]game.DailyActivity, error) {
+	if m.err != nil {
+		return nil, m.err
+	}
+	return m.acts, nil
+}
+
+func TestGetHome_CrewStreak(t *testing.T) {
+	player := &game.Player{UID: "u1", CrewID: "c1", ExplorerName: "Alice", Level: 1, XP: 0}
+	qs := quest.NewQuestService(&mockQuestStore{})
+	dts := dailyturn.NewDailyTurnService(&mockDailyTurnStore{}, &dailyturn.DailyTurnConfig{})
+	svc := NewHomeService(qs, dts, &mockProgressionStore{}, &mockRealmProgressStore{}, &mockUserStore{player: player}, &mockCreativeSubmissionStore{}, &mockChestStore{}, nil)
+	activity := &mockActivityStore{
+		acts: []game.DailyActivity{
+			{UserID: "u1", ActivityDate: dailyturn.TodayDate()},
+			{UserID: "u2", ActivityDate: dailyturn.TodayDate()},
+		},
+	}
+	userStore := &mockUserStore{player: player, crewMembers: []game.Player{{UID: "u1", CrewID: "c1"}, {UID: "u2", CrewID: "c1"}}}
+	cs := crewstreak.NewService(userStore, activity, "UTC")
+	svc.SetCrewStreakService(cs)
+
+	resp, err := svc.GetHome(context.Background(), "u1", "c1")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if resp.DailyTurn.CrewStreak != 1 {
+		t.Errorf("expected crew streak 1, got %d", resp.DailyTurn.CrewStreak)
+	}
+	if resp.Sections.DailyTurn.CrewStreak != resp.DailyTurn.CrewStreak {
+		t.Errorf("sections daily_turn.crew_streak mismatch")
+	}
+}
+
+func TestGetHome_CrewStreakNilService(t *testing.T) {
+	player := &game.Player{UID: "u1", CrewID: "c1", ExplorerName: "Alice", Level: 1, XP: 0}
+	qs := quest.NewQuestService(&mockQuestStore{})
+	dts := dailyturn.NewDailyTurnService(&mockDailyTurnStore{}, &dailyturn.DailyTurnConfig{})
+	svc := NewHomeService(qs, dts, &mockProgressionStore{}, &mockRealmProgressStore{}, &mockUserStore{player: player}, &mockCreativeSubmissionStore{}, &mockChestStore{}, nil)
+
+	resp, err := svc.GetHome(context.Background(), "u1", "c1")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if resp.DailyTurn.CrewStreak != 0 {
+		t.Errorf("expected crew streak 0 when service not set, got %d", resp.DailyTurn.CrewStreak)
+	}
 }

@@ -153,4 +153,46 @@ describe('HomePage', () => {
     // Assert no reaction bar is rendered
     expect(screen.queryByTestId(/reaction-bar/)).not.toBeInTheDocument()
   })
+
+  it('renders crew streak as shared progress', async () => {
+    vi.mocked(apiClient.request).mockResolvedValueOnce({
+      player: { explorer_name: 'Tester', coins: 10 },
+      realm_progress: [{ realm: 'Whispering Woods', progress: 50, status: 'ACTIVE' }],
+      daily_turn: { available: true, streak_days: 1, crew_streak: 4 },
+      active_quests: [],
+      completed_quests_today: [],
+      available_chests: [],
+    })
+
+    render(
+      <MemoryRouter>
+        <HomePage />
+      </MemoryRouter>
+    )
+
+    await waitFor(() => {
+      expect(screen.getByTestId('home-crew-streak')).toHaveTextContent('Runtutan kru: 4 hari bersama')
+    })
+  })
+
+  it('falls back to 0 crew streak when field is missing', async () => {
+    vi.mocked(apiClient.request).mockResolvedValueOnce({
+      player: { explorer_name: 'Tester', coins: 10 },
+      realm_progress: [{ realm: 'Whispering Woods', progress: 50, status: 'ACTIVE' }],
+      daily_turn: { available: true, streak_days: 1 },
+      active_quests: [],
+      completed_quests_today: [],
+      available_chests: [],
+    })
+
+    render(
+      <MemoryRouter>
+        <HomePage />
+      </MemoryRouter>
+    )
+
+    await waitFor(() => {
+      expect(screen.getByTestId('home-crew-streak')).toHaveTextContent('Runtutan kru: 0 hari bersama')
+    })
+  })
 })

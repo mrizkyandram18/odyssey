@@ -182,6 +182,9 @@ export function HomePage() {
           <div className="flex flex-col gap-1">
             <h3 className="font-medium text-text-primary text-sm">Giliran Hari Ini</h3>
             <p className="text-xs text-text-secondary">Runtutan: {home.daily_turn.streak_days} Hari 🔥</p>
+            <p className="text-xs text-text-secondary" data-testid="home-crew-streak">
+              Runtutan kru: {home.daily_turn.crew_streak ?? 0} hari bersama 🤝
+            </p>
           </div>
           <Button 
             variant="secondary" 

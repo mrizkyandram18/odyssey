@@ -9,9 +9,9 @@ import (
 
 	apiAchievements "odyssey/internal/api/achievements"
 	"odyssey/internal/api/admin"
+	apiBoard "odyssey/internal/api/board"
 	apiChapters "odyssey/internal/api/chapters"
 	"odyssey/internal/api/chests"
-	apiBoard "odyssey/internal/api/board"
 	apiCosmetics "odyssey/internal/api/cosmetics"
 	"odyssey/internal/api/creative"
 	"odyssey/internal/api/crews"
@@ -37,6 +37,7 @@ import (
 	"odyssey/pkg/game/chest"
 	"odyssey/pkg/game/cosmetic"
 	gamecreative "odyssey/pkg/game/creative"
+	"odyssey/pkg/game/crewstreak"
 	"odyssey/pkg/game/dailyturn"
 	"odyssey/pkg/game/events"
 	gamehome "odyssey/pkg/game/home"
@@ -210,6 +211,7 @@ func BuildHandler() (*Server, error) {
 	homeSvc.SetChapterService(chapterSvc)
 	homeSvc.SetLoreService(loreSvc)
 	homeSvc.SetAchievementService(achieveSvc)
+	homeSvc.SetCrewStreakService(crewstreak.NewService(repo.Users, repo.Activity, config.Timezone))
 
 	adminStore := db.NewDefinitionStore(supabaseClient)
 	auditStore := db.NewAuditStore(supabaseClient)
@@ -434,8 +436,8 @@ func BuildHandler() (*Server, error) {
 	}
 
 	return &Server{
-		Handler:  handler,
-		Cleanup:  cleanup,
+		Handler: handler,
+		Cleanup: cleanup,
 	}, nil
 }
 

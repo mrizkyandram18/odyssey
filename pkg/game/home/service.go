@@ -12,6 +12,7 @@ import (
 	"odyssey/pkg/game/chapter"
 	"odyssey/pkg/game/chest"
 	"odyssey/pkg/game/creative"
+	"odyssey/pkg/game/crewstreak"
 	"odyssey/pkg/game/dailyturn"
 	"odyssey/pkg/game/lore"
 	"odyssey/pkg/game/progression"
@@ -79,6 +80,7 @@ type DailyTurnSection struct {
 	Completed      bool   `json:"completed"`
 	Available      bool   `json:"available"`
 	StreakDays     int    `json:"streak_days"`
+	CrewStreak     int    `json:"crew_streak"`
 	RemainingTurns int    `json:"remaining_turns"`
 	QuestSlug      string `json:"quest_slug,omitempty"`
 }
@@ -133,6 +135,7 @@ type DailyTurnView struct {
 	Completed      bool   `json:"completed"`
 	Available      bool   `json:"available"`
 	StreakDays     int    `json:"streak_days"`
+	CrewStreak     int    `json:"crew_streak"`
 	RemainingTurns int    `json:"remaining_turns"`
 	QuestSlug      string `json:"quest_slug,omitempty"`
 }
@@ -151,6 +154,7 @@ type HomeService struct {
 	chapterSvc *chapter.ChapterService
 	loreSvc    *lore.LoreService
 	achieveSvc *achievement.AchievementService
+	crewStreak *crewstreak.Service
 }
 
 func (s *HomeService) SetChapterService(cs *chapter.ChapterService) {
@@ -163,6 +167,12 @@ func (s *HomeService) SetLoreService(ls *lore.LoreService) {
 
 func (s *HomeService) SetAchievementService(as *achievement.AchievementService) {
 	s.achieveSvc = as
+}
+
+// SetCrewStreakService attaches the crew-level streak computation. Safe to
+// call with nil (crew streak simply stays 0).
+func (s *HomeService) SetCrewStreakService(cs *crewstreak.Service) {
+	s.crewStreak = cs
 }
 
 // NewHomeService constructs a HomeService from its collaborators.
@@ -207,6 +217,7 @@ func (s *HomeService) GetHome(ctx context.Context, uid string, crewID string) (*
 		hasCompleted       bool
 		available          bool
 		streak             int
+		crewStreak         int
 		realmProgress      []game.RealmProgress
 		relicCount         int
 		availableChests    []chest.ChestView
@@ -266,6 +277,15 @@ func (s *HomeService) GetHome(ctx context.Context, uid string, crewID string) (*
 		if err != nil {
 			return fmt.Errorf("failed to compute streak: %w", err)
 		}
+		return nil
+	})
+
+	// 3b. Crew streak (display-only: failures never break Home)
+	g.Go(func() error {
+		if s.crewStreak == nil {
+			return nil
+		}
+		crewStreak, _ = s.crewStreak.ComputeCrewStreak(gCtx, crewID)
 		return nil
 	})
 
@@ -415,6 +435,7 @@ func (s *HomeService) GetHome(ctx context.Context, uid string, crewID string) (*
 			Completed:      hasCompleted,
 			Available:      available,
 			StreakDays:     streak,
+			CrewStreak:     crewStreak,
 			RemainingTurns: remainingTurns,
 		},
 		RealmProgress:        realmProgress,
@@ -440,6 +461,7 @@ func (s *HomeService) GetHome(ctx context.Context, uid string, crewID string) (*
 				Completed:      hasCompleted,
 				Available:      available,
 				StreakDays:     streak,
+				CrewStreak:     crewStreak,
 				RemainingTurns: remainingTurns,
 			},
 			Realm: RealmSection{
