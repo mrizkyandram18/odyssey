@@ -5,6 +5,28 @@ const PROD_URL = 'https://odyssey-beta-nine.vercel.app';
 const T = 90_000;
 const tinyPng = 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==';
 
+interface MeSnapshot {
+  xp: number;
+  coins: number;
+}
+
+// Auth is session-cookie based on prod (Gatekeeper). Reads player xp/coins.
+const fetchMe = async (page: import('@playwright/test').Page): Promise<MeSnapshot | null> =>
+  await page.evaluate(async () => {
+    const sessionRaw = localStorage.getItem('odyssey_session');
+    const session = sessionRaw ? JSON.parse(sessionRaw) : null;
+    const token = session?.token as string | undefined;
+    const headers: Record<string, string> = {};
+    if (token) {
+      headers.Authorization = `Bearer ${token}`;
+      headers['X-User-Session'] = token;
+    }
+    const r = await fetch('/api/me', { credentials: 'include', headers });
+    if (!r.ok) return null;
+    const body = (await r.json()) as { xp?: number; coins?: number };
+    return { xp: body.xp ?? 0, coins: body.coins ?? 0 };
+  });
+
 /**
  * Slice 2.9 prod smoke — PHOTO submission kind.
  * Uses quest 102 (DONE) with the last challenge (39) for the post-completion
@@ -17,6 +39,13 @@ test.describe('PROD smoke: photo submission (Slice 2.9)', () => {
     test.setTimeout(240_000);
 
     await login(page, 'demo1');
+
+    // Snapshot xp/coins before the smoke (no reward/XP/coin change expected
+    // from a pending-review PHOTO submission).
+    const meBefore = await fetchMe(page);
+    if (!meBefore) {
+      test.fail(true, '/api/me returned no player snapshot');
+    }
 
     const postPhoto = async (photo: string, caption: string) =>
       await page.evaluate(
@@ -102,15 +131,27 @@ test.describe('PROD smoke: photo submission (Slice 2.9)', () => {
     await expect(page.getByRole('heading', { name: 'Family Journal' }).first()).toBeVisible({ timeout: T });
     await expect(page.getByText(marker, { exact: false }).first()).toBeVisible({ timeout: 20_000 });
 
+    // PHOTO submission is pending review: xp/coins must be unchanged.
+    const meAfter = await fetchMe(page);
+    expect(meAfter).not.toBeNull();
+    if (meBefore && meAfter) {
+      expect(meAfter.xp, 'XP must not change from a pending PHOTO submission').toBe(meBefore.xp);
+      expect(meAfter.coins, 'Coins must not change from a pending PHOTO submission').toBe(meBefore.coins);
+    }
+
     // eslint-disable-next-line no-console
-    console.log(
-      '[PROD SMOKE]',
-      JSON.stringify({
-        invalid_status: bad.status,
-        submit_status: good.status,
-        marker,
-        listed: found,
-      }),
-    );
+      console.log(
+        '[PROD SMOKE]',
+        JSON.stringify({
+          invalid_status: bad.status,
+          submit_status: good.status,
+          marker,
+          listed: found,
+          xp_before: meBefore?.xp,
+          xp_after: meAfter?.xp,
+          coins_before: meBefore?.coins,
+          coins_after: meAfter?.coins,
+        }),
+      );
   });
 });
