@@ -179,6 +179,11 @@ type RewardLedgerStore interface {
 	ListByUser(ctx context.Context, userID string) ([]RewardLedger, error)
 }
 
+// RewardSignalStore manages the ADR-004 integration signals.
+type RewardSignalStore interface {
+	SaveSignal(ctx context.Context, signal *RewardSignal) error
+}
+
 // CosmeticUnlockStore manages paid cosmetic ownership.
 type CosmeticUnlockStore interface {
 	ListByUser(ctx context.Context, uid string) ([]CosmeticUnlock, error)
@@ -221,6 +226,7 @@ type Repository struct {
 	Reactions           ReactionStore
 	Activity            ActivityStore
 	RewardLedgers       RewardLedgerStore
+	RewardSignals       RewardSignalStore
 	CosmeticUnlocks     CosmeticUnlockStore
 	PushSubscriptions   PushSubscriptionStore
 }

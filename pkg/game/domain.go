@@ -348,6 +348,15 @@ type RewardLedger struct {
 	CreatedAt  time.Time `json:"created_at"`
 }
 
+// RewardSignal is an outward-facing event indicating a player achieved a milestone.
+// It is intended to be consumed by the Family Reward system (ADR-004).
+type RewardSignal struct {
+	UID             string    `json:"uid"`
+	AchievementCode string    `json:"achievement_code"`
+	IssuedAt        time.Time `json:"issued_at"`
+	Consumed        bool      `json:"consumed"`
+}
+
 // CosmeticUnlock is ownership of a paid cosmetic for one explorer.
 type CosmeticUnlock struct {
 	ID          int64     `json:"id"`

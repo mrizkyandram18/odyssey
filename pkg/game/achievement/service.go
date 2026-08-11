@@ -257,6 +257,13 @@ func (s *AchievementService) evaluate(ctx context.Context, trigger AchievementTr
 			if err != nil {
 				return fmt.Errorf("create achievement %s: %w", def.Code, err)
 			}
+
+			s.publisher.Publish(ctx, events.AchievementEarnedEvent{
+				UID:             uid,
+				CrewID:          crewID,
+				AchievementCode: def.Code,
+			})
+
 			if def.RewardCosmeticID != "" {
 				_, _ = s.unlocks.CreateIfAbsent(ctx, uid, def.RewardCosmeticID, 0)
 			}

@@ -50,6 +50,7 @@ import (
 	"odyssey/pkg/game/quest"
 	"odyssey/pkg/game/relic"
 	"odyssey/pkg/game/reward"
+	"odyssey/pkg/game/rewardsignal"
 	"odyssey/pkg/game/season"
 	"odyssey/pkg/game/social"
 	"odyssey/pkg/game/world"
@@ -156,6 +157,7 @@ func BuildHandler() (*Server, error) {
 		repo.PlayerRelics, repo.DailyTurns, repo.CreativeSubmissions, chapterStore,
 	)
 	achieveSvc := achievement.NewAchievementService(contentRepo.Achievements, repo.Achievements, achieveRdr, dispatcher, repo.CosmeticUnlocks)
+	rewardSignalService := rewardsignal.NewService(repo)
 
 	dispatcher.Subscribe(events.EventTypeQuestCompleted, chapter.NewQuestCompletedHandler(chapterSvc))
 	dispatcher.Subscribe(events.EventTypeQuestCompleted, achievement.NewQuestCompletedHandler(achieveSvc))
@@ -165,6 +167,7 @@ func BuildHandler() (*Server, error) {
 	dispatcher.Subscribe(events.EventTypeDailyTurnCompleted, achievement.NewDailyTurnCompletedHandler(achieveSvc))
 	dispatcher.Subscribe(events.EventTypeLevelReached, achievement.NewLevelReachedHandler(achieveSvc))
 	dispatcher.Subscribe(events.EventTypeCreativeSubmission, achievement.NewCreativeSubmissionHandler(achieveSvc))
+	dispatcher.Subscribe(events.EventTypeAchievementEarned, rewardsignal.NewAchievementEarnedHandler(rewardSignalService))
 
 	creativeSvc := gamecreative.NewCreativeServiceWithPublisher(repo.CreativeSubmissions, repo.Quests, dispatcher)
 	creativeHandler := gamecreative.NewCreativeAPIHandler(creativeSvc)

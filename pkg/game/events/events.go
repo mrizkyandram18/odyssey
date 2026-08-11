@@ -18,6 +18,7 @@ const (
 	EventTypeLevelReached       = "level_reached"
 	EventTypeCreativeSubmission = "creative_submission"
 	EventTypeRelayHandoff       = "relay_handoff"
+	EventTypeAchievementEarned  = "achievement_earned"
 )
 
 type QuestCompletedEvent struct {
@@ -78,6 +79,14 @@ type LevelReachedEvent struct {
 }
 
 func (e LevelReachedEvent) EventType() string { return EventTypeLevelReached }
+
+type AchievementEarnedEvent struct {
+	UID             string
+	CrewID          string
+	AchievementCode string
+}
+
+func (e AchievementEarnedEvent) EventType() string { return EventTypeAchievementEarned }
 
 type CreativeSubmissionEvent struct {
 	UID         string
