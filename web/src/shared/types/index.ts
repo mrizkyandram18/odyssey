@@ -376,6 +376,19 @@ export interface InventoryItem {
   created_at: string
 }
 
+export interface GiftRelicRequest {
+  recipient_uid: string
+  relic_slug: string
+}
+
+export interface GiftRelicResult {
+  relic_slug: string
+  relic_name: string
+  recipient_uid: string
+  recipient_name: string
+  sender_remaining_count: number
+}
+
 export interface QuestView {
   id: number
   crew_id: string

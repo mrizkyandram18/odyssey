@@ -5,7 +5,15 @@ import { ProgressBar } from '../../shared/components/atoms/ProgressBar'
 import { Card } from '../../shared/components/atoms/Card'
 import { useSession } from '../../shared/hooks/useSession'
 import { apiClient } from '../../shared/lib/api'
-import type { CosmeticCatalogItem, CosmeticsResponse, RewardLedgerEntry } from '../../shared/types'
+import type {
+  CosmeticCatalogItem,
+  CosmeticsResponse,
+  RewardLedgerEntry,
+  InventoryItem,
+  CrewMember,
+  GiftRelicResult,
+  QuestWithChallenges,
+} from '../../shared/types'
 import { Avatar } from '../../shared/components/atoms/Avatar'
 import { Shuffle } from 'lucide-react'
 
@@ -20,6 +28,15 @@ export function ProfilePage() {
   const [shopError, setShopError] = useState<string | null>(null)
   const [shopMsg, setShopMsg] = useState<string | null>(null)
 
+  // Relic inventory + gift state
+  const [inventory, setInventory] = useState<InventoryItem[]>([])
+  const [crewMembers, setCrewMembers] = useState<CrewMember[]>([])
+  const [giftRelic, setGiftRelic] = useState<InventoryItem | null>(null)
+  const [giftRecipient, setGiftRecipient] = useState<string>('')
+  const [gifting, setGifting] = useState(false)
+  const [giftMsg, setGiftMsg] = useState<string | null>(null)
+  const [giftError, setGiftError] = useState<string | null>(null)
+
   const loadCosmetics = useCallback(async () => {
     try {
       const data = await apiClient.get<CosmeticsResponse>('/api/cosmetics')
@@ -30,17 +47,40 @@ export function ProfilePage() {
     }
   }, [])
 
+  const loadInventory = useCallback(async () => {
+    try {
+      const data = await apiClient.get<InventoryItem[]>('/api/relics/inventory')
+      setInventory(data ?? [])
+    } catch (e) {
+      console.error('failed to load inventory', e)
+    }
+  }, [])
+
+  const loadCrewMembers = useCallback(async () => {
+    try {
+      const quests = await apiClient.get<QuestWithChallenges[]>('/api/quests')
+      const questWithMembers = quests?.find((q) => q.members && q.members.length > 0)
+      if (questWithMembers?.members) {
+        setCrewMembers(questWithMembers.members)
+      }
+    } catch (e) {
+      console.error('failed to load crew members', e)
+    }
+  }, [])
+
   useEffect(() => {
     if (profile) {
       apiClient.get<RewardLedgerEntry[]>('/api/rewards')
         .then(setLedgers)
         .catch(console.error)
       void loadCosmetics()
+      void loadInventory()
+      void loadCrewMembers()
       if (profile.avatar_frame) {
         setFrame(profile.avatar_frame)
       }
     }
-  }, [profile, loadCosmetics])
+  }, [profile, loadCosmetics, loadInventory, loadCrewMembers])
 
   const purchaseGoldFrame = async (item: CosmeticCatalogItem) => {
     setBuying(true)
@@ -74,6 +114,28 @@ export function ProfilePage() {
       setShopMsg(cosmeticId === 'none' ? 'Frame unequipped.' : 'Frame equipped.')
     } catch (e) {
       setShopError(e instanceof Error ? e.message : 'Equip failed')
+    }
+  }
+
+  const doGiftRelic = async () => {
+    if (!giftRelic || !giftRecipient) return
+    setGifting(true)
+    setGiftError(null)
+    setGiftMsg(null)
+    try {
+      const res = await apiClient.post<GiftRelicResult>('/api/relics/gift', {
+        recipient_uid: giftRecipient,
+        relic_slug: giftRelic.relic_slug,
+      })
+      const recipientName = crewMembers.find((m) => m.uid === giftRecipient)?.explorer_name ?? 'them'
+      setGiftMsg(`🎁 ${res.relic_name} gifted to ${recipientName}! You have ${res.sender_remaining_count} left.`)
+      setGiftRelic(null)
+      setGiftRecipient('')
+      await loadInventory()
+    } catch (e) {
+      setGiftError(e instanceof Error ? e.message : 'Gift failed')
+    } finally {
+      setGifting(false)
     }
   }
 
@@ -264,6 +326,121 @@ export function ProfilePage() {
           )}
         </div>
       </Card>
+
+      {/* Relic Inventory + Gifting — Slice 2.11 */}
+      {inventory.length > 0 && (
+        <Card className="p-6" data-testid="relic-inventory">
+          <h3 className="font-heading text-xl text-text-primary mb-1 flex items-center gap-2">
+            <span>🗝️</span> Relic Vault
+          </h3>
+          <p className="text-xs text-text-secondary mb-4">
+            Gift a relic to a crewmate · free · no coins deducted
+          </p>
+          {giftMsg && (
+            <p className="mb-3 text-sm text-accent-nature" data-testid="gift-success-msg">{giftMsg}</p>
+          )}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            {inventory.map((item) => (
+              <div
+                key={item.relic_slug}
+                className="flex items-center justify-between gap-3 rounded-lg border border-border-subtle bg-surface p-3"
+                data-testid={`relic-item-${item.relic_slug}`}
+              >
+                <div className="flex items-center gap-3 min-w-0">
+                  <span className="text-2xl shrink-0">{item.image}</span>
+                  <div className="min-w-0">
+                    <p className="font-medium text-text-primary text-sm truncate">{item.name}</p>
+                    <p className="text-[10px] text-text-secondary uppercase tracking-wider">
+                      {item.rarity} · ×{item.owned_count}
+                    </p>
+                  </div>
+                </div>
+                {crewMembers.filter((m) => m.uid !== profile.uid).length > 0 && (
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    className="shrink-0 text-accent-magic border border-accent-magic/30 hover:bg-accent-magic/10"
+                    onClick={() => {
+                      setGiftRelic(item)
+                      setGiftRecipient('')
+                      setGiftError(null)
+                      setGiftMsg(null)
+                    }}
+                    data-testid={`gift-btn-${item.relic_slug}`}
+                  >
+                    🎁 Gift
+                  </Button>
+                )}
+              </div>
+            ))}
+          </div>
+        </Card>
+      )}
+
+      {/* Gift modal overlay */}
+      {giftRelic && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4"
+          data-testid="gift-modal"
+          onClick={(e) => { if (e.target === e.currentTarget) { setGiftRelic(null) } }}
+        >
+          <div className="bg-surface-elevated border border-border-subtle rounded-xl shadow-2xl p-6 w-full max-w-sm flex flex-col gap-4">
+            <h4 className="font-heading text-xl text-text-primary flex items-center gap-2">
+              🎁 Gift Relic
+            </h4>
+            <div className="flex items-center gap-3 rounded-lg bg-surface border border-border-subtle p-3">
+              <span className="text-3xl">{giftRelic.image}</span>
+              <div>
+                <p className="font-medium text-text-primary">{giftRelic.name}</p>
+                <p className="text-xs text-text-secondary uppercase tracking-wider">{giftRelic.rarity} · ×{giftRelic.owned_count}</p>
+              </div>
+            </div>
+            <div>
+              <label htmlFor="gift-recipient" className="block text-xs font-bold uppercase tracking-wider text-text-secondary mb-2">
+                Select recipient
+              </label>
+              <select
+                id="gift-recipient"
+                value={giftRecipient}
+                onChange={(e) => setGiftRecipient(e.target.value)}
+                className="w-full rounded-lg border border-border-subtle bg-surface text-text-primary px-3 py-2 text-sm focus:outline-none focus:border-accent-magic"
+                data-testid="gift-recipient-select"
+              >
+                <option value="">— choose a crewmate —</option>
+                {crewMembers
+                  .filter((m) => m.uid !== profile.uid)
+                  .map((m) => (
+                    <option key={m.uid} value={m.uid}>{m.explorer_name}</option>
+                  ))
+                }
+              </select>
+            </div>
+            {giftError && (
+              <p className="text-sm text-accent-danger" data-testid="gift-error-msg">{giftError}</p>
+            )}
+            <div className="flex gap-3">
+              <Button
+                variant="secondary"
+                className="flex-1"
+                onClick={() => setGiftRelic(null)}
+                disabled={gifting}
+              >
+                Cancel
+              </Button>
+              <Button
+                variant="primary"
+                className="flex-1"
+                onClick={() => void doGiftRelic()}
+                disabled={gifting || !giftRecipient}
+                isLoading={gifting}
+                data-testid="gift-confirm-btn"
+              >
+                Confirm Gift
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         {/* Crew Info */}

@@ -46,3 +46,12 @@ type InventoryItem struct {
 	DiscoveredAt time.Time   `json:"discovered_at"`
 	CreatedAt    time.Time   `json:"created_at"`
 }
+
+// GiftResult represents the outcome of a successful relic gift.
+type GiftResult struct {
+	RelicSlug     string `json:"relic_slug"`
+	RelicName     string `json:"relic_name"`
+	RecipientUID  string `json:"recipient_uid"`
+	RecipientName string `json:"recipient_name"`
+	SenderCount   int    `json:"sender_remaining_count"`
+}

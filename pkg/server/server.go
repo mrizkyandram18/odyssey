@@ -205,6 +205,8 @@ func BuildHandler() (*Server, error) {
 	dispatcher.Subscribe(events.EventTypeQuestCompleted, chest.NewQuestCompletedHandler(chestSvc, contentSvc))
 
 	relicSvc := relic.NewRelicService(repo.Relics, repo.PlayerRelics, repo.RelicDefinitions)
+	relicSvc.SetUserStore(repo.Users)
+	relicSvc.SetLedgerStore(repo.RewardLedgers)
 	relics.Setup(relicSvc)
 
 	homeSvc := gamehome.NewHomeService(questSvc, dailyTurnSvc, repo.Progression, realmStore, repo.Users, repo.CreativeSubmissions, repo.Chests, relicSvc)
@@ -392,6 +394,7 @@ func BuildHandler() (*Server, error) {
 	mux.HandleFunc("/api/home/", secure(mw.RequireAuth(apiHome.Handler)))
 	mux.HandleFunc("/api/chests", secure(mw.RequireAuth(chests.Handler)))
 	mux.HandleFunc("/api/chests/", secure(mw.RequireAuth(chests.Handler)))
+	mux.HandleFunc("/api/relics/gift", secure(mw.RequireAuth(csrf(relics.Handler))))
 	mux.HandleFunc("/api/relics", secure(mw.RequireAuth(relics.Handler)))
 	mux.HandleFunc("/api/relics/", secure(mw.RequireAuth(relics.Handler)))
 	mux.HandleFunc("/api/chapters", secure(mw.RequireAuth(apiChapters.Handler)))

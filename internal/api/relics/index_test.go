@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 	"time"
 
@@ -16,6 +17,8 @@ type mockRelicService struct {
 	relics    []gamerelic.RelicDefinition
 	inventory []gamerelic.InventoryItem
 	err       error
+	giftRes   *gamerelic.GiftResult
+	giftErr   error
 }
 
 func (m *mockRelicService) ListRelics(ctx context.Context) ([]gamerelic.RelicDefinition, error) {
@@ -39,6 +42,13 @@ func (m *mockRelicService) ListInventory(ctx context.Context, uid string) ([]gam
 		return nil, m.err
 	}
 	return m.inventory, nil
+}
+
+func (m *mockRelicService) GiftRelic(ctx context.Context, senderUID, recipientUID, relicSlug, crewID string) (*gamerelic.GiftResult, error) {
+	if m.giftErr != nil {
+		return nil, m.giftErr
+	}
+	return m.giftRes, nil
 }
 
 func makeUserToken(t *testing.T, issuer *auth.HMACSessionIssuer) string {
@@ -133,5 +143,61 @@ func TestRelicsHandler_GetRelic_NotFound(t *testing.T) {
 
 	if w.Code != http.StatusNotFound {
 		t.Errorf("expected 404, got %d", w.Code)
+	}
+}
+
+func TestRelicsHandler_GiftSuccess(t *testing.T) {
+	Setup(&mockRelicService{
+		giftRes: &gamerelic.GiftResult{
+			RelicSlug:     "ancient-compass",
+			RelicName:     "Ancient Compass",
+			RecipientUID:  "recipient-uid",
+			RecipientName: "Aria",
+			SenderCount:   1,
+		},
+	})
+	issuer := auth.NewSessionIssuer("test-secret")
+	mw := auth.NewMiddleware(issuer)
+	token := makeUserToken(t, issuer)
+
+	body := `{"recipient_uid":"recipient-uid","relic_slug":"ancient-compass"}`
+	req := httptest.NewRequest(http.MethodPost, "/api/relics/gift", strings.NewReader(body))
+	req.Header.Set("Authorization", "Bearer "+token)
+	w := httptest.NewRecorder()
+	mw.RequireAuth(Handler)(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d: %s", w.Code, w.Body.String())
+	}
+}
+
+func TestRelicsHandler_GiftErrorMapping(t *testing.T) {
+	cases := []struct {
+		err  error
+		code int
+	}{
+		{gamerelic.ErrSelfGift, http.StatusBadRequest},
+		{gamerelic.ErrCrossCrewGift, http.StatusForbidden},
+		{gamerelic.ErrRecipientNotFound, http.StatusNotFound},
+		{gamerelic.ErrRelicNotOwned, http.StatusConflict},
+		{gamerelic.ErrRelicNotFound, http.StatusNotFound},
+		{context.DeadlineExceeded, http.StatusInternalServerError},
+	}
+
+	issuer := auth.NewSessionIssuer("test-secret")
+	mw := auth.NewMiddleware(issuer)
+	token := makeUserToken(t, issuer)
+
+	for _, tc := range cases {
+		Setup(&mockRelicService{giftErr: tc.err})
+		body := `{"recipient_uid":"recipient-uid","relic_slug":"ancient-compass"}`
+		req := httptest.NewRequest(http.MethodPost, "/api/relics/gift", strings.NewReader(body))
+		req.Header.Set("Authorization", "Bearer "+token)
+		w := httptest.NewRecorder()
+		mw.RequireAuth(Handler)(w, req)
+
+		if w.Code != tc.code {
+			t.Errorf("expected %d for error %v, got %d", tc.code, tc.err, w.Code)
+		}
 	}
 }
