@@ -1,6 +1,7 @@
 import type { CreativeSubmission } from '../../types'
 import { toSvgDataUri } from '../../utils/svg'
 import { parseComicPayload } from '../../utils/comic'
+import { parsePhotoPayload } from '../../utils/media'
 import { ConnectedReactionBar } from './ConnectedReactionBar'
 
 export interface CreativeCardProps {
@@ -22,7 +23,7 @@ export function CreativeCard({ submission }: CreativeCardProps) {
             <span className="text-sm font-semibold">{submission.author_uid}</span>
             <span className="text-xs text-muted-foreground">
               {formatter.format(date)}
-              {submission.kind === 'COMIC' ? ' · Comic' : submission.kind === 'DRAWING' ? ' · Drawing' : ''}
+              {submission.kind === 'COMIC' ? ' · Comic' : submission.kind === 'DRAWING' ? ' · Drawing' : submission.kind === 'PHOTO' ? ' · Photo' : ''}
             </span>
           </div>
         </div>
@@ -76,6 +77,19 @@ function CreativeBody({ submission }: { submission: CreativeSubmission }) {
             ) : null}
           </div>
         ))}
+      </div>
+    )
+  }
+
+  if (submission.kind === 'PHOTO') {
+    const photo = parsePhotoPayload(submission.content)
+    if (!photo) {
+      return <p className="text-muted-foreground text-xs">Photo could not be displayed.</p>
+    }
+    return (
+      <div className="flex flex-col gap-2">
+        <img src={photo.photo} alt="Submitted photo" className="w-full h-auto rounded-md object-cover" />
+        {photo.caption ? <p className="text-sm leading-snug">{photo.caption}</p> : null}
       </div>
     )
   }

@@ -320,6 +320,54 @@ func TestBodySizeLimit(t *testing.T) {
 	}
 }
 
+func TestMaxBodyForPath(t *testing.T) {
+	cfg := DefaultSecurityConfig()
+	cfg.MaxBodyBytes = 1 << 20
+	cfg.MaxBodyBytesByPath = map[string]int64{
+		"/api/creative":  8 << 20,
+		"/api/creative/": 8 << 20,
+	}
+
+	cases := []struct {
+		path string
+		want int64
+	}{
+		{"/api/creative", 8 << 20},
+		{"/api/creative/1/approve", 8 << 20},
+		{"/api/login", 1 << 20},
+		{"/api/quests", 1 << 20},
+	}
+	for _, c := range cases {
+		if got := cfg.MaxBodyForPath(c.path); got != c.want {
+			t.Errorf("path %q: expected %d, got %d", c.path, c.want, got)
+		}
+	}
+}
+
+func TestBodySizeLimit_PerPathOverride(t *testing.T) {
+	cfg := DefaultSecurityConfig()
+	cfg.MaxBodyBytes = 100
+	cfg.MaxBodyBytesByPath = map[string]int64{"/api/creative": 1000}
+	called := false
+	next := func(w http.ResponseWriter, r *http.Request) {
+		called = true
+		w.WriteHeader(http.StatusOK)
+	}
+	handler := RequestLimitMiddleware(cfg, next)
+
+	body := strings.Repeat("a", 500) // exceeds 100 but within 1000
+	w := httptest.NewRecorder()
+	r := httptest.NewRequest(http.MethodPost, "/api/creative", strings.NewReader(body))
+	handler(w, r)
+
+	if !called {
+		t.Fatalf("expected handler to be called within per-path limit")
+	}
+	if w.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d", w.Code)
+	}
+}
+
 func TestRateLimiterConcurrentAccess(t *testing.T) {
 	rl := NewRateLimiter(time.Minute, 100)
 	var wg sync.WaitGroup

@@ -506,3 +506,45 @@ func TestSubmit_Comic_Invalid(t *testing.T) {
 		t.Fatalf("expected ErrComicPanelCount, got %v", err)
 	}
 }
+
+func photoContent(t *testing.T, caption string) string {
+	t.Helper()
+	return `{"v":1,"photo":"data:image/png;base64,` +
+		"iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=" +
+		`","caption":"` + caption + `"}`
+}
+
+func TestSubmit_Photo_Success(t *testing.T) {
+	qs := newMockQuestStore()
+	qs.CreateQuest(context.Background(), makeQuest(1, "ACTIVE", "c1"))
+	qs.challenges[1] = []game.Challenge{makeChallenge(1, 1, "PENDING")}
+	svc := NewCreativeService(newMockSubmissionStore(), qs)
+
+	content := photoContent(t, "a sunny day")
+	sub, err := svc.Submit(context.Background(), &game.Submission{
+		QuestID: 1, ChallengeID: 1, Kind: game.SubmissionPhoto, Content: content,
+	})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if sub.Kind != game.SubmissionPhoto {
+		t.Errorf("expected PHOTO, got %s", sub.Kind)
+	}
+	if sub.Content != content {
+		t.Errorf("content mismatch")
+	}
+}
+
+func TestSubmit_Photo_Invalid(t *testing.T) {
+	qs := newMockQuestStore()
+	qs.CreateQuest(context.Background(), makeQuest(1, "ACTIVE", "c1"))
+	qs.challenges[1] = []game.Challenge{makeChallenge(1, 1, "PENDING")}
+	svc := NewCreativeService(newMockSubmissionStore(), qs)
+
+	_, err := svc.Submit(context.Background(), &game.Submission{
+		QuestID: 1, ChallengeID: 1, Kind: game.SubmissionPhoto, Content: `{"photo":"not-a-data-uri"}`,
+	})
+	if !errors.Is(err, ErrPhotoBadURI) {
+		t.Fatalf("expected ErrPhotoBadURI, got %v", err)
+	}
+}

@@ -9,6 +9,13 @@ import {
   MIN_COMIC_PANELS,
   type ComicPanel,
 } from '../../shared/utils/comic'
+import {
+  buildPhotoPayload,
+  fileToDataURL,
+  isImageFile,
+  isImageDataURL,
+  MAX_PHOTO_CAPTION,
+} from '../../shared/utils/media'
 
 export interface SubmissionFormProps {
   questId: number
@@ -17,7 +24,7 @@ export interface SubmissionFormProps {
   onSkip: () => void
 }
 
-type Mode = 'STORY' | 'DRAWING' | 'COMIC'
+type Mode = 'STORY' | 'DRAWING' | 'COMIC' | 'PHOTO'
 
 const emptyPanels = (): ComicPanel[] => [
   { caption: '' },
@@ -31,6 +38,9 @@ export function SubmissionForm({ questId, challengeId, onComplete, onSkip }: Sub
   const [sketchPanelIndex, setSketchPanelIndex] = useState<number | null>(null)
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
+
+  const [photoURL, setPhotoURL] = useState('')
+  const [photoCaption, setPhotoCaption] = useState('')
 
   const handleSubmitText = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -48,7 +58,16 @@ export function SubmissionForm({ questId, challengeId, onComplete, onSkip }: Sub
     await submitCreative('COMIC', buildComicPayload(panels))
   }
 
-  const submitCreative = async (kind: 'STORY' | 'DRAWING' | 'COMIC', payload: string) => {
+  const handlePhotoSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!photoURL || !isImageDataURL(photoURL)) {
+      setError('Please select an image')
+      return
+    }
+    await submitCreative('PHOTO', buildPhotoPayload(photoURL, photoCaption))
+  }
+
+  const submitCreative = async (kind: 'STORY' | 'DRAWING' | 'COMIC' | 'PHOTO', payload: string) => {
     setSubmitting(true)
     setError(null)
     try {
@@ -114,6 +133,7 @@ export function SubmissionForm({ questId, challengeId, onComplete, onSkip }: Sub
         {modeBtn('STORY', 'Write Story')}
         {modeBtn('DRAWING', 'Draw Canvas')}
         {modeBtn('COMIC', 'Comic Strip')}
+        {modeBtn('PHOTO', 'Take Photo')}
       </div>
 
       {error && <p className="text-center text-xs text-red-500">{error}</p>}
@@ -152,6 +172,80 @@ export function SubmissionForm({ questId, challengeId, onComplete, onSkip }: Sub
           onCancel={onSkip}
           isSubmitting={submitting}
         />
+      ) : mode === 'PHOTO' ? (
+        <form onSubmit={handlePhotoSubmit} className="flex flex-col gap-4">
+          <div className="flex flex-col gap-2">
+            <label className="text-xs text-muted-foreground">Photo</label>
+            {photoURL ? (
+              <div className="relative aspect-video w-full overflow-hidden rounded-lg border border-border bg-background/60">
+                <img src={photoURL} alt="captured" className="h-full w-full object-cover" />
+                <button
+                  type="button"
+                  onClick={() => setPhotoURL('')}
+                  className="absolute right-1 top-1 rounded bg-black/60 px-2 py-1 text-xs text-white opacity-80 hover:opacity-100"
+                >
+                  Clear
+                </button>
+              </div>
+            ) : (
+              <label className="flex cursor-pointer items-center justify-center gap-2 rounded-lg border border-dashed border-border py-8 text-center hover:bg-muted">
+                <input
+                  type="file"
+                  accept="image/*"
+                  capture="environment"
+                  className="hidden"
+                  onChange={async (e) => {
+                    const file = e.target.files?.[0]
+                    if (!file) return
+                    if (!isImageFile(file)) {
+                      setError('Only image files are allowed')
+                      return
+                    }
+                    setError(null)
+                    try {
+                      const url = await fileToDataURL(file)
+                      setPhotoURL(url)
+                    } catch (err) {
+                      setError(err instanceof Error ? err.message : 'Failed to read photo')
+                    }
+                  }}
+                />
+                <span className="text-sm font-medium text-muted-foreground">
+                  Tap to take or choose a photo
+                </span>
+              </label>
+            )}
+          </div>
+          <div className="flex flex-col gap-2">
+            <label className="text-xs text-muted-foreground">Caption (optional)</label>
+            <textarea
+              value={photoCaption}
+              onChange={(e) => setPhotoCaption(e.target.value.slice(0, MAX_PHOTO_CAPTION))}
+              maxLength={MAX_PHOTO_CAPTION}
+              placeholder="What happened here?"
+              className="w-full resize-none rounded-lg border border-border bg-background p-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+              rows={3}
+              disabled={submitting}
+            />
+          </div>
+          <div className="flex flex-col gap-2 pt-2">
+            <button
+              type="submit"
+              disabled={submitting || !photoURL || !isImageDataURL(photoURL)}
+              className="w-full rounded-lg bg-primary py-3 text-sm font-bold text-primary-foreground transition-all hover:brightness-110 disabled:opacity-50"
+            >
+              {submitting ? 'Saving...' : 'Save Photo'}
+            </button>
+            <button
+              type="button"
+              onClick={onSkip}
+              disabled={submitting}
+              className="w-full rounded-lg py-3 text-sm font-semibold text-muted-foreground transition-all hover:bg-muted"
+            >
+              Skip for now
+            </button>
+          </div>
+        </form>
       ) : sketchPanelIndex !== null ? (
         <div className="flex flex-col gap-3">
           <p className="text-sm text-center text-muted-foreground">

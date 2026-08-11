@@ -260,6 +260,10 @@ func BuildHandler() (*Server, error) {
 	secCfg := shared.DefaultSecurityConfig()
 	secCfg.AllowedOrigins = config.AllowedOrigins
 	secCfg.MaxBodyBytes = config.MaxBodyBytes
+	secCfg.MaxBodyBytesByPath = map[string]int64{
+		"/api/creative":  8 << 20,
+		"/api/creative/": 8 << 20,
+	}
 	secCfg.RateLimitWindow = time.Duration(config.RateLimitWindowSec) * time.Second
 	secCfg.RateLimitMaxHits = config.RateLimitMaxHits
 	secCfg.LoginRateLimitMax = config.LoginRateLimitMax

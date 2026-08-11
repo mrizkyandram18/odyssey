@@ -10,16 +10,19 @@ import (
 )
 
 type SecurityConfig struct {
-	AllowedOrigins    []string
-	MaxBodyBytes      int64
-	MaxJSONDepth      int
-	MaxStringLength   int
-	RateLimitWindow   time.Duration
-	RateLimitMaxHits  int
-	LoginRateLimitMax int
-	AdminRateLimitMax int
-	CSRFHeaderName    string
-	CSRFMaxAge        int
+	AllowedOrigins []string
+	MaxBodyBytes   int64
+	// MaxBodyBytesByPath overrides MaxBodyBytes for a specific request path
+	// (matched exactly or as a path-prefix subtree like "/api/creative/").
+	MaxBodyBytesByPath map[string]int64
+	MaxJSONDepth       int
+	MaxStringLength    int
+	RateLimitWindow    time.Duration
+	RateLimitMaxHits   int
+	LoginRateLimitMax  int
+	AdminRateLimitMax  int
+	CSRFHeaderName     string
+	CSRFMaxAge         int
 }
 
 func DefaultSecurityConfig() SecurityConfig {
@@ -63,6 +66,22 @@ func (c SecurityConfig) IsOriginAllowed(origin string) bool {
 		}
 	}
 	return false
+}
+
+// MaxBodyForPath resolves the request body size limit for a path, falling back
+// to the global MaxBodyBytes when no per-path override is registered. A path
+// prefix key (e.g. "/api/creative/") matches the subtree; an exact key
+// (e.g. "/api/creative") matches that path precisely.
+func (c SecurityConfig) MaxBodyForPath(path string) int64 {
+	if exact, ok := c.MaxBodyBytesByPath[path]; ok && exact > 0 {
+		return exact
+	}
+	for prefix, limit := range c.MaxBodyBytesByPath {
+		if strings.HasSuffix(prefix, "/") && strings.HasPrefix(path, prefix) && limit > 0 {
+			return limit
+		}
+	}
+	return c.MaxBodyBytes
 }
 
 type RateLimiter struct {
@@ -162,8 +181,9 @@ func CORSHeaderMiddleware(cfg SecurityConfig, next http.HandlerFunc) http.Handle
 
 func RequestLimitMiddleware(cfg SecurityConfig, next http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		if cfg.MaxBodyBytes > 0 {
-			r.Body = http.MaxBytesReader(w, r.Body, cfg.MaxBodyBytes)
+		maxBytes := cfg.MaxBodyForPath(r.URL.Path)
+		if maxBytes > 0 {
+			r.Body = http.MaxBytesReader(w, r.Body, maxBytes)
 		}
 		next.ServeHTTP(w, r)
 	}

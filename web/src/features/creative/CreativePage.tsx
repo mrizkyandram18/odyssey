@@ -98,7 +98,7 @@ export function CreativePage() {
         </div>
         <div className="flex flex-col gap-2">
           <label className="text-xs text-muted-foreground">
-            Submission Type (STORY / DRAWING / COMIC; PHOTO/VIDEO not enabled)
+            Submission Type (STORY / DRAWING / COMIC / PHOTO; VIDEO not enabled)
           </label>
           <select
             value={kind}
@@ -108,6 +108,7 @@ export function CreativePage() {
             <option value="STORY">Story Snippet</option>
             <option value="DRAWING">Drawing (SVG)</option>
             <option value="COMIC">Comic Strip (JSON panels)</option>
+            <option value="PHOTO">Photo (JSON data URI)</option>
           </select>
         </div>
         <div className="flex flex-col gap-2">

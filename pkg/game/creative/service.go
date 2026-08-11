@@ -97,6 +97,10 @@ func (s *CreativeService) Submit(ctx context.Context, sub *game.Submission) (*ga
 		if err := ValidateComic(sub.Content); err != nil {
 			return nil, err
 		}
+	case game.SubmissionPhoto:
+		if err := ValidatePhoto(sub.Content); err != nil {
+			return nil, err
+		}
 	}
 
 	// crew_id is NOT NULL on odyssey_creative_submissions; always bind to quest crew.
