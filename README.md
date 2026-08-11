@@ -60,7 +60,7 @@ Start at `CLAUDE.md`, then read `docs/vision.md` → `docs/principles.md` →
 |-------|-------|--------|
 | 0 — Foundation | Vision, ADRs, architecture, coding standards | Complete |
 | 1 — MVP | One realm, 6 quests, daily turns, basic progression | Complete (UI/UX Finished) |
-| 2 — Social Fabric | Peer reactions, coin currency, expanded creative tools | Future |
+| 2 — Social Fabric | Peer reactions, coin currency, expanded creative tools | Complete |
 | 3 — Deeper Storytelling | Branching quests, second realm, achievement log | Future |
 | 4 — Richer Creation | Comic mode, expanded creative tools, trading | Future |
 | 5 — Long Arc & Integration | Seasonal realms, Family Reward signal integration, AI | Future |

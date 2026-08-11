@@ -83,6 +83,9 @@ Untuk memastikan kualitas rilis, Phase 1 dipecah menjadi beberapa fase kecil seb
 
 ## Phase 2 — Social Fabric (Weeks 5–8)
 
+**Status:** **COMPLETE** (2026-08-11) — code + automated/E2E tests PASS
+**Note:** Real Web Push E2E OS delivery on physical device is **NOT VERIFIED** (requires physical device verification).
+
 **Goal:** Add the connective tissue that makes the family feel like a crew.
 
 **What ships:**
