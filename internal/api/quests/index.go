@@ -2,6 +2,8 @@ package quests
 
 import (
 	"context"
+	"encoding/json"
+	"errors"
 	"net/http"
 	"strconv"
 	"strings"
@@ -19,6 +21,7 @@ type QuestHandler interface {
 	GetByCrewAndID(ctx context.Context, questID int64, crewID string) (*quest.QuestWithChallenges, error)
 	StartQuest(ctx context.Context, questID int64, crewID string) error
 	CompleteChallenge(ctx context.Context, questID, challengeID int64, crewID, uid string) (*quest.CompleteChallengeResult, error)
+	SelectBranch(ctx context.Context, questID int64, crewID, branchChoice string) (*quest.SelectBranchResult, error)
 }
 
 var handler QuestHandler
@@ -32,10 +35,11 @@ func Setup(h QuestHandler) {
 //	/api/quests                      → list
 //	/api/quests/<id>                 → get by id
 //	/api/quests/<id>/start           → start quest (POST)
+//	/api/quests/<id>/branch          → select narrative branch (POST)
 //	/api/quests/<id>/challenges/<cid>/complete → complete challenge (POST)
 type routeInfo struct {
 	idStr  string // raw quest id segment ("" when absent)
-	action string // "start", "complete", or ""
+	action string // "start", "branch", "complete", or ""
 	cidStr string // raw challenge id segment ("" when absent)
 }
 
@@ -56,6 +60,8 @@ func parseQuestPath(path string) routeInfo {
 		return routeInfo{idStr: parts[0]}
 	case len(parts) == 2 && parts[1] == "start":
 		return routeInfo{idStr: parts[0], action: "start"}
+	case len(parts) == 2 && parts[1] == "branch":
+		return routeInfo{idStr: parts[0], action: "branch"}
 	case len(parts) == 4 && parts[1] == "challenges" && parts[3] == "complete":
 		return routeInfo{idStr: parts[0], action: "complete", cidStr: parts[2]}
 	}
@@ -79,6 +85,9 @@ func Handler(w http.ResponseWriter, r *http.Request) {
 	case r.Method == http.MethodPost && route.action == "start":
 		idStr := route.idStr
 		routeFn = func(c *auth.SessionClaims) { handleStart(w, r, c, idStr) }
+	case r.Method == http.MethodPost && route.action == "branch":
+		idStr := route.idStr
+		routeFn = func(c *auth.SessionClaims) { handleSelectBranch(w, r, c, idStr) }
 	case r.Method == http.MethodPost && route.action == "complete":
 		idStr, cidStr := route.idStr, route.cidStr
 		routeFn = func(c *auth.SessionClaims) { handleCompleteChallenge(w, r, c, idStr, cidStr) }
@@ -176,4 +185,38 @@ func handleCompleteChallenge(w http.ResponseWriter, r *http.Request, claims *aut
 
 func isNotFound(err error) bool {
 	return strings.Contains(err.Error(), "not found")
+}
+
+type selectBranchReq struct {
+	Branch string `json:"branch"`
+}
+
+func handleSelectBranch(w http.ResponseWriter, r *http.Request, claims *auth.SessionClaims, idStr string) {
+	questID, err := strconv.ParseInt(idStr, 10, 64)
+	if err != nil {
+		shared.WriteJSONError(w, "invalid quest id", http.StatusBadRequest)
+		return
+	}
+
+	var req selectBranchReq
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil || req.Branch == "" {
+		shared.WriteJSONError(w, "invalid request body", http.StatusBadRequest)
+		return
+	}
+
+	result, err := handler.SelectBranch(r.Context(), questID, claims.CrewID, req.Branch)
+	if err != nil {
+		if errors.Is(err, quest.ErrInvalidBranchChoice) || errors.Is(err, quest.ErrNoBranchOptions) {
+			shared.WriteJSONError(w, err.Error(), http.StatusBadRequest)
+			return
+		}
+		if isNotFound(err) || errors.Is(err, quest.ErrQuestNotFound) {
+			shared.WriteJSONError(w, "quest not found", http.StatusNotFound)
+			return
+		}
+		shared.WriteJSONError(w, "failed to select branch", http.StatusInternalServerError)
+		return
+	}
+
+	shared.WriteJSON(w, http.StatusOK, result)
 }

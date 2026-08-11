@@ -13,6 +13,8 @@ import (
 var ErrQuestNotFound = errors.New("quest not found")
 var ErrQuestNotInCrew = errors.New("quest not found")
 var ErrChallengeNotFound = errors.New("challenge not found")
+var ErrInvalidBranchChoice = errors.New("invalid branch choice")
+var ErrNoBranchOptions = errors.New("quest has no branch choices")
 
 // QuestGate provides cross-service checks needed for prerequisite filtering.
 // Implemented by an adapter composed in the handler layer to avoid import cycles.
@@ -56,7 +58,8 @@ type QuestWithChallenges struct {
 	ActiveChallengeAssignedTo *string          `json:"active_challenge_assigned_to,omitempty"`
 	// Members is a best-effort roster of the crew (UID -> name/role) used to
 	// render relay leg ownership. Omitted when the user store is unavailable.
-	Members []CrewMember `json:"members,omitempty"`
+	Members       []CrewMember   `json:"members,omitempty"`
+	BranchOptions []BranchOption `json:"branch_options,omitempty"`
 }
 
 // QuestView is the quest summary used for list responses.
@@ -293,6 +296,9 @@ func (s *QuestService) getWithChallenges(ctx context.Context, q *game.Quest) (*Q
 		if players, err := s.users.ListUsersByCrew(ctx, q.CrewID); err == nil {
 			result.Members = toCrewMembers(players)
 		}
+	}
+	if tpl, ok := LookupTemplate(q.TemplateSlug); ok && len(tpl.BranchOptions) > 0 {
+		result.BranchOptions = tpl.BranchOptions
 	}
 	return result, nil
 }

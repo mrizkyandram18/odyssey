@@ -137,7 +137,30 @@ target state.
 ### Submission
 
 A player's response to a Challenge. Content may be text, image, or voice note.
-See the **Creative Layer** for Story-submission specializations.
+### StoryFragment
+
+A collectible narrative fragment tied to a specific realm. Secret/hidden fragments (`is_hidden = true`) are revealed when returning to complete a **Realm Replay**.
+
+| Field | Type | Notes |
+|---|---|---|
+| `slug` | TEXT (PK) | Unique fragment identifier |
+| `realm` | TEXT | FK → Realm |
+| `title` | TEXT | Display title |
+| `content` | TEXT | Story text snippet |
+| `set_name` | TEXT | Grouping set name |
+| `is_hidden` | BOOLEAN | `true` if unlocked only via realm replay |
+
+### PlayerStoryFragment
+
+Tracks a player's discovery of a specific `StoryFragment`.
+
+| Field | Type | Notes |
+|---|---|---|
+| `id` | BIGINT (PK) | Auto-increment primary key |
+| `uid` | TEXT | FK → Player |
+| `crew_id` | TEXT | FK → Crew |
+| `fragment_slug` | TEXT | FK → StoryFragment |
+| `discovered_at` | TIMESTAMPTZ | Timestamp of discovery |
 
 ---
 
@@ -228,6 +251,7 @@ runtime behavior. Each definition is independent and maps to a database table.
 | `AchievementDefinition` | `odyssey_achievement_definitions` | Milestone definition |
 | `SeasonDefinition` | `odyssey_season_definitions` | Time-bounded progression arc |
 | `LoreDefinition` | `odyssey_lore_definitions` | Narrative lore entry |
+| `StoryFragment` | `odyssey_story_fragments` | Collectible story fragment definition |
 
 ### Runtime Layer (`pkg/game`, `pkg/content`)
 
@@ -255,6 +279,7 @@ content definitions.
 | `Relic` | `odyssey_relics` | Awarded relic instance |
 | `Chest` | `odyssey_chests` | Awarded chest instance |
 | `Achievement` | `odyssey_achievements` | Earned achievement |
+| `PlayerStoryFragment` | `odyssey_player_story_fragments` | Player's discovered story fragment |
 
 ---
 
@@ -272,7 +297,9 @@ content definitions.
 | AchievementDefinition | `odyssey_achievement_definitions` | Definition |
 | SeasonDefinition | `odyssey_season_definitions` | Definition |
 | LoreDefinition | `odyssey_lore_definitions` | Definition |
+| StoryFragment | `odyssey_story_fragments` | Definition |
 | QuestInstance | `odyssey_quests` | Runtime |
 | PlayerRelic | `odyssey_player_relics` | Player |
 | Achievement | `odyssey_achievements` | Player |
 | Chest | `odyssey_chests` | Player |
+| PlayerStoryFragment | `odyssey_player_story_fragments` | Player |

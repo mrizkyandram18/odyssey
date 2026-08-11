@@ -27,6 +27,7 @@ import (
 	"odyssey/internal/api/relics"
 	"odyssey/internal/api/rewards"
 	"odyssey/internal/api/status"
+	apiStoryFragments "odyssey/internal/api/story_fragments"
 	"odyssey/pkg/auth"
 	"odyssey/pkg/content"
 	"odyssey/pkg/db"
@@ -41,6 +42,7 @@ import (
 	"odyssey/pkg/game/crewstreak"
 	"odyssey/pkg/game/dailyturn"
 	"odyssey/pkg/game/events"
+	"odyssey/pkg/game/fragment"
 	gamehome "odyssey/pkg/game/home"
 	"odyssey/pkg/game/lore"
 	"odyssey/pkg/game/progression"
@@ -252,6 +254,9 @@ func BuildHandler() (*Server, error) {
 	apiLore.Setup(loreSvc)
 	apiAchievements.Setup(achieveSvc)
 
+	fragSvc := fragment.NewFragmentService(nil, repo.RealmProgress, progSvc)
+	apiStoryFragments.Setup(fragSvc)
+
 	reactionSvc := social.NewReactionServiceWithItems(repo.Reactions, repo.CreativeSubmissions, repo.Creatives, repo.Quests)
 	apiReactions.Setup(reactionSvc)
 
@@ -418,6 +423,8 @@ func BuildHandler() (*Server, error) {
 	mux.HandleFunc("/api/chapters/", secure(mw.RequireAuth(apiChapters.Handler)))
 	mux.HandleFunc("/api/lore", secure(mw.RequireAuth(apiLore.Handler)))
 	mux.HandleFunc("/api/lore/", secure(mw.RequireAuth(apiLore.Handler)))
+	mux.HandleFunc("/api/story_fragments", secure(mw.RequireAuth(apiStoryFragments.Handler)))
+	mux.HandleFunc("/api/story_fragments/", secure(mw.RequireAuth(apiStoryFragments.Handler)))
 	mux.HandleFunc("/api/achievements", secure(mw.RequireAuth(apiAchievements.Handler)))
 	mux.HandleFunc("/api/achievements/", secure(mw.RequireAuth(apiAchievements.Handler)))
 	mux.HandleFunc("/api/reactions", secure(mw.RequireAuth(apiReactions.Handler)))

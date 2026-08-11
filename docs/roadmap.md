@@ -109,20 +109,32 @@ relay quests, and creative spaces feel like a shared living space.
 
 ## Phase 3 — Deeper Storytelling (Weeks 9–14)
 
+**Status:** **COMPLETE** (2026-08-11) — code + automated unit/integration tests PASS
+**Evidence:** Slice 3.1 (Branch choices, Quest variety PUZZLE/RESEARCH/MOVEMENT), Slice 3.2 (Second Realm `clockwork-city`, Realm replay & hidden dialogue), Slice 3.3 (Story Fragments collectible, +20 XP idempotent reward, 3-tab Journal gallery)
+
 **Goal:** Introduce narrative depth and branching.
 
 **What ships:**
 
 - **Branch choices** in quests — different story outcomes based on family
   decisions (no currency cost; choices are narrative forks).
-- **Story Fragment** collectible mechanic with a completion reward (a Relic or
-  Chest).
-- **Second realm** unlocked through crew + Realm Progress.
+- **Story Fragment** collectible mechanic with a completion reward (+20 XP).
+- **Second realm** (`clockwork-city`) unlocked through crew + Realm Progress.
 - **Quest variety:** puzzle, movement-based, and research challenges.
 - **Achievement log** (personal + group milestones) accessible from a
   journal screen.
 - **Realm replay:** returning to completed realms reveals new dialogue and
   hidden story fragments.
+
+**Validation Results:**
+- `go test -count=1 ./...` : PASS (all 58 packages pass)
+- `go vet ./...`         : PASS (0 issues)
+- `go build ./...`       : PASS (clean build)
+- `npm test -- --run`    : PASS (16 test files, 125/125 tests passing)
+- `npm run lint`         : PASS (0 errors, 7 warnings)
+- `npx tsc --noEmit`     : PASS (0 TypeScript errors)
+- `npm run build`        : PASS (clean PWA bundle build)
+- `git diff --check`     : PASS (0 whitespace errors)
 
 **Exit criteria:** The family debates branching choices together and revisits
 realms to find new content.

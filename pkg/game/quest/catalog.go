@@ -4,6 +4,13 @@ import (
 	"odyssey/pkg/game/world"
 )
 
+// BranchOption defines a narrative choice option for a quest.
+type BranchOption struct {
+	Slug        string `json:"slug"`
+	Title       string `json:"title"`
+	Description string `json:"description"`
+}
+
 // QuestTemplate is the code-embedded definition for a quest (see
 // docs/domain-model.md: "Quest (template) referenced by slug in odyssey_quests").
 // Templates are NOT persisted; they live in code for the MVP and provide the
@@ -14,6 +21,7 @@ type QuestTemplate struct {
 	Realm         string
 	Type          QuestType
 	ChallengeDefs []ChallengeDef
+	BranchOptions []BranchOption
 }
 
 // ChallengeDef describes a single challenge within a template.
@@ -96,6 +104,7 @@ var questCatalog = map[string]QuestTemplate{
 			{Slug: "herb-lore", Description: "Name one use for a common houseplant.", Type: ChallengeResearch},
 		},
 	},
+	// SOLO — puzzle / observation with narrative branching choices
 	"riddle-of-the-stones": {
 		Slug:  "riddle-of-the-stones",
 		Title: "Riddle of the Stones",
@@ -104,6 +113,10 @@ var questCatalog = map[string]QuestTemplate{
 		ChallengeDefs: []ChallengeDef{
 			{Slug: "stone-shape", Description: "Find a stone or brick and describe its shape.", Type: ChallengeObservation},
 			{Slug: "solve-riddle", Description: "Solve: I have no voice, yet I answer every question. What am I?", Type: ChallengePuzzle},
+		},
+		BranchOptions: []BranchOption{
+			{Slug: "path-of-echoes", Title: "Langkah Gema Berbisik", Description: "Kru memilih menyusuri tebing gaung bertekstur lumut."},
+			{Slug: "path-of-moss", Title: "Langkah Karpet Hijau", Description: "Kru memilih menelusuri karpet hijau di dasar lembah."},
 		},
 	},
 	// RELAY — sequential legs; next leg is assigned round-robin after each completion
@@ -137,6 +150,21 @@ var questCatalog = map[string]QuestTemplate{
 		ChallengeDefs: []ChallengeDef{
 			{Slug: "riddle-solve", Description: "Solve the riddle: I am always hungry, I must always be fed. The finger I touch will soon turn red. What am I?", Type: ChallengePuzzle},
 			{Slug: "find-marker", Description: "Find a natural marker (stone, stick, leaf) that matches the riddle answer.", Type: ChallengeObservation},
+		},
+	},
+	// SOLO — movement / observation challenge in Clockwork City
+	"clockwork-expedition": {
+		Slug:  "clockwork-expedition",
+		Title: "Clockwork Expedition",
+		Realm: "clockwork-city",
+		Type:  QuestTypeSolo,
+		ChallengeDefs: []ChallengeDef{
+			{Slug: "step-count", Description: "Berjalan 100 langkah atau periksa sudut bayangan menara jam.", Type: ChallengeMovement},
+			{Slug: "gear-observation", Description: "Catat tiga objek berputar yang kamu temukan.", Type: ChallengeObservation},
+		},
+		BranchOptions: []BranchOption{
+			{Slug: "path-of-copper", Title: "Jalur Tembaga Kuning", Description: "Kru menelusuri lorong tembaga kuno yang berkilau."},
+			{Slug: "path-of-steam", Title: "Jalur Uap Bertekanan", Description: "Kru menelusuri lorong uap panas bertekanan tinggi."},
 		},
 	},
 }

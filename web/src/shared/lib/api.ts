@@ -10,6 +10,10 @@ import type {
   AchievementView,
   LoreView,
   RealmProgress,
+  SelectBranchResult,
+  StoryFragmentView,
+  DiscoverResult,
+  ReplayResult,
 } from '../types'
 import { getSession, isSessionExpired } from './session'
 
@@ -140,6 +144,8 @@ export const questsApi = {
   start: (id: number) => apiClient.post<{ started: boolean }>(`/api/quests/${id}/start`, {}),
   completeChallenge: (questId: number, challengeId: number) =>
     apiClient.post<CompleteChallengeResult>(`/api/quests/${questId}/challenges/${challengeId}/complete`, {}),
+  selectBranch: (questId: number, branch: string) =>
+    apiClient.post<SelectBranchResult>(`/api/quests/${questId}/branch`, { branch }),
 }
 
 export const achievementsApi = {
@@ -148,6 +154,12 @@ export const achievementsApi = {
 
 export const loreApi = {
   list: () => apiClient.get<LoreView[]>('/api/lore'),
+}
+
+export const storyFragmentsApi = {
+  list: () => apiClient.get<StoryFragmentView[]>('/api/story_fragments'),
+  discover: (slug: string) => apiClient.post<DiscoverResult>('/api/story_fragments/discover', { slug }),
+  replay: (realm: string) => apiClient.post<ReplayResult>('/api/story_fragments/replay', { realm }),
 }
 
 export const realmProgressApi = {

@@ -104,6 +104,9 @@ func (m *mockRealmProgressStoreForHandler) UpdateRealmProgress(ctx context.Conte
 		if v, ok := patch["status"].(string); ok {
 			rp.Status = v
 		}
+		if v, ok := patch["story_branch"].(string); ok {
+			rp.StoryBranch = v
+		}
 		if v, ok := patch["last_unlocked_at"]; ok && v != nil {
 			rp.LastUnlockedAt, _ = patch["last_unlocked_at"].(time.Time)
 		}
@@ -737,5 +740,91 @@ func TestCompleteChallenge_ConcurrentExactlyOnceReward(t *testing.T) {
 	quest, _ := store.GetQuest(context.Background(), 1)
 	if quest.Status != string(QuestStatusDone) {
 		t.Errorf("expected quest DONE, got %s", quest.Status)
+	}
+}
+
+func TestSelectBranch_Valid_PersistsBranch(t *testing.T) {
+	qsStore := newMockQuestStore()
+	qsStore.quests[1] = &game.Quest{
+		ID:           1,
+		CrewID:       "crew-1",
+		TemplateSlug: "riddle-of-the-stones",
+		Title:        "Riddle of the Stones",
+		Status:       "ACTIVE",
+	}
+
+	realmStore := &mockRealmProgressStoreForHandler{
+		progress: map[string]*game.RealmProgress{
+			"crew-1|whispering-woods": {CrewID: "crew-1", Realm: "whispering-woods", Status: "ACTIVE", Progress: 10},
+		},
+	}
+
+	svc := NewQuestService(qsStore)
+	handler := NewQuestAPIHandler(svc, nil, realmStore, nil, nil)
+
+	ctx := context.Background()
+	res, err := handler.SelectBranch(ctx, 1, "crew-1", "path-of-echoes")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	if !res.Success || res.StoryBranch != "path-of-echoes" || res.Realm != "whispering-woods" {
+		t.Errorf("unexpected res: %+v", res)
+	}
+
+	if realmStore.progress["crew-1|whispering-woods"].StoryBranch != "path-of-echoes" {
+		t.Errorf("expected story_branch 'path-of-echoes', got %s", realmStore.progress["crew-1|whispering-woods"].StoryBranch)
+	}
+}
+
+func TestSelectBranch_InvalidChoice_Rejected(t *testing.T) {
+	qsStore := newMockQuestStore()
+	qsStore.quests[1] = &game.Quest{
+		ID:           1,
+		CrewID:       "crew-1",
+		TemplateSlug: "riddle-of-the-stones",
+		Title:        "Riddle of the Stones",
+		Status:       "ACTIVE",
+	}
+
+	realmStore := &mockRealmProgressStoreForHandler{
+		progress: map[string]*game.RealmProgress{
+			"crew-1|whispering-woods": {CrewID: "crew-1", Realm: "whispering-woods", Status: "ACTIVE", Progress: 10},
+		},
+	}
+
+	svc := NewQuestService(qsStore)
+	handler := NewQuestAPIHandler(svc, nil, realmStore, nil, nil)
+
+	ctx := context.Background()
+	_, err := handler.SelectBranch(ctx, 1, "crew-1", "arbitrary-hacked-branch")
+	if err == nil || err != ErrInvalidBranchChoice {
+		t.Fatalf("expected ErrInvalidBranchChoice, got %v", err)
+	}
+}
+
+func TestSelectBranch_LinearQuest_NoBranch(t *testing.T) {
+	qsStore := newMockQuestStore()
+	qsStore.quests[1] = &game.Quest{
+		ID:           1,
+		CrewID:       "crew-1",
+		TemplateSlug: "morning-light",
+		Title:        "Morning Light",
+		Status:       "ACTIVE",
+	}
+
+	realmStore := &mockRealmProgressStoreForHandler{
+		progress: map[string]*game.RealmProgress{
+			"crew-1|whispering-woods": {CrewID: "crew-1", Realm: "whispering-woods", Status: "ACTIVE", Progress: 10},
+		},
+	}
+
+	svc := NewQuestService(qsStore)
+	handler := NewQuestAPIHandler(svc, nil, realmStore, nil, nil)
+
+	ctx := context.Background()
+	_, err := handler.SelectBranch(ctx, 1, "crew-1", "path-of-echoes")
+	if err == nil || err != ErrNoBranchOptions {
+		t.Fatalf("expected ErrNoBranchOptions, got %v", err)
 	}
 }

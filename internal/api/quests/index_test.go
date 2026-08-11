@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 	"time"
 
@@ -25,6 +26,8 @@ type mockQuestHandler struct {
 	completedChallenge int64
 	completeResult     *quest.CompleteChallengeResult
 	completeErr        error
+	selectedBranch     string
+	selectBranchErr    error
 }
 
 func (m *mockQuestHandler) List(ctx context.Context, crewID string) ([]quest.QuestView, error) {
@@ -65,6 +68,21 @@ func (m *mockQuestHandler) CompleteChallenge(ctx context.Context, questID, chall
 	m.completedQuestID = questID
 	m.completedChallenge = challengeID
 	return m.completeResult, nil
+}
+
+func (m *mockQuestHandler) SelectBranch(ctx context.Context, questID int64, crewID, branchChoice string) (*quest.SelectBranchResult, error) {
+	if m.selectBranchErr != nil {
+		return nil, m.selectBranchErr
+	}
+	if m.notFound {
+		return nil, quest.ErrQuestNotFound
+	}
+	m.selectedBranch = branchChoice
+	return &quest.SelectBranchResult{
+		Success:     true,
+		StoryBranch: branchChoice,
+		Realm:       "clockwork-city",
+	}, nil
 }
 
 func makeUserToken(t *testing.T, issuer *auth.HMACSessionIssuer) string {
@@ -378,4 +396,76 @@ func TestQuestsHandler_CompleteChallenge_InvalidIDs(t *testing.T) {
 
 func TestQuestsHandler_ImplementsInterface(t *testing.T) {
 	var _ QuestHandler = (*mockQuestHandler)(nil)
+}
+
+func TestQuestsHandler_SelectBranch_Valid(t *testing.T) {
+	Setup(&mockQuestHandler{})
+	issuer := auth.NewSessionIssuer("test-secret")
+	mw := auth.NewMiddleware(issuer)
+	token := makeUserToken(t, issuer)
+
+	body := strings.NewReader(`{"branch":"path-of-copper"}`)
+	req := httptest.NewRequest(http.MethodPost, "/api/quests/1/branch", body)
+	req.Header.Set("Authorization", "Bearer "+token)
+	w := httptest.NewRecorder()
+	mw.RequireAuth(Handler)(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d: %s", w.Code, w.Body.String())
+	}
+
+	var res quest.SelectBranchResult
+	if err := json.Unmarshal(w.Body.Bytes(), &res); err != nil {
+		t.Fatalf("unmarshal: %v", err)
+	}
+	if !res.Success || res.StoryBranch != "path-of-copper" {
+		t.Errorf("unexpected res: %+v", res)
+	}
+}
+
+func TestQuestsHandler_SelectBranch_InvalidChoice(t *testing.T) {
+	Setup(&mockQuestHandler{selectBranchErr: quest.ErrInvalidBranchChoice})
+	issuer := auth.NewSessionIssuer("test-secret")
+	mw := auth.NewMiddleware(issuer)
+	token := makeUserToken(t, issuer)
+
+	body := strings.NewReader(`{"branch":"invalid-branch"}`)
+	req := httptest.NewRequest(http.MethodPost, "/api/quests/1/branch", body)
+	req.Header.Set("Authorization", "Bearer "+token)
+	w := httptest.NewRecorder()
+	mw.RequireAuth(Handler)(w, req)
+
+	if w.Code != http.StatusBadRequest {
+		t.Errorf("expected 400 for invalid branch choice, got %d", w.Code)
+	}
+}
+
+func TestQuestsHandler_SelectBranch_LinearQuestNoBranch(t *testing.T) {
+	Setup(&mockQuestHandler{selectBranchErr: quest.ErrNoBranchOptions})
+	issuer := auth.NewSessionIssuer("test-secret")
+	mw := auth.NewMiddleware(issuer)
+	token := makeUserToken(t, issuer)
+
+	body := strings.NewReader(`{"branch":"some-branch"}`)
+	req := httptest.NewRequest(http.MethodPost, "/api/quests/1/branch", body)
+	req.Header.Set("Authorization", "Bearer "+token)
+	w := httptest.NewRecorder()
+	mw.RequireAuth(Handler)(w, req)
+
+	if w.Code != http.StatusBadRequest {
+		t.Errorf("expected 400 for quest with no branch options, got %d", w.Code)
+	}
+}
+
+func TestQuestsHandler_SelectBranch_Unauthorized(t *testing.T) {
+	Setup(&mockQuestHandler{})
+
+	body := strings.NewReader(`{"branch":"path-of-copper"}`)
+	req := httptest.NewRequest(http.MethodPost, "/api/quests/1/branch", body)
+	w := httptest.NewRecorder()
+	Handler(w, req)
+
+	if w.Code != http.StatusUnauthorized {
+		t.Errorf("expected 401 unauthorized, got %d", w.Code)
+	}
 }

@@ -68,6 +68,26 @@ type RealmProgress struct {
 	UpdatedAt      time.Time `json:"updated_at"`
 }
 
+// StoryFragment is a collectible narrative piece in a realm.
+type StoryFragment struct {
+	Slug      string    `json:"slug"`
+	Realm     string    `json:"realm"`
+	Title     string    `json:"title"`
+	Content   string    `json:"content"`
+	SetName   string    `json:"set_name"`
+	IsHidden  bool      `json:"is_hidden"`
+	CreatedAt time.Time `json:"created_at"`
+}
+
+// PlayerStoryFragment tracks player discovery of a story fragment.
+type PlayerStoryFragment struct {
+	ID           int64     `json:"id"`
+	UID          string    `json:"uid"`
+	CrewID       string    `json:"crew_id"`
+	FragmentSlug string    `json:"fragment_slug"`
+	DiscoveredAt time.Time `json:"discovered_at"`
+}
+
 // CreativeItem is an append-only contribution to a creative space.
 type CreativeItem struct {
 	ID        int64     `json:"id"`
@@ -97,10 +117,10 @@ const (
 type SubmissionKind string
 
 const (
-	SubmissionStory SubmissionKind = "STORY"
-	SubmissionComic SubmissionKind = "COMIC"
-	SubmissionPhoto SubmissionKind = "PHOTO"
-	SubmissionVideo SubmissionKind = "VIDEO"
+	SubmissionStory   SubmissionKind = "STORY"
+	SubmissionComic   SubmissionKind = "COMIC"
+	SubmissionPhoto   SubmissionKind = "PHOTO"
+	SubmissionVideo   SubmissionKind = "VIDEO"
 	SubmissionDrawing SubmissionKind = "DRAWING"
 )
 

@@ -196,7 +196,10 @@ export interface Achievement {
 export interface AchievementView {
   id: number
   code: string
+  slug?: string
   title: string
+  description?: string
+  icon?: string
   kind: AchievementKind
   trigger: AchievementTrigger
   threshold: number
@@ -404,6 +407,18 @@ export interface QuestView {
   active_challenge_assigned_to?: string
 }
 
+export interface BranchOption {
+  slug: string
+  title: string
+  description: string
+}
+
+export interface SelectBranchResult {
+  success: boolean
+  story_branch: string
+  realm: string
+}
+
 export interface CrewMember {
   uid: string
   explorer_name: string
@@ -424,6 +439,7 @@ export interface QuestWithChallenges {
   created_at: string
   challenges: Challenge[]
   members?: CrewMember[]
+  branch_options?: BranchOption[]
 }
 
 export interface CompleteChallengeResult {
@@ -554,6 +570,30 @@ export interface AchievementsSection {
   all: AchievementView[]
   recent: AchievementView[]
   count: number
+}
+
+export interface StoryFragmentView {
+  slug: string
+  realm: string
+  title: string
+  content: string
+  set_name: string
+  is_hidden: boolean
+  discovered: boolean
+  discovered_at?: string | null
+}
+
+export interface DiscoverResult {
+  fragment: StoryFragmentView
+  discovered: boolean
+  xp_granted: number
+}
+
+export interface ReplayResult {
+  realm: string
+  is_replay: boolean
+  bonus_dialogue: string
+  unlocked_fragments: StoryFragmentView[]
 }
 
 export interface ApiError {

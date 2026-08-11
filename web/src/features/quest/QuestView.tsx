@@ -6,7 +6,7 @@ import { isMyRelayTurn } from '../../shared/utils/questTurn'
 
 
 export function QuestView({ questId }: { questId: number }) {
-  const { quest, challenges, loading, error, startQuest, completeChallenge } = useQuest(questId)
+  const { quest, challenges, loading, error, startQuest, completeChallenge, selectBranch } = useQuest(questId)
   const { session } = useSession()
 
   if (loading) {
@@ -50,6 +50,7 @@ export function QuestView({ questId }: { questId: number }) {
         myUID={session?.uid}
         onStartQuest={startQuest}
         onCompleteChallenge={completeChallenge}
+        onSelectBranch={selectBranch}
         isMyTurn={isMyRelayTurn(quest, session?.uid)}
       />
     </div>

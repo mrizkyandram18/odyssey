@@ -7,8 +7,8 @@ func TestMVPCatalog_ExactlySixWhisperingWoods(t *testing.T) {
 	if len(slugs) != 6 {
 		t.Fatalf("expected 6 MVP quests, got %d", len(slugs))
 	}
-	if len(questCatalog) != 6 {
-		t.Fatalf("expected catalog size 6, got %d", len(questCatalog))
+	if len(questCatalog) < 6 {
+		t.Fatalf("expected catalog size at least 6, got %d", len(questCatalog))
 	}
 
 	types := map[QuestType]int{}

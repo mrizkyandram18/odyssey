@@ -398,3 +398,58 @@ func (h *QuestAPIHandler) publishRelayHandoff(ctx context.Context, qwc *QuestWit
 		}
 	}
 }
+
+// SelectBranchResult is returned by SelectBranch when a family member picks a narrative branch.
+type SelectBranchResult struct {
+	Success     bool   `json:"success"`
+	StoryBranch string `json:"story_branch"`
+	Realm       string `json:"realm"`
+}
+
+// SelectBranch records the family's narrative branch choice for a quest.
+func (h *QuestAPIHandler) SelectBranch(ctx context.Context, questID int64, crewID, branchChoice string) (*SelectBranchResult, error) {
+	qwc, err := h.qs.GetByCrewAndID(ctx, questID, crewID)
+	if err != nil {
+		return nil, err
+	}
+	tpl, ok := LookupTemplate(qwc.TemplateSlug)
+	if !ok || len(tpl.BranchOptions) == 0 {
+		return nil, ErrNoBranchOptions
+	}
+
+	var valid bool
+	for _, opt := range tpl.BranchOptions {
+		if opt.Slug == branchChoice {
+			valid = true
+			break
+		}
+	}
+	if !valid {
+		return nil, ErrInvalidBranchChoice
+	}
+
+	realm := tpl.Realm
+	if realm == "" {
+		realm = MVPRealm
+	}
+
+	rp, err := h.realm.GetRealmProgress(ctx, crewID, realm)
+	if err != nil {
+		return nil, fmt.Errorf("get realm progress: %w", err)
+	}
+	if rp == nil {
+		return nil, fmt.Errorf("realm progress not found for %s", realm)
+	}
+
+	if err := h.realm.UpdateRealmProgress(ctx, crewID, realm, map[string]any{
+		"story_branch": branchChoice,
+	}); err != nil {
+		return nil, fmt.Errorf("update story_branch: %w", err)
+	}
+
+	return &SelectBranchResult{
+		Success:     true,
+		StoryBranch: branchChoice,
+		Realm:       realm,
+	}, nil
+}

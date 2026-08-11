@@ -49,6 +49,9 @@
 odyssey/
 ├── api/                          # Go backend handlers (serverless-compatible)
 │   └── <resource>/index.go       # One Handler(w, r) per resource
+├── internal/
+│   └── api/
+│       └── story_fragments/      # Story fragment discovery/replay handlers
 ├── pkg/                          # Shared, reusable Go packages
 │   ├── auth/                     # Authenticator port + Firestore adapter
 │   ├── content/                  # ContentService (DB-backed definitions & caching)
@@ -57,6 +60,7 @@ odyssey/
 │   │   ├── quest/                # Quest & challenge domain
 │   │   ├── progression/          # XP, levels, milestones, relics
 │   │   ├── creative/             # Creative-space, story submissions
+│   │   ├── fragment/             # Story fragment discovery, replay & gallery domain
 │   │   └── world/                # Realm progress, world state
 │   ├── observability/            # Structured logging, metrics, health, profiler
 │   └── shared/                   # Config, security middleware, CORS, rate limiting
@@ -117,6 +121,7 @@ Owns:
 Owns:
 
 - Quest, challenge, world-state, and progression logic.
+- Story fragment discovery, catalog listing, and realm replay logic (`pkg/game/fragment`).
 - Reward computation (XP, Relic, Chest grants).
 - All game-domain types and rules.
 
@@ -137,10 +142,10 @@ Owns:
   TTL. Supports manual refresh via the admin API.
 - **Fallback chain** — when the database is empty, the ContentService falls
   back to hardcoded defaults embedded in the existing catalog packages
-  (`pkg/game/chest`, `pkg/game/quest`, `pkg/game/relic`, `pkg/game/world`).
+  (`pkg/game/chest`, `pkg/game/quest`, `pkg/game/relic`, `pkg/game/world`, `pkg/game/fragment`).
 
 The ContentService is consumed by gameplay services (QuestService,
-RewardEngine, RelicService, CreativeService) instead of hardcoded catalogs
+RewardEngine, RelicService, CreativeService, FragmentService) instead of hardcoded catalogs
 wherever possible. The fallback chain ensures the application never fails
 because content is missing.
 
@@ -162,6 +167,23 @@ Each resource has exactly one handler file with a single `Handler` function.
 Handlers are thin: parse request → call `pkg/game` or `pkg/content` or
 `pkg/auth` → write JSON response. Business logic lives in `pkg/`, never in
 `api/`.
+
+### `internal/api/story_fragments/index.go` — Story Fragments API
+
+Provides endpoints for collectible story fragments and realm replays:
+
+- `GET /api/story_fragments` — List all story fragments with caller's discovery status
+- `POST /api/story_fragments/discover` — Discover/collect a fragment by slug (+20 XP)
+- `POST /api/story_fragments/replay` — Replay a completed realm for bonus dialogue & secret fragments
+
+#### Story Fragments Flow (`list` → `discover` → `replay`)
+1. **List (`GET /api/story_fragments`):** Fetches the full story fragment catalog merged with the player's discovery history (`discovered_at`).
+2. **Discover (`POST /api/story_fragments/discover`):** Player collects a fragment slug. Grants +20 XP if newly discovered.
+3. **Replay (`POST /api/story_fragments/replay`):** Verifies that the crew has completed the specified realm (`status = COMPLETE` or `progress >= 100`). Reveals secret hidden fragments (`is_hidden = true`) and returns narrative bonus dialogue.
+
+#### Authentication & Idempotency
+- **Auth & Authorization:** All endpoints require a valid session HMAC token validated via `auth.ClaimsFromRequest`. Queries and mutations are strictly scoped by `claims.UID` and `claims.CrewID`.
+- **Idempotency:** Fragment discovery awards +20 XP only on the initial discovery (`newlyDiscovered == true`). Subsequent calls for an already-discovered fragment return `newlyDiscovered = false` and `XPGranted = 0`, ensuring exactly-once XP grants.
 
 ### `api/admin/` — Admin CMS API
 

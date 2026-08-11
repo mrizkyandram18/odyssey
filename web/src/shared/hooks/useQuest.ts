@@ -64,6 +64,19 @@ export function useQuest(questId?: number) {
     }
   }
 
+  const selectBranch = async (branchSlug: string) => {
+    if (!questId) return
+    setError(null)
+    try {
+      const res = await questsApi.selectBranch(questId, branchSlug)
+      await fetchQuest()
+      return res
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'failed to select branch')
+      throw e
+    }
+  }
+
   return {
     quest: data,
     challenges: data?.challenges ?? [],
@@ -72,5 +85,6 @@ export function useQuest(questId?: number) {
     refresh: fetchQuest,
     startQuest,
     completeChallenge,
+    selectBranch,
   }
 }
