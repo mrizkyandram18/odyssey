@@ -185,6 +185,13 @@ type CosmeticUnlockStore interface {
 	Delete(ctx context.Context, uid, cosmeticID string) error
 }
 
+// PushSubscriptionStore manages Web Push subscriptions for users.
+type PushSubscriptionStore interface {
+	UpsertSubscription(ctx context.Context, sub *PushSubscription) (*PushSubscription, error)
+	ListSubscriptionsByUID(ctx context.Context, uid string) ([]PushSubscription, error)
+	DeleteSubscription(ctx context.Context, uid string, endpoint string) error
+}
+
 // Repository groups all persistence interfaces for convenient dependency injection.
 type Repository struct {
 	Users               UserStore
@@ -208,6 +215,7 @@ type Repository struct {
 	Activity            ActivityStore
 	RewardLedgers       RewardLedgerStore
 	CosmeticUnlocks     CosmeticUnlockStore
+	PushSubscriptions   PushSubscriptionStore
 }
 
 // BuildRepository is a package placeholder. Concrete repository construction

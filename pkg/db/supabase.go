@@ -44,6 +44,7 @@ var allowedTables = map[string]bool{
 	"odyssey_local_users":                 true,
 	"odyssey_reward_ledgers":              true,
 	"odyssey_cosmetic_unlocks":            true,
+	"odyssey_push_subscriptions":          true,
 }
 
 func validateTable(table string) error {

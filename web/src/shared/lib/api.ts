@@ -40,6 +40,13 @@ export class ApiClient {
     })
   }
 
+  async delete<T>(path: string, body?: unknown): Promise<T> {
+    return this.request<T>(path, {
+      method: 'DELETE',
+      body: body ? JSON.stringify(body) : undefined,
+    })
+  }
+
   /** Fetch CSRF token once per session for state-changing creative routes. */
   private async ensureCsrfToken(): Promise<string | null> {
     if (this.csrfToken && this.csrfToken.length >= 32) {
@@ -77,7 +84,7 @@ export class ApiClient {
     const method = (options.method || 'GET').toUpperCase()
     // Creative write routes require X-CSRF-Token (see pkg/server CSRF middleware).
     if (method !== 'GET' && method !== 'HEAD' && method !== 'OPTIONS') {
-      if (path.startsWith('/api/creative') || path.startsWith('/api/board')) {
+      if (path.startsWith('/api/creative') || path.startsWith('/api/board') || path.startsWith('/api/push')) {
         const csrf = await this.ensureCsrfToken()
         if (csrf) {
           headers['X-CSRF-Token'] = csrf
@@ -209,4 +216,17 @@ export const reactionsApi = {
       target_id: targetId,
       reaction_type: reactionType,
     }),
+}
+
+export interface PushSubscribePayload {
+  endpoint: string
+  keys: {
+    p256dh: string
+    auth: string
+  }
+}
+
+export const pushApi = {
+  subscribe: (payload: PushSubscribePayload) => apiClient.post<{ status: string }>('/api/push/subscribe', payload),
+  unsubscribe: (endpoint?: string) => apiClient.delete<{ status: string }>('/api/push/subscribe', endpoint ? { endpoint } : undefined),
 }

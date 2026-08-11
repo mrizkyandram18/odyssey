@@ -333,3 +333,14 @@ type CosmeticUnlock struct {
 	PricePaid   int64     `json:"price_paid"`
 	PurchasedAt time.Time `json:"purchased_at"`
 }
+
+// PushSubscription represents a Web Push API registration for an explorer.
+type PushSubscription struct {
+	ID        int64     `json:"id"`
+	UID       string    `json:"uid"`
+	Endpoint  string    `json:"endpoint"`
+	P256dh    string    `json:"p256dh"`
+	Auth      string    `json:"auth"`
+	CreatedAt time.Time `json:"created_at"`
+	UpdatedAt time.Time `json:"updated_at"`
+}

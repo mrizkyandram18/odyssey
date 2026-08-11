@@ -21,6 +21,11 @@ func ClaimsFromContext(ctx context.Context) (*SessionClaims, bool) {
 	return claims, ok
 }
 
+// ContextWithClaims attaches session claims to a context for testing or internal dispatch.
+func ContextWithClaims(ctx context.Context, claims *SessionClaims) context.Context {
+	return context.WithValue(ctx, sessionClaimsKey, claims)
+}
+
 // ClaimsFromRequest extracts session claims from the request context.
 func ClaimsFromRequest(r *http.Request) (*SessionClaims, bool) {
 	return ClaimsFromContext(r.Context())

@@ -18,6 +18,7 @@ import { Avatar } from '../../shared/components/atoms/Avatar'
 import { Shuffle } from 'lucide-react'
 
 import { getRoleMastery } from '../../shared/utils/roleMastery'
+import { PushNotificationToggle } from '../../shared/components/molecules/PushNotificationToggle'
 
 export function ProfilePage() {
   const { profile, session, loading, error, logout, refreshProfile } = useSession()
@@ -441,6 +442,8 @@ export function ProfilePage() {
           </div>
         </div>
       )}
+
+      <PushNotificationToggle />
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         {/* Crew Info */}

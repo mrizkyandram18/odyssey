@@ -20,6 +20,7 @@ import (
 	"odyssey/internal/api/login"
 	apiLore "odyssey/internal/api/lore"
 	"odyssey/internal/api/me"
+	apiPush "odyssey/internal/api/push"
 	"odyssey/internal/api/quests"
 	apiReactions "odyssey/internal/api/reactions"
 	"odyssey/internal/api/realm_progress"
@@ -50,6 +51,7 @@ import (
 	"odyssey/pkg/game/social"
 	"odyssey/pkg/game/world"
 	"odyssey/pkg/observability"
+	"odyssey/pkg/push"
 	"odyssey/pkg/shared"
 )
 
@@ -258,6 +260,21 @@ func BuildHandler() (*Server, error) {
 
 	crews.Setup(repo.Crews)
 	realm_progress.Setup(repo.RealmProgress)
+	apiPush.Setup(repo.PushSubscriptions)
+
+	// Wire Web Push delivery. VAPID keys are optional — server starts normally
+	// without them, but push notifications will not be delivered.
+	pushSender, pushErr := push.NewSender(push.Config{
+		VAPIDPublicKey:  config.VAPIDPublicKey,
+		VAPIDPrivateKey: config.VAPIDPrivateKey,
+		VAPIDSubject:    config.VAPIDSubject,
+	}, repo.PushSubscriptions)
+	if pushErr != nil {
+		log.Printf("Warning: Web Push disabled — %v", pushErr)
+	} else {
+		dispatcher.Subscribe(events.EventTypeDailyTurnCompleted, push.NewDailyTurnHandler(pushSender))
+		dispatcher.Subscribe(events.EventTypeRelayHandoff, push.NewRelayHandoffHandler(pushSender))
+	}
 
 	secCfg := shared.DefaultSecurityConfig()
 	secCfg.AllowedOrigins = config.AllowedOrigins
@@ -411,6 +428,8 @@ func BuildHandler() (*Server, error) {
 	mux.HandleFunc("/api/cosmetics/", secure(mw.RequireAuth(apiCosmetics.Handler)))
 	mux.HandleFunc("/api/board", secure(mw.RequireAuth(csrf(apiBoard.Handler))))
 	mux.HandleFunc("/api/board/", secure(mw.RequireAuth(csrf(apiBoard.Handler))))
+	mux.HandleFunc("/api/push/subscribe", secure(mw.RequireAuth(csrf(apiPush.Handler))))
+	mux.HandleFunc("/api/push/subscribe/", secure(mw.RequireAuth(csrf(apiPush.Handler))))
 	mux.HandleFunc("/api/admin", secure(rateLimit(adminLimiter, mw.RequireRole(auth.RoleAdmin)(admin.Handler))))
 	mux.HandleFunc("/api/admin/", secure(rateLimit(adminLimiter, mw.RequireRole(auth.RoleAdmin)(admin.Handler))))
 

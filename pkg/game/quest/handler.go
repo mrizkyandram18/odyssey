@@ -229,6 +229,15 @@ func (h *QuestAPIHandler) CompleteChallenge(ctx context.Context, questID, challe
 	}
 	result.Quest = updated
 
+	// Emit RelayHandoffEvent when a relay leg was handed off to the next explorer.
+	// Conditions: the challenge progressed (not a replay), the quest is still
+	// active (not yet done), and there is a pending challenge with a new assignee
+	// that differs from the completer (uid). This is best-effort and never blocks
+	// the response.
+	if progressed && !questCompleted && h.publisher != nil {
+		h.publishRelayHandoff(ctx, updated, uid)
+	}
+
 	return result, nil
 }
 
@@ -367,4 +376,25 @@ func (h *QuestAPIHandler) publishQuestCompleted(ctx context.Context, qwc *QuestW
 		SeasonSlug:   seasonSlug,
 		PlayerUID:    uid,
 	})
+}
+
+// publishRelayHandoff emits a RelayHandoffEvent when the quest is still active
+// and its first pending challenge has an assignee other than the completer.
+// Best-effort: called only when publisher is set and challenge progressed.
+func (h *QuestAPIHandler) publishRelayHandoff(ctx context.Context, qwc *QuestWithChallenges, completedBy string) {
+	if h.publisher == nil || qwc == nil {
+		return
+	}
+	for _, c := range qwc.Challenges {
+		if c.Status == string(ChallengeStatusPending) && c.AssignedTo != nil && *c.AssignedTo != "" && *c.AssignedTo != completedBy {
+			h.publisher.Publish(ctx, events.RelayHandoffEvent{
+				FromUID:    completedBy,
+				ToUID:      *c.AssignedTo,
+				QuestID:    qwc.ID,
+				QuestTitle: qwc.Title,
+				CrewID:     qwc.CrewID,
+			})
+			return
+		}
+	}
 }

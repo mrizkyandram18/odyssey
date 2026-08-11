@@ -17,6 +17,7 @@ const (
 	EventTypeDailyTurnCompleted = "daily_turn_completed"
 	EventTypeLevelReached       = "level_reached"
 	EventTypeCreativeSubmission = "creative_submission"
+	EventTypeRelayHandoff       = "relay_handoff"
 )
 
 type QuestCompletedEvent struct {
@@ -56,6 +57,18 @@ type DailyTurnCompletedEvent struct {
 }
 
 func (e DailyTurnCompletedEvent) EventType() string { return EventTypeDailyTurnCompleted }
+
+// RelayHandoffEvent is published when a relay quest leg is assigned to the next
+// explorer. It is emitted only after the assignment has been persisted.
+type RelayHandoffEvent struct {
+	FromUID    string // Explorer who completed the previous leg
+	ToUID      string // Explorer now assigned the next leg
+	QuestID    int64
+	QuestTitle string
+	CrewID     string
+}
+
+func (e RelayHandoffEvent) EventType() string { return EventTypeRelayHandoff }
 
 type LevelReachedEvent struct {
 	UID      string
