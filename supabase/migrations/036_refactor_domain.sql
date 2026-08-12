@@ -26,7 +26,7 @@ ALTER TABLE odyssey_exercises RENAME COLUMN quest_id TO mission_id;
 
 -- 4. Rename Daily Turns to Daily Missions
 ALTER TABLE odyssey_daily_turns RENAME TO odyssey_daily_missions;
-ALTER TABLE odyssey_daily_missions RENAME COLUMN daily_turn_id TO daily_mission_id;
+-- No daily_turn_id column exists
 
 -- 5. Rename Realms & Chapters to Journeys & Courses
 ALTER TABLE odyssey_realm_definitions RENAME TO odyssey_journey_definitions;
