@@ -1,5 +1,5 @@
 import { Link, useLocation } from 'react-router-dom'
-import { Home, Scroll, Book, Palette, Sparkles, User, Compass } from 'lucide-react'
+import { Home, Scroll, Book, User, Compass } from 'lucide-react'
 import { useSession } from '../../hooks/useSession'
 import { ProgressBar } from '../atoms/ProgressBar'
 import { Avatar } from '../atoms/Avatar'
@@ -11,10 +11,8 @@ export function Sidebar() {
 
   const navItems = [
     { label: 'Beranda', path: '/', icon: <Home size={20} /> },
-    { label: 'Petualangan', path: '/quests', icon: <Scroll size={20} /> },
+    { label: 'Misi', path: '/quests', icon: <Scroll size={20} /> },
     { label: 'Jurnal', path: '/journal', icon: <Book size={20} /> },
-    { label: 'Kenangan', path: '/creative', icon: <Palette size={20} /> },
-    { label: 'Koleksi', path: '/relics', icon: <Sparkles size={20} /> },
     { label: 'Profil', path: '/profile', icon: <User size={20} /> },
   ]
 

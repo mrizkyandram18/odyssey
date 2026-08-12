@@ -248,7 +248,7 @@ export function QuestDetail({
           onClick={handleStart}
           className="w-full shadow-lg shadow-accent-magic/20 text-lg"
         >
-          Mulai Petualangan
+          Mulai Misi
         </Button>
       )}
 
@@ -273,11 +273,11 @@ export function QuestDetail({
       {/* Challenges List (Practice) */}
       <div className="mt-4">
         <h2 className="font-heading text-2xl text-text-primary mb-6">
-          {quest.status === 'ACTIVE' ? 'PRAKTIK' : 'Tujuan Misi'}
+          {quest.status === 'ACTIVE' ? 'LATIHAN' : 'Daftar Latihan'}
         </h2>
         {challenges.length === 0 ? (
           <p className="text-text-secondary italic">
-            Jalan ke depan dipenuhi misteri. Belum ada tujuan.
+            Belum ada latihan yang tersedia.
           </p>
         ) : (
           <div className="flex flex-col gap-4 relative">

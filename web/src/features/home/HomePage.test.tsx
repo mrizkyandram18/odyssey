@@ -234,4 +234,93 @@ describe('HomePage', () => {
       expect(screen.getByTestId('crew-banner')).toBeInTheDocument()
     })
   })
+
+  it('shows primary CTA when there are no active and no completed quests', async () => {
+    vi.mocked(apiClient.request).mockResolvedValueOnce({
+      player: { explorer_name: 'Tester', coins: 10 },
+      realm_progress: [],
+      daily_turn: { available: true, streak_days: 1 },
+      active_quests: [],
+      completed_quests_today: [],
+      available_chests: [],
+    })
+
+    render(
+      <MemoryRouter>
+        <HomePage />
+      </MemoryRouter>
+    )
+
+    await waitFor(() => {
+      expect(screen.getByText('Mulai Aktivitas Hari Ini')).toBeInTheDocument()
+    })
+  })
+
+  it('limits active quests to 2 and shows the remainder text', async () => {
+    vi.mocked(apiClient.request).mockResolvedValueOnce({
+      player: { explorer_name: 'Tester', coins: 10 },
+      realm_progress: [],
+      daily_turn: { available: true, streak_days: 1 },
+      active_quests: [
+        { id: 1, title: 'Q1', challenge_count: 1, completed_count: 0, status: 'ACTIVE' },
+        { id: 2, title: 'Q2', challenge_count: 1, completed_count: 0, status: 'ACTIVE' },
+        { id: 3, title: 'Q3', challenge_count: 1, completed_count: 0, status: 'ACTIVE' },
+      ],
+      completed_quests_today: [],
+      available_chests: [],
+    })
+
+    render(
+      <MemoryRouter>
+        <HomePage />
+      </MemoryRouter>
+    )
+
+    await waitFor(() => {
+      expect(screen.getByText('Q1')).toBeInTheDocument()
+      expect(screen.getByText('Q2')).toBeInTheDocument()
+      expect(screen.queryByText('Q3')).not.toBeInTheDocument()
+      expect(screen.getByText('+ 1 Misi lainnya...')).toBeInTheDocument()
+    })
+  })
+
+  it('shows coin tooltip correctly', async () => {
+    vi.mocked(apiClient.request).mockResolvedValueOnce({
+      player: { explorer_name: 'Tester', coins: 150 },
+      realm_progress: [],
+      daily_turn: { available: true, streak_days: 1 },
+      active_quests: [],
+      completed_quests_today: [],
+      available_chests: [],
+    })
+
+    render(
+      <MemoryRouter>
+        <HomePage />
+      </MemoryRouter>
+    )
+
+    await waitFor(() => {
+      const coinBadge = screen.getByTestId('home-coin-balance')
+      expect(coinBadge).toHaveAttribute('title', 'Koin adalah hadiah virtual dari aktivitas dan misi. Koin bisa digunakan untuk kosmetik profil.')
+      expect(coinBadge).toHaveTextContent('150')
+    })
+  })
+
+  it('renders onboarding immediately on first visit even before home loads', async () => {
+    // delay mock to simulate slow load
+    vi.mocked(apiClient.request).mockImplementationOnce(() => new Promise((resolve) => setTimeout(() => resolve({} as any), 1000)))
+    localStorage.removeItem('odyssey_onboarded')
+    
+    render(
+      <MemoryRouter>
+        <HomePage />
+      </MemoryRouter>
+    )
+
+    // Onboarding modal shows up immediately
+    expect(screen.getByText('Selamat datang di Odyssey!')).toBeInTheDocument()
+    // Home loader shows up under it
+    expect(screen.getByText('Memuat dunia...')).toBeInTheDocument()
+  })
 })

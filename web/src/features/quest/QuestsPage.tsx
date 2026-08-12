@@ -158,6 +158,11 @@ export function QuestsPage() {
 
   const activeQuests = filteredQuests.filter((q) => q.status === 'ACTIVE')
   const completedQuests = filteredQuests.filter((q) => q.status === 'DONE')
+  const pendingQuests = filteredQuests.filter(
+    (q) =>
+      q.status === 'PENDING' &&
+      availableQuests.some((aq) => aq.template_slug === q.template_slug)
+  )
 
   const handleSelectRealm = (slug: string) => {
     if (slug === 'all') {
@@ -268,14 +273,14 @@ export function QuestsPage() {
       )}
 
       <QuestList
-        title="Petualangan Aktif"
+        title="Misi Aktif"
         list={activeQuests}
         emptyMsg="Tidak ada misi aktif untuk topik ini."
         uid={session?.uid}
       />
       <QuestList
         title="Misi Tersedia"
-        list={availableQuests}
+        list={pendingQuests}
         emptyMsg="Tidak ada misi baru tersedia di topik ini."
         uid={session?.uid}
       />

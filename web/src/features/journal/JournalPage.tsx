@@ -22,11 +22,11 @@ export function JournalPage() {
         loreApi.list().catch(() => []),
         storyFragmentsApi.list().catch(() => []),
       ])
-      setAchievements(achData)
-      setLoreEntries(loreData)
-      setFragments(fragData)
+      setAchievements(achData || [])
+      setLoreEntries(loreData || [])
+      setFragments(fragData || [])
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'failed to load journal data')
+      setError(e instanceof Error ? e.message : 'Gagal memuat data jurnal')
     } finally {
       setLoading(false)
     }
@@ -43,7 +43,7 @@ export function JournalPage() {
   return (
     <div className="flex flex-col gap-6 max-w-5xl mx-auto py-4">
       <header className="mb-2">
-        <h1 className="font-heading text-4xl text-text-primary mb-2">Milestones & Jurnal Topik</h1>
+        <h1 className="font-heading text-4xl text-text-primary mb-2">Pencapaian & Jurnal Topik</h1>
         <p className="text-text-secondary">Catatan petualangan keluarga, cerita, dan kepingan kenangan yang terkumpul.</p>
       </header>
 
@@ -57,7 +57,7 @@ export function JournalPage() {
               : 'text-text-secondary hover:text-text-primary hover:bg-surface-glass'
           }`}
         >
-          Achievements ({unlockedAchievementsCount}/{achievements.length})
+          Pencapaian ({unlockedAchievementsCount}/{achievements.length})
         </button>
         <button
           onClick={() => setTab('lore')}
@@ -67,7 +67,7 @@ export function JournalPage() {
               : 'text-text-secondary hover:text-text-primary hover:bg-surface-glass'
           }`}
         >
-          Story Lore ({unlockedLoreCount}/{loreEntries.length})
+          Cerita Topik ({unlockedLoreCount}/{loreEntries.length})
         </button>
         <button
           onClick={() => setTab('fragments')}
@@ -77,7 +77,7 @@ export function JournalPage() {
               : 'text-text-secondary hover:text-text-primary hover:bg-surface-glass'
           }`}
         >
-          Story Fragments ({discoveredFragmentsCount}/{fragments.length})
+          Kepingan Kenangan ({discoveredFragmentsCount}/{fragments.length})
         </button>
       </div>
 
@@ -91,14 +91,14 @@ export function JournalPage() {
         <div className="flex h-64 w-full items-center justify-center">
           <div className="flex flex-col items-center gap-4 animate-pulse">
             <div className="text-4xl">📖</div>
-            <p className="text-sm text-text-secondary">Opening the chronicle...</p>
+            <p className="text-sm text-text-secondary">Membuka lembaran jurnal...</p>
           </div>
         </div>
       ) : tab === 'achievements' ? (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 animate-in fade-in duration-500">
           {achievements.length === 0 ? (
             <div className="col-span-full py-12 text-center text-text-secondary italic bg-surface-elevated/30 rounded-lg border border-dashed border-border-subtle">
-              No achievements configured yet.
+              Belum ada pencapaian. Mulai aktivitas pertamamu!
             </div>
           ) : (
             achievements.map((ach) => {
@@ -122,11 +122,11 @@ export function JournalPage() {
                         <h3 className="font-heading text-xl text-text-primary">{ach.title}</h3>
                         {ach.unlocked ? (
                           <span className="text-xs font-bold bg-accent-reward/20 text-accent-reward px-2 py-0.5 rounded border border-accent-reward/30">
-                            UNLOCKED
+                            TERBUKA
                           </span>
                         ) : (
                           <span className="text-xs font-bold bg-surface border border-border-subtle text-text-secondary px-2 py-0.5 rounded">
-                            LOCKED
+                            TERKUNCI
                           </span>
                         )}
                       </div>
@@ -137,7 +137,7 @@ export function JournalPage() {
                   {ach.threshold > 1 && !ach.unlocked && (
                     <div className="mt-auto pt-4">
                       <div className="flex justify-between text-xs text-text-secondary mb-1">
-                        <span>Progress</span>
+                        <span>Progres</span>
                         <span>{ach.progress} / {ach.threshold}</span>
                       </div>
                       <ProgressBar progress={progressPct} colorClass="bg-text-secondary" />
@@ -147,7 +147,7 @@ export function JournalPage() {
                   {ach.awarded_at && (
                     <div className="mt-auto pt-4">
                       <p className="text-xs font-medium text-accent-reward border-t border-accent-reward/20 pt-2 text-right">
-                        Awarded {new Date(ach.awarded_at).toLocaleDateString()}
+                        Diperoleh {new Date(ach.awarded_at).toLocaleDateString()}
                       </p>
                     </div>
                   )}
@@ -160,7 +160,7 @@ export function JournalPage() {
         <div className="flex flex-col gap-4 animate-in fade-in duration-500">
           {loreEntries.length === 0 ? (
             <div className="col-span-full py-12 text-center text-text-secondary italic bg-surface-elevated/30 rounded-lg border border-dashed border-border-subtle">
-              No story lore unlocked yet. Complete quests to discover the history of the realms!
+              Belum ada cerita topik yang terbuka. Selesaikan misi untuk mengungkap sejarah Odyssey!
             </div>
           ) : (
             loreEntries.map((lore) => (
@@ -184,7 +184,7 @@ export function JournalPage() {
                     </div>
                     {!lore.unlocked && (
                       <span className="text-xs font-bold bg-surface border border-border-subtle text-text-secondary px-3 py-1 rounded">
-                        LOCKED
+                        TERKUNCI
                       </span>
                     )}
                   </div>
@@ -196,7 +196,7 @@ export function JournalPage() {
                   ) : (
                     <p className="text-sm text-text-secondary italic flex items-center gap-2">
                       <span className="text-lg">🗝️</span>
-                      Complete chapter quests in {lore.realm.replace(/-/g, ' ')} to reveal this memory.
+                      Selesaikan misi pada topik {lore.realm.replace(/-/g, ' ')} untuk membuka kenangan ini.
                     </p>
                   )}
                 </div>
@@ -209,7 +209,7 @@ export function JournalPage() {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 animate-in fade-in duration-500">
           {fragments.length === 0 ? (
             <div className="col-span-full py-12 text-center text-text-secondary italic bg-surface-elevated/30 rounded-lg border border-dashed border-border-subtle">
-              No story fragments found in the world.
+              Belum ada kepingan kenangan yang ditemukan.
             </div>
           ) : (
             fragments.map((frag) => (
@@ -228,11 +228,11 @@ export function JournalPage() {
                     </span>
                     {frag.discovered ? (
                       <span className="text-xs font-bold bg-accent-nature/20 text-accent-nature px-2 py-0.5 rounded border border-accent-nature/30">
-                        DISCOVERED (+20 Poin)
+                        DITEMUKAN (+20 Poin)
                       </span>
                     ) : (
                       <span className="text-xs font-bold bg-surface border border-border-subtle text-text-secondary px-2 py-0.5 rounded">
-                        {frag.is_hidden ? '🔒 REPLAY SECRET' : '🔒 UNDISCOVERED'}
+                        {frag.is_hidden ? '🔒 RAHASIA (REPLAY)' : '🔒 BELUM DITEMUKAN'}
                       </span>
                     )}
                   </div>
@@ -246,8 +246,8 @@ export function JournalPage() {
                   ) : (
                     <p className="text-xs text-text-secondary italic mb-3">
                       {frag.is_hidden
-                        ? 'Jelajahi kembali (Replay) ranah yang telah tamat untuk menemukan fragmen tersembunyi ini.'
-                        : 'Jelajahi ranah dan selesaikan misi untuk menemukan fragmen cerita ini.'}
+                        ? 'Jelajahi kembali (Replay) topik yang telah tamat untuk menemukan kepingan tersembunyi ini.'
+                        : 'Jelajahi topik dan selesaikan misi untuk menemukan kepingan kenangan ini.'}
                     </p>
                   )}
                 </div>
