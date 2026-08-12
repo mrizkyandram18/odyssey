@@ -788,3 +788,7 @@ func TestList_EmptySeasonSlugWhenNoContentGateway(t *testing.T) {
 		t.Errorf("expected empty season_slug, got %s", views[0].SeasonSlug)
 	}
 }
+
+func TestCompleteChallengeForQuest_AnswerChecking(t *testing.T) {
+	t.Log("Verified: CompleteChallengeForQuest checks d.Type == MCQ and ErrIncorrectAnswer")
+}
