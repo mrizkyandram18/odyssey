@@ -107,6 +107,15 @@ func IsAdmin(r *http.Request) bool {
 	return claims.Role == string(RoleAdmin)
 }
 
+// IsGuideOrAdmin checks whether the session claims contain an admin or guide role.
+func IsGuideOrAdmin(r *http.Request) bool {
+	claims, ok := ClaimsFromRequest(r)
+	if !ok {
+		return false
+	}
+	return claims.Role == string(RoleAdmin) || claims.Role == string(RoleGuide)
+}
+
 // AdminUIDFromContext extracts the admin UID set by RequireRole(RoleAdmin).
 func AdminUIDFromContext(ctx context.Context) (string, bool) {
 	uid, ok := ctx.Value(adminUIDKey).(string)

@@ -33,6 +33,7 @@ import (
 	"odyssey/pkg/auth"
 	"odyssey/pkg/content"
 	"odyssey/pkg/db"
+	gameadmin "odyssey/pkg/game/admin"
 	"odyssey/pkg/game/dailyactivity"
 	"odyssey/pkg/game/achievement"
 	"odyssey/pkg/game/audit"
@@ -231,6 +232,8 @@ func BuildHandler() (*Server, error) {
 	adminSvc := admin.NewAdminService(contentSvc, adminStore, auditLogger)
 	adminSvc.SetBalance(balanceSvc)
 	adminSvc.SetMetrics(metrics)
+	gameAdminSvc := gameadmin.NewAdminService(supabaseClient)
+	adminSvc.SetGameAdmin(gameAdminSvc)
 	admin.Setup(adminSvc)
 
 	localUserStore := db.NewLocalUserStore(supabaseClient)
@@ -453,8 +456,8 @@ func BuildHandler() (*Server, error) {
 	mux.HandleFunc("/api/push/subscribe/", secure(mw.RequireAuth(csrf(apiPush.Handler))))
 	mux.HandleFunc("/api/seasons", secure(mw.RequireAuth(apiSeasons.Handler)))
 	mux.HandleFunc("/api/seasons/", secure(mw.RequireAuth(apiSeasons.Handler)))
-	mux.HandleFunc("/api/admin", secure(rateLimit(adminLimiter, mw.RequireRole(auth.RoleAdmin)(admin.Handler))))
-	mux.HandleFunc("/api/admin/", secure(rateLimit(adminLimiter, mw.RequireRole(auth.RoleAdmin)(admin.Handler))))
+	mux.HandleFunc("/api/admin", secure(rateLimit(adminLimiter, mw.RequireAuth(admin.Handler))))
+	mux.HandleFunc("/api/admin/", secure(rateLimit(adminLimiter, mw.RequireAuth(admin.Handler))))
 
 	mux.HandleFunc("/metrics", secure(observability.InternalTokenMiddleware(config.InternalMetricsToken, observability.MetricsHandler(metrics))))
 	mux.HandleFunc("/version", secure(observability.VersionHandler(&contentSvcGenProvider{svc: contentSvc})))

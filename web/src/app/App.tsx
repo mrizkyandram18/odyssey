@@ -15,6 +15,7 @@ import { ChestPage } from '../features/chests/ChestPage'
 import { ChestOpeningPage } from '../features/chests/ChestOpeningPage'
 import { RelicInventoryPage } from '../features/relics/RelicInventoryPage'
 import { RelicDetailPage } from '../features/relics/RelicDetailPage'
+import { AdminPage } from '../features/admin/AdminPage'
 
 export function App() {
   return (
@@ -37,6 +38,7 @@ export function App() {
         <Route path="/chests/open/:chestId" element={<ChestOpeningPage />} />
         <Route path="/relics" element={<RelicInventoryPage />} />
         <Route path="/relics/:slug" element={<RelicDetailPage />} />
+        <Route path="/admin" element={<AdminPage />} />
       </Route>
 
       <Route path="*" element={<Navigate to="/" replace />} />

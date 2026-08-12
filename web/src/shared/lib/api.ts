@@ -255,6 +255,38 @@ export interface PushSubscribePayload {
 export const pushApi = {
   subscribe: (payload: PushSubscribePayload) => apiClient.post<{ status: string }>('/api/push/subscribe', payload),
   unsubscribe: (endpoint?: string) => apiClient.delete<{ status: string }>('/api/push/subscribe', endpoint ? { endpoint } : undefined),
+  delete: () => apiClient.delete<{ success: boolean }>('/api/push'),
+}
+
+export interface AdminStats {
+  total_users: number
+  active_users_7d: number
+  active_users_30d: number
+  quest_completions: number
+  daily_activity_completions_today: number
+}
+
+export interface QuestStat {
+  slug: string
+  title: string
+  published: boolean
+  completion_count: number
+}
+
+export interface ActivityStat {
+  id: number
+  slug: string
+  title: string
+  active: boolean
+  completion_count: number
+}
+
+export const adminApi = {
+  getStats: () => apiClient.get<AdminStats>('/api/admin/stats'),
+  getQuests: () => apiClient.get<QuestStat[]>('/api/admin/quests'),
+  getDailyActivities: () => apiClient.get<ActivityStat[]>('/api/admin/daily-activities'),
+  toggleQuest: (slug: string) => apiClient.post<{ status: string }>(`/api/admin/quests/${slug}/toggle`, {}),
+  toggleActivity: (id: number) => apiClient.post<{ status: string }>(`/api/admin/daily-activities/${id}/toggle`, {}),
 }
 
 export const creativeApi = {

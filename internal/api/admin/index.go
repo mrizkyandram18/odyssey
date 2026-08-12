@@ -12,6 +12,7 @@ import (
 	"odyssey/pkg/auth"
 	"odyssey/pkg/content"
 	"odyssey/pkg/game/audit"
+	gameadmin "odyssey/pkg/game/admin"
 	gamecontent "odyssey/pkg/game/content"
 	"odyssey/pkg/game/validation"
 	"odyssey/pkg/observability"
@@ -98,6 +99,7 @@ type AdminContext struct {
 	auditLog   *audit.Logger
 	balance    BalanceService
 	metrics    *observability.Metrics
+	gameAdmin  *gameadmin.AdminService
 }
 
 // AdminService handles all admin CMS operations with audit logging.
@@ -123,6 +125,10 @@ func (s *AdminService) SetBalance(b BalanceService) {
 // SetMetrics attaches an optional metrics sink for validation failures.
 func (s *AdminService) SetMetrics(m *observability.Metrics) {
 	s.metrics = m
+}
+
+func (s *AdminService) SetGameAdmin(g *gameadmin.AdminService) {
+	s.gameAdmin = g
 }
 
 func adminUIDFromContext(ctx context.Context) string {
@@ -322,7 +328,7 @@ func Setup(s *AdminService) {
 func Handler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 
-	if !auth.IsAdmin(r) {
+	if !auth.IsGuideOrAdmin(r) {
 		shared.WriteUnauthorized(w)
 		return
 	}
@@ -346,6 +352,15 @@ func Handler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	first := parts[0]
+
+	// Admin-only endpoints guard
+	if first == "reload" || first == "status" || first == "metrics" || first == "validate" || first == "audit" || first == "balance" {
+		if !auth.IsAdmin(r) {
+			shared.WriteUnauthorized(w)
+			return
+		}
+	}
+
 	if first == "reload" && r.Method == http.MethodPost {
 		handleReload(w, r)
 		return
@@ -364,6 +379,64 @@ func Handler(w http.ResponseWriter, r *http.Request) {
 	}
 	if first == "audit" && r.Method == http.MethodGet {
 		handleAuditList(w, r)
+		return
+	}
+	if first == "stats" && r.Method == http.MethodGet {
+		if svc.gameAdmin != nil {
+			stats, err := svc.gameAdmin.GetStats(r.Context())
+			if err != nil {
+				shared.WriteJSONError(w, err.Error(), http.StatusInternalServerError)
+				return
+			}
+			shared.WriteJSON(w, http.StatusOK, stats)
+		} else {
+			shared.WriteJSONError(w, "game admin not configured", http.StatusInternalServerError)
+		}
+		return
+	}
+	if first == "quests" && len(parts) == 1 && r.Method == http.MethodGet {
+		if svc.gameAdmin != nil {
+			stats, err := svc.gameAdmin.GetQuests(r.Context())
+			if err != nil {
+				shared.WriteJSONError(w, err.Error(), http.StatusInternalServerError)
+				return
+			}
+			shared.WriteJSON(w, http.StatusOK, stats)
+		}
+		return
+	}
+	if first == "daily-activities" && len(parts) == 1 && r.Method == http.MethodGet {
+		if svc.gameAdmin != nil {
+			stats, err := svc.gameAdmin.GetDailyActivities(r.Context())
+			if err != nil {
+				shared.WriteJSONError(w, err.Error(), http.StatusInternalServerError)
+				return
+			}
+			shared.WriteJSON(w, http.StatusOK, stats)
+		}
+		return
+	}
+	if first == "quests" && len(parts) == 3 && parts[2] == "toggle" && r.Method == http.MethodPost {
+		if svc.gameAdmin != nil {
+			err := svc.gameAdmin.ToggleQuestPublished(r.Context(), parts[1])
+			if err != nil {
+				shared.WriteJSONError(w, err.Error(), http.StatusInternalServerError)
+				return
+			}
+			shared.WriteJSON(w, http.StatusOK, map[string]string{"status": "toggled"})
+		}
+		return
+	}
+	if first == "daily-activities" && len(parts) == 3 && parts[2] == "toggle" && r.Method == http.MethodPost {
+		if svc.gameAdmin != nil {
+			id, _ := strconv.ParseInt(parts[1], 10, 64)
+			err := svc.gameAdmin.ToggleActivityActive(r.Context(), id)
+			if err != nil {
+				shared.WriteJSONError(w, err.Error(), http.StatusInternalServerError)
+				return
+			}
+			shared.WriteJSON(w, http.StatusOK, map[string]string{"status": "toggled"})
+		}
 		return
 	}
 	if first == "balance" && r.Method == http.MethodGet {
@@ -713,7 +786,9 @@ func trimAdminPath(path string) string {
 	for len(p) > 0 && p[0] == '/' {
 		p = p[1:]
 	}
-	if len(p) >= 6 && p[:6] == "admin/" {
+	if len(p) >= 10 && p[:10] == "api/admin/" {
+		p = p[10:]
+	} else if len(p) >= 6 && p[:6] == "admin/" {
 		p = p[6:]
 	}
 	return p
