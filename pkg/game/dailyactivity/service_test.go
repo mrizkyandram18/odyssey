@@ -167,3 +167,38 @@ func TestComplete_IncorrectAnswer(t *testing.T) {
 		t.Errorf("retry should succeed")
 	}
 }
+
+func TestSelection_45Items(t *testing.T) {
+	// Create 45 mock activities
+	acts := make([]ActivityQuestion, 45)
+	for i := 0; i < 45; i++ {
+		acts[i] = ActivityQuestion{ID: int64(i + 1), Slug: "test"}
+	}
+	store := &mockActivityStore{
+		activities: acts,
+		completions: make(map[string]bool),
+	}
+	progStore := &mockProgressionStore{}
+	progSvc := progression.NewProgressionService(progStore, nil)
+	genericActStore := &mockGenericActivityStore{}
+	svc := NewService(store, genericActStore, progSvc, "UTC")
+	ctx := context.Background()
+
+	// YearDay 45 (2026-02-14 is YearDay 45) -> pool[44] -> ID 45
+	act45, _ := svc.getDailyActivityFromPool(ctx, "2026-02-14")
+	if act45.ID != 45 {
+		t.Errorf("expected 45, got %d", act45.ID)
+	}
+
+	// YearDay 46 (2026-02-15) -> pool[45 % 45] -> pool[0] -> ID 1
+	act46, _ := svc.getDailyActivityFromPool(ctx, "2026-02-15")
+	if act46.ID != 1 {
+		t.Errorf("expected 1, got %d", act46.ID)
+	}
+
+	// YearDay 45 again next year (2027-02-14)
+	actNextYear, _ := svc.getDailyActivityFromPool(ctx, "2027-02-14")
+	if actNextYear.ID != 45 {
+		t.Errorf("expected 45, got %d", actNextYear.ID)
+	}
+}
