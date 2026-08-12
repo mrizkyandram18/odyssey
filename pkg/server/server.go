@@ -15,6 +15,7 @@ import (
 	apiCosmetics "odyssey/internal/api/cosmetics"
 	"odyssey/internal/api/creative"
 	"odyssey/internal/api/crews"
+	"odyssey/internal/api/daily_activities"
 	"odyssey/internal/api/daily_turns"
 	apiHome "odyssey/internal/api/home"
 	"odyssey/internal/api/login"
@@ -32,6 +33,7 @@ import (
 	"odyssey/pkg/auth"
 	"odyssey/pkg/content"
 	"odyssey/pkg/db"
+	"odyssey/pkg/game/dailyactivity"
 	"odyssey/pkg/game/achievement"
 	"odyssey/pkg/game/audit"
 	"odyssey/pkg/game/balance"
@@ -247,7 +249,12 @@ func BuildHandler() (*Server, error) {
 	login.Setup(authenticator, issuer, profileStore)
 	me.Setup(profileStore)
 	apiQuests.Setup(questAPIHandler)
+	crews.Setup(repo.Crews)
 	daily_turns.Setup(dailyTurnAPIHandler)
+
+	daStore := db.NewDailyActivityEngineStore(supabaseClient)
+	daSvc := dailyactivity.NewService(daStore, repo.Activity, progSvc, "Asia/Jakarta")
+	daAPI := daily_activities.Setup(daSvc, logger)
 	rewards.Setup(rewardSvc)
 	cosmeticSvc := cosmetic.NewService(repo.Users, repo.RewardLedgers, repo.CosmeticUnlocks, profileStore, profileStore)
 	apiCosmetics.Setup(cosmeticSvc)
@@ -416,6 +423,7 @@ func BuildHandler() (*Server, error) {
 	mux.HandleFunc("/api/realm_progress/", secure(mw.RequireAuth(realm_progress.Handler)))
 	mux.HandleFunc("/api/daily_turns", secure(mw.RequireAuth(daily_turns.Handler)))
 	mux.HandleFunc("/api/daily_turns/", secure(mw.RequireAuth(daily_turns.Handler)))
+	mux.HandleFunc("/api/daily-activities/", secure(mw.RequireAuth(daAPI.Handler)))
 	mux.HandleFunc("/api/creative", secure(mw.RequireAuth(csrf(creative.Handler))))
 	mux.HandleFunc("/api/creative/", secure(mw.RequireAuth(csrf(creative.Handler))))
 	mux.HandleFunc("/api/home", secure(mw.RequireAuth(apiHome.Handler)))

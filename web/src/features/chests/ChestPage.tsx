@@ -35,20 +35,20 @@ export function ChestPage() {
   }
 
   if (loading) {
-    return <p className="p-4 text-sm text-muted-foreground">Loading chests...</p>
+    return <p className="p-4 text-sm text-muted-foreground">Memuat peti...</p>
   }
 
   return (
     <div className="flex flex-col gap-4 p-4 pb-safe">
       <header className="flex items-center gap-2">
-        <Link to="/" className="text-sm text-muted-foreground">Home</Link>
-        <h1 className="text-xl font-semibold">Chests</h1>
+        <Link to="/" className="text-sm text-muted-foreground">Beranda</Link>
+        <h1 className="text-xl font-semibold">Peti</h1>
       </header>
 
       {error && <p className="text-xs text-red-500">{error}</p>}
 
       {chests.length === 0 && (
-        <p className="text-sm text-muted-foreground">No chests yet. Complete quests to earn chests!</p>
+        <p className="text-sm text-muted-foreground">Belum ada peti. Selesaikan misi untuk mendapatkan peti!</p>
       )}
 
       <div className="flex flex-col gap-3">
@@ -62,7 +62,7 @@ export function ChestPage() {
               <div className="flex-1">
                 <p className="font-medium">{chest.name}</p>
                 <p className="text-xs text-muted-foreground">{chest.description}</p>
-                <p className="text-xs text-muted-foreground mt-1">Rarity: {chest.rarity}</p>
+                <p className="text-xs text-muted-foreground mt-1">Kelangkaan: {chest.rarity}</p>
               </div>
             </div>
             {!chest.opened && (
@@ -70,11 +70,11 @@ export function ChestPage() {
                 onClick={() => openChest(chest.id)}
                 className="mt-3 w-full rounded-lg bg-accent py-2 text-sm font-medium text-background transition hover:opacity-90"
               >
-                Open Chest
+                Buka Peti
               </button>
             )}
             {chest.opened && (
-              <p className="mt-3 text-xs text-muted-foreground">Opened</p>
+              <p className="mt-3 text-xs text-muted-foreground">Terbuka</p>
             )}
           </div>
         ))}

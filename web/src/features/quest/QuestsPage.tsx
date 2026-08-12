@@ -53,17 +53,17 @@ const QuestList = ({
                 {isMyRelayTurn(quest, uid) && <YourTurnBadge />}
                 {quest.status === 'ACTIVE' && (
                   <span className="text-xs font-bold bg-accent-magic/20 text-accent-magic px-2 py-1 rounded">
-                    ACTIVE
+                    AKTIF
                   </span>
                 )}
                 {quest.status === 'DONE' && (
                   <span className="text-xs font-bold bg-accent-nature/20 text-accent-nature px-2 py-1 rounded">
-                    DONE
+                    SELESAI
                   </span>
                 )}
                 {quest.status === 'PENDING' && (
                   <span className="text-xs font-bold bg-surface border border-border-subtle text-text-secondary px-2 py-1 rounded">
-                    PENDING
+                    MENUNGGU
                   </span>
                 )}
               </div>
@@ -95,7 +95,7 @@ const QuestList = ({
                   variant={quest.status === 'ACTIVE' ? 'primary' : 'secondary'}
                   className="w-full"
                 >
-                  {quest.status === 'DONE' ? 'Review Quest' : 'View Details'}
+                  {quest.status === 'DONE' ? 'Ulas Misi' : 'Lihat Detail'}
                 </Button>
               </Link>
             </div>
@@ -142,7 +142,7 @@ export function QuestsPage() {
       <div className="flex h-64 w-full items-center justify-center">
         <div className="flex flex-col items-center gap-4 animate-pulse">
           <div className="text-4xl">📜</div>
-          <p className="text-sm text-text-secondary">Unrolling the scrolls...</p>
+          <p className="text-sm text-text-secondary">Membuka gulungan...</p>
         </div>
       </div>
     )
@@ -173,7 +173,7 @@ export function QuestsPage() {
   return (
     <div className="max-w-5xl mx-auto flex flex-col gap-6">
       <header className="mb-2">
-        <h1 className="font-heading text-4xl text-text-primary mb-2">Quests & Realms</h1>
+        <h1 className="font-heading text-4xl text-text-primary mb-2">Misi & Ranah</h1>
         <p className="text-text-secondary">
           Tantangan petualangan keluarga di berbagai ranah cerita.
         </p>
@@ -240,7 +240,7 @@ export function QuestsPage() {
                   : 'bg-accent-magic/20 text-accent-magic'
               }`}
             >
-              {currentRealmInfo.status === 'COMPLETE' ? 'Complete' : 'Active Realm'}
+              {currentRealmInfo.status === 'COMPLETE' ? 'Selesai' : 'Ranah Aktif'}
             </span>
           </div>
 
@@ -268,19 +268,19 @@ export function QuestsPage() {
       )}
 
       <QuestList
-        title="Active Adventures"
+        title="Petualangan Aktif"
         list={activeQuests}
         emptyMsg="Tidak ada misi aktif untuk ranah ini."
         uid={session?.uid}
       />
       <QuestList
-        title="Available Quests"
+        title="Misi Tersedia"
         list={availableQuests}
         emptyMsg="Tidak ada misi baru tersedia di ranah ini."
         uid={session?.uid}
       />
       <QuestList
-        title="Completed"
+        title="Selesai"
         list={completedQuests}
         emptyMsg="Belum ada misi yang diselesaikan di ranah ini."
         uid={session?.uid}

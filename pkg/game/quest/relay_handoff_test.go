@@ -123,7 +123,7 @@ func TestPublishRelayHandoff_EmittedAfterSuccessfulAssignment(t *testing.T) {
 	store := makeRelayQuestStore()
 	h, pub := buildRelayHandoffHandler(store)
 
-	_, err := h.CompleteChallenge(context.Background(), 1, 10, "crew-1", "alice")
+	_, err := h.CompleteChallenge(context.Background(), 1, 10, "crew-1", "alice", "")
 	if err != nil {
 		t.Fatalf("CompleteChallenge: %v", err)
 	}
@@ -151,7 +151,7 @@ func TestPublishRelayHandoff_RecipientDiffersFromSender(t *testing.T) {
 	store := makeRelayQuestStore()
 	h, pub := buildRelayHandoffHandler(store)
 
-	_, err := h.CompleteChallenge(context.Background(), 1, 10, "crew-1", "alice")
+	_, err := h.CompleteChallenge(context.Background(), 1, 10, "crew-1", "alice", "")
 	if err != nil {
 		t.Fatalf("CompleteChallenge: %v", err)
 	}
@@ -183,7 +183,7 @@ func TestPublishRelayHandoff_NoEventOnQuestCompletion(t *testing.T) {
 
 	h, pub := buildRelayHandoffHandler(store)
 
-	_, err := h.CompleteChallenge(context.Background(), 2, 21, "crew-1", "bob")
+	_, err := h.CompleteChallenge(context.Background(), 2, 21, "crew-1", "bob", "")
 	if err != nil {
 		t.Fatalf("CompleteChallenge: %v", err)
 	}
@@ -214,7 +214,7 @@ func TestPublishRelayHandoff_NoEventOnReplay(t *testing.T) {
 	h, pub := buildRelayHandoffHandler(store)
 
 	// Replay the already-completed challenge.
-	_, err := h.CompleteChallenge(context.Background(), 3, 30, "crew-1", "alice")
+	_, err := h.CompleteChallenge(context.Background(), 3, 30, "crew-1", "alice", "")
 	if err != nil {
 		t.Fatalf("CompleteChallenge (replay): %v", err)
 	}
@@ -228,7 +228,7 @@ func TestPublishRelayHandoff_QuestTitlePropagated(t *testing.T) {
 	store := makeRelayQuestStore()
 	h, pub := buildRelayHandoffHandler(store)
 
-	_, err := h.CompleteChallenge(context.Background(), 1, 10, "crew-1", "alice")
+	_, err := h.CompleteChallenge(context.Background(), 1, 10, "crew-1", "alice", "")
 	if err != nil {
 		t.Fatalf("CompleteChallenge: %v", err)
 	}

@@ -188,7 +188,7 @@ func TestOpenChest_ConcurrentRequests_OnlyOneSucceeds(t *testing.T) {
 	engine := NewRewardEngine(nil, nil)
 	svc := NewChestService(chestStore, playerRelicStore, relicStore, userStore, engine)
 
-	ch, err := svc.CreateChest(context.Background(), "uid1", "wooden-chest", "QUEST")
+	ch, err := svc.CreateChest(context.Background(), "uid1", "wooden-chest", "QUEST", "")
 	if err != nil {
 		t.Fatalf("create chest: %v", err)
 	}
@@ -236,7 +236,7 @@ func TestOpenChest_CompareAndSet_PreventsDoubleOpen(t *testing.T) {
 	engine := NewRewardEngine(nil, nil)
 	svc := NewChestService(store, playerRelicStore, relicStore, userStore, engine)
 
-	ch, _ := svc.CreateChest(context.Background(), "uid1", "wooden-chest", "QUEST")
+	ch, _ := svc.CreateChest(context.Background(), "uid1", "wooden-chest", "QUEST", "")
 
 	result, err := svc.OpenChest(context.Background(), ch.ID, "uid1")
 	if err != nil {

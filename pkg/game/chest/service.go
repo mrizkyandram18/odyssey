@@ -95,7 +95,7 @@ func (s *ChestService) SetBalance(b *balance.Service) {
 
 // CreateChest creates a chest instance for a player from a chest definition slug.
 // The source indicates how the chest was earned (e.g. "QUEST", "LEVEL_UP").
-func (s *ChestService) CreateChest(ctx context.Context, uid, chestSlug, source string) (*game.Chest, error) {
+func (s *ChestService) CreateChest(ctx context.Context, uid, chestSlug, source, rewardRelic string) (*game.Chest, error) {
 	ct := s.engine.GetChestType(ctx, chestSlug)
 	if ct == nil {
 		return nil, fmt.Errorf("chest definition not found: %s", chestSlug)
@@ -109,6 +109,7 @@ func (s *ChestService) CreateChest(ctx context.Context, uid, chestSlug, source s
 		Rarity:      string(ct.Rarity),
 		Icon:        ct.Icon,
 		Description: ct.Description,
+		RewardRelic: rewardRelic,
 		DropTable:   "",
 		Opened:      false,
 		CreatedAt:   now,
@@ -189,8 +190,28 @@ func (s *ChestService) OpenChest(ctx context.Context, chestID int64, uid string)
 		return nil, errors.New("chest already opened")
 	}
 
-	rewardCount := s.rewardCountForRarity(game.Rarity(ch.Rarity))
-	rewards := s.engine.GenerateRewardsForChest(ctx, ch.ChestSlug, rewardCount)
+	var rewards []RewardItem
+	if ch.RewardRelic != "" {
+		def := relic.GetRelicDefinition(ch.RewardRelic)
+		name := ch.RewardRelic
+		realm := ""
+		if def != nil {
+			name = def.Name
+			realm = def.Realm
+		}
+		rewards = []RewardItem{
+			{
+				RelicSlug: ch.RewardRelic,
+				Name:      name,
+				Realm:     realm,
+				Rarity:    game.Rarity(ch.Rarity),
+			},
+		}
+	} else {
+		rewardCount := s.rewardCountForRarity(game.Rarity(ch.Rarity))
+		rewards = s.engine.GenerateRewardsForChest(ctx, ch.ChestSlug, rewardCount)
+	}
+
 	if s.metrics != nil {
 		s.metrics.RecordRewardsGenerated(len(rewards))
 	}
@@ -355,6 +376,6 @@ func (h *QuestCompletedHandler) Handle(ctx context.Context, event events.Event) 
 		}
 	}
 
-	_, err = h.svc.CreateChest(ctx, e.PlayerUID, qd.RewardChest, "QUEST")
+	_, err = h.svc.CreateChest(ctx, e.PlayerUID, qd.RewardChest, "QUEST", qd.RewardRelic)
 	return err
 }

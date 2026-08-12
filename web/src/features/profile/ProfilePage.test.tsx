@@ -148,7 +148,7 @@ describe('ProfilePage crew customization', () => {
     })
 
     await waitFor(() => {
-      expect(screen.getByTestId('crew-save-msg')).toHaveTextContent('Crew customization saved!')
+      expect(screen.getByTestId('crew-save-msg')).toHaveTextContent('Kustomisasi kru berhasil disimpan!')
     })
   })
 })
@@ -241,7 +241,7 @@ describe('ProfilePage explorer effects', () => {
     fireEvent.click(screen.getByTestId('equip-explorer_effect_sparkle'))
 
     await waitFor(() => {
-      expect(screen.getByTestId('cosmetic-shop-msg')).toHaveTextContent('Effect equipped.')
+      expect(screen.getByTestId('cosmetic-shop-msg')).toHaveTextContent('Efek dipasang.')
     })
   })
 })

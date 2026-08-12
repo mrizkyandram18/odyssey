@@ -1,11 +1,13 @@
 import { Link, useLocation } from 'react-router-dom'
 import { Home, Scroll, BookOpen, Palette, Sparkles, User, Image } from 'lucide-react'
+import { useSession } from '../../hooks/useSession'
 
 export function MobileNav() {
   const location = useLocation()
+  const { profile } = useSession()
 
   // Simplified nav for mobile
-  const navItems = [
+  let navItems = [
     { label: 'Beranda', path: '/', icon: <Home size={20} /> },
     { label: 'Petualangan', path: '/quests', icon: <Scroll size={20} /> },
     { label: 'Jurnal', path: '/journal', icon: <BookOpen size={20} /> },
@@ -14,6 +16,10 @@ export function MobileNav() {
     { label: 'Koleksi', path: '/relics', icon: <Sparkles size={20} /> },
     { label: 'Profil', path: '/profile', icon: <User size={20} /> },
   ]
+
+  if (profile?.role !== 'GUIDE') {
+    navItems = navItems.filter((item) => item.path !== '/relics')
+  }
 
   return (
     <nav className="flex items-center justify-around px-2 py-2">

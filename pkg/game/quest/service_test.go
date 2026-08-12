@@ -493,7 +493,7 @@ func TestCompleteChallengeForQuest_TransitionsToActive(t *testing.T) {
 	store.challenges[1] = []game.Challenge{c1, c2}
 	svc := NewQuestService(store)
 
-	status, progressed, completed, err := svc.CompleteChallengeForQuest(context.Background(), 1, 1, "user-1")
+	status, progressed, completed, err := svc.CompleteChallengeForQuest(context.Background(), 1, 1, "user-1", "")
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -520,7 +520,7 @@ func TestCompleteChallengeForQuest_TransitionsToDone(t *testing.T) {
 	store.challenges[1] = []game.Challenge{c1, c2}
 	svc := NewQuestService(store)
 
-	status, progressed, completed, err := svc.CompleteChallengeForQuest(context.Background(), 1, 2, "user-2")
+	status, progressed, completed, err := svc.CompleteChallengeForQuest(context.Background(), 1, 2, "user-2", "")
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -552,7 +552,7 @@ func TestCompleteChallengeForQuest_AlreadyDoneNoReReward(t *testing.T) {
 	store.challenges[1] = []game.Challenge{c1, c2}
 	svc := NewQuestService(store)
 
-	status, progressed, completed, err := svc.CompleteChallengeForQuest(context.Background(), 1, 1, "user-1")
+	status, progressed, completed, err := svc.CompleteChallengeForQuest(context.Background(), 1, 1, "user-1", "")
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -572,8 +572,7 @@ func TestStartQuest(t *testing.T) {
 	store.quests[1] = makeQuest(string(QuestStatusPending))
 	svc := NewQuestService(store)
 
-	err := svc.StartQuest(context.Background(), 1)
-	if err != nil {
+	if err := svc.StartQuest(context.Background(), 1, "user-1"); err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
 	if store.quests[1].Status != string(QuestStatusActive) {

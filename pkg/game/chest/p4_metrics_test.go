@@ -19,7 +19,7 @@ func TestChestService_MetricsRecorded(t *testing.T) {
 	svc.SetMetrics(m)
 
 	// Create a chest for the quest source.
-	ch, err := svc.CreateChest(context.Background(), "uid1", "wooden-chest", "QUEST")
+	ch, err := svc.CreateChest(context.Background(), "uid1", "wooden-chest", "QUEST", "")
 	if err != nil {
 		t.Fatalf("create chest: %v", err)
 	}
@@ -53,7 +53,7 @@ func TestChestService_SetMetricsNilSafe(t *testing.T) {
 	store := newConcurrentChestStore()
 	svc := NewChestService(store, newConcurrentPlayerRelicStore(), &concurrentRelicStore{}, &concurrentUserStore{}, NewRewardEngine(nil, nil))
 	svc.SetMetrics(nil)
-	_, err := svc.CreateChest(context.Background(), "uid1", "wooden-chest", "QUEST")
+	_, err := svc.CreateChest(context.Background(), "user-1", "wooden-chest", "TEST", "")
 	if err != nil {
 		t.Fatalf("create chest: %v", err)
 	}

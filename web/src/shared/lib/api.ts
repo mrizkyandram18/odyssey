@@ -145,8 +145,8 @@ export const questsApi = {
   available: () => apiClient.get<QuestView[]>('/api/quests/available'),
   get: (id: number) => apiClient.get<QuestWithChallenges>(`/api/quests/${id}`),
   start: (id: number) => apiClient.post<{ started: boolean }>(`/api/quests/${id}/start`, {}),
-  completeChallenge: (questId: number, challengeId: number) =>
-    apiClient.post<CompleteChallengeResult>(`/api/quests/${questId}/challenges/${challengeId}/complete`, {}),
+  completeChallenge: (questId: number, challengeId: number, payload?: { answer?: string, content?: string }) =>
+    apiClient.post<CompleteChallengeResult>(`/api/quests/${questId}/challenges/${challengeId}/complete`, payload || {}),
   selectBranch: (questId: number, branch: string) =>
     apiClient.post<SelectBranchResult>(`/api/quests/${questId}/branch`, { branch }),
 }

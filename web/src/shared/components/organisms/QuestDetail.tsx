@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { Link } from 'react-router-dom'
 import confetti from 'canvas-confetti'
 import type {
   Challenge,
@@ -118,17 +119,17 @@ export function QuestDetail({
             {isMyTurn && <YourTurnBadge />}
             {quest.status === 'ACTIVE' && (
               <span className="bg-accent-magic/20 text-accent-magic font-bold px-3 py-1 rounded border border-accent-magic/30">
-                ACTIVE
+                AKTIF
               </span>
             )}
             {quest.status === 'DONE' && (
               <span className="bg-accent-nature/20 text-accent-nature font-bold px-3 py-1 rounded border border-accent-nature/30">
-                COMPLETED
+                SELESAI
               </span>
             )}
             {quest.status === 'PENDING' && (
               <span className="bg-surface border border-border-subtle text-text-secondary font-bold px-3 py-1 rounded">
-                PENDING
+                MENUNGGU
               </span>
             )}
             {quest.quest_type && (
@@ -197,7 +198,7 @@ export function QuestDetail({
       {/* Rewards / Result Banner */}
       {lastResult && lastResult.next_action !== 'CREATE_MEMORY' && (
         <Card className="border-accent-reward bg-accent-reward/5 p-6 text-center shadow-[0_0_20px_rgba(245,158,11,0.1)]">
-          <h3 className="font-heading text-2xl text-accent-reward mb-4">Victory!</h3>
+          <h3 className="font-heading text-2xl text-accent-reward mb-4">Kemenangan!</h3>
           <div className="flex justify-center gap-6 mb-4">
             <div className="text-center">
               <span className="block text-2xl mb-1">✨</span>
@@ -205,19 +206,24 @@ export function QuestDetail({
             </div>
             <div className="text-center">
               <span className="block text-2xl mb-1">🪙</span>
-              <span className="font-bold text-text-primary">+5 Coins</span>
+              <span className="font-bold text-text-primary">+5 Koin</span>
             </div>
           </div>
 
           {lastResult.level_up && (
             <p className="text-sm font-bold text-accent-magic mt-4 bg-accent-magic/10 py-2 rounded">
-              🎉 Level Up! You are now Level {lastResult.new_level}!
+              🎉 Naik Level! Kamu sekarang Level {lastResult.new_level}!
             </p>
           )}
           {lastResult.quest_completed && (
-            <p className="text-sm font-bold text-accent-nature mt-4">
-              🏆 Quest Completed! Check your home screen for chest rewards.
-            </p>
+            <div className="flex flex-col items-center gap-4 mt-4">
+              <p className="text-sm font-bold text-accent-nature">
+                🏆 Misi Selesai! Cek beranda untuk mengambil peti hadiahmu.
+              </p>
+              <Link to="/">
+                <Button variant="primary">Ambil Hadiah</Button>
+              </Link>
+            </div>
           )}
         </Card>
       )}
@@ -242,7 +248,7 @@ export function QuestDetail({
           onClick={handleStart}
           className="w-full shadow-lg shadow-accent-magic/20 text-lg"
         >
-          Embark on Quest
+          Mulai Petualangan
         </Button>
       )}
 
@@ -251,12 +257,27 @@ export function QuestDetail({
         <RelayRotation quest={quest} challenges={challenges} members={members} myUID={myUID} />
       )}
 
-      {/* Challenges List */}
+      {/* Learn Section */}
+      {quest.status === 'ACTIVE' && quest.learn_text && !starting && (
+        <Card className="p-6 border-accent-magic/40 bg-surface-elevated flex flex-col gap-4 animate-in fade-in slide-in-from-bottom-4">
+          <div className="flex items-center gap-3">
+            <span className="text-3xl">📖</span>
+            <h2 className="font-heading text-2xl text-text-primary">BELAJAR</h2>
+          </div>
+          <p className="text-base text-text-primary leading-relaxed whitespace-pre-wrap bg-surface p-4 rounded-lg border border-border-subtle">
+            {quest.learn_text}
+          </p>
+        </Card>
+      )}
+
+      {/* Challenges List (Practice) */}
       <div className="mt-4">
-        <h2 className="font-heading text-2xl text-text-primary mb-6">Mission Objectives</h2>
+        <h2 className="font-heading text-2xl text-text-primary mb-6">
+          {quest.status === 'ACTIVE' ? 'PRAKTIK' : 'Tujuan Misi'}
+        </h2>
         {challenges.length === 0 ? (
           <p className="text-text-secondary italic">
-            The path ahead is shrouded in mystery. No objectives found.
+            Jalan ke depan dipenuhi misteri. Belum ada tujuan.
           </p>
         ) : (
           <div className="flex flex-col gap-4 relative">
@@ -270,13 +291,13 @@ export function QuestDetail({
               return (
                 <Card
                   key={c.id}
-                  className={`flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-6 relative z-10 transition-all ${
+                  className={`flex flex-col gap-4 p-6 relative z-10 transition-all ${
                     isDone
                       ? 'opacity-70 bg-surface-elevated/50'
                       : 'bg-surface border-border-subtle hover:border-accent-magic/50'
                   }`}
                 >
-                  <div className="flex gap-4 items-start sm:items-center flex-1">
+                  <div className="flex gap-4 items-start flex-1">
                     <div
                       className={`w-12 h-12 rounded-full flex items-center justify-center shrink-0 border-2 ${
                         isDone
@@ -288,21 +309,29 @@ export function QuestDetail({
                     </div>
                     <div className="flex-1">
                       <p
-                        className={`text-base font-medium ${
+                        className={`text-base font-medium mb-1 ${
                           isDone ? 'text-text-secondary' : 'text-text-primary'
                         }`}
                       >
                         {c.description}
                       </p>
-                      {isDone && c.completed_by && (
-                        <p className="text-xs text-text-secondary mt-1">
-                          Completed by {memberName(members, c.completed_by)}
+
+                      {/* Render Question if available */}
+                      {c.question && !isDone && (
+                        <p className="text-sm font-medium text-text-primary mt-2 mb-3">
+                          Q: {c.question}
                         </p>
                       )}
 
-                      {/* Interactive Inputs for PUZZLE / RESEARCH */}
+                      {isDone && c.completed_by && (
+                        <p className="text-xs text-text-secondary mt-1">
+                          Diselesaikan oleh {memberName(members, c.completed_by)}
+                        </p>
+                      )}
+
+                      {/* Interactive Inputs for PUZZLE / RESEARCH / MCQ / TRUE_FALSE */}
                       {!isDone && quest.status === 'ACTIVE' && (
-                        <div className="mt-3">
+                        <div className="mt-3 w-full">
                           {challengeType === 'PUZZLE' && (
                             <input
                               type="text"
@@ -311,7 +340,7 @@ export function QuestDetail({
                               onChange={(e) =>
                                 setInputs({ ...inputs, [c.id]: e.target.value })
                               }
-                              className="w-full text-xs p-2 rounded bg-surface-elevated border border-border-subtle text-text-primary focus:border-accent-magic outline-none"
+                              className="w-full text-sm p-3 rounded bg-surface-elevated border border-border-subtle text-text-primary focus:border-accent-magic outline-none"
                             />
                           )}
                           {challengeType === 'RESEARCH' && (
@@ -321,9 +350,46 @@ export function QuestDetail({
                               onChange={(e) =>
                                 setInputs({ ...inputs, [c.id]: e.target.value })
                               }
-                              rows={2}
-                              className="w-full text-xs p-2 rounded bg-surface-elevated border border-border-subtle text-text-primary focus:border-accent-magic outline-none resize-none"
+                              rows={3}
+                              className="w-full text-sm p-3 rounded bg-surface-elevated border border-border-subtle text-text-primary focus:border-accent-magic outline-none resize-none"
                             />
+                          )}
+                          {(challengeType === 'MCQ' || challengeType === 'TRUE_FALSE') && c.options && (
+                            <div className="flex flex-col gap-2 mt-2">
+                              {c.options.map((opt) => (
+                                <label
+                                  key={opt}
+                                  className={`flex items-center gap-3 p-3 rounded-lg border cursor-pointer transition-all ${
+                                    inputs[c.id] === opt
+                                      ? 'bg-accent-magic/10 border-accent-magic text-text-primary'
+                                      : 'bg-surface-elevated border-border-subtle text-text-secondary hover:border-accent-magic/50'
+                                  }`}
+                                >
+                                  <input
+                                    type="radio"
+                                    name={`challenge-${c.id}`}
+                                    value={opt}
+                                    checked={inputs[c.id] === opt}
+                                    onChange={(e) =>
+                                      setInputs({ ...inputs, [c.id]: e.target.value })
+                                    }
+                                    className="hidden"
+                                  />
+                                  <div
+                                    className={`w-4 h-4 rounded-full border flex items-center justify-center ${
+                                      inputs[c.id] === opt
+                                        ? 'border-accent-magic bg-accent-magic'
+                                        : 'border-text-secondary'
+                                    }`}
+                                  >
+                                    {inputs[c.id] === opt && (
+                                      <div className="w-1.5 h-1.5 rounded-full bg-bg-app" />
+                                    )}
+                                  </div>
+                                  <span className="text-sm font-medium">{opt}</span>
+                                </label>
+                              ))}
+                            </div>
                           )}
                         </div>
                       )}
@@ -331,16 +397,17 @@ export function QuestDetail({
                   </div>
 
                   {!isDone && quest.status === 'ACTIVE' && onCompleteChallenge && (
-                    <div className="flex flex-col items-end gap-2 w-full sm:w-auto mt-4 sm:mt-0 shrink-0">
+                    <div className="flex justify-end mt-2">
                       <Button
                         variant="secondary"
                         isLoading={isCompleting}
                         onClick={() => handleComplete(c.id, challengeType)}
-                        className="shrink-0 w-full sm:w-auto bg-gradient-to-r from-accent-magic/20 to-transparent border-accent-magic/50 hover:border-accent-magic"
+                        disabled={(challengeType === 'MCQ' || challengeType === 'TRUE_FALSE') && !inputs[c.id]}
+                        className="w-full sm:w-auto bg-gradient-to-r from-accent-magic/20 to-transparent border-accent-magic/50 hover:border-accent-magic"
                       >
                         {challengeType === 'MOVEMENT'
-                          ? '🚶 Konfirmasi 100 Langkah'
-                          : '✓ Selesaikan'}
+                          ? '🚶 Konfirmasi Selesai'
+                          : '✓ Kirim Jawaban'}
                       </Button>
                     </div>
                   )}
@@ -350,6 +417,21 @@ export function QuestDetail({
           </div>
         )}
       </div>
+
+      {/* RESULT & REWARD Section (Shows at the bottom when quest is DONE or last challenge completes) */}
+      {lastResult && lastResult.quest_completed && quest.result_text && (
+        <Card className="mt-4 border-accent-magic/50 bg-surface-elevated p-6 animate-in fade-in slide-in-from-bottom-4">
+          <div className="flex items-center gap-3 mb-4">
+            <span className="text-3xl">🎯</span>
+            <h2 className="font-heading text-2xl text-text-primary">HASIL</h2>
+          </div>
+          <p className="text-base text-text-primary mb-6 p-4 bg-surface rounded-lg border border-border-subtle">
+            {quest.result_text}
+          </p>
+          <div className="w-full h-px bg-border-subtle mb-6"></div>
+          {/* Rewards are rendered above, but wait, I can just show the result text here */}
+        </Card>
+      )}
     </div>
   )
 }

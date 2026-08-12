@@ -68,6 +68,11 @@ func (s *Service) OverrideXPForLevel(def int64) int64 {
 	return s.GetOverride(KeyXPPerLevel, def)
 }
 
+// OverrideMaxNewQuestsPerDay returns the max new quests per day.
+func (s *Service) OverrideMaxNewQuestsPerDay(def int) int {
+	return int(s.GetOverride(KeyMaxNewQuestsPerDay, int64(def)))
+}
+
 // OverrideDropRateMultiplier returns the drop rate multiplier.
 func (s *Service) OverrideDropRateMultiplier(def float64) float64 {
 	s.mu.RLock()

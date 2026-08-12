@@ -81,9 +81,9 @@ func TestXPForLevel(t *testing.T) {
 		want  int64
 	}{
 		{1, 0},
-		{2, 100},
-		{3, 200},
-		{5, 400},
+		{2, 500},
+		{3, 1000},
+		{5, 2000},
 	}
 	for _, c := range cases {
 		if got := XPForLevel(c.level); got != c.want {
@@ -106,11 +106,11 @@ func TestLevelFromXP(t *testing.T) {
 		{0, 1},
 		{50, 1},
 		{99, 1},
-		{100, 2},
-		{150, 2},
-		{199, 2},
-		{200, 3},
-		{450, 5},
+		{100, 1},
+		{499, 1},
+		{500, 2},
+		{1000, 3},
+		{2400, 5},
 	}
 	for _, c := range cases {
 		if got := LevelFromXP(c.xp); got != c.want {
@@ -126,11 +126,11 @@ func TestLevelFromXP_Negative(t *testing.T) {
 }
 
 func TestXPToNext(t *testing.T) {
-	if got := XPToNext(0); got != 100 {
-		t.Errorf("XPToNext(0) = %d, want 100", got)
+	if got := XPToNext(0); got != 500 {
+		t.Errorf("XPToNext(0) = %d, want 500", got)
 	}
-	if got := XPToNext(150); got != 50 {
-		t.Errorf("XPToNext(150) = %d, want 50", got)
+	if got := XPToNext(150); got != 350 {
+		t.Errorf("XPToNext(150) = %d, want 350", got)
 	}
 }
 
@@ -150,14 +150,14 @@ func TestAwardXP_AddsXPNoLevelUp(t *testing.T) {
 }
 
 func TestAwardXP_TriggersLevelUp(t *testing.T) {
-	store := &mockUserStore{player: makePlayer(1, 80)}
+	store := &mockUserStore{player: makePlayer(1, 480)}
 	svc := NewProgressionService(store, nil)
 	player, levelUp, err := svc.AwardXP(context.Background(), "user-1", 50)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
-	if player.XP != 130 {
-		t.Errorf("expected XP 130, got %d", player.XP)
+	if player.XP != 530 {
+		t.Errorf("expected XP 530, got %d", player.XP)
 	}
 	if player.Level != 2 {
 		t.Errorf("expected level 2, got %d", player.Level)
@@ -168,14 +168,14 @@ func TestAwardXP_TriggersLevelUp(t *testing.T) {
 }
 
 func TestAwardXP_LevelAlreadyHigh(t *testing.T) {
-	store := &mockUserStore{player: makePlayer(3, 250)}
+	store := &mockUserStore{player: makePlayer(3, 1250)}
 	svc := NewProgressionService(store, nil)
 	player, levelUp, err := svc.AwardXP(context.Background(), "user-1", 10)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
-	if player.XP != 260 {
-		t.Errorf("expected XP 260, got %d", player.XP)
+	if player.XP != 1260 {
+		t.Errorf("expected XP 1260, got %d", player.XP)
 	}
 	if player.Level != 3 {
 		t.Errorf("expected level 3, got %d", player.Level)
@@ -186,13 +186,13 @@ func TestAwardXP_LevelAlreadyHigh(t *testing.T) {
 }
 
 func TestAwardXP_PersistsToStore(t *testing.T) {
-	store := &mockUserStore{player: makePlayer(1, 90)}
+	store := &mockUserStore{player: makePlayer(1, 490)}
 	svc := NewProgressionService(store, nil)
 	if _, _, err := svc.AwardXP(context.Background(), "user-1", 30); err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
-	if store.player.XP != 120 {
-		t.Errorf("expected persisted XP 120, got %d", store.player.XP)
+	if store.player.XP != 520 {
+		t.Errorf("expected persisted XP 520, got %d", store.player.XP)
 	}
 	if store.player.Level != 2 {
 		t.Errorf("expected persisted level 2, got %d", store.player.Level)
@@ -267,8 +267,8 @@ func TestAwardXP_RespectsCustomConfig(t *testing.T) {
 
 func TestDefaultProgressionConfig(t *testing.T) {
 	cfg := DefaultProgressionConfig()
-	if cfg.XPPerLevel != 100 {
-		t.Errorf("expected default XPPerLevel 100, got %d", cfg.XPPerLevel)
+	if cfg.XPPerLevel != 500 {
+		t.Errorf("expected default XPPerLevel 500, got %d", cfg.XPPerLevel)
 	}
 	if cfg.ChallengeXP != 20 {
 		t.Errorf("expected default ChallengeXP 20, got %d", cfg.ChallengeXP)
@@ -281,7 +281,7 @@ func TestDefaultProgressionConfig(t *testing.T) {
 func TestNewProgressionService_NilConfigUsesDefaults(t *testing.T) {
 	store := &mockUserStore{player: makePlayer(1, 0)}
 	svc := NewProgressionService(store, nil)
-	if svc.cfg.XPPerLevel != 100 {
+	if svc.cfg.XPPerLevel != 500 {
 		t.Errorf("expected default XPPerLevel when nil config, got %d", svc.cfg.XPPerLevel)
 	}
 }
@@ -295,7 +295,7 @@ func (p *capturePublisher) Publish(ctx context.Context, event events.Event) {
 }
 
 func TestAwardXP_PublishesLevelReachedEvent(t *testing.T) {
-	store := &mockUserStore{player: makePlayer(1, 80)}
+	store := &mockUserStore{player: makePlayer(1, 480)}
 	pub := &capturePublisher{}
 	svc := NewProgressionServiceWithPublisher(store, nil, pub)
 
@@ -346,8 +346,8 @@ func TestAwardXP_RepeatedLevelUp_EventsForEachLevel(t *testing.T) {
 	pub := &capturePublisher{}
 	svc := NewProgressionServiceWithPublisher(store, nil, pub)
 
-	_, _, _ = svc.AwardXP(context.Background(), "user-1", 100)
-	_, _, _ = svc.AwardXP(context.Background(), "user-1", 100)
+	_, _, _ = svc.AwardXP(context.Background(), "user-1", 600)
+	_, _, _ = svc.AwardXP(context.Background(), "user-1", 600)
 
 	if len(pub.events) != 2 {
 		t.Errorf("expected 2 events published, got %d", len(pub.events))

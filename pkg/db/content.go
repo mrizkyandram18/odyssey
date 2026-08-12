@@ -49,8 +49,11 @@ type QuestDefinition struct {
 	Description        string          `json:"description"`
 	QuestType          string          `json:"quest_type"`
 	ChallengeDefs      json.RawMessage `json:"challenge_defs"`
+	LearnText          *string         `json:"learn_text"`
+	ResultText         *string         `json:"result_text"`
 	RewardXP           int64           `json:"reward_xp"`
 	RewardChest        string          `json:"reward_chest"`
+	RewardRelic        string          `json:"reward_relic"`
 	IsMandatory        bool            `json:"is_mandatory"`
 	RequiredQuestSlug  string          `json:"required_quest_slug"`
 	RequiredQuestSlugs []string        `json:"required_quest_slugs"`

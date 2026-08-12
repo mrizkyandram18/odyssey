@@ -107,8 +107,11 @@ type QuestDefinition struct {
 	Description        string         `json:"description"`
 	QuestType          string         `json:"quest_type"`
 	ChallengeDefs      []ChallengeDef `json:"challenge_defs"`
+	LearnText          *string        `json:"learn_text,omitempty"`
+	ResultText         *string        `json:"result_text,omitempty"`
 	RewardXP           int64          `json:"reward_xp"`
 	RewardChest        string         `json:"reward_chest"`
+	RewardRelic        string         `json:"reward_relic,omitempty"`
 	IsMandatory        bool           `json:"is_mandatory"`
 	RequiredQuestSlug  string         `json:"required_quest_slug,omitempty"`
 	RequiredQuestSlugs []string       `json:"required_quest_slugs,omitempty"`
@@ -127,9 +130,13 @@ type QuestDefinition struct {
 
 // ChallengeDef describes a single challenge within a quest definition.
 type ChallengeDef struct {
-	Slug        string `json:"slug"`
-	Description string `json:"description"`
-	Type        string `json:"type"`
+	Slug          string   `json:"slug"`
+	Description   string   `json:"description"`
+	Type          string   `json:"type"`
+	Question      string   `json:"question,omitempty"`
+	Options       []string `json:"options,omitempty"`
+	CorrectAnswer string   `json:"correct_answer,omitempty"`
+	Explanation   string   `json:"explanation,omitempty"`
 }
 
 // CreativePromptDefinition describes a creative prompt for a creative quest.

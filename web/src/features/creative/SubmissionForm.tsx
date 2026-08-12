@@ -69,7 +69,7 @@ export function SubmissionForm({ questId, challengeId, onComplete, onSkip }: Sub
   const handlePhotoSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!photoURL || !isImageDataURL(photoURL)) {
-      setError('Please select an image')
+      setError('Pilih gambar')
       return
     }
     await submitCreative('PHOTO', buildPhotoPayload(photoURL, photoCaption))
@@ -78,7 +78,7 @@ export function SubmissionForm({ questId, challengeId, onComplete, onSkip }: Sub
   const handleVideoSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!videoURL || !isVideoDataURL(videoURL)) {
-      setError('Please select a video')
+      setError('Pilih video')
       return
     }
     await submitCreative('VIDEO', buildVideoPayload(videoURL, videoCaption))
@@ -96,7 +96,7 @@ export function SubmissionForm({ questId, challengeId, onComplete, onSkip }: Sub
       })
       onComplete()
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to save memory')
+      setError(err instanceof Error ? err.message : 'Gagal menyimpan kenangan')
       setSubmitting(false)
     }
   }
@@ -140,18 +140,18 @@ export function SubmissionForm({ questId, challengeId, onComplete, onSkip }: Sub
   return (
     <div className="flex w-full flex-col gap-4 rounded-xl border border-border bg-surface p-6 shadow-md">
       <div className="text-center mb-2">
-        <h2 className="text-xl font-bold">Create a Memory</h2>
+        <h2 className="text-xl font-bold">Buat Kenangan</h2>
         <p className="mt-1 text-sm text-muted-foreground">
-          You completed a quest! Capture the moment.
+          Kamu menyelesaikan misi! Abadikan momen ini.
         </p>
       </div>
 
       <div className="flex flex-wrap justify-center gap-2 mb-2">
-        {modeBtn('STORY', 'Write Story')}
-        {modeBtn('DRAWING', 'Draw Canvas')}
-        {modeBtn('COMIC', 'Comic Strip')}
-        {modeBtn('PHOTO', 'Take Photo')}
-        {modeBtn('VIDEO', 'Record Video')}
+        {modeBtn('STORY', 'Tulis Cerita')}
+        {modeBtn('DRAWING', 'Gambar Kanvas')}
+        {modeBtn('COMIC', 'Strip Komik')}
+        {modeBtn('PHOTO', 'Ambil Foto')}
+        {modeBtn('VIDEO', 'Rekam Video')}
       </div>
 
       {error && <p className="text-center text-xs text-red-500">{error}</p>}
@@ -161,7 +161,7 @@ export function SubmissionForm({ questId, challengeId, onComplete, onSkip }: Sub
           <textarea
             value={content}
             onChange={(e) => setContent(e.target.value)}
-            placeholder="What happened today? (e.g., Dad found the treasure!)"
+            placeholder="Apa yang terjadi hari ini? (misal, Ayah menemukan harta karun!)"
             className="min-h-[120px] w-full resize-none rounded-lg border border-border bg-background p-4 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
             required
             disabled={submitting}
@@ -172,7 +172,7 @@ export function SubmissionForm({ questId, challengeId, onComplete, onSkip }: Sub
               disabled={submitting || !content.trim()}
               className="w-full rounded-lg bg-primary py-3 text-sm font-bold text-primary-foreground transition-all hover:brightness-110 disabled:opacity-50"
             >
-              {submitting ? 'Saving...' : 'Save Memory'}
+              {submitting ? 'Menyimpan...' : 'Simpan Kenangan'}
             </button>
             <button
               type="button"
@@ -180,7 +180,7 @@ export function SubmissionForm({ questId, challengeId, onComplete, onSkip }: Sub
               disabled={submitting}
               className="w-full rounded-lg py-3 text-sm font-semibold text-muted-foreground transition-all hover:bg-muted"
             >
-              Skip for now
+              Lewati dulu
             </button>
           </div>
         </form>
@@ -193,7 +193,7 @@ export function SubmissionForm({ questId, challengeId, onComplete, onSkip }: Sub
       ) : mode === 'PHOTO' ? (
         <form onSubmit={handlePhotoSubmit} className="flex flex-col gap-4">
           <div className="flex flex-col gap-2">
-            <label className="text-xs text-muted-foreground">Photo</label>
+            <label className="text-xs text-muted-foreground">Foto</label>
             {photoURL ? (
               <div className="relative aspect-video w-full overflow-hidden rounded-lg border border-border bg-background/60">
                 <img src={photoURL} alt="captured" className="h-full w-full object-cover" />
@@ -202,7 +202,7 @@ export function SubmissionForm({ questId, challengeId, onComplete, onSkip }: Sub
                   onClick={() => setPhotoURL('')}
                   className="absolute right-1 top-1 rounded bg-black/60 px-2 py-1 text-xs text-white opacity-80 hover:opacity-100"
                 >
-                  Clear
+                  Hapus
                 </button>
               </div>
             ) : (
@@ -216,7 +216,7 @@ export function SubmissionForm({ questId, challengeId, onComplete, onSkip }: Sub
                     const file = e.target.files?.[0]
                     if (!file) return
                     if (!isImageFile(file)) {
-                      setError('Only image files are allowed')
+                      setError('Hanya file gambar yang diizinkan')
                       return
                     }
                     setError(null)
@@ -224,23 +224,23 @@ export function SubmissionForm({ questId, challengeId, onComplete, onSkip }: Sub
                       const url = await fileToDataURL(file)
                       setPhotoURL(url)
                     } catch (err) {
-                      setError(err instanceof Error ? err.message : 'Failed to read photo')
+                      setError(err instanceof Error ? err.message : 'Gagal membaca foto')
                     }
                   }}
                 />
                 <span className="text-sm font-medium text-muted-foreground">
-                  Tap to take or choose a photo
+                  Ketuk untuk mengambil atau memilih foto
                 </span>
               </label>
             )}
           </div>
           <div className="flex flex-col gap-2">
-            <label className="text-xs text-muted-foreground">Caption (optional)</label>
+            <label className="text-xs text-muted-foreground">Keterangan (opsional)</label>
             <textarea
               value={photoCaption}
               onChange={(e) => setPhotoCaption(e.target.value.slice(0, MAX_PHOTO_CAPTION))}
               maxLength={MAX_PHOTO_CAPTION}
-              placeholder="What happened here?"
+              placeholder="Apa yang terjadi di sini?"
               className="w-full resize-none rounded-lg border border-border bg-background p-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
               rows={3}
               disabled={submitting}
@@ -252,7 +252,7 @@ export function SubmissionForm({ questId, challengeId, onComplete, onSkip }: Sub
               disabled={submitting || !photoURL || !isImageDataURL(photoURL)}
               className="w-full rounded-lg bg-primary py-3 text-sm font-bold text-primary-foreground transition-all hover:brightness-110 disabled:opacity-50"
             >
-              {submitting ? 'Saving...' : 'Save Photo'}
+              {submitting ? 'Menyimpan...' : 'Simpan Foto'}
             </button>
             <button
               type="button"
@@ -260,7 +260,7 @@ export function SubmissionForm({ questId, challengeId, onComplete, onSkip }: Sub
               disabled={submitting}
               className="w-full rounded-lg py-3 text-sm font-semibold text-muted-foreground transition-all hover:bg-muted"
             >
-              Skip for now
+              Lewati dulu
             </button>
           </div>
         </form>
@@ -276,7 +276,7 @@ export function SubmissionForm({ questId, challengeId, onComplete, onSkip }: Sub
                   onClick={() => setVideoURL('')}
                   className="absolute right-1 top-1 rounded bg-black/60 px-2 py-1 text-xs text-white opacity-80 hover:opacity-100"
                 >
-                  Clear
+                  Hapus
                 </button>
               </div>
             ) : (
@@ -290,7 +290,7 @@ export function SubmissionForm({ questId, challengeId, onComplete, onSkip }: Sub
                     const file = e.target.files?.[0]
                     if (!file) return
                     if (!isVideoFile(file)) {
-                      setError('Only video files are allowed')
+                      setError('Hanya file video yang diizinkan')
                       return
                     }
                     setError(null)
@@ -298,23 +298,23 @@ export function SubmissionForm({ questId, challengeId, onComplete, onSkip }: Sub
                       const url = await fileToVideoDataURL(file)
                       setVideoURL(url)
                     } catch (err) {
-                      setError(err instanceof Error ? err.message : 'Failed to read video')
+                      setError(err instanceof Error ? err.message : 'Gagal membaca video')
                     }
                   }}
                 />
                 <span className="text-sm font-medium text-muted-foreground">
-                  Tap to record or choose a video
+                  Ketuk untuk merekam atau memilih video
                 </span>
               </label>
             )}
           </div>
           <div className="flex flex-col gap-2">
-            <label className="text-xs text-muted-foreground">Caption (optional)</label>
+            <label className="text-xs text-muted-foreground">Keterangan (opsional)</label>
             <textarea
               value={videoCaption}
               onChange={(e) => setVideoCaption(e.target.value.slice(0, MAX_VIDEO_CAPTION))}
               maxLength={MAX_VIDEO_CAPTION}
-              placeholder="What happened here?"
+              placeholder="Apa yang terjadi di sini?"
               className="w-full resize-none rounded-lg border border-border bg-background p-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
               rows={3}
               disabled={submitting}
@@ -326,7 +326,7 @@ export function SubmissionForm({ questId, challengeId, onComplete, onSkip }: Sub
               disabled={submitting || !videoURL || !isVideoDataURL(videoURL)}
               className="w-full rounded-lg bg-primary py-3 text-sm font-bold text-primary-foreground transition-all hover:brightness-110 disabled:opacity-50"
             >
-              {submitting ? 'Saving...' : 'Save Video'}
+              {submitting ? 'Menyimpan...' : 'Simpan Video'}
             </button>
             <button
               type="button"
@@ -334,14 +334,14 @@ export function SubmissionForm({ questId, challengeId, onComplete, onSkip }: Sub
               disabled={submitting}
               className="w-full rounded-lg py-3 text-sm font-semibold text-muted-foreground transition-all hover:bg-muted"
             >
-              Skip for now
+              Lewati dulu
             </button>
           </div>
         </form>
       ) : sketchPanelIndex !== null ? (
         <div className="flex flex-col gap-3">
           <p className="text-sm text-center text-muted-foreground">
-            Sketch for panel {sketchPanelIndex + 1}
+            Sketsa untuk panel {sketchPanelIndex + 1}
           </p>
           <CreativeCanvas
             onSubmit={(svg) => {
@@ -356,7 +356,7 @@ export function SubmissionForm({ questId, challengeId, onComplete, onSkip }: Sub
       ) : (
         <form onSubmit={handleComicSubmit} className="flex flex-col gap-4">
           <p className="text-xs text-center text-muted-foreground">
-            2–4 panels. Each panel needs a short caption and/or a sketch.
+            2–4 panel. Setiap panel butuh keterangan singkat dan/atau sketsa.
           </p>
           {panels.map((panel, index) => (
             <div
@@ -374,7 +374,7 @@ export function SubmissionForm({ questId, challengeId, onComplete, onSkip }: Sub
                     className="text-xs text-muted-foreground hover:text-destructive"
                     disabled={submitting}
                   >
-                    Remove
+                    Hapus
                   </button>
                 )}
               </div>
@@ -382,21 +382,21 @@ export function SubmissionForm({ questId, challengeId, onComplete, onSkip }: Sub
                 value={panel.caption}
                 onChange={(e) => updatePanelCaption(index, e.target.value)}
                 maxLength={MAX_COMIC_CAPTION}
-                placeholder={`What happens in panel ${index + 1}?`}
+                placeholder={`Apa yang terjadi di panel ${index + 1}?`}
                 className="min-h-[72px] w-full resize-none rounded-lg border border-border bg-background p-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
                 disabled={submitting}
               />
               <div className="flex flex-wrap items-center gap-2">
                 {panel.svg ? (
                   <>
-                    <span className="text-xs font-medium text-primary">Sketch attached</span>
+                    <span className="text-xs font-medium text-primary">Sketsa terlampir</span>
                     <button
                       type="button"
                       onClick={() => setSketchPanelIndex(index)}
                       className="text-xs text-primary underline"
                       disabled={submitting}
                     >
-                      Redraw
+                      Gambar ulang
                     </button>
                     <button
                       type="button"
@@ -404,7 +404,7 @@ export function SubmissionForm({ questId, challengeId, onComplete, onSkip }: Sub
                       className="text-xs text-muted-foreground underline"
                       disabled={submitting}
                     >
-                      Clear sketch
+                      Hapus sketsa
                     </button>
                   </>
                 ) : (
@@ -414,7 +414,7 @@ export function SubmissionForm({ questId, challengeId, onComplete, onSkip }: Sub
                     className="text-xs font-semibold text-primary underline"
                     disabled={submitting}
                   >
-                    Add sketch (optional)
+                    Tambah sketsa (opsional)
                   </button>
                 )}
               </div>
@@ -428,7 +428,7 @@ export function SubmissionForm({ questId, challengeId, onComplete, onSkip }: Sub
               disabled={submitting}
               className="rounded-lg border border-dashed border-border py-2 text-sm font-semibold text-muted-foreground hover:bg-muted disabled:opacity-50"
             >
-              + Add panel
+              + Tambah panel
             </button>
           )}
 
@@ -438,7 +438,7 @@ export function SubmissionForm({ questId, challengeId, onComplete, onSkip }: Sub
               disabled={submitting || !isComicReady(panels)}
               className="w-full rounded-lg bg-primary py-3 text-sm font-bold text-primary-foreground transition-all hover:brightness-110 disabled:opacity-50"
             >
-              {submitting ? 'Saving...' : 'Save Comic'}
+              {submitting ? 'Menyimpan...' : 'Simpan Komik'}
             </button>
             <button
               type="button"
@@ -446,7 +446,7 @@ export function SubmissionForm({ questId, challengeId, onComplete, onSkip }: Sub
               disabled={submitting}
               className="w-full rounded-lg py-3 text-sm font-semibold text-muted-foreground transition-all hover:bg-muted"
             >
-              Skip for now
+              Lewati dulu
             </button>
           </div>
         </form>

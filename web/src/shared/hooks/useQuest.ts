@@ -42,11 +42,11 @@ export function useQuest(questId?: number) {
     }
   }
 
-  const completeChallenge = async (challengeId: number): Promise<CompleteChallengeResult | null> => {
+  const completeChallenge = async (challengeId: number, payload?: { answer?: string, content?: string }): Promise<CompleteChallengeResult | null> => {
     if (!questId) return null
     setError(null)
     try {
-      const result = await questsApi.completeChallenge(questId, challengeId)
+      const result = await questsApi.completeChallenge(questId, challengeId, payload)
       if (result && result.quest) {
         setData(result.quest)
       } else {

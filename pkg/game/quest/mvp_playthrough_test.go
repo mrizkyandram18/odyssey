@@ -54,7 +54,7 @@ func TestMVPPlaythrough_AllSixQuests(t *testing.T) {
 		}
 		store.challenges[qid] = chs
 
-		if err := svc.StartQuest(ctx, qid); err != nil {
+		if err := svc.StartQuest(ctx, qid, "user-mvp"); err != nil {
 			t.Fatalf("%s: start: %v", slug, err)
 		}
 		got, err := svc.GetByCrewAndID(ctx, qid, "crew-mvp")
@@ -69,7 +69,7 @@ func TestMVPPlaythrough_AllSixQuests(t *testing.T) {
 		}
 
 		for i, ch := range store.challenges[qid] {
-			status, progressed, completed, err := svc.CompleteChallengeForQuest(ctx, qid, ch.ID, "user-mvp")
+			status, progressed, completed, err := svc.CompleteChallengeForQuest(ctx, qid, ch.ID, "user-mvp", "")
 			if err != nil {
 				t.Fatalf("%s challenge %d: complete: %v", slug, ch.ID, err)
 			}

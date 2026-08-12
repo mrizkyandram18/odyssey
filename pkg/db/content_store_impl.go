@@ -270,6 +270,7 @@ func mapQuestDefinition(d QuestDefinition) (*content.QuestDefinition, error) {
 		ChallengeDefs:      challengeDefs,
 		RewardXP:           d.RewardXP,
 		RewardChest:        d.RewardChest,
+		RewardRelic:        d.RewardRelic,
 		IsMandatory:        d.IsMandatory,
 		RequiredQuestSlug:  d.RequiredQuestSlug,
 		RequiredQuestSlugs: requiredQuestSlugs,

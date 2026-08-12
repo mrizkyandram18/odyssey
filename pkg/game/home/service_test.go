@@ -257,8 +257,8 @@ func TestGetHome_Success(t *testing.T) {
 	if resp.Sections.Player.UID != "u1" {
 		t.Errorf("expected sections player UID u1, got %s", resp.Sections.Player.UID)
 	}
-	if resp.Sections.Player.XPToNext != 200 {
-		t.Errorf("expected xp_to_next 200, got %d", resp.Sections.Player.XPToNext)
+	if resp.Sections.Player.XPToNext != 1400 {
+		t.Errorf("expected xp_to_next 1400, got %d", resp.Sections.Player.XPToNext)
 	}
 	if len(resp.Sections.Quests.All) != 2 {
 		t.Errorf("expected 2 quests in sections.all, got %d", len(resp.Sections.Quests.All))

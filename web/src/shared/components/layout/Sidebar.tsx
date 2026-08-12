@@ -10,12 +10,12 @@ export function Sidebar() {
   const location = useLocation()
 
   const navItems = [
-    { label: 'Home', path: '/', icon: <Home size={20} /> },
-    { label: 'Quests', path: '/quests', icon: <Scroll size={20} /> },
-    { label: 'Journal', path: '/journal', icon: <Book size={20} /> },
-    { label: 'Memories', path: '/creative', icon: <Palette size={20} /> },
-    { label: 'Collection', path: '/relics', icon: <Sparkles size={20} /> },
-    { label: 'Profile', path: '/profile', icon: <User size={20} /> },
+    { label: 'Beranda', path: '/', icon: <Home size={20} /> },
+    { label: 'Petualangan', path: '/quests', icon: <Scroll size={20} /> },
+    { label: 'Jurnal', path: '/journal', icon: <Book size={20} /> },
+    { label: 'Kenangan', path: '/creative', icon: <Palette size={20} /> },
+    { label: 'Koleksi', path: '/relics', icon: <Sparkles size={20} /> },
+    { label: 'Profil', path: '/profile', icon: <User size={20} /> },
   ]
 
   const xpPercent = profile ? Math.min(100, (profile.xp % 100)) : 0
@@ -42,7 +42,7 @@ export function Sidebar() {
           <h2 className="font-semibold text-lg text-text-primary">{profile.explorer_name}</h2>
           <p className="text-xs text-text-secondary mb-1">Level {profile.level} &bull; {getRoleMastery(profile.role, profile.level).title}</p>
           <p className="text-xs font-semibold text-accent-reward mb-3 tabular-nums" data-testid="sidebar-coin-balance">
-            🪙 {profile.coins ?? 0} coins
+            🪙 {profile.coins ?? 0} koin
           </p>
           
           <div className="w-full relative group">
@@ -79,7 +79,7 @@ export function Sidebar() {
       {/* Footer area if needed */}
       <div className="mt-auto pt-4 px-2">
         <div className="rounded-lg bg-surface-glass border border-border-subtle p-3">
-          <p className="text-xs text-text-secondary text-center">Your crew is waiting.</p>
+          <p className="text-xs text-text-secondary text-center">Krumu sedang menunggu.</p>
         </div>
       </div>
     </div>

@@ -99,9 +99,9 @@ export function ProfilePage() {
       })
       setBannerUrl(data.banner_url || '')
       setTheme(data.theme || 'default')
-      setCrewSaveMsg('Crew customization saved!')
+      setCrewSaveMsg('Kustomisasi kru berhasil disimpan!')
     } catch (e) {
-      setCrewSaveError(e instanceof Error ? e.message : 'Save failed')
+      setCrewSaveError(e instanceof Error ? e.message : 'Gagal menyimpan')
     } finally {
       setSavingCrew(false)
     }
@@ -142,12 +142,12 @@ export function ProfilePage() {
       } else if (item.kind === 'explorer_effect') {
         setEffect(res.explorer_effect || item.value)
       }
-      setShopMsg(res.already_owned ? 'Already unlocked — no charge.' : `Unlocked! Spent ${item.price} coins.`)
+      setShopMsg(res.already_owned ? 'Sudah terbuka — tidak dikenakan biaya.' : `Terbuka! Menghabiskan ${item.price} koin.`)
       await Promise.all([refreshProfile(), loadCosmetics()])
       const led = await apiClient.get<RewardLedgerEntry[]>('/api/rewards')
       setLedgers(led)
     } catch (e) {
-      setShopError(e instanceof Error ? e.message : 'Purchase failed')
+      setShopError(e instanceof Error ? e.message : 'Gagal membeli')
     } finally {
       setBuying(false)
     }
@@ -163,18 +163,18 @@ export function ProfilePage() {
       if (cosmeticId === 'none') {
         setFrame('none')
         setEffect('none')
-        setShopMsg('Frame and effect unequipped.')
+        setShopMsg('Bingkai dan efek dilepas.')
       } else if (item?.kind === 'avatar_frame') {
         setFrame(item.value)
-        setShopMsg('Frame equipped.')
+        setShopMsg('Bingkai dipasang.')
       } else if (item?.kind === 'explorer_effect') {
         setEffect(item.value)
-        setShopMsg('Effect equipped.')
+        setShopMsg('Efek dipasang.')
       } else {
-        setShopMsg('Equipped.')
+        setShopMsg('Dipasang.')
       }
     } catch (e) {
-      setShopError(e instanceof Error ? e.message : 'Equip failed')
+      setShopError(e instanceof Error ? e.message : 'Gagal memasang')
     }
   }
 
@@ -188,13 +188,13 @@ export function ProfilePage() {
         recipient_uid: giftRecipient,
         relic_slug: giftRelic.relic_slug,
       })
-      const recipientName = crewMembers.find((m) => m.uid === giftRecipient)?.explorer_name ?? 'them'
-      setGiftMsg(`🎁 ${res.relic_name} gifted to ${recipientName}! You have ${res.sender_remaining_count} left.`)
+      const recipientName = crewMembers.find((m) => m.uid === giftRecipient)?.explorer_name ?? 'mereka'
+      setGiftMsg(`🎁 ${res.relic_name} diberikan kepada ${recipientName}! Kamu masih memiliki ${res.sender_remaining_count}.`)
       setGiftRelic(null)
       setGiftRecipient('')
       await loadInventory()
     } catch (e) {
-      setGiftError(e instanceof Error ? e.message : 'Gift failed')
+      setGiftError(e instanceof Error ? e.message : 'Gagal memberi hadiah')
     } finally {
       setGifting(false)
     }
@@ -205,7 +205,7 @@ export function ProfilePage() {
       <div className="flex h-64 w-full items-center justify-center max-w-4xl mx-auto">
         <div className="flex flex-col items-center gap-4 animate-pulse">
           <div className="text-4xl">👤</div>
-          <p className="text-sm text-text-secondary">Summoning profile...</p>
+          <p className="text-sm text-text-secondary">Memuat profil...</p>
         </div>
       </div>
     )
@@ -216,15 +216,15 @@ export function ProfilePage() {
       <div className="flex flex-col gap-6 max-w-4xl mx-auto py-4">
         <header className="flex items-center justify-between">
           <Link to="/" className="text-sm font-medium text-text-secondary hover:text-text-primary transition-colors inline-flex items-center gap-2">
-            <span>←</span> Home
+            <span>←</span> Beranda
           </Link>
         </header>
         <Card className="flex flex-col items-center justify-center gap-4 py-16 text-center border-accent-danger/30 bg-accent-danger/5">
           <p className="text-lg font-medium text-text-primary">
-            {error || 'No active profile found. Please sign in to view your explorer profile.'}
+            {error || 'Profil tidak ditemukan. Silakan masuk untuk melihat profilmu.'}
           </p>
           <Link to="/" className="text-sm font-bold text-accent-magic hover:underline uppercase tracking-wider">
-            Return to Sign In
+            Kembali ke Masuk
           </Link>
         </Card>
       </div>
@@ -239,9 +239,9 @@ export function ProfilePage() {
     <div className="flex flex-col gap-6 max-w-4xl mx-auto py-4 animate-in fade-in duration-500">
       <header className="flex items-center justify-between mb-2">
         <Link to="/" className="text-sm font-medium text-text-secondary hover:text-text-primary transition-colors inline-flex items-center gap-2">
-          <span>←</span> Home
+          <span>←</span> Beranda
         </Link>
-        <h1 className="font-heading text-2xl md:text-3xl text-text-primary">Dossier</h1>
+        <h1 className="font-heading text-2xl md:text-3xl text-text-primary">Profil</h1>
       </header>
 
       {/* Identity Hero */}
@@ -276,7 +276,7 @@ export function ProfilePage() {
                 }
               }}
             >
-              <Shuffle size={12} /> Randomize
+              <Shuffle size={12} /> Acak
             </Button>
           </div>
           
@@ -300,7 +300,7 @@ export function ProfilePage() {
                 className="mt-3 flex items-center justify-between rounded-md border border-accent-reward/20 bg-accent-reward/5 px-3 py-2"
                 data-testid="profile-coin-balance"
               >
-                <span className="text-xs font-bold uppercase tracking-wider text-text-secondary">Coins</span>
+                <span className="text-xs font-bold uppercase tracking-wider text-text-secondary">Koin</span>
                 <span className="text-sm font-bold text-accent-reward tabular-nums">
                   🪙 {profile.coins ?? 0}
                 </span>
@@ -313,10 +313,10 @@ export function ProfilePage() {
       {/* Slice 2.2 — first spend path */}
       <Card className="p-6" data-testid="cosmetic-shop">
         <h3 className="font-heading text-xl text-text-primary mb-1 flex items-center gap-2">
-          <span>✨</span> Cosmetic shop
+          <span>✨</span> Toko Kosmetik
         </h3>
         <p className="text-xs text-text-secondary mb-4">
-          Spend coins on a portrait frame. Fixed price · fictional currency only.
+          Gunakan koin untuk bingkai potret. Harga tetap · hanya koin fiktif.
         </p>
         {shopError && (
           <p className="mb-3 text-sm text-accent-danger" data-testid="cosmetic-shop-error">{shopError}</p>
@@ -348,7 +348,7 @@ export function ProfilePage() {
                   <p className="font-medium text-text-primary">{item.name}</p>
                   <p className="text-xs text-text-secondary">{item.description}</p>
                   <p className="text-xs font-semibold text-accent-reward mt-1">
-                    {item.unlocked ? 'Unlocked' : item.price === 0 ? 'Free reward' : `🔒 ${item.price} coins`}
+                    {item.unlocked ? 'Terbuka' : item.price === 0 ? 'Hadiah gratis' : `🔒 ${item.price} koin`}
                   </p>
                 </div>
               </div>
@@ -361,7 +361,7 @@ export function ProfilePage() {
                       onClick={() => void equipCosmetic('none')}
                       data-testid={`unequip-${item.id}`}
                     >
-                      Unequip
+                      Lepas
                     </Button>
                   ) : (
                     <Button
@@ -370,7 +370,7 @@ export function ProfilePage() {
                       onClick={() => void equipCosmetic(item.id)}
                       data-testid={`equip-${item.id}`}
                     >
-                      Equip
+                      Pakai
                     </Button>
                   )
                 ) : (
@@ -382,7 +382,7 @@ export function ProfilePage() {
                     onClick={() => void purchaseGoldFrame(item)}
                     data-testid={`buy-${item.id}`}
                   >
-                    {item.price === 0 ? 'Claim' : ((profile.coins ?? 0) < item.price ? 'Need more coins' : `Buy for ${item.price} 🪙`)}
+                    {item.price === 0 ? 'Klaim' : ((profile.coins ?? 0) < item.price ? 'Koin tidak cukup' : `Beli seharga ${item.price} 🪙`)}
                   </Button>
                 )}
               </div>
@@ -390,7 +390,7 @@ export function ProfilePage() {
             )
           })}
           {cosmetics.length === 0 && (
-            <p className="text-sm text-text-secondary italic">Loading cosmetics…</p>
+            <p className="text-sm text-text-secondary italic">Memuat kosmetik…</p>
           )}
         </div>
       </Card>
@@ -399,10 +399,10 @@ export function ProfilePage() {
       {inventory.length > 0 && (
         <Card className="p-6" data-testid="relic-inventory">
           <h3 className="font-heading text-xl text-text-primary mb-1 flex items-center gap-2">
-            <span>🗝️</span> Relic Vault
+            <span>🗝️</span> Brankas Relik
           </h3>
           <p className="text-xs text-text-secondary mb-4">
-            Gift a relic to a crewmate · free · no coins deducted
+            Berikan relik ke kru · gratis · tanpa potong koin
           </p>
           {giftMsg && (
             <p className="mb-3 text-sm text-accent-nature" data-testid="gift-success-msg">{giftMsg}</p>
@@ -436,7 +436,7 @@ export function ProfilePage() {
                     }}
                     data-testid={`gift-btn-${item.relic_slug}`}
                   >
-                    🎁 Gift
+                    🎁 Beri Hadiah
                   </Button>
                 )}
               </div>
@@ -454,7 +454,7 @@ export function ProfilePage() {
         >
           <div className="bg-surface-elevated border border-border-subtle rounded-xl shadow-2xl p-6 w-full max-w-sm flex flex-col gap-4">
             <h4 className="font-heading text-xl text-text-primary flex items-center gap-2">
-              🎁 Gift Relic
+              🎁 Beri Hadiah Relik
             </h4>
             <div className="flex items-center gap-3 rounded-lg bg-surface border border-border-subtle p-3">
               <span className="text-3xl">{giftRelic.image}</span>
@@ -465,7 +465,7 @@ export function ProfilePage() {
             </div>
             <div>
               <label htmlFor="gift-recipient" className="block text-xs font-bold uppercase tracking-wider text-text-secondary mb-2">
-                Select recipient
+                Pilih penerima
               </label>
               <select
                 id="gift-recipient"
@@ -474,7 +474,7 @@ export function ProfilePage() {
                 className="w-full rounded-lg border border-border-subtle bg-surface text-text-primary px-3 py-2 text-sm focus:outline-none focus:border-accent-magic"
                 data-testid="gift-recipient-select"
               >
-                <option value="">— choose a crewmate —</option>
+                <option value="">— pilih kru —</option>
                 {crewMembers
                   .filter((m) => m.uid !== profile.uid)
                   .map((m) => (
@@ -493,7 +493,7 @@ export function ProfilePage() {
                 onClick={() => setGiftRelic(null)}
                 disabled={gifting}
               >
-                Cancel
+                Batal
               </Button>
               <Button
                 variant="primary"
@@ -503,7 +503,7 @@ export function ProfilePage() {
                 isLoading={gifting}
                 data-testid="gift-confirm-btn"
               >
-                Confirm Gift
+                Konfirmasi Hadiah
               </Button>
             </div>
           </div>
@@ -515,10 +515,10 @@ export function ProfilePage() {
       {/* Crew Customization — Slice 4.4 */}
       <Card className="p-6" data-testid="crew-customization">
         <h3 className="font-heading text-xl text-text-primary mb-1 flex items-center gap-2">
-          <span>⚓</span> Crew Customization
+          <span>⚓</span> Kustomisasi Kru
         </h3>
         <p className="text-xs text-text-secondary mb-4">
-          Set a banner URL and shared theme for your crew.
+          Atur URL banner dan tema bersama untuk kru kalian.
         </p>
         {crewSaveError && (
           <p className="mb-3 text-sm text-accent-danger" data-testid="crew-save-error">{crewSaveError}</p>
@@ -529,7 +529,7 @@ export function ProfilePage() {
         <div className="flex flex-col gap-4">
           <div>
             <label htmlFor="banner-url" className="block text-xs font-bold uppercase tracking-wider text-text-secondary mb-2">
-              Banner URL
+              URL Banner
             </label>
             <input
               id="banner-url"
@@ -553,7 +553,7 @@ export function ProfilePage() {
           </div>
           <div>
             <label htmlFor="theme-select" className="block text-xs font-bold uppercase tracking-wider text-text-secondary mb-2">
-              Shared Theme
+              Tema Bersama
             </label>
             <select
               id="theme-select"
@@ -574,7 +574,7 @@ export function ProfilePage() {
             isLoading={savingCrew}
             data-testid="save-crew-settings"
           >
-            Save Crew Settings
+            Simpan Pengaturan Kru
           </Button>
         </div>
       </Card>
@@ -583,23 +583,23 @@ export function ProfilePage() {
         {/* Crew Info */}
         <Card className="p-6">
           <h3 className="font-heading text-xl text-text-primary mb-6 flex items-center gap-2">
-            <span>🛡️</span> Alliance
+            <span>🛡️</span> Aliansi
           </h3>
           <div className="space-y-4">
             <div className="flex justify-between items-center py-2 border-b border-border-subtle/50">
-              <span className="text-sm text-text-secondary font-medium">Crew Identification</span>
+              <span className="text-sm text-text-secondary font-medium">Identifikasi Kru</span>
               <span className="font-mono text-sm bg-surface-elevated px-2 py-1 rounded text-text-primary">
-                {profile.crew_id || session?.crew_id || 'Shared Crew'}
+                {profile.crew_id || session?.crew_id || 'Kru Bersama'}
               </span>
             </div>
             <div className="flex justify-between items-center py-2 border-b border-border-subtle/50">
-              <span className="text-sm text-text-secondary font-medium">Explorer ID</span>
+              <span className="text-sm text-text-secondary font-medium">ID Penjelajah</span>
               <span className="font-mono text-sm bg-surface-elevated px-2 py-1 rounded text-text-primary">
                 {profile.uid}
               </span>
             </div>
             <div className="flex justify-between items-center py-2 border-b border-border-subtle/50">
-              <span className="text-sm text-text-secondary font-medium">Coin balance</span>
+              <span className="text-sm text-text-secondary font-medium">Saldo Koin</span>
               <span className="text-sm font-bold text-accent-reward tabular-nums">🪙 {profile.coins ?? 0}</span>
             </div>
           </div>
@@ -608,15 +608,15 @@ export function ProfilePage() {
         {/* Ledger — earn + spend */}
         <Card className="p-6 flex flex-col max-h-[300px]">
           <h3 className="font-heading text-xl text-text-primary mb-1 flex items-center gap-2">
-            <span>🪙</span> Coin ledger
+            <span>🪙</span> Catatan Koin
           </h3>
           <p className="text-xs text-text-secondary mb-4">
-            Quest +5 · Daily +1 · Gold frame −3. Fictional coins only.
+            Misi +5 · Harian +1 · Bingkai emas −3. Hanya koin fiktif.
           </p>
           
           <div className="flex-1 overflow-y-auto pr-2 custom-scrollbar space-y-3">
             {ledgers.length === 0 ? (
-              <p className="text-sm text-text-secondary italic text-center py-8">No coin activity yet.</p>
+              <p className="text-sm text-text-secondary italic text-center py-8">Belum ada aktivitas koin.</p>
             ) : (
               ledgers.slice(0, 15).map((l) => (
                 <div key={l.id} className="flex justify-between items-center bg-surface p-3 rounded border border-border-subtle hover:border-accent-reward/30 transition-colors">
@@ -644,7 +644,7 @@ export function ProfilePage() {
 
       <div className="mt-8 flex justify-center">
         <Button variant="danger" onClick={logout} className="w-full max-w-xs shadow-lg shadow-accent-danger/20">
-          Leave Realm (Sign Out)
+          Keluar (Sign Out)
         </Button>
       </div>
     </div>

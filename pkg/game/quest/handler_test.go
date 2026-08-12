@@ -191,7 +191,7 @@ func TestStartQuest_Succeeds(t *testing.T) {
 	qStore.questsByCrew["crew-1"] = []game.Quest{*qStore.quests[1]}
 
 	h, _ := setupOrchestrator(t, qStore, makePlayerForHandler(1, 0))
-	if err := h.StartQuest(context.Background(), 1, "crew-1"); err != nil {
+	if err := h.StartQuest(context.Background(), 1, "crew-1", "user-1"); err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
 	if qStore.quests[1].Status != string(QuestStatusActive) {
@@ -206,7 +206,7 @@ func TestStartQuest_NotInCrew(t *testing.T) {
 	qStore := newMockQuestStore()
 	qStore.quests[1] = makeStoredQuest(1, "crew-1", "morning-light", string(QuestStatusPending))
 	h, _ := setupOrchestrator(t, qStore, makePlayerForHandler(1, 0))
-	err := h.StartQuest(context.Background(), 1, "other-crew")
+	err := h.StartQuest(context.Background(), 1, "other-crew", "user-1")
 	if err == nil {
 		t.Fatal("expected error when starting a quest not in crew")
 	}
@@ -219,7 +219,7 @@ func TestCompleteChallenge_NonLastAwardsChallengeXPOnly(t *testing.T) {
 	qStore.challenges[1] = makeStoredChallenges(1, string(ChallengeStatusPending), string(ChallengeStatusPending))
 
 	h, realm := setupOrchestrator(t, qStore, makePlayerForHandler(1, 0))
-	result, err := h.CompleteChallenge(context.Background(), 1, 11, "crew-1", "user-1")
+	result, err := h.CompleteChallenge(context.Background(), 1, 11, "crew-1", "user-1", "")
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -248,8 +248,8 @@ func TestCompleteChallenge_LastChallengeCompletesQuest(t *testing.T) {
 	qStore.questsByCrew["crew-1"] = []game.Quest{*qStore.quests[1]}
 	qStore.challenges[1] = makeStoredChallenges(1, string(ChallengeStatusDone), string(ChallengeStatusPending))
 
-	h, realm := setupOrchestrator(t, qStore, makePlayerForHandler(1, 90))
-	result, err := h.CompleteChallenge(context.Background(), 1, 12, "crew-1", "user-1")
+	h, realm := setupOrchestrator(t, qStore, makePlayerForHandler(1, 490))
+	result, err := h.CompleteChallenge(context.Background(), 1, 12, "crew-1", "user-1", "")
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -284,14 +284,14 @@ func TestCompleteChallenge_FullLoop(t *testing.T) {
 
 	h, realm := setupOrchestrator(t, qStore, makePlayerForHandler(1, 0))
 
-	if err := h.StartQuest(context.Background(), 1, "crew-1"); err != nil {
+	if err := h.StartQuest(context.Background(), 1, "crew-1", "user-1"); err != nil {
 		t.Fatalf("start: %v", err)
 	}
 	if qStore.quests[1].Status != string(QuestStatusActive) {
 		t.Fatalf("expected ACTIVE after start, got %s", qStore.quests[1].Status)
 	}
 
-	r1, err := h.CompleteChallenge(context.Background(), 1, 11, "crew-1", "user-1")
+	r1, err := h.CompleteChallenge(context.Background(), 1, 11, "crew-1", "user-1", "")
 	if err != nil {
 		t.Fatalf("complete 1: %v", err)
 	}
@@ -299,7 +299,7 @@ func TestCompleteChallenge_FullLoop(t *testing.T) {
 		t.Fatal("quest should not be completed after 1/2 challenges")
 	}
 
-	r2, err := h.CompleteChallenge(context.Background(), 1, 12, "crew-1", "user-1")
+	r2, err := h.CompleteChallenge(context.Background(), 1, 12, "crew-1", "user-1", "")
 	if err != nil {
 		t.Fatalf("complete 2: %v", err)
 	}
@@ -317,7 +317,7 @@ func TestCompleteChallenge_FullLoop(t *testing.T) {
 func TestCompleteChallenge_UnknownQuest(t *testing.T) {
 	qStore := newMockQuestStore()
 	h, _ := setupOrchestrator(t, qStore, makePlayerForHandler(1, 0))
-	_, err := h.CompleteChallenge(context.Background(), 999, 1, "crew-1", "user-1")
+	_, err := h.CompleteChallenge(context.Background(), 999, 1, "crew-1", "user-1", "")
 	if err == nil {
 		t.Fatal("expected error for unknown quest")
 	}
@@ -349,7 +349,7 @@ func TestCompleteChallenge_UsesCustomProgressionConfig(t *testing.T) {
 	realm := newMockRealmStore()
 	h := NewQuestAPIHandler(NewQuestService(qStore), prog, realm, defaultRealmCfg, customCfg)
 
-	result, err := h.CompleteChallenge(context.Background(), 1, 12, "crew-1", "user-1")
+	result, err := h.CompleteChallenge(context.Background(), 1, 12, "crew-1", "user-1", "")
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -379,7 +379,7 @@ func TestCompleteChallenge_PublishesEventWithContentGateway(t *testing.T) {
 	h.SetPublisher(pub)
 	h.SetContentGateway(cg)
 
-	result, err := h.CompleteChallenge(context.Background(), 1, 12, "crew-1", "user-1")
+	result, err := h.CompleteChallenge(context.Background(), 1, 12, "crew-1", "user-1", "")
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -413,7 +413,7 @@ func TestCompleteChallenge_NoPublisher_NoError(t *testing.T) {
 	prog := progression.NewProgressionService(userStore, &defaultProgCfg)
 	h := NewQuestAPIHandler(NewQuestService(qStore), prog, newMockRealmStore(), defaultRealmCfg, &defaultProgCfg)
 
-	result, err := h.CompleteChallenge(context.Background(), 1, 12, "crew-1", "user-1")
+	result, err := h.CompleteChallenge(context.Background(), 1, 12, "crew-1", "user-1", "")
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -469,7 +469,7 @@ func TestCompleteChallenge_UsesQuestRewardXP(t *testing.T) {
 	h := NewQuestAPIHandler(qs, prog, realm, defaultRealmCfg, &defaultProgCfg)
 	h.SetContentGateway(cg)
 
-	result, err := h.CompleteChallenge(context.Background(), 1, 12, "crew-1", "user-1")
+	result, err := h.CompleteChallenge(context.Background(), 1, 12, "crew-1", "user-1", "")
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -508,7 +508,7 @@ func TestCompleteChallenge_UsesQuestRewardXPWithBalanceMultiplier(t *testing.T) 
 	}
 	h.SetBalance(bal)
 
-	result, err := h.CompleteChallenge(context.Background(), 1, 12, "crew-1", "user-1")
+	result, err := h.CompleteChallenge(context.Background(), 1, 12, "crew-1", "user-1", "")
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -589,7 +589,7 @@ func (g *countingRewardGateway) GrantQuestReward(ctx context.Context, uid string
 // whispering-woods realm.
 func completeFinalChallengeForQuest1(t *testing.T, h *QuestAPIHandler) *CompleteChallengeResult {
 	t.Helper()
-	result, err := h.CompleteChallenge(context.Background(), 1, 12, "crew-1", "user-1")
+	result, err := h.CompleteChallenge(context.Background(), 1, 12, "crew-1", "user-1", "")
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -706,7 +706,7 @@ func TestCompleteChallenge_ConcurrentExactlyOnceReward(t *testing.T) {
 		wg.Add(1)
 		go func(idx int) {
 			defer wg.Done()
-			results[idx], errs[idx] = h.CompleteChallenge(context.Background(), 1, 12, "crew-1", "user-1")
+			results[idx], errs[idx] = h.CompleteChallenge(context.Background(), 1, 12, "crew-1", "user-1", "")
 		}(i)
 	}
 	wg.Wait()

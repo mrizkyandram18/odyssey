@@ -47,7 +47,7 @@ func (m *mockQuestHandler) GetByCrewAndID(ctx context.Context, questID int64, cr
 	return m.quest, nil
 }
 
-func (m *mockQuestHandler) StartQuest(ctx context.Context, questID int64, crewID string) error {
+func (m *mockQuestHandler) StartQuest(ctx context.Context, questID int64, crewID, uid string) error {
 	if m.startedErr != nil {
 		return m.startedErr
 	}
@@ -58,8 +58,8 @@ func (m *mockQuestHandler) StartQuest(ctx context.Context, questID int64, crewID
 	return nil
 }
 
-func (m *mockQuestHandler) CompleteChallenge(ctx context.Context, questID, challengeID int64, crewID, uid string) (*quest.CompleteChallengeResult, error) {
-	if m.completeErr != nil {
+func (m *mockQuestHandler) CompleteChallenge(ctx context.Context, questID, challengeID int64, crewID, uid string, answer string) (*quest.CompleteChallengeResult, error) {
+	if m.err != nil {
 		return nil, m.completeErr
 	}
 	if m.notFound {
@@ -127,9 +127,25 @@ func makeQuestWithChallenges() *quest.QuestWithChallenges {
 			Status:    "ACTIVE",
 			CreatedAt: time.Date(2026, 8, 3, 12, 0, 0, 0, time.UTC),
 		},
-		Challenges: []game.Challenge{
-			{ID: 10, QuestID: 1, Slug: "obs", Description: "Observe", Status: "DONE"},
-			{ID: 11, QuestID: 1, Slug: "research", Description: "Research", Status: "PENDING"},
+		Challenges: []quest.ChallengeView{
+			{
+				Challenge: game.Challenge{
+					ID:          1,
+					QuestID:     1,
+					Slug:        "test-challenge-1",
+					Description: "Do something",
+					Status:      "PENDING",
+				},
+			},
+			{
+				Challenge: game.Challenge{
+					ID:          11,
+					QuestID:     1,
+					Slug:        "research",
+					Description: "Research",
+					Status:      "PENDING",
+				},
+			},
 		},
 	}
 }

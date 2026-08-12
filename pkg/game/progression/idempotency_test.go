@@ -134,7 +134,7 @@ func TestAwardXP_OptimisticConflict_ReturnsCurrentState(t *testing.T) {
 
 func TestAwardXP_NoDuplicateLevelUpEvents(t *testing.T) {
 	store := newConcurrentUserStore(&game.Player{
-		UID: "user-1", CrewID: "crew-1", Level: 1, XP: 90, Version: 1,
+		UID: "user-1", CrewID: "crew-1", Level: 1, XP: 490, Version: 1,
 	})
 	pub := &capturePublisher{}
 	svc := NewProgressionServiceWithPublisher(store, nil, pub)

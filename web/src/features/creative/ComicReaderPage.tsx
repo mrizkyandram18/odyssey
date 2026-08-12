@@ -35,7 +35,7 @@ export function ComicReaderPage() {
     return (
       <div className="flex flex-col gap-4 p-4 pb-safe max-w-2xl mx-auto w-full">
         <div className="flex h-32 items-center justify-center">
-          <p className="text-sm text-muted-foreground animate-pulse">Loading comic…</p>
+          <p className="text-sm text-muted-foreground animate-pulse">Memuat komik…</p>
         </div>
       </div>
     )
@@ -44,10 +44,10 @@ export function ComicReaderPage() {
   if (error || !submission) {
     return (
       <div className="flex flex-col gap-4 p-4 pb-safe max-w-2xl mx-auto w-full">
-        <h1 className="text-2xl font-bold">Comic Reader</h1>
+        <h1 className="text-2xl font-bold">Pembaca Komik</h1>
         <div className="flex flex-col items-center gap-2 p-6">
-          <p className="text-sm text-red-500">{error || 'Comic not found'}</p>
-          <Link to="/gallery" className="text-sm text-primary underline">Back to Gallery</Link>
+          <p className="text-sm text-red-500">{error || 'Komik tidak ditemukan'}</p>
+          <Link to="/gallery" className="text-sm text-primary underline">Kembali ke Galeri</Link>
         </div>
       </div>
     )
@@ -56,10 +56,10 @@ export function ComicReaderPage() {
   if (submission.kind !== 'COMIC') {
     return (
       <div className="flex flex-col gap-4 p-4 pb-safe max-w-2xl mx-auto w-full">
-        <h1 className="text-2xl font-bold">Comic Reader</h1>
+        <h1 className="text-2xl font-bold">Pembaca Komik</h1>
         <div className="flex flex-col items-center gap-2 p-6">
-          <p className="text-sm text-red-500">This submission is not a comic.</p>
-          <Link to="/gallery" className="text-sm text-primary underline">Back to Gallery</Link>
+          <p className="text-sm text-red-500">Karya ini bukan komik.</p>
+          <Link to="/gallery" className="text-sm text-primary underline">Kembali ke Galeri</Link>
         </div>
       </div>
     )
@@ -69,10 +69,10 @@ export function ComicReaderPage() {
   if (!comic) {
     return (
       <div className="flex flex-col gap-4 p-4 pb-safe max-w-2xl mx-auto w-full">
-        <h1 className="text-2xl font-bold">Comic Reader</h1>
+        <h1 className="text-2xl font-bold">Pembaca Komik</h1>
         <div className="flex flex-col items-center gap-2 p-6">
-          <p className="text-sm text-red-500">Comic could not be displayed.</p>
-          <Link to="/gallery" className="text-sm text-primary underline">Back to Gallery</Link>
+          <p className="text-sm text-red-500">Komik tidak dapat ditampilkan.</p>
+          <Link to="/gallery" className="text-sm text-primary underline">Kembali ke Galeri</Link>
         </div>
       </div>
     )
@@ -86,22 +86,22 @@ export function ComicReaderPage() {
   return (
     <div className="flex flex-col gap-4 p-4 pb-safe max-w-2xl mx-auto w-full">
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold">Comic Reader</h1>
-        <Link to="/gallery" className="text-sm text-primary underline">Back to Gallery</Link>
+        <h1 className="text-2xl font-bold">Pembaca Komik</h1>
+        <Link to="/gallery" className="text-sm text-primary underline">Kembali ke Galeri</Link>
       </div>
 
       <div className="flex items-center gap-2">
         <span className="text-xs font-medium text-muted-foreground">
-          Quest #{submission.quest_id} · Comic
+          Misi #{submission.quest_id} · Komik
         </span>
-        <span className="text-xs text-muted-foreground">by {submission.author_uid}</span>
+        <span className="text-xs text-muted-foreground">oleh {submission.author_uid}</span>
       </div>
 
       <div className="flex flex-col gap-3">
         <div className="rounded-lg border border-border bg-surface p-4">
           <div className="flex items-center justify-between mb-3">
             <span className="text-xs font-medium text-muted-foreground">
-              Panel {panelIndex + 1} of {panels.length}
+              Panel {panelIndex + 1} dari {panels.length}
             </span>
           </div>
 
@@ -129,7 +129,7 @@ export function ComicReaderPage() {
             disabled={isFirst}
             className="rounded-md bg-primary px-4 py-2 text-sm font-semibold text-black disabled:opacity-40"
           >
-            Prev
+            Sebel
           </button>
 
           <div className="flex gap-1">
@@ -148,7 +148,7 @@ export function ComicReaderPage() {
             disabled={isLast}
             className="rounded-md bg-primary px-4 py-2 text-sm font-semibold text-black disabled:opacity-40"
           >
-            Next
+            Lanjut
           </button>
         </div>
       </div>

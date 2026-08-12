@@ -4,11 +4,11 @@ import type { CreativeSubmission, SubmissionKind } from '../../shared/types'
 import { Badge } from '../../shared/components/atoms/Badge'
 
 const KIND_LABELS: Record<SubmissionKind, string> = {
-  STORY: 'Story',
-  COMIC: 'Comic',
-  PHOTO: 'Photo',
+  STORY: 'Cerita',
+  COMIC: 'Komik',
+  PHOTO: 'Foto',
   VIDEO: 'Video',
-  DRAWING: 'Drawing',
+  DRAWING: 'Gambar',
 }
 
 const STATUS_VARIANT: Record<string, 'default' | 'primary' | 'secondary' | 'success' | 'warning' | 'error'> = {
@@ -35,7 +35,7 @@ export function CreativePage() {
       const data = await apiClient.get<CreativeSubmission[]>(`/api/creative?quest_id=${qid}`)
       setSubmissions(data)
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'failed to load submissions')
+      setError(e instanceof Error ? e.message : 'gagal memuat kiriman')
     } finally {
       setLoading(false)
     }
@@ -55,27 +55,27 @@ export function CreativePage() {
       setContent('')
       await loadSubmissions()
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'failed to submit')
+      setError(e instanceof Error ? e.message : 'gagal mengirim')
     } finally {
       setSubmitting(false)
     }
   }
 
   if (loading && submissions.length === 0) {
-    return <p className="p-4 text-sm text-muted-foreground">Loading...</p>
+    return <p className="p-4 text-sm text-muted-foreground">Memuat...</p>
   }
 
   return (
     <div className="flex flex-col gap-4 p-4 pb-safe">
-      <h1 className="text-xl font-semibold">Creative Space</h1>
+      <h1 className="text-xl font-semibold">Ruang Kreatif</h1>
       <p className="text-sm text-muted-foreground">
-        Submit your creative work for quest challenges.
+        Kirim karya kreatifmu untuk tantangan misi.
       </p>
 
       <form onSubmit={handleSubmit} className="flex flex-col gap-3 rounded-lg border border-border bg-surface p-4">
-        <h2 className="text-sm font-medium">New Submission</h2>
+        <h2 className="text-sm font-medium">Kiriman Baru</h2>
         <div className="flex flex-col gap-2">
-          <label className="text-xs text-muted-foreground">Quest ID</label>
+          <label className="text-xs text-muted-foreground">ID Misi</label>
           <input
             type="number"
             value={questId}
@@ -86,7 +86,7 @@ export function CreativePage() {
           />
         </div>
         <div className="flex flex-col gap-2">
-          <label className="text-xs text-muted-foreground">Challenge ID</label>
+          <label className="text-xs text-muted-foreground">ID Tantangan</label>
           <input
             type="number"
             value={challengeId}
@@ -98,28 +98,28 @@ export function CreativePage() {
         </div>
         <div className="flex flex-col gap-2">
           <label className="text-xs text-muted-foreground">
-            Submission Type (STORY / DRAWING / COMIC / PHOTO / VIDEO)
+            Tipe Kiriman (CERITA / GAMBAR / KOMIK / FOTO / VIDEO)
           </label>
           <select
             value={kind}
             onChange={(e) => setKind(e.target.value as SubmissionKind)}
             className="rounded-md border border-border bg-background p-2 text-sm"
           >
-            <option value="STORY">Story Snippet</option>
-            <option value="DRAWING">Drawing (SVG)</option>
-            <option value="COMIC">Comic Strip (JSON panels)</option>
-            <option value="PHOTO">Photo (JSON data URI)</option>
+            <option value="STORY">Potongan Cerita</option>
+            <option value="DRAWING">Gambar (SVG)</option>
+            <option value="COMIC">Strip Komik (Panel JSON)</option>
+            <option value="PHOTO">Foto (JSON data URI)</option>
             <option value="VIDEO">Video (JSON data URI)</option>
           </select>
         </div>
         <div className="flex flex-col gap-2">
-          <label className="text-xs text-muted-foreground">Content</label>
+          <label className="text-xs text-muted-foreground">Konten</label>
           <textarea
             value={content}
             onChange={(e) => setContent(e.target.value)}
             className="rounded-md border border-border bg-background p-2 text-sm"
             rows={4}
-            placeholder="Describe your creative work..."
+            placeholder="Deskripsikan karya kreatifmu..."
           />
         </div>
         <button
@@ -127,7 +127,7 @@ export function CreativePage() {
           disabled={submitting}
           className="rounded-md bg-primary p-2 text-sm font-semibold text-black disabled:opacity-50"
         >
-          {submitting ? 'Submitting...' : 'Submit'}
+          {submitting ? 'Mengirim...' : 'Kirim'}
         </button>
       </form>
 
@@ -135,18 +135,18 @@ export function CreativePage() {
 
       <div className="flex flex-col gap-2">
         <div className="flex items-center justify-between">
-          <h2 className="text-sm font-medium text-muted-foreground">Submissions</h2>
+          <h2 className="text-sm font-medium text-muted-foreground">Kiriman</h2>
           <button
             onClick={loadSubmissions}
             className="text-xs text-primary"
           >
-            Refresh
+            Segarkan
           </button>
         </div>
         {loading ? (
-          <p className="text-sm text-muted-foreground">Loading...</p>
+          <p className="text-sm text-muted-foreground">Memuat...</p>
         ) : submissions.length === 0 ? (
-          <p className="text-sm text-muted-foreground">No submissions yet.</p>
+          <p className="text-sm text-muted-foreground">Belum ada kiriman.</p>
         ) : (
           submissions.map((sub) => (
             <div key={sub.id} className="rounded-lg border border-border bg-surface p-3">
@@ -160,7 +160,7 @@ export function CreativePage() {
                 {sub.content}
               </p>
               <p className="mt-1 text-xs text-muted-foreground">
-                Quest #{sub.quest_id} · Challenge #{sub.challenge_id}
+                Misi #{sub.quest_id} · Tantangan #{sub.challenge_id}
               </p>
             </div>
           ))

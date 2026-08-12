@@ -278,7 +278,7 @@ func TestCompleteChallenge_ConcurrentLastChallenge(t *testing.T) {
 		wg.Add(1)
 		go func(idx int) {
 			defer wg.Done()
-			results[idx], errs[idx] = h.CompleteChallenge(context.Background(), 1, 12, "crew-1", "user-1")
+			results[idx], errs[idx] = h.CompleteChallenge(context.Background(), 1, 12, "crew-1", "user-1", "")
 		}(i)
 	}
 	wg.Wait()
@@ -332,7 +332,7 @@ func TestCompleteChallenge_EventPublishedOnce(t *testing.T) {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
-			h.CompleteChallenge(context.Background(), 1, 12, "crew-1", "user-1")
+			h.CompleteChallenge(context.Background(), 1, 12, "crew-1", "user-1", "")
 		}()
 	}
 	wg.Wait()

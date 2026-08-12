@@ -1,14 +1,17 @@
 import { useState, useEffect } from 'react'
+import { Navigate } from 'react-router-dom'
 
 import { apiClient } from '../../shared/lib/api'
 import type { InventoryItem } from '../../shared/types'
 import { RelicGrid } from './components/RelicGrid'
 import { Card } from '../../shared/components/atoms/Card'
+import { useSession } from '../../shared/hooks/useSession'
 
 export function RelicInventoryPage() {
   const [relics, setRelics] = useState<InventoryItem[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const { profile } = useSession()
 
   useEffect(() => {
     const load = async () => {
@@ -25,6 +28,10 @@ export function RelicInventoryPage() {
     }
     load()
   }, [])
+
+  if (profile?.role !== 'GUIDE') {
+    return <Navigate to="/profile" replace />
+  }
 
   if (loading) {
     return (

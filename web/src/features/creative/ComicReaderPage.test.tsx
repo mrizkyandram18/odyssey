@@ -51,7 +51,7 @@ describe('ComicReaderPage', () => {
       </MemoryRouter>
     )
 
-    expect(screen.getByText('Loading comic…')).toBeInTheDocument()
+    expect(screen.getByText('Memuat komik…')).toBeInTheDocument()
   })
 
   it('loads and displays comic panels with navigation', async () => {
@@ -88,16 +88,16 @@ describe('ComicReaderPage', () => {
       expect(screen.getByText('Panel 1')).toBeInTheDocument()
     })
 
-    expect(screen.getByText('Panel 1 of 3')).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: 'Next' })).toBeInTheDocument()
+    expect(screen.getByText('Panel 1 dari 3')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Lanjut' })).toBeInTheDocument()
 
-    const nextButton = screen.getByRole('button', { name: 'Next' })
+    const nextButton = screen.getByRole('button', { name: 'Lanjut' })
     nextButton.click()
 
     await waitFor(() => {
       expect(screen.getByText('Panel 2')).toBeInTheDocument()
     })
-    expect(screen.getByText('Panel 2 of 3')).toBeInTheDocument()
+    expect(screen.getByText('Panel 2 dari 3')).toBeInTheDocument()
   })
 
   it('disables prev button on first panel and next on last panel', async () => {
@@ -130,8 +130,8 @@ describe('ComicReaderPage', () => {
       expect(screen.getByText('Only panel')).toBeInTheDocument()
     })
 
-    expect(screen.getByRole('button', { name: 'Prev' })).toBeDisabled()
-    expect(screen.getByRole('button', { name: 'Next' })).toBeDisabled()
+    expect(screen.getByRole('button', { name: 'Sebel' })).toBeDisabled()
+    expect(screen.getByRole('button', { name: 'Lanjut' })).toBeDisabled()
   })
 
   it('renders error state when API fails', async () => {
@@ -148,7 +148,7 @@ describe('ComicReaderPage', () => {
     await waitFor(() => {
       expect(screen.getByText('network error')).toBeInTheDocument()
     })
-    expect(screen.getByRole('link', { name: 'Back to Gallery' })).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: 'Kembali ke Galeri' })).toBeInTheDocument()
   })
 
   it('renders not-comic error when submission kind is not COMIC', async () => {
@@ -173,7 +173,7 @@ describe('ComicReaderPage', () => {
     )
 
     await waitFor(() => {
-      expect(screen.getByText('This submission is not a comic.')).toBeInTheDocument()
+      expect(screen.getByText('Karya ini bukan komik.')).toBeInTheDocument()
     })
   })
 
@@ -199,7 +199,7 @@ describe('ComicReaderPage', () => {
     )
 
     await waitFor(() => {
-      expect(screen.getByText('Comic could not be displayed.')).toBeInTheDocument()
+      expect(screen.getByText('Komik tidak dapat ditampilkan.')).toBeInTheDocument()
     })
   })
 
@@ -235,7 +235,7 @@ describe('ComicReaderPage', () => {
     )
 
     await waitFor(() => {
-      expect(screen.getByText('Panel 1 of 4')).toBeInTheDocument()
+      expect(screen.getByText('Panel 1 dari 4')).toBeInTheDocument()
     })
 
     const dots = screen.getAllByRole('generic').filter(el =>

@@ -52,6 +52,7 @@ type QuestInstance struct {
 	Title        string     `json:"title"`
 	Status       string     `json:"status"`
 	StartedAt    *time.Time `json:"started_at"`
+	StartedBy    *string    `json:"started_by"`
 	CompletedAt  *time.Time `json:"completed_at"`
 	CreatedAt    time.Time  `json:"created_at"`
 }
@@ -147,6 +148,7 @@ type Chest struct {
 	Rarity      string     `json:"rarity"`
 	Icon        string     `json:"icon"`
 	Description string     `json:"description"`
+	RewardRelic string     `json:"reward_relic"`
 	DropTable   string     `json:"drop_table"`
 	Opened      bool       `json:"opened"`
 	OpenedAt    *time.Time `json:"opened_at"`

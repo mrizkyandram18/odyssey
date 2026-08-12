@@ -124,6 +124,10 @@ export interface Challenge {
   completed_by?: string | null
   completed_at?: string | null
   created_at: string
+  type?: string
+  question?: string
+  options?: string[]
+  explanation?: string
 }
 
 export type RealmStatus = 'LOCKED' | 'ACTIVE' | 'COMPLETE'
@@ -444,6 +448,8 @@ export interface QuestWithChallenges {
   started_at?: string | null
   completed_at?: string | null
   created_at: string
+  learn_text?: string
+  result_text?: string
   challenges: Challenge[]
   members?: CrewMember[]
   branch_options?: BranchOption[]

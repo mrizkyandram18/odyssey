@@ -23,7 +23,7 @@ export function LoginPage() {
       }
       await login(username, credential, device)
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Login failed')
+      setError(e instanceof Error ? e.message : 'Login gagal')
     } finally {
       setLoading(false)
     }
@@ -45,22 +45,22 @@ export function LoginPage() {
             <span className="text-3xl">🧭</span>
           </div>
           <h1 className="font-heading text-4xl text-text-primary mb-2 tracking-wide">Odyssey</h1>
-          <p className="text-base text-text-secondary">Your crew is waiting for the next adventure.</p>
+          <p className="text-base text-text-secondary">Krumu sedang menunggu petualangan berikutnya.</p>
         </div>
 
         <Card className="shadow-2xl shadow-black/50 border-border-subtle/50 bg-surface-glass">
           <form onSubmit={handleLogin} className="flex flex-col gap-6">
             <div className="space-y-4">
               <Input
-                label="Explorer Name"
-                placeholder="Enter your username"
+                label="Nama Penjelajah"
+                placeholder="Masukkan nama pengguna"
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
                 autoComplete="username"
                 required
               />
               <Input
-                label="Secret Word"
+                label="Kata Rahasia"
                 type="password"
                 placeholder="••••••••"
                 value={credential}
@@ -82,7 +82,7 @@ export function LoginPage() {
               className="w-full mt-2"
               isLoading={loading}
             >
-              Begin Adventure
+              Mulai Petualangan
             </Button>
           </form>
         </Card>

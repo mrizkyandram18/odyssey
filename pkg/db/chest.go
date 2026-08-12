@@ -28,6 +28,7 @@ func (s *supabaseChestStore) CreateChest(ctx context.Context, ch *game.Chest) (*
 		Rarity:      ch.Rarity,
 		Icon:        ch.Icon,
 		Description: ch.Description,
+		RewardRelic: ch.RewardRelic,
 		DropTable:   ch.DropTable,
 		Opened:      ch.Opened,
 	}
@@ -128,6 +129,7 @@ func mapChest(ch Chest) *game.Chest {
 		Rarity:      ch.Rarity,
 		Icon:        ch.Icon,
 		Description: ch.Description,
+		RewardRelic: ch.RewardRelic,
 		DropTable:   ch.DropTable,
 		Opened:      ch.Opened,
 		OpenedAt:    ch.OpenedAt,

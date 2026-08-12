@@ -12,6 +12,9 @@ import { useSession } from '../../shared/hooks/useSession'
 vi.mock('../../shared/lib/api', () => ({
   apiClient: {
     request: vi.fn(),
+    get: vi.fn().mockResolvedValue({ data: {
+      id: 1, title: 'Test', question: 'Q?', type: 'MCQ', options: ['A'], completed: false, xp_reward: 10
+    } }),
     post: vi.fn(),
   },
   chestsApi: {
@@ -64,7 +67,11 @@ describe('HomePage', () => {
       ],
       available_chests: [],
     })
-
+    vi.mocked(apiClient.get).mockResolvedValue({
+      data: {
+        id: 1, title: 'Test', question: 'Q?', type: 'MCQ', options: ['A'], completed: false, xp_reward: 10
+      }
+    })
     render(
       <MemoryRouter>
         <HomePage />
@@ -174,7 +181,7 @@ describe('HomePage', () => {
     )
 
     await waitFor(() => {
-      expect(screen.getByTestId('home-crew-streak')).toHaveTextContent('Runtutan kru: 4 hari bersama')
+      expect(screen.getByTestId('home-crew-streak')).toHaveTextContent('Runtutan keluarga: 4 hari bersama')
     })
   })
 
@@ -195,7 +202,7 @@ describe('HomePage', () => {
     )
 
     await waitFor(() => {
-      expect(screen.getByTestId('home-crew-streak')).toHaveTextContent('Runtutan kru: 0 hari bersama')
+      expect(screen.getByTestId('home-crew-streak')).toHaveTextContent('Runtutan keluarga: 0 hari bersama')
     })
   })
 

@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strings"
 	"time"
 
 	"odyssey/pkg/game"
@@ -11,7 +12,8 @@ import (
 )
 
 var ErrQuestNotFound = errors.New("quest not found")
-var ErrQuestNotInCrew = errors.New("quest not found")
+var ErrQuestNotInCrew = errors.New("quest does not belong to this crew")
+var ErrIncorrectAnswer = errors.New("INCORRECT_ANSWER")
 var ErrChallengeNotFound = errors.New("challenge not found")
 var ErrInvalidBranchChoice = errors.New("invalid branch choice")
 var ErrNoBranchOptions = errors.New("quest has no branch choices")
@@ -51,11 +53,21 @@ type CrewMember struct {
 }
 
 // QuestWithChallenges is a quest returned together with its challenge list.
+type ChallengeView struct {
+	game.Challenge
+	Type        string   `json:"type,omitempty"`
+	Question    string   `json:"question,omitempty"`
+	Options     []string `json:"options,omitempty"`
+	Explanation string   `json:"explanation,omitempty"`
+}
+
 type QuestWithChallenges struct {
 	game.Quest
-	QuestType                 string           `json:"quest_type,omitempty"`
-	Challenges                []game.Challenge `json:"challenges"`
-	ActiveChallengeAssignedTo *string          `json:"active_challenge_assigned_to,omitempty"`
+	QuestType                 string          `json:"quest_type,omitempty"`
+	Challenges                []ChallengeView `json:"challenges"`
+	LearnText                 *string         `json:"learn_text,omitempty"`
+	ResultText                *string         `json:"result_text,omitempty"`
+	ActiveChallengeAssignedTo *string         `json:"active_challenge_assigned_to,omitempty"`
 	// Members is a best-effort roster of the crew (UID -> name/role) used to
 	// render relay leg ownership. Omitted when the user store is unavailable.
 	Members       []CrewMember   `json:"members,omitempty"`
@@ -286,11 +298,39 @@ func (s *QuestService) getWithChallenges(ctx context.Context, q *game.Quest) (*Q
 		return nil, err
 	}
 
+	var defs []gamecontent.ChallengeDef
+	if s.content != nil {
+		if def, err := s.content.GetQuest(ctx, q.TemplateSlug); err == nil && def != nil {
+			defs = def.ChallengeDefs
+		}
+	}
+
+	views := make([]ChallengeView, len(challenges))
+	for i, c := range challenges {
+		v := ChallengeView{Challenge: c}
+		for _, d := range defs {
+			if d.Slug == c.Slug {
+				v.Type = d.Type
+				v.Question = d.Question
+				v.Options = d.Options
+				v.Explanation = d.Explanation
+				break
+			}
+		}
+		views[i] = v
+	}
+
 	result := &QuestWithChallenges{
 		Quest:                     *q,
 		QuestType:                 string(TypeForSlug(q.TemplateSlug)),
-		Challenges:                challenges,
+		Challenges:                views,
 		ActiveChallengeAssignedTo: firstPendingAssignee(challenges),
+	}
+	if s.content != nil {
+		if def, err := s.content.GetQuest(ctx, q.TemplateSlug); err == nil && def != nil {
+			result.LearnText = def.LearnText
+			result.ResultText = def.ResultText
+		}
 	}
 	computed := string(s.ComputeStatus(challenges))
 	if computed == string(QuestStatusPending) && (q.Status == string(QuestStatusActive) || q.StartedAt != nil) {
@@ -360,11 +400,12 @@ func computeStatus(challenges []game.Challenge) QuestStatus {
 // StartQuest transitions a quest from PENDING to ACTIVE.
 // This is a write operation (persists the status change) and is intended
 // for when a family member begins work on a quest.
-func (s *QuestService) StartQuest(ctx context.Context, questID int64) error {
+func (s *QuestService) StartQuest(ctx context.Context, questID int64, uid string) error {
 	now := time.Now().UTC()
 	patch := map[string]any{
 		"status":     string(QuestStatusActive),
 		"started_at": &now,
+		"started_by": uid,
 	}
 	return s.store.UpdateQuest(ctx, questID, patch)
 }
@@ -418,8 +459,45 @@ func (s *QuestService) CompleteChallenge(ctx context.Context, challengeID int64,
 //   - The quest row is finalized with an atomic CAS against the current stored
 //     status (with a bounded retry), so concurrent completions converge on
 //     exactly one caller with completed=true.
-func (s *QuestService) CompleteChallengeForQuest(ctx context.Context, questID, challengeID int64, uid string) (QuestStatus, bool, bool, error) {
+func (s *QuestService) CompleteChallengeForQuest(ctx context.Context, questID, challengeID int64, uid string, answer string) (QuestStatus, bool, bool, error) {
 	now := time.Now().UTC()
+
+	q, err := s.store.GetQuest(ctx, questID)
+	if err != nil {
+		return "", false, false, err
+	}
+	challenges, err := s.store.GetChallenges(ctx, questID)
+	if err != nil {
+		return "", false, false, err
+	}
+
+	var currentChallenge *game.Challenge
+	for i := range challenges {
+		if challenges[i].ID == challengeID {
+			currentChallenge = &challenges[i]
+			break
+		}
+	}
+
+	if currentChallenge == nil {
+		return "", false, false, ErrChallengeNotFound
+	}
+
+	if s.content != nil {
+		def, err := s.content.GetQuest(ctx, q.TemplateSlug)
+		if err == nil && def != nil && len(def.ChallengeDefs) > 0 {
+			for _, d := range def.ChallengeDefs {
+				if d.Slug == currentChallenge.Slug {
+					if d.Type == "MCQ" || d.Type == "TRUE_FALSE" {
+						if !strings.EqualFold(strings.TrimSpace(answer), strings.TrimSpace(d.CorrectAnswer)) {
+							return "", false, false, ErrIncorrectAnswer
+						}
+					}
+					break
+				}
+			}
+		}
+	}
 
 	challengePatch := map[string]any{
 		"status":       string(ChallengeStatusDone),
@@ -432,10 +510,10 @@ func (s *QuestService) CompleteChallengeForQuest(ctx context.Context, questID, c
 	}
 	progressed := matched
 
-	challenges, err := s.store.GetChallenges(ctx, questID)
-	if err != nil {
-		return "", false, false, err
+	if progressed {
+		currentChallenge.Status = string(ChallengeStatusDone)
 	}
+
 	newStatus := computeStatus(challenges)
 
 	if !progressed {

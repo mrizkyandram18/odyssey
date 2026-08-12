@@ -11,6 +11,8 @@ import { SeasonBadge } from '../../shared/components/molecules/SeasonBadge'
 import { useSession } from '../../shared/hooks/useSession'
 import { WorldMap } from '../../shared/components/organisms/WorldMap'
 import { isMyRelayTurn } from '../../shared/utils/questTurn'
+import { OnboardingModal } from './OnboardingModal'
+import { DailyActivitySection } from './DailyActivitySection'
 
 const containerVariants = {
   hidden: { opacity: 0 },
@@ -27,11 +29,10 @@ const itemVariants = {
 
 export function HomePage() {
   const navigate = useNavigate()
-  const { session, refreshProfile } = useSession()
+  const { session } = useSession()
   const [home, setHome] = useState<HomeResponse | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
-  const [takingTurn, setTakingTurn] = useState(false)
   const [openingChestId, setOpeningChestId] = useState<number | null>(null)
   const [crew, setCrew] = useState<Crew | null>(null)
 
@@ -77,18 +78,7 @@ export function HomePage() {
     loadCrew()
   }, [loadHome, loadCrew])
 
-  const takeTurn = async () => {
-    setTakingTurn(true)
-    try {
-      await apiClient.post('/api/daily_turns/consume', { quest_slug: 'daily-turn' })
-      // Refresh home + session profile so coin balance is not stale after +1 daily earn.
-      await Promise.all([loadHome(), refreshProfile()])
-    } catch (e) {
-      console.error('Gagal mengambil giliran', e)
-    } finally {
-      setTakingTurn(false)
-    }
-  }
+
 
   const openChest = async (chestId: number) => {
     setOpeningChestId(chestId)
@@ -131,9 +121,11 @@ export function HomePage() {
   const availableChests = home.available_chests || []
 
   return (
-    <motion.div
-      className="flex flex-col gap-6 max-w-md mx-auto pb-8"
-      data-theme={crew?.theme || 'default'}
+    <>
+      <OnboardingModal />
+      <motion.div
+        className="flex flex-col gap-6 max-w-md mx-auto pb-8"
+        data-theme={crew?.theme || 'default'}
       variants={containerVariants}
       initial="hidden"
       animate="show"
@@ -146,7 +138,7 @@ export function HomePage() {
               Halo, {home.player?.explorer_name || 'Explorer'}!
             </h1>
             <p className="text-text-secondary text-sm italic">
-              Setiap langkah yang kita ambil bersama akan menuliskan bab baru dalam legenda kita.
+              Mari belajar keterampilan baru bersama keluarga hari ini!
             </p>
           </div>
           <div
@@ -159,7 +151,7 @@ export function HomePage() {
               {home.player?.coins ?? 0}
             </span>
             <span className="text-[10px] font-semibold uppercase tracking-wider text-text-secondary">
-              Coins
+              Koin
             </span>
           </div>
         </div>
@@ -181,7 +173,7 @@ export function HomePage() {
       )}
 
       {/* Season Indicator — Slice 5.1 */}
-      {home.current_season && (
+      {home.current_season && session?.role === 'GUIDE' && (
         <motion.section variants={itemVariants}>
           <SeasonBadge
             season={home.current_season}
@@ -202,7 +194,7 @@ export function HomePage() {
       <motion.section variants={itemVariants} className="flex flex-col gap-3">
         <div className="flex items-center justify-between">
           <h2 className="font-heading text-xl text-text-primary flex items-center gap-2">
-            <span>🌍</span> Peta Dunia & Ranah
+            <span>🌍</span> Peta Dunia & Topik
           </h2>
           <Button variant="ghost" size="sm" onClick={() => navigate('/quests')}>
             Jelajah Misi
@@ -214,36 +206,22 @@ export function HomePage() {
         />
       </motion.section>
 
-      {/* 3. Giliran Harian */}
+      {/* 3. Giliran Harian / Daily Activity */}
       <motion.section variants={itemVariants} className="flex flex-col mt-2">
-        <h2 className="font-heading text-xl text-text-primary mb-3 flex items-center gap-2">
-          <span>✍️</span> Tugas Harian
-        </h2>
-        <Card className="flex flex-row items-center justify-between p-4 bg-surface border-l-4 border-l-accent-nature">
-          <div className="flex flex-col gap-1">
-            <h3 className="font-medium text-text-primary text-sm">Giliran Hari Ini</h3>
-            <p className="text-xs text-text-secondary">Runtutan: {home.daily_turn.streak_days} Hari 🔥</p>
-            <p className="text-xs text-text-secondary" data-testid="home-crew-streak">
-              Runtutan kru: {home.daily_turn.crew_streak ?? 0} hari bersama 🤝
-            </p>
-          </div>
-          <Button 
-            variant="secondary" 
-            size="sm"
-            onClick={takeTurn}
-            isLoading={takingTurn}
-            disabled={!home.daily_turn.available}
-          >
-            {home.daily_turn.available ? 'Kerjakan' : 'Selesai'}
-          </Button>
-        </Card>
+        <DailyActivitySection />
+        <div className="flex justify-between items-center px-2 mt-2">
+          <p className="text-xs text-text-secondary">Runtutan: {home.daily_turn.streak_days} Hari 🔥</p>
+          <p className="text-xs text-text-secondary" data-testid="home-crew-streak">
+            Runtutan keluarga: {home.daily_turn.crew_streak ?? 0} hari bersama 🤝
+          </p>
+        </div>
       </motion.section>
 
       {/* 4. Petualangan Aktif Keluarga */}
       <motion.section variants={itemVariants} className="flex flex-col gap-3 mt-2">
         <div className="flex items-center justify-between">
           <h2 className="font-heading text-xl text-text-primary flex items-center gap-2">
-            <span className="text-accent-reward">📜</span> Buku Misi Aktif
+            <span className="text-accent-reward">📜</span> Misi Aktif
           </h2>
           <Button variant="ghost" size="sm" onClick={() => navigate('/quests')}>Lihat Semua</Button>
         </div>
@@ -271,7 +249,7 @@ export function HomePage() {
           </div>
         ) : (
           <Card className="p-6 text-center border-dashed border-border-subtle bg-surface/50">
-            <p className="text-text-secondary text-sm">Tidak ada cerita yang aktif saat ini. Beristirahatlah sejenak dan bicarakan petualangan esok hari!</p>
+            <p className="text-text-secondary text-sm">Tidak ada aktivitas yang sedang berjalan. Bicarakan materi esok hari dengan keluargamu!</p>
           </Card>
         )}
       </motion.section>
@@ -280,7 +258,7 @@ export function HomePage() {
       {availableChests.length > 0 && (
         <motion.section variants={itemVariants} className="flex flex-col mt-2 gap-3">
           <h2 className="font-heading text-xl text-text-primary flex items-center gap-2">
-            <span>🎁</span> Harta Karun Tersedia
+            <span>🎁</span> Peti Hadiah Tersedia
           </h2>
           <div className="grid grid-cols-2 gap-3">
             {availableChests.map(chest => (
@@ -316,7 +294,7 @@ export function HomePage() {
                   </div>
                   <div className="flex-1">
                     <h4 className="text-sm font-medium text-text-primary">{quest.title}</h4>
-                    <p className="text-xs text-text-secondary">Telah diselesaikan oleh kru</p>
+                    <p className="text-xs text-text-secondary">Telah diselesaikan oleh keluarga</p>
                   </div>
                 </div>
                 <div className="flex justify-end border-t border-border-subtle/50 pt-2">
@@ -329,5 +307,6 @@ export function HomePage() {
       )}
 
     </motion.div>
+    </>
   )
 }

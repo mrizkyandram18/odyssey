@@ -128,7 +128,7 @@ func TestCreateChest_Success(t *testing.T) {
 	engine := NewRewardEngine(nil, nil)
 	svc := NewChestService(store, &mockPlayerRelicStore{}, &mockRelicStore{}, &mockUserStore{}, engine)
 
-	ch, err := svc.CreateChest(context.Background(), "uid1", "wooden-chest", "QUEST")
+	ch, err := svc.CreateChest(context.Background(), "uid1", "wooden-chest", "QUEST", "")
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -157,7 +157,7 @@ func TestCreateChest_DefinitionNotFound(t *testing.T) {
 	engine := NewRewardEngine(nil, nil)
 	svc := NewChestService(store, &mockPlayerRelicStore{}, &mockRelicStore{}, &mockUserStore{}, engine)
 
-	_, err := svc.CreateChest(context.Background(), "uid1", "nonexistent-chest", "QUEST")
+	_, err := svc.CreateChest(context.Background(), "uid1", "nonexistent-chest", "QUEST", "")
 	if err == nil {
 		t.Fatal("expected error for nonexistent chest definition")
 	}
@@ -168,7 +168,7 @@ func TestCreateChest_StoreError(t *testing.T) {
 	engine := NewRewardEngine(nil, nil)
 	svc := NewChestService(store, &mockPlayerRelicStore{}, &mockRelicStore{}, &mockUserStore{}, engine)
 
-	_, err := svc.CreateChest(context.Background(), "uid1", "wooden-chest", "QUEST")
+	_, err := svc.CreateChest(context.Background(), "uid1", "wooden-chest", "QUEST", "")
 	if err == nil {
 		t.Fatal("expected error from store")
 	}

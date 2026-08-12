@@ -12,6 +12,7 @@ type ConfigKey string
 
 const (
 	KeyXPPerLevel                ConfigKey = "xp_per_level"
+	KeyMaxNewQuestsPerDay        ConfigKey = "max_new_quests_per_day"
 	KeyChallengeXP               ConfigKey = "challenge_xp"
 	KeyCompletionBonusXP         ConfigKey = "completion_bonus_xp"
 	KeyDropRate                  ConfigKey = "drop_rate_multiplier"

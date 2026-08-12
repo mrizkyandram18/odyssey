@@ -22,7 +22,7 @@ export function SharedTextBoard() {
       const res = await boardApi.list()
       setPosts(res.posts ?? [])
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'failed to load board')
+      setError(e instanceof Error ? e.message : 'gagal memuat papan')
     } finally {
       setLoading(false)
     }
@@ -42,7 +42,7 @@ export function SharedTextBoard() {
       setContent('')
       await load()
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'failed to post')
+      setError(err instanceof Error ? err.message : 'gagal memposting')
     } finally {
       setPosting(false)
     }
@@ -53,9 +53,9 @@ export function SharedTextBoard() {
   return (
     <section className="flex flex-col gap-4" data-testid="shared-text-board">
       <div>
-        <h2 className="text-xl font-bold text-text-primary">Shared Text Board</h2>
+        <h2 className="text-xl font-bold text-text-primary">Papan Teks Bersama</h2>
         <p className="text-sm text-muted-foreground">
-          Leave notes for your crew. Everyone can add entries and react — not a live multiplayer editor.
+          Tinggalkan catatan untuk krumu. Semua bisa menambah entri dan bereaksi — bukan editor multiplayer langsung.
         </p>
       </div>
 
@@ -64,7 +64,7 @@ export function SharedTextBoard() {
           <textarea
             value={content}
             onChange={(e) => setContent(e.target.value)}
-            placeholder="Write something the whole crew can see…"
+            placeholder="Tulis sesuatu yang bisa dilihat seluruh kru…"
             className="min-h-[96px] w-full resize-none rounded-lg border border-border bg-background p-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
             maxLength={2000}
             disabled={posting}
@@ -79,7 +79,7 @@ export function SharedTextBoard() {
               isLoading={posting}
               data-testid="board-submit"
             >
-              Post to board
+              Kirim ke papan
             </Button>
           </div>
         </form>
@@ -92,11 +92,11 @@ export function SharedTextBoard() {
       )}
 
       {loading && posts.length === 0 ? (
-        <p className="text-sm text-muted-foreground animate-pulse">Loading board…</p>
+        <p className="text-sm text-muted-foreground animate-pulse">Memuat papan…</p>
       ) : posts.length === 0 ? (
         <div className="rounded-xl border border-dashed border-border bg-surface/50 p-8 text-center">
-          <p className="text-muted-foreground">No board notes yet.</p>
-          <p className="mt-1 text-sm text-muted-foreground">Be the first to leave a message for your crew.</p>
+          <p className="text-muted-foreground">Belum ada catatan di papan.</p>
+          <p className="mt-1 text-sm text-muted-foreground">Jadilah yang pertama meninggalkan pesan untuk krumu.</p>
         </div>
       ) : (
         <div className="flex flex-col gap-3">
@@ -121,7 +121,7 @@ export function SharedTextBoard() {
                 {post.payload}
               </p>
               <div className="flex items-center justify-between border-t border-border/50 pt-3">
-                <span className="text-xs font-medium text-muted-foreground">Shared board</span>
+                <span className="text-xs font-medium text-muted-foreground">Papan bersama</span>
                 <ConnectedReactionBar targetType="TEXT_BOARD" targetId={post.id} />
               </div>
             </div>

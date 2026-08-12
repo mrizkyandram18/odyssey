@@ -13,7 +13,7 @@ import (
 
 // XPPerLevel is the XP stride between consecutive Explorer Levels.
 // Level 1 begins at 0 XP; reaching level N requires (N-1)*XPPerLevel XP.
-const XPPerLevel int64 = 100
+const XPPerLevel int64 = 500
 
 // XPForLevel returns the total XP required to *reach* a given level.
 // Level 1 requires 0 XP. This is a pure function with no side effects.
@@ -54,7 +54,7 @@ type ProgressionConfig struct {
 // DefaultProgressionConfig returns the standard MVP progression values.
 func DefaultProgressionConfig() ProgressionConfig {
 	return ProgressionConfig{
-		XPPerLevel:        100,
+		XPPerLevel:        500,
 		ChallengeXP:       20,
 		CompletionBonusXP: 60,
 	}
@@ -107,7 +107,7 @@ func (s *ProgressionService) Config() ProgressionConfig {
 	if s.balance != nil {
 		def := s.cfg
 		if def.XPPerLevel == 0 {
-			def.XPPerLevel = 100
+			def.XPPerLevel = 500
 		}
 		if def.ChallengeXP == 0 {
 			def.ChallengeXP = 20
@@ -127,7 +127,7 @@ func (s *ProgressionService) Config() ProgressionConfig {
 func (s *ProgressionService) applyBalanceOverrides() {
 	def := s.cfg
 	if def.XPPerLevel == 0 {
-		def.XPPerLevel = 100
+		def.XPPerLevel = 500
 	}
 	if def.ChallengeXP == 0 {
 		def.ChallengeXP = 20

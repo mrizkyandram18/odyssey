@@ -50,6 +50,7 @@ func (s *supabaseQuestStore) CreateQuest(ctx context.Context, q *game.Quest) (*g
 		Title:        q.Title,
 		Status:       q.Status,
 		StartedAt:    q.StartedAt,
+		StartedBy:    q.StartedBy,
 		CompletedAt:  q.CompletedAt,
 	}
 	_, err := s.client.Mutate(ctx, "POST", "odyssey_quests", payload, "return=representation")
@@ -212,6 +213,7 @@ func mapQuest(q QuestInstance) *game.Quest {
 		Title:        q.Title,
 		Status:       q.Status,
 		StartedAt:    q.StartedAt,
+		StartedBy:    q.StartedBy,
 		CompletedAt:  q.CompletedAt,
 		CreatedAt:    q.CreatedAt,
 	}

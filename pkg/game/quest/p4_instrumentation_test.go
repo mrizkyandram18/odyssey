@@ -35,7 +35,7 @@ func TestCompleteChallenge_RealmCompletedMetric(t *testing.T) {
 	qStore.challenges[1] = makeStoredChallenges(1, string(ChallengeStatusDone), string(ChallengeStatusPending))
 
 	h, realm, m := setupOrchestratorWithMetrics(t, qStore, makePlayerForHandler(1, 90))
-	result, err := h.CompleteChallenge(context.Background(), 1, 12, "crew-1", "user-1")
+	result, err := h.CompleteChallenge(context.Background(), 1, 12, "crew-1", "user-1", "")
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -69,7 +69,7 @@ func TestCompleteChallenge_ServiceCallLogging(t *testing.T) {
 	h.SetLogger(logger)
 
 	// Non-completing challenge: still exercises the service-call log path.
-	if _, err := h.CompleteChallenge(context.Background(), 1, 11, "crew-1", "user-1"); err != nil {
+	if _, err := h.CompleteChallenge(context.Background(), 1, 11, "crew-1", "user-1", ""); err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
 	logger.Flush()
@@ -84,5 +84,5 @@ func TestQuestAPIHandler_SetMetricsNilSafe(t *testing.T) {
 	h.SetMetrics(nil)
 	h.SetLogger(nil)
 	// Completing an unknown quest exercises the early error-return log path.
-	_, _ = h.CompleteChallenge(context.Background(), 999, 1, "crew-1", "user-1")
+	_, _ = h.CompleteChallenge(context.Background(), 999, 1, "crew-1", "user-1", "")
 }

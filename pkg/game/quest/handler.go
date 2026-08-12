@@ -133,18 +133,46 @@ func (h *QuestAPIHandler) GetByCrewAndID(ctx context.Context, questID int64, cre
 // StartQuest transitions a quest from PENDING to ACTIVE for a crew. It first
 // verifies the quest belongs to the crew (returning ErrQuestNotFound for
 // unknown or unauthorized quests) before mutating state.
-func (h *QuestAPIHandler) StartQuest(ctx context.Context, questID int64, crewID string) error {
-	if _, err := h.qs.GetByCrewAndID(ctx, questID, crewID); err != nil {
+func (h *QuestAPIHandler) StartQuest(ctx context.Context, questID int64, crewID, uid string) error {
+	qwc, err := h.qs.GetByCrewAndID(ctx, questID, crewID)
+	if err != nil {
 		return err
 	}
-	return h.qs.StartQuest(ctx, questID)
+
+	if qwc.StartedAt == nil && qwc.Status == string(QuestStatusPending) {
+		maxNew := 1
+		if h.balance != nil {
+			maxNew = h.balance.OverrideMaxNewQuestsPerDay(maxNew)
+		}
+
+		if maxNew > 0 {
+			quests, err := h.qs.ListByCrew(ctx, crewID)
+			if err != nil {
+				return fmt.Errorf("list quests: %w", err)
+			}
+
+			today := time.Now().UTC().Truncate(24 * time.Hour)
+			startedToday := 0
+			for _, q := range quests {
+				if q.StartedBy != nil && *q.StartedBy == uid && q.StartedAt != nil && q.StartedAt.UTC().Truncate(24*time.Hour).Equal(today) {
+					startedToday++
+				}
+			}
+
+			if startedToday >= maxNew {
+				return errors.New("daily new quest limit reached")
+			}
+		}
+	}
+
+	return h.qs.StartQuest(ctx, questID, uid)
 }
 
 // CompleteChallenge marks a challenge done, recomputes the quest status, and
 // — when the quest becomes DONE — awards XP (including a completion bonus) and
 // advances the crew's shared Realm Progress. The completing Explorer is
 // always the one identified by uid.
-func (h *QuestAPIHandler) CompleteChallenge(ctx context.Context, questID, challengeID int64, crewID, uid string) (result *CompleteChallengeResult, err error) {
+func (h *QuestAPIHandler) CompleteChallenge(ctx context.Context, questID, challengeID int64, crewID, uid string, answer string) (result *CompleteChallengeResult, err error) {
 	start := time.Now()
 	defer func() {
 		if h.logger == nil {
@@ -172,7 +200,7 @@ func (h *QuestAPIHandler) CompleteChallenge(ctx context.Context, questID, challe
 		return nil, err
 	}
 
-	status, progressed, questCompleted, err := h.qs.CompleteChallengeForQuest(ctx, questID, challengeID, uid)
+	status, progressed, questCompleted, err := h.qs.CompleteChallengeForQuest(ctx, questID, challengeID, uid, answer)
 	if err != nil {
 		return nil, fmt.Errorf("complete challenge: %w", err)
 	}
@@ -183,9 +211,11 @@ func (h *QuestAPIHandler) CompleteChallenge(ctx context.Context, questID, challe
 		NextAction:     "",
 	}
 
-	if !progressed {
+	if !progressed && !questCompleted {
 		// Replay of an already-completed challenge (double-tap or client retry):
 		// no XP, no rewards — return the fresh quest state.
+		// However, if questCompleted is true, it means this replay fixed a stuck quest
+		// (or won the CAS against the actual completer), so we must proceed to award quest XP.
 		updated, err := h.qs.GetByCrewAndID(ctx, questID, crewID)
 		if err != nil {
 			return nil, fmt.Errorf("reload quest: %w", err)
@@ -204,14 +234,16 @@ func (h *QuestAPIHandler) CompleteChallenge(ctx context.Context, questID, challe
 	challengeXP = progCfg.ChallengeXP
 	completionBonusXP = progCfg.CompletionBonusXP
 
-	player, levelUp, err := h.prog.AwardXP(ctx, uid, challengeXP)
-	if err != nil {
-		return nil, fmt.Errorf("award challenge xp: %w", err)
+	result.XP = 0
+	if progressed {
+		player, levelUp, err := h.prog.AwardXP(ctx, uid, challengeXP)
+		if err != nil {
+			return nil, fmt.Errorf("award challenge xp: %w", err)
+		}
+		result.XP = challengeXP
+		result.NewLevel = player.Level
+		result.LevelUp = levelUp
 	}
-
-	result.XP = challengeXP
-	result.NewLevel = player.Level
-	result.LevelUp = levelUp
 
 	if questCompleted {
 		result.NextAction = "CREATE_MEMORY"

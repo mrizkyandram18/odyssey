@@ -31,9 +31,9 @@ export function FamilyTimeline() {
   return (
     <div className="flex flex-col gap-8 p-4 pb-safe max-w-2xl mx-auto w-full">
       <div>
-        <h1 className="text-2xl font-bold">Family Journal</h1>
+        <h1 className="text-2xl font-bold">Jurnal Keluarga</h1>
         <p className="text-sm text-muted-foreground">
-          Shared board notes and quest memories from your adventures.
+          Catatan papan bersama dan kenangan misi dari petualanganmu.
         </p>
       </div>
 
@@ -42,25 +42,25 @@ export function FamilyTimeline() {
 
       <section className="flex flex-col gap-4">
         <div>
-          <h2 className="text-xl font-bold">Quest memories</h2>
+          <h2 className="text-xl font-bold">Kenangan Misi</h2>
           <p className="text-sm text-muted-foreground">
-            STORY, DRAWING, and COMIC submissions from completed quests.
+            Karya CERITA, GAMBAR, dan KOMIK dari misi yang telah diselesaikan.
           </p>
         </div>
 
         {loading && submissions.length === 0 ? (
           <div className="flex h-32 items-center justify-center">
-            <p className="text-sm text-muted-foreground animate-pulse">Loading memories…</p>
+            <p className="text-sm text-muted-foreground animate-pulse">Memuat kenangan…</p>
           </div>
         ) : error ? (
           <div className="flex flex-col items-center gap-2 p-6">
             <p className="text-sm text-red-500">{error}</p>
-            <button onClick={loadTimeline} className="text-sm text-primary underline">Retry</button>
+            <button onClick={loadTimeline} className="text-sm text-primary underline">Coba Lagi</button>
           </div>
         ) : submissions.length === 0 ? (
           <div className="flex flex-col items-center justify-center rounded-xl border border-dashed border-border bg-surface/50 p-12 text-center">
-            <p className="text-muted-foreground">No quest memories yet.</p>
-            <p className="mt-1 text-sm text-muted-foreground">Complete quests to start writing your family story!</p>
+            <p className="text-muted-foreground">Belum ada kenangan misi.</p>
+            <p className="mt-1 text-sm text-muted-foreground">Selesaikan misi untuk mulai menulis cerita keluargamu!</p>
           </div>
         ) : (
           <div className="flex flex-col gap-4">

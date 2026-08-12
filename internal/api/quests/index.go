@@ -20,8 +20,8 @@ type QuestHandler interface {
 	List(ctx context.Context, crewID string) ([]quest.QuestView, error)
 	ListAvailable(ctx context.Context, crewID, uid string) ([]quest.QuestView, error)
 	GetByCrewAndID(ctx context.Context, questID int64, crewID string) (*quest.QuestWithChallenges, error)
-	StartQuest(ctx context.Context, questID int64, crewID string) error
-	CompleteChallenge(ctx context.Context, questID, challengeID int64, crewID, uid string) (*quest.CompleteChallengeResult, error)
+	StartQuest(ctx context.Context, questID int64, crewID, uid string) error
+	CompleteChallenge(ctx context.Context, questID, challengeID int64, crewID, uid string, answer string) (*quest.CompleteChallengeResult, error)
 	SelectBranch(ctx context.Context, questID int64, crewID, branchChoice string) (*quest.SelectBranchResult, error)
 }
 
@@ -158,7 +158,7 @@ func handleStart(w http.ResponseWriter, r *http.Request, claims *auth.SessionCla
 		return
 	}
 
-	if err := handler.StartQuest(r.Context(), questID, claims.CrewID); err != nil {
+	if err := handler.StartQuest(r.Context(), questID, claims.CrewID, claims.UID); err != nil {
 		if isNotFound(err) {
 			shared.WriteJSONError(w, "quest not found", http.StatusNotFound)
 			return
@@ -182,7 +182,14 @@ func handleCompleteChallenge(w http.ResponseWriter, r *http.Request, claims *aut
 		return
 	}
 
-	result, err := handler.CompleteChallenge(r.Context(), questID, challengeID, claims.CrewID, claims.UID)
+	var req struct {
+		Answer string `json:"answer,omitempty"`
+	}
+	if r.Body != nil {
+		_ = json.NewDecoder(r.Body).Decode(&req)
+	}
+
+	result, err := handler.CompleteChallenge(r.Context(), questID, challengeID, claims.CrewID, claims.UID, req.Answer)
 	if err != nil {
 		if isNotFound(err) {
 			shared.WriteJSONError(w, "quest not found", http.StatusNotFound)

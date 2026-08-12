@@ -50,7 +50,7 @@ describe('GalleryPage', () => {
       </MemoryRouter>
     )
 
-    expect(screen.getByText('Loading gallery…')).toBeInTheDocument()
+    expect(screen.getByText('Memuat galeri…')).toBeInTheDocument()
   })
 
   it('loads and displays submissions with All filter', async () => {
@@ -69,7 +69,7 @@ describe('GalleryPage', () => {
       expect(screen.getByTestId('creative-card-1')).toBeInTheDocument()
     })
     expect(screen.getByTestId('creative-card-2')).toBeInTheDocument()
-    expect(screen.getByText('Family Gallery')).toBeInTheDocument()
+    expect(screen.getByText('Galeri Keluarga')).toBeInTheDocument()
   })
 
   it('filters submissions by kind when filter is selected', async () => {
@@ -92,7 +92,7 @@ describe('GalleryPage', () => {
       expect(screen.getByTestId('creative-card-1')).toBeInTheDocument()
     })
 
-    const comicButton = screen.getByRole('button', { name: 'Comics' })
+    const comicButton = screen.getByRole('button', { name: 'Komik' })
     comicButton.click()
 
     await waitFor(() => {
@@ -115,7 +115,7 @@ describe('GalleryPage', () => {
     await waitFor(() => {
       expect(screen.getByText('network error')).toBeInTheDocument()
     })
-    expect(screen.getByRole('button', { name: 'Retry' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Coba Lagi' })).toBeInTheDocument()
   })
 
   it('renders empty state when no submissions exist', async () => {
@@ -128,7 +128,7 @@ describe('GalleryPage', () => {
     )
 
     await waitFor(() => {
-      expect(screen.getByText('No contributions yet.')).toBeInTheDocument()
+      expect(screen.getByText('Belum ada karya.')).toBeInTheDocument()
     })
   })
 

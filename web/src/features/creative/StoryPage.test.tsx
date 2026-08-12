@@ -51,7 +51,7 @@ describe('StoryPage', () => {
       </MemoryRouter>
     )
 
-    expect(screen.getByText('Loading story…')).toBeInTheDocument()
+    expect(screen.getByText('Memuat cerita…')).toBeInTheDocument()
   })
 
   it('loads and displays a drawing submission', async () => {
@@ -76,9 +76,9 @@ describe('StoryPage', () => {
     )
 
     await waitFor(() => {
-      expect(screen.getByText('Quest #1 · Drawing')).toBeInTheDocument()
+      expect(screen.getByText('Misi #1 · Gambar')).toBeInTheDocument()
     })
-    expect(screen.getByText('by u1')).toBeInTheDocument()
+    expect(screen.getByText('oleh u1')).toBeInTheDocument()
   })
 
   it('renders error state when API fails', async () => {
@@ -95,7 +95,7 @@ describe('StoryPage', () => {
     await waitFor(() => {
       expect(screen.getByText('network error')).toBeInTheDocument()
     })
-    expect(screen.getByRole('link', { name: 'Back to Gallery' })).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: 'Kembali ke Galeri' })).toBeInTheDocument()
   })
 
   it('renders not-drawing error when submission kind is not DRAWING', async () => {
@@ -120,7 +120,7 @@ describe('StoryPage', () => {
     )
 
     await waitFor(() => {
-      expect(screen.getByText('This submission is not a drawing.')).toBeInTheDocument()
+      expect(screen.getByText('Karya ini bukan gambar.')).toBeInTheDocument()
     })
   })
 
@@ -136,7 +136,7 @@ describe('StoryPage', () => {
     )
 
     await waitFor(() => {
-      expect(screen.getByText('Story not found')).toBeInTheDocument()
+      expect(screen.getByText('Cerita tidak ditemukan')).toBeInTheDocument()
     })
   })
 })

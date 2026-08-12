@@ -6,11 +6,11 @@ import { CreativeCard } from '../../shared/components/molecules/CreativeCard'
 type FilterKind = 'ALL' | SubmissionKind
 
 const FILTERS: { value: FilterKind; label: string }[] = [
-  { value: 'ALL', label: 'All' },
-  { value: 'STORY', label: 'Stories' },
-  { value: 'COMIC', label: 'Comics' },
-  { value: 'PHOTO', label: 'Photos' },
-  { value: 'VIDEO', label: 'Videos' },
+  { value: 'ALL', label: 'Semua' },
+  { value: 'STORY', label: 'Cerita' },
+  { value: 'COMIC', label: 'Komik' },
+  { value: 'PHOTO', label: 'Foto' },
+  { value: 'VIDEO', label: 'Video' },
 ]
 
 export function GalleryPage() {
@@ -41,9 +41,9 @@ export function GalleryPage() {
   return (
     <div className="flex flex-col gap-6 p-4 pb-safe max-w-2xl mx-auto w-full">
       <div>
-        <h1 className="text-2xl font-bold">Family Gallery</h1>
+        <h1 className="text-2xl font-bold">Galeri Keluarga</h1>
         <p className="text-sm text-muted-foreground">
-          Creative contributions from your crew.
+          Karya kreatif dari kru kalian.
         </p>
       </div>
 
@@ -65,17 +65,17 @@ export function GalleryPage() {
 
       {loading && submissions.length === 0 ? (
         <div className="flex h-32 items-center justify-center">
-          <p className="text-sm text-muted-foreground animate-pulse">Loading gallery…</p>
+          <p className="text-sm text-muted-foreground animate-pulse">Memuat galeri…</p>
         </div>
       ) : error ? (
         <div className="flex flex-col items-center gap-2 p-6">
           <p className="text-sm text-red-500">{error}</p>
-          <button onClick={loadGallery} className="text-sm text-primary underline">Retry</button>
+          <button onClick={loadGallery} className="text-sm text-primary underline">Coba Lagi</button>
         </div>
       ) : submissions.length === 0 ? (
         <div className="flex flex-col items-center justify-center rounded-xl border border-dashed border-border bg-surface/50 p-12 text-center">
-          <p className="text-muted-foreground">No contributions yet.</p>
-          <p className="mt-1 text-sm text-muted-foreground">Complete quests and submit creative work to fill the gallery.</p>
+          <p className="text-muted-foreground">Belum ada karya.</p>
+          <p className="mt-1 text-sm text-muted-foreground">Selesaikan misi dan unggah karya kreatif untuk mengisi galeri.</p>
         </div>
       ) : (
         <div className="flex flex-col gap-4">
