@@ -6,6 +6,7 @@ import { ProgressBar } from '../../shared/components/atoms/ProgressBar'
 import { questsApi, realmProgressApi } from '../../shared/lib/api'
 import type { QuestView, RealmProgress } from '../../shared/types'
 import { YourTurnBadge } from '../../shared/components/molecules/YourTurnBadge'
+import { WorldMap } from '../../shared/components/organisms/WorldMap'
 import { useSession } from '../../shared/hooks/useSession'
 import { isMyRelayTurn } from '../../shared/utils/questTurn'
 import {
@@ -184,44 +185,17 @@ export function QuestsPage() {
         </p>
       </header>
 
-      {/* Realm Filter Tabs */}
-      <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-none" data-testid="realm-tabs">
-        <button
-          onClick={() => handleSelectRealm('all')}
-          className={`px-4 py-2 rounded-lg text-sm font-semibold whitespace-nowrap transition-all ${
-            selectedRealm === 'all'
-              ? 'bg-accent-magic text-black shadow-md'
-              : 'bg-surface border border-border-subtle text-text-secondary hover:text-text-primary'
-          }`}
-        >
-          Semua Topik
-        </button>
-
-        {mergedRealms.map((r) => {
-          const unlocked = isRealmUnlocked(r.status)
-          const active = selectedRealm === r.slug
-
-          return (
-            <button
-              key={r.slug}
-              disabled={!unlocked}
-              onClick={() => handleSelectRealm(r.slug)}
-              className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold whitespace-nowrap transition-all ${
-                !unlocked
-                  ? 'opacity-50 cursor-not-allowed bg-surface-elevated/30 text-text-secondary border border-border-subtle'
-                  : active
-                  ? 'bg-accent-magic text-black shadow-md'
-                  : 'bg-surface border border-border-subtle text-text-secondary hover:text-text-primary'
-              }`}
-            >
-              <span>{r.icon}</span>
-              <span>{r.name}</span>
-              {!unlocked && <span className="text-xs">🔒</span>}
-              {r.status === 'COMPLETE' && <span className="text-xs">✓</span>}
-            </button>
-          )
-        })}
-      </div>
+      {/* World Map Section */}
+      <section className="mb-8">
+        <h2 className="font-heading text-2xl text-text-primary mb-4 border-b border-border-subtle pb-2">
+          Mengenal Topik
+        </h2>
+        <WorldMap 
+          realms={realms}
+          onRealmSelect={handleSelectRealm}
+          selectedRealm={selectedRealm}
+        />
+      </section>
 
       {/* Selected Realm Banner Header (when specific realm selected) */}
       {currentRealmInfo && selectedRealm !== 'all' && (

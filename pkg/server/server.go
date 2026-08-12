@@ -252,7 +252,7 @@ func BuildHandler() (*Server, error) {
 	login.Setup(authenticator, issuer, profileStore)
 	me.Setup(profileStore)
 	apiQuests.Setup(questAPIHandler)
-	crews.Setup(repo.Crews)
+	crews.Setup(repo.Crews, repo.Users)
 	daily_turns.Setup(dailyTurnAPIHandler)
 
 	daStore := db.NewDailyActivityEngineStore(supabaseClient)
@@ -278,7 +278,7 @@ func BuildHandler() (*Server, error) {
 	boardSvc := board.NewService(repo.Creatives)
 	apiBoard.Setup(boardSvc)
 
-	crews.Setup(repo.Crews)
+	crews.Setup(repo.Crews, repo.Users)
 	realm_progress.Setup(repo.RealmProgress)
 	apiPush.Setup(repo.PushSubscriptions)
 	apiSeasons.Setup(seasonSvc)

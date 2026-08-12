@@ -12,7 +12,6 @@ import type {
   InventoryItem,
   CrewMember,
   GiftRelicResult,
-  QuestWithChallenges,
 } from '../../shared/types'
 import { Avatar } from '../../shared/components/atoms/Avatar'
 import { Shuffle } from 'lucide-react'
@@ -68,13 +67,10 @@ export function ProfilePage() {
 
   const loadCrewMembers = useCallback(async () => {
     try {
-      const quests = await apiClient.get<QuestWithChallenges[]>('/api/quests')
-      const questWithMembers = quests?.find((q) => q.members && q.members.length > 0)
-      if (questWithMembers?.members) {
-        setCrewMembers(questWithMembers.members)
-      }
+      const members = await crewsApi.members()
+      setCrewMembers(members as unknown as CrewMember[])
     } catch (e) {
-      console.error('failed to load crew members', e)
+      console.error('failed to load family members', e)
     }
   }, [])
 
@@ -99,7 +95,7 @@ export function ProfilePage() {
       })
       setBannerUrl(data.banner_url || '')
       setTheme(data.theme || 'default')
-      setCrewSaveMsg('Kustomisasi kru berhasil disimpan!')
+      setCrewSaveMsg('Kustomisasi keluarga berhasil disimpan!')
     } catch (e) {
       setCrewSaveError(e instanceof Error ? e.message : 'Gagal menyimpan')
     } finally {
@@ -110,7 +106,7 @@ export function ProfilePage() {
   useEffect(() => {
     if (profile) {
       apiClient.get<RewardLedgerEntry[]>('/api/rewards')
-        .then(setLedgers)
+        .then(data => setLedgers(data ?? []))
         .catch(console.error)
       void loadCosmetics()
       void loadInventory()
@@ -402,7 +398,7 @@ export function ProfilePage() {
             <span>🗝️</span> Brankas Relik
           </h3>
           <p className="text-xs text-text-secondary mb-4">
-            Berikan relik ke kru · gratis · tanpa potong koin
+            Berikan relik ke keluarga · gratis · tanpa potong koin
           </p>
           {giftMsg && (
             <p className="mb-3 text-sm text-accent-nature" data-testid="gift-success-msg">{giftMsg}</p>
@@ -474,7 +470,7 @@ export function ProfilePage() {
                 className="w-full rounded-lg border border-border-subtle bg-surface text-text-primary px-3 py-2 text-sm focus:outline-none focus:border-accent-magic"
                 data-testid="gift-recipient-select"
               >
-                <option value="">— pilih kru —</option>
+                <option value="">— pilih keluarga —</option>
                 {crewMembers
                   .filter((m) => m.uid !== profile.uid)
                   .map((m) => (
@@ -515,10 +511,10 @@ export function ProfilePage() {
       {/* Crew Customization — Slice 4.4 */}
       <Card className="p-6" data-testid="crew-customization">
         <h3 className="font-heading text-xl text-text-primary mb-1 flex items-center gap-2">
-          <span>⚓</span> Kustomisasi Kru
+          <span>⚓</span> Kustomisasi Keluarga
         </h3>
         <p className="text-xs text-text-secondary mb-4">
-          Atur URL banner dan tema bersama untuk kru kalian.
+          Atur URL banner dan tema bersama untuk keluarga kalian.
         </p>
         {crewSaveError && (
           <p className="mb-3 text-sm text-accent-danger" data-testid="crew-save-error">{crewSaveError}</p>
@@ -574,7 +570,7 @@ export function ProfilePage() {
             isLoading={savingCrew}
             data-testid="save-crew-settings"
           >
-            Simpan Pengaturan Kru
+            Simpan Pengaturan Keluarga
           </Button>
         </div>
       </Card>
@@ -583,13 +579,13 @@ export function ProfilePage() {
         {/* Crew Info */}
         <Card className="p-6">
           <h3 className="font-heading text-xl text-text-primary mb-6 flex items-center gap-2">
-            <span>🛡️</span> Aliansi
+            <span>🛡️</span> Keluarga
           </h3>
           <div className="space-y-4">
             <div className="flex justify-between items-center py-2 border-b border-border-subtle/50">
-              <span className="text-sm text-text-secondary font-medium">Identifikasi Kru</span>
+              <span className="text-sm text-text-secondary font-medium">Identifikasi Keluarga</span>
               <span className="font-mono text-sm bg-surface-elevated px-2 py-1 rounded text-text-primary">
-                {profile.crew_id || session?.crew_id || 'Kru Bersama'}
+                {profile.crew_id || session?.crew_id || 'Keluarga Bersama'}
               </span>
             </div>
             <div className="flex justify-between items-center py-2 border-b border-border-subtle/50">

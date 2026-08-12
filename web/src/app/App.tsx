@@ -1,4 +1,5 @@
 import { Routes, Route, Navigate, useParams } from 'react-router-dom'
+import { ErrorBoundary } from '../shared/components/ErrorBoundary'
 import { useSession } from '../shared/hooks/useSession'
 import { ProtectedRoute } from '../shared/components/ProtectedRoute'
 import { PublicRoute } from '../shared/components/PublicRoute'
@@ -20,30 +21,32 @@ import { AdminPage } from '../features/admin/AdminPage'
 
 export function App() {
   return (
-    <Routes>
-      <Route element={<PublicRoute />}>
-        <Route path="/login" element={<LoginPage />} />
-      </Route>
+    <ErrorBoundary>
+      <Routes>
+        <Route element={<PublicRoute />}>
+          <Route path="/login" element={<LoginPage />} />
+        </Route>
 
-      <Route element={<ProtectedRoute />}>
-        <Route index element={<HomePage />} />
-        <Route path="/quests" element={<QuestsPage />} />
-        <Route path="/quests/:questId" element={<QuestRoute />} />
-      <Route path="/creative" element={<FamilyTimeline />} />
-      <Route path="/gallery" element={<GalleryPage />} />
-      <Route path="/comics/:id" element={<ComicReaderPage />} />
-      <Route path="/stories/:id" element={<StoryPage />} />
-      <Route path="/journal" element={<JournalPage />} />
-        <Route path="/profile" element={<ProfilePage />} />
-        <Route path="/chests" element={<ChestPage />} />
-        <Route path="/chests/open/:chestId" element={<ChestOpeningPage />} />
-        <Route path="/relics" element={<RelicRoute><RelicInventoryPage /></RelicRoute>} />
-        <Route path="/relics/:slug" element={<RelicRoute><RelicDetailPage /></RelicRoute>} />
-        <Route path="/admin" element={<AdminPage />} />
-      </Route>
+        <Route element={<ProtectedRoute />}>
+          <Route index element={<HomePage />} />
+          <Route path="/quests" element={<QuestsPage />} />
+          <Route path="/quests/:questId" element={<QuestRoute />} />
+        <Route path="/creative" element={<FamilyTimeline />} />
+        <Route path="/gallery" element={<GalleryPage />} />
+        <Route path="/comics/:id" element={<ComicReaderPage />} />
+        <Route path="/stories/:id" element={<StoryPage />} />
+        <Route path="/journal" element={<JournalPage />} />
+          <Route path="/profile" element={<ProfilePage />} />
+          <Route path="/chests" element={<ChestPage />} />
+          <Route path="/chests/open/:chestId" element={<ChestOpeningPage />} />
+          <Route path="/relics" element={<RelicRoute><RelicInventoryPage /></RelicRoute>} />
+          <Route path="/relics/:slug" element={<RelicRoute><RelicDetailPage /></RelicRoute>} />
+          <Route path="/admin" element={<AdminPage />} />
+        </Route>
 
-      <Route path="*" element={<Navigate to="/" replace />} />
-    </Routes>
+        <Route path="*" element={<Navigate to="/" replace />} />
+      </Routes>
+    </ErrorBoundary>
   )
 }
 

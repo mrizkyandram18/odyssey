@@ -29,6 +29,6 @@ describe('Sidebar', () => {
     // Ensure hidden items are not there
     expect(screen.queryByText('Kenangan')).not.toBeInTheDocument()
     expect(screen.queryByText('Koleksi')).not.toBeInTheDocument()
-    expect(screen.queryByText('Galeri')).not.toBeInTheDocument()
+    expect(screen.getByText('Galeri')).toBeInTheDocument()
   })
 })

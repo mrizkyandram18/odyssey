@@ -17,6 +17,11 @@ type CrewStore interface {
 	UpdateCrew(ctx context.Context, crewID string, patch map[string]any) error
 }
 
+// UserStore provides access to user data.
+type UserStore interface {
+	ListUsersByCrew(ctx context.Context, crewID string) ([]game.Player, error)
+}
+
 // crewResponse is the JSON representation of a crew.
 type crewResponse struct {
 	ID        string    `json:"id"`
@@ -44,11 +49,13 @@ type updateCrewRequest struct {
 }
 
 var store CrewStore
+var users UserStore
 
-// Setup injects the crew store. Must be called once at startup before
+// Setup injects the crew and user stores. Must be called once at startup before
 // the server serves requests.
-func Setup(s CrewStore) {
+func Setup(s CrewStore, u UserStore) {
 	store = s
+	users = u
 }
 
 // Handler serves the /api/crews endpoint.
@@ -71,7 +78,11 @@ func Handler(w http.ResponseWriter, r *http.Request) {
 
 	switch r.Method {
 	case http.MethodGet:
-		handleGetCrew(w, r, claims)
+		if r.URL.Path == "/api/crews/members" {
+			handleGetMembers(w, r, claims)
+		} else {
+			handleGetCrew(w, r, claims)
+		}
 	case http.MethodPatch:
 		handlePatchCrew(w, r, claims)
 	default:
@@ -125,4 +136,18 @@ func handlePatchCrew(w http.ResponseWriter, r *http.Request, claims *auth.Sessio
 	}
 
 	shared.WriteJSON(w, http.StatusOK, mapCrew(crew))
+}
+
+func handleGetMembers(w http.ResponseWriter, r *http.Request, claims *auth.SessionClaims) {
+	members, err := users.ListUsersByCrew(r.Context(), claims.CrewID)
+	if err != nil {
+		shared.WriteJSONError(w, "failed to get crew members", http.StatusInternalServerError)
+		return
+	}
+
+	if members == nil {
+		members = []game.Player{}
+	}
+
+	shared.WriteJSON(w, http.StatusOK, members)
 }

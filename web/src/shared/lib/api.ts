@@ -16,6 +16,7 @@ import type {
   ReplayResult,
   CreativeSubmission,
   Crew,
+  Explorer,
 } from '../types'
 import { getSession, isSessionExpired } from './session'
 
@@ -129,20 +130,20 @@ export class ApiClient {
 export const apiClient = new ApiClient()
 
 export const chestsApi = {
-  list: () => apiClient.get<ChestView[]>('/api/chests'),
+  list: () => apiClient.get<ChestView[]>('/api/chests').then(d => d || []),
   get: (id: number) => apiClient.get<ChestView>(`/api/chests/${id}`),
   open: (id: number) => apiClient.post<OpenResult>(`/api/chests/${id}/open`, {}),
 }
 
 export const relicsApi = {
-  list: () => apiClient.get<InventoryItem[]>('/api/relics'),
+  list: () => apiClient.get<InventoryItem[]>('/api/relics').then(d => d || []),
   get: (slug: string) => apiClient.get<RelicDefinition>(`/api/relics/${slug}`),
-  inventory: () => apiClient.get<InventoryItem[]>('/api/relics/inventory'),
+  inventory: () => apiClient.get<InventoryItem[]>('/api/relics/inventory').then(d => d || []),
 }
 
 export const questsApi = {
-  list: () => apiClient.get<QuestView[]>('/api/quests'),
-  available: () => apiClient.get<QuestView[]>('/api/quests/available'),
+  list: () => apiClient.get<QuestView[]>('/api/quests').then(d => d || []),
+  available: () => apiClient.get<QuestView[]>('/api/quests/available').then(d => d || []),
   get: (id: number) => apiClient.get<QuestWithChallenges>(`/api/quests/${id}`),
   start: (id: number) => apiClient.post<{ started: boolean }>(`/api/quests/${id}/start`, {}),
   completeChallenge: (questId: number, challengeId: number, payload?: { answer?: string, content?: string }) =>
@@ -152,27 +153,28 @@ export const questsApi = {
 }
 
 export const achievementsApi = {
-  list: () => apiClient.get<AchievementView[]>('/api/achievements'),
+  list: () => apiClient.get<AchievementView[]>('/api/achievements').then(d => d || []),
 }
 
 export const loreApi = {
-  list: () => apiClient.get<LoreView[]>('/api/lore'),
+  list: () => apiClient.get<LoreView[]>('/api/lore/unlocked').then(d => d || []),
 }
 
 export const storyFragmentsApi = {
-  list: () => apiClient.get<StoryFragmentView[]>('/api/story_fragments'),
+  list: () => apiClient.get<StoryFragmentView[]>('/api/story_fragments').then(d => d || []),
   discover: (slug: string) => apiClient.post<DiscoverResult>('/api/story_fragments/discover', { slug }),
   replay: (realm: string) => apiClient.post<ReplayResult>('/api/story_fragments/replay', { realm }),
 }
 
 export const realmProgressApi = {
-  list: () => apiClient.get<RealmProgress[]>('/api/realm_progress'),
+  list: () => apiClient.get<RealmProgress[]>('/api/realm_progress').then(d => d || []),
 }
 
 export const crewsApi = {
   get: () => apiClient.get<Crew>('/api/crews'),
   patch: (body: { banner_url?: string; theme?: string }) =>
     apiClient.patch<Crew>('/api/crews', body),
+  members: () => apiClient.get<Explorer[]>('/api/crews/members').then(d => d || []),
 }
 
 export type ReactionType = 'HEART' | 'CLAP' | 'STAR'
@@ -190,7 +192,7 @@ export interface BoardPost {
 
 export const boardApi = {
   list: (): Promise<{ posts: BoardPost[] }> =>
-    apiClient.get<{ posts: BoardPost[] }>('/api/board'),
+    apiClient.get<{ posts: BoardPost[] }>('/api/board').then(d => d || { posts: [] }),
   post: (content: string): Promise<BoardPost> =>
     apiClient.post<BoardPost>('/api/board', { content }),
 }

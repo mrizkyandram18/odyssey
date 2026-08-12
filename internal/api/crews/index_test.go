@@ -68,7 +68,7 @@ func makeCrew() *game.Crew {
 }
 
 func TestCrews_Handler_MethodNotAllowed(t *testing.T) {
-	Setup(&mockCrewStore{crew: makeCrew()})
+	Setup(&mockCrewStore{crew: makeCrew()}, nil)
 	issuer := auth.NewSessionIssuer("test-secret")
 	mw := auth.NewMiddleware(issuer)
 	token := makeToken(t, issuer)
@@ -84,7 +84,7 @@ func TestCrews_Handler_MethodNotAllowed(t *testing.T) {
 }
 
 func TestCrews_Handler_Unauthorized(t *testing.T) {
-	Setup(&mockCrewStore{crew: makeCrew()})
+	Setup(&mockCrewStore{crew: makeCrew()}, nil)
 	req := httptest.NewRequest(http.MethodGet, "/api/crews", nil)
 	w := httptest.NewRecorder()
 	Handler(w, req)
@@ -95,7 +95,7 @@ func TestCrews_Handler_Unauthorized(t *testing.T) {
 }
 
 func TestCrews_Handler_NotConfigured(t *testing.T) {
-	Setup(nil)
+	Setup(nil, nil)
 	issuer := auth.NewSessionIssuer("test-secret")
 	mw := auth.NewMiddleware(issuer)
 	token := makeToken(t, issuer)
@@ -111,7 +111,7 @@ func TestCrews_Handler_NotConfigured(t *testing.T) {
 }
 
 func TestCrews_Handler_Success(t *testing.T) {
-	Setup(&mockCrewStore{crew: makeCrew()})
+	Setup(&mockCrewStore{crew: makeCrew()}, nil)
 	issuer := auth.NewSessionIssuer("test-secret")
 	mw := auth.NewMiddleware(issuer)
 	token := makeToken(t, issuer)
@@ -138,7 +138,7 @@ func TestCrews_Handler_Success(t *testing.T) {
 }
 
 func TestCrews_Handler_NotFound(t *testing.T) {
-	Setup(&mockCrewStore{err: game.ErrNotFound})
+	Setup(&mockCrewStore{err: game.ErrNotFound}, nil)
 	issuer := auth.NewSessionIssuer("test-secret")
 	mw := auth.NewMiddleware(issuer)
 	token := makeToken(t, issuer)
@@ -154,7 +154,7 @@ func TestCrews_Handler_NotFound(t *testing.T) {
 }
 
 func TestCrews_Handler_StoreError(t *testing.T) {
-	Setup(&mockCrewStore{err: errors.New("db failure")})
+	Setup(&mockCrewStore{err: errors.New("db failure")}, nil)
 	issuer := auth.NewSessionIssuer("test-secret")
 	mw := auth.NewMiddleware(issuer)
 	token := makeToken(t, issuer)
@@ -170,7 +170,7 @@ func TestCrews_Handler_StoreError(t *testing.T) {
 }
 
 func TestCrews_Handler_PatchSuccess(t *testing.T) {
-	Setup(&mockCrewStore{crew: makeCrew()})
+	Setup(&mockCrewStore{crew: makeCrew()}, nil)
 	issuer := auth.NewSessionIssuer("test-secret")
 	mw := auth.NewMiddleware(issuer)
 	token := makeToken(t, issuer)
@@ -199,7 +199,7 @@ func TestCrews_Handler_PatchSuccess(t *testing.T) {
 }
 
 func TestCrews_Handler_PatchUnauthorized(t *testing.T) {
-	Setup(&mockCrewStore{crew: makeCrew()})
+	Setup(&mockCrewStore{crew: makeCrew()}, nil)
 	req := httptest.NewRequest(http.MethodPatch, "/api/crews", nil)
 	w := httptest.NewRecorder()
 	Handler(w, req)
@@ -210,7 +210,7 @@ func TestCrews_Handler_PatchUnauthorized(t *testing.T) {
 }
 
 func TestCrews_Handler_PatchBadRequest(t *testing.T) {
-	Setup(&mockCrewStore{crew: makeCrew()})
+	Setup(&mockCrewStore{crew: makeCrew()}, nil)
 	issuer := auth.NewSessionIssuer("test-secret")
 	mw := auth.NewMiddleware(issuer)
 	token := makeToken(t, issuer)
@@ -227,7 +227,7 @@ func TestCrews_Handler_PatchBadRequest(t *testing.T) {
 }
 
 func TestCrews_Handler_PatchNoFields(t *testing.T) {
-	Setup(&mockCrewStore{crew: makeCrew()})
+	Setup(&mockCrewStore{crew: makeCrew()}, nil)
 	issuer := auth.NewSessionIssuer("test-secret")
 	mw := auth.NewMiddleware(issuer)
 	token := makeToken(t, issuer)

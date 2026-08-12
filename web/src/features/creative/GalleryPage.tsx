@@ -43,7 +43,7 @@ export function GalleryPage() {
       <div>
         <h1 className="text-2xl font-bold">Galeri Keluarga</h1>
         <p className="text-sm text-muted-foreground">
-          Karya kreatif dari kru kalian.
+          Karya kreatif dari keluarga kalian.
         </p>
       </div>
 

@@ -48,6 +48,7 @@ vi.mock('../../shared/lib/api', () => ({
   crewsApi: {
     get: (...args: any[]) => mockApiClientGet(...args),
     patch: (...args: any[]) => mockApiClientPatch(...args),
+    members: () => Promise.resolve([]),
   },
   questsApi: {
     list: () => Promise.resolve([]),
@@ -148,7 +149,7 @@ describe('ProfilePage crew customization', () => {
     })
 
     await waitFor(() => {
-      expect(screen.getByTestId('crew-save-msg')).toHaveTextContent('Kustomisasi kru berhasil disimpan!')
+      expect(screen.getByTestId('crew-save-msg')).toHaveTextContent('Kustomisasi keluarga berhasil disimpan!')
     })
   })
 })
