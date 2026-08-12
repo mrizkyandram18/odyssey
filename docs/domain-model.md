@@ -79,6 +79,22 @@ A reward container earned through quest completion or Explorer Level-ups.
 MVP Chests have **known, fixed contents** (not randomized in a way that
 simulates gambling — see Principles P3 in [principles](principles.md)).
 
+| Field | Type | Notes |
+|---|---|---|
+| `id` | TEXT (PK, UUID) | |
+| `uid` | TEXT | FK → Player |
+| `chest_slug` | TEXT | FK → ChestDefinition |
+| `reward_relic` | TEXT | (Phase 3) Explicit mapped relic slug inside the chest |
+
+### Balance Configuration
+
+System-wide economy configuration (injected at runtime).
+
+| Field | Type | Notes |
+|---|---|---|
+| `xp_per_level` | INTEGER | Default 500 (Phase 3 progression pacing) |
+| `max_new_quests_per_day` | INTEGER | Default 1 (Phase 3 quest pacing) |
+
 ### Achievement
 
 A milestone (personal or group). Achievements award XP, a Relic, or unlock
@@ -122,11 +138,25 @@ A story chapter within a Realm. Chapters contain Quests.
 
 A reusable quest definition: challenges, story beats, and rewards.
 
+| Field | Type | Notes |
+|---|---|---|
+| `slug` | TEXT (PK) | |
+| `reward_relic` | TEXT | (Phase 3) Explicit relic slug granted upon completion (deterministic) |
+
 ### QuestInstance
 
 A quest taken on by a specific Crew. Tracks status (`PENDING` / `ACTIVE` /
 `DONE`) and completion timestamps. Multiple crews can run the same Quest
 template independently.
+
+| Field | Type | Notes |
+|---|---|---|
+| `id` | TEXT (PK, UUID) | |
+| `crew_id` | TEXT | FK → Crew |
+| `quest_slug` | TEXT | FK → QuestDefinition |
+| `status` | TEXT | `PENDING` / `ACTIVE` / `DONE` |
+| `started_at` | TIMESTAMPTZ | Time when the quest transitioned to ACTIVE |
+| `started_by` | TEXT | UID of the explorer who started the quest |
 
 ### Challenge
 

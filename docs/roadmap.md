@@ -125,6 +125,14 @@ relay quests, and creative spaces feel like a shared living space.
   journal screen.
 - **Realm replay:** returning to completed realms reveals new dialogue and
   hidden story fragments.
+- **Economy & Pacing:**
+  - `xp_per_level` configurable, default 500.
+  - `max_new_quests_per_day` = 1 (Quest start pacing).
+  - Deterministic explicit chest rewards (`reward_relic`).
+  - Completion/reward idempotency (via CAS).
+  - Atomicity debt documented.
+
+> **Note:** Production automated E2E belum diverifikasi karena Vercel Protected Deployment/SSO. Manual QA diperlukan.
 
 **Validation Results:**
 - `go test -count=1 ./...` : PASS (all 58 packages pass)

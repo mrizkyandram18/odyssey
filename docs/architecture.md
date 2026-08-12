@@ -131,6 +131,11 @@ testable without Supabase or Gatekeeper.
 
 **Does not own:** HTTP, networking, or persistence mechanics.
 
+#### Quest Pacing & Reward Idempotency (Phase 3)
+- **Quest Start Pacing:** The system enforces a daily limit on starting new quests (`max_new_quests_per_day = 1`). This is validated using the `started_at` and `started_by` tracking fields on `QuestInstance`.
+- **Idempotent Completion:** Quest completion uses a Compare-And-Swap (CAS) mechanism (`UpdateUserIfMatch` for XP and Coin mutations). This ensures that concurrent or retry requests do not duplicate rewards.
+- **Explicit Reward Mapping:** Chests are deterministic. They map explicitly from a `quest_slug` → `ChestDefinition.reward_relic` → `Relic`. No RNG or loot-box mechanics are used.
+
 ### `pkg/content` — Content Engine
 
 Owns:
