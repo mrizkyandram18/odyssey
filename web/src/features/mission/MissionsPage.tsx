@@ -6,7 +6,6 @@ import { ProgressBar } from '../../shared/components/atoms/ProgressBar'
 import { MissionsApi, JourneyProgressApi } from '../../shared/lib/api'
 import type { MissionView, JourneyProgress } from '../../shared/types'
 import { YourTurnBadge } from '../../shared/components/molecules/YourTurnBadge'
-import { WorldMap } from '../../shared/components/organisms/WorldMap'
 import { useSession } from '../../shared/hooks/useSession'
 import { isMyRelayTurn } from '../../shared/utils/missionTurn'
 import {
@@ -24,31 +23,30 @@ const MissionList = ({
   title: string
   list: MissionView[]
   emptyMsg: string
-  uid?: string | null
+  uid?: string
 }) => (
   <section className="mb-8">
     <h2 className="font-heading text-2xl text-text-primary mb-4 border-b border-border-subtle pb-2">
       {title}
     </h2>
     {list.length === 0 ? (
-      <Card className="text-center py-8 opacity-60 bg-transparent border-dashed">
-        <p className="text-text-secondary">{emptyMsg}</p>
-      </Card>
+      <p className="text-text-secondary text-sm italic">{emptyMsg}</p>
     ) : (
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         {list.map((Mission) => (
-          <Card key={Mission.id} hoverable className="flex flex-col">
-            <div className="flex justify-between items-start mb-3">
+          <Card
+            key={Mission.id}
+            className={`flex flex-col p-4 border transition-colors ${
+              Mission.status === 'ACTIVE'
+                ? 'border-accent-magic/50 bg-accent-magic/5'
+                : Mission.status === 'DONE'
+                ? 'border-accent-nature/50 bg-accent-nature/5'
+                : 'border-border-subtle opacity-75'
+            }`}
+          >
+            <div className="flex justify-between items-start mb-4">
               <div>
-                <h3 className="font-heading text-xl text-text-primary">{Mission.title}</h3>
-                <p className="text-xs text-accent-magic uppercase tracking-wider">
-                  {Mission.template_slug.replace(/-/g, ' ')}
-                </p>
-                {Mission.Mission_type && (
-                  <p className="text-[10px] text-text-secondary uppercase tracking-widest mt-1">
-                    {Mission.Mission_type}
-                  </p>
-                )}
+                <h3 className="font-heading text-xl text-text-primary mb-1">{Mission.title}</h3>
               </div>
               <div className="flex flex-col items-end gap-1">
                 {isMyRelayTurn(Mission, uid) && <YourTurnBadge />}
@@ -185,16 +183,31 @@ export function MissionsPage() {
         </p>
       </header>
 
-      {/* World Map Section */}
+      {/* Topics Grid */}
       <section className="mb-8">
-        <h2 className="font-heading text-2xl text-text-primary mb-4 border-b border-border-subtle pb-2">
-          Mengenal Topik
-        </h2>
-        <WorldMap 
-          realms={realms}
-          onRealmSelect={handleSelectRealm}
-          selectedRealm={selectedRealm}
-        />
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          {mergedRealms.filter(t => t.slug !== 'whispering-woods' && t.slug !== 'clockwork-city' && t.slug !== 'starlit-library').map((topic) => (
+            <Card
+              key={topic.slug}
+              className={`p-4 flex flex-col gap-2 border transition-colors cursor-pointer ${
+                selectedRealm === topic.slug ? 'border-accent-magic bg-accent-magic/5' : 'border-border-subtle hover:border-accent-magic/50'
+              }`}
+              onClick={() => handleSelectRealm(topic.slug)}
+            >
+              <div className="flex items-center gap-3 mb-2">
+                <span className="text-2xl">{topic.icon || '📘'}</span>
+                <h3 className="font-heading text-lg text-text-primary">{topic.name}</h3>
+              </div>
+              <div className="mt-2 pt-3 border-t border-border-subtle/50">
+                <div className="flex justify-between text-[10px] text-text-secondary mb-1">
+                  <span>Progres</span>
+                  <span>{topic.progress}%</span>
+                </div>
+                <ProgressBar progress={topic.progress} colorClass="bg-accent-magic" />
+              </div>
+            </Card>
+          ))}
+        </div>
       </section>
 
       {/* Selected Journey Banner Header (when specific journey selected) */}
