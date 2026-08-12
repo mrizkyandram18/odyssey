@@ -17,16 +17,13 @@ ALTER TABLE odyssey_mission_definitions RENAME COLUMN quest_type TO mission_type
 ALTER TABLE odyssey_mission_definitions RENAME COLUMN challenge_defs TO exercise_defs;
 ALTER TABLE odyssey_quests RENAME TO odyssey_missions;
 ALTER TABLE odyssey_missions RENAME COLUMN crew_id TO family_id;
--- (quest_slug was template_slug, no need to rename)
 
 -- 3. Rename Challenges to Exercises
 ALTER TABLE odyssey_challenges RENAME TO odyssey_exercises;
 ALTER TABLE odyssey_exercises RENAME COLUMN quest_id TO mission_id;
--- (no challenge_slug exists, it was template_slug too)
 
 -- 4. Rename Daily Turns to Daily Missions
 ALTER TABLE odyssey_daily_turns RENAME TO odyssey_daily_missions;
--- No daily_turn_id column exists
 
 -- 5. Rename Realms & Chapters to Journeys & Courses
 ALTER TABLE odyssey_realm_definitions RENAME TO odyssey_journey_definitions;
@@ -41,8 +38,10 @@ ALTER TABLE odyssey_relic_definitions RENAME COLUMN realm TO journey;
 ALTER TABLE odyssey_relics RENAME COLUMN realm TO journey;
 ALTER TABLE odyssey_lore_unlocks RENAME COLUMN realm TO journey;
 ALTER TABLE odyssey_lore_unlocks RENAME COLUMN chapter TO course;
+
+-- This removes the invalid column renames for journey/course definitions
 ALTER TABLE odyssey_course_definitions RENAME COLUMN realm TO journey;
-ALTER TABLE odyssey_course_definitions RENAME COLUMN chapter TO course;
+
 ALTER TABLE odyssey_mission_definitions RENAME COLUMN realm TO journey;
 ALTER TABLE odyssey_mission_definitions RENAME COLUMN chapter TO course;
 
