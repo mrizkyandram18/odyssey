@@ -17,19 +17,19 @@ export function Button({
   type = 'button',
   ...props
 }: ButtonProps) {
-  const base = 'inline-flex items-center justify-center rounded-md font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-background disabled:opacity-50 disabled:pointer-events-none cursor-pointer border'
+  const base = 'inline-flex items-center justify-center rounded-full font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-background disabled:opacity-50 disabled:pointer-events-none cursor-pointer border'
 
   const variants = {
-    primary: 'bg-accent-magic text-black border-accent-magic hover:bg-accent-magic/90 hover:shadow-[0_0_15px_rgba(6,182,222,0.4)] focus:ring-accent-magic',
-    secondary: 'bg-surface-elevated text-text-primary border-border-subtle hover:bg-surface-glass hover:border-accent-nature focus:ring-accent-nature',
-    ghost: 'bg-transparent text-text-secondary border-transparent hover:text-text-primary hover:bg-surface-elevated focus:ring-border-subtle',
-    danger: 'bg-accent-danger/20 text-accent-danger border-accent-danger hover:bg-accent-danger hover:text-white focus:ring-accent-danger',
+    primary: 'bg-accent-reward text-white border-transparent hover:bg-accent-reward/90 shadow-sm focus:ring-accent-reward',
+    secondary: 'bg-surface-elevated text-text-primary border-border-subtle hover:bg-gray-50 focus:ring-border-subtle',
+    ghost: 'bg-transparent text-text-secondary border-transparent hover:text-text-primary hover:bg-black/5 focus:ring-border-subtle',
+    danger: 'bg-accent-danger/10 text-accent-danger border-transparent hover:bg-accent-danger hover:text-white focus:ring-accent-danger',
   }
 
   const sizes = {
-    sm: 'h-8 px-3 text-xs',
-    md: 'h-11 px-5 py-2 text-sm',
-    lg: 'h-14 px-8 text-base font-semibold',
+    sm: 'h-10 px-4 text-xs',
+    md: 'h-12 px-6 text-sm',
+    lg: 'h-14 px-8 text-base',
   }
 
   return (

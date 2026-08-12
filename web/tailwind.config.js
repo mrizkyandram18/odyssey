@@ -34,7 +34,7 @@ export default {
         error: "rgb(var(--accent-danger))",
       },
       fontFamily: {
-        heading: ['Cinzel', 'serif'],
+        heading: ['Nunito', 'sans-serif'],
         body: ['Inter', 'sans-serif'],
       },
     },

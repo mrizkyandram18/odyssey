@@ -33,7 +33,7 @@ describe('JournalPage', () => {
     )
 
     await waitFor(() => {
-      expect(screen.getByText('Belum ada pencapaian. Mulai aktivitas pertamamu!')).toBeInTheDocument()
+      expect(screen.getByText('Belum ada catatan perjalanan. Mulailah misi untuk mengukir ceritamu!')).toBeInTheDocument()
     })
   })
 
@@ -49,7 +49,7 @@ describe('JournalPage', () => {
     )
 
     await waitFor(() => {
-      expect(screen.getByText('Belum ada pencapaian. Mulai aktivitas pertamamu!')).toBeInTheDocument()
+      expect(screen.getByText('Belum ada catatan perjalanan. Mulailah misi untuk mengukir ceritamu!')).toBeInTheDocument()
     })
   })
 })

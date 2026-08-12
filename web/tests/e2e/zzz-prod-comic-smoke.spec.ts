@@ -106,7 +106,7 @@ test.describe('PROD smoke: comic submission (Slice 2.7)', () => {
     await expect(page.getByRole('heading', { name: 'Family Journal' }).first()).toBeVisible({ timeout: T });
     await expect(page.getByText(marker, { exact: false }).first()).toBeVisible({ timeout: 20_000 });
 
-    // eslint-disable-next-line no-console
+     
     console.log(
       '[PROD SMOKE]',
       JSON.stringify({

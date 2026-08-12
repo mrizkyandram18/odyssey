@@ -184,7 +184,7 @@ test.describe('PROD smoke: relic gifting round-trip (Slice 2.11)', () => {
       expect(item1?.owned_count ?? 0, `B's unrelated relic ${item0.relic_slug} must be unchanged`).toBe(item0.owned_count);
     }
 
-    // eslint-disable-next-line no-console
+     
     console.log('[PROD SMOKE 2.11]', JSON.stringify({
       target_slug: targetSlug,
       a_count_before: aCount0, a_count_after: aCount1,

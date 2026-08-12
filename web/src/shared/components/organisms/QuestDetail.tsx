@@ -6,14 +6,12 @@ import type {
   QuestWithChallenges,
   CompleteChallengeResult,
   CrewMember,
-  BranchOption,
 } from '../../types'
 import { Card } from '../atoms/Card'
 import { Button } from '../atoms/Button'
 import { YourTurnBadge } from '../molecules/YourTurnBadge'
 import { RelayRotation } from '../molecules/RelayRotation'
 import { memberName } from '../../utils/relayRotation'
-import { SubmissionForm } from '../../../features/creative/SubmissionForm'
 
 export interface QuestDetailProps {
   quest: QuestWithChallenges
@@ -25,9 +23,33 @@ export interface QuestDetailProps {
     challengeId: number,
     payload?: { answer?: string; content?: string }
   ) => Promise<CompleteChallengeResult | null>
-  onSelectBranch?: (branchSlug: string) => Promise<unknown>
   isMyTurn?: boolean
 }
+
+const StepIndicator = ({ activeStep }: { activeStep: number }) => (
+  <div className="flex items-center justify-between w-full mb-8 relative px-4">
+    <div className="absolute left-4 right-4 top-1/2 -translate-y-1/2 h-1 bg-border-subtle -z-10"></div>
+    {[
+      { num: 1, label: 'Belajar' },
+      { num: 2, label: 'Latihan' },
+      { num: 3, label: 'Hasil' },
+      { num: 4, label: 'Reward' }
+    ].map(s => {
+      const isActive = activeStep === s.num;
+      const isPast = activeStep > s.num;
+      return (
+        <div key={s.num} className="flex flex-col items-center gap-2 bg-surface px-2">
+          <div className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-sm border-2 ${isActive ? 'bg-accent-reward border-accent-reward text-white shadow-md' : isPast ? 'bg-accent-nature border-accent-nature text-white' : 'bg-surface border-border-subtle text-text-secondary'}`}>
+            {isPast ? '✓' : s.num}
+          </div>
+          <span className={`text-xs font-semibold ${isActive ? 'text-accent-reward' : isPast ? 'text-accent-nature' : 'text-text-secondary'}`}>
+            {s.label}
+          </span>
+        </div>
+      )
+    })}
+  </div>
+)
 
 export function QuestDetail({
   quest,
@@ -36,24 +58,26 @@ export function QuestDetail({
   myUID,
   onStartQuest,
   onCompleteChallenge,
-  onSelectBranch,
   isMyTurn,
 }: QuestDetailProps) {
   const [starting, setStarting] = useState(false)
   const [completingId, setCompletingId] = useState<number | null>(null)
-  const [selectingBranch, setSelectingBranch] = useState<string | null>(null)
   const [lastResult, setLastResult] = useState<CompleteChallengeResult | null>(null)
-  const [actionError, setActionError] = useState<string | null>(null)
   const [inputs, setInputs] = useState<Record<number, string>>({})
+  const [activeStep, setActiveStep] = useState<number>(quest.status === 'DONE' ? 4 : 1)
+
+  // Move to next step
+  const handleNextStep = () => {
+    setActiveStep(prev => prev + 1)
+  }
 
   const handleStart = async () => {
     if (!onStartQuest) return
     setStarting(true)
-    setActionError(null)
     try {
       await onStartQuest()
     } catch (e) {
-      setActionError(e instanceof Error ? e.message : 'Failed to start quest')
+      console.error(e)
     } finally {
       setStarting(false)
     }
@@ -62,7 +86,6 @@ export function QuestDetail({
   const handleComplete = async (challengeId: number, type?: string) => {
     if (!onCompleteChallenge) return
     setCompletingId(challengeId)
-    setActionError(null)
     const val = inputs[challengeId]?.trim() || ''
 
     try {
@@ -78,26 +101,11 @@ export function QuestDetail({
         })
       }
     } catch (e) {
-      setActionError(e instanceof Error ? e.message : 'Failed to complete challenge')
+      console.error(e)
     } finally {
       setCompletingId(null)
     }
   }
-
-  const handleBranchSelect = async (branchSlug: string) => {
-    if (!onSelectBranch) return
-    setSelectingBranch(branchSlug)
-    setActionError(null)
-    try {
-      await onSelectBranch(branchSlug)
-    } catch (e) {
-      setActionError(e instanceof Error ? e.message : 'Failed to select branch')
-    } finally {
-      setSelectingBranch(null)
-    }
-  }
-
-  const branchOptions: BranchOption[] = quest.branch_options || []
 
   return (
     <div className="flex flex-col gap-6 max-w-4xl mx-auto">
@@ -141,115 +149,22 @@ export function QuestDetail({
         </div>
       </Card>
 
-      {actionError && (
-        <div className="bg-accent-danger/10 border border-accent-danger/30 p-4 rounded-lg">
-          <p className="text-sm font-medium text-accent-danger">{actionError}</p>
-        </div>
-      )}
+      {/* Step Indicator */}
+      {quest.status !== 'PENDING' && <StepIndicator activeStep={activeStep} />}
 
-      {/* Narrative Branch Options Section */}
-      {branchOptions.length > 0 && (
-        <Card className="p-6 border-accent-magic/40 bg-surface flex flex-col gap-4">
-          <div className="flex items-center gap-2">
-            <span className="text-2xl">🌿</span>
-            <div>
-              <h2 className="font-heading text-xl text-text-primary">
-                Cabang Narasi Cerita
-              </h2>
-              <p className="text-xs text-text-secondary">
-                Pilih jalur keputusan cerita keluarga untuk menentukan alur petualangan ranah.
-              </p>
-            </div>
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-2">
-            {branchOptions.map((opt) => {
-              const isSelecting = selectingBranch === opt.slug
-
-              return (
-                <div
-                  key={opt.slug}
-                  className="flex flex-col justify-between p-4 rounded-lg bg-surface-elevated border border-border-subtle hover:border-accent-magic/50 transition-all"
-                >
-                  <div className="mb-3">
-                    <h3 className="font-medium text-text-primary text-base mb-1">
-                      {opt.title}
-                    </h3>
-                    <p className="text-xs text-text-secondary italic">{opt.description}</p>
-                  </div>
-                  {onSelectBranch && quest.status === 'ACTIVE' && (
-                    <Button
-                      size="sm"
-                      variant="secondary"
-                      isLoading={isSelecting}
-                      onClick={() => handleBranchSelect(opt.slug)}
-                      className="w-full mt-2"
-                    >
-                      Pilih Jalur Ini
-                    </Button>
-                  )}
-                </div>
-              )
-            })}
-          </div>
-        </Card>
-      )}
-
-      {/* Rewards / Result Banner */}
-      {lastResult && lastResult.next_action !== 'CREATE_MEMORY' && (
-        <Card className="border-accent-reward bg-accent-reward/5 p-6 text-center shadow-[0_0_20px_rgba(245,158,11,0.1)]">
-          <h3 className="font-heading text-2xl text-accent-reward mb-4">Kemenangan!</h3>
-          <div className="flex justify-center gap-6 mb-4">
-            <div className="text-center">
-              <span className="block text-2xl mb-1">✨</span>
-              <span className="font-bold text-text-primary">+{lastResult.xp} Poin</span>
-            </div>
-            <div className="text-center">
-              <span className="block text-2xl mb-1">🪙</span>
-              <span className="font-bold text-text-primary">+5 Koin</span>
-            </div>
-          </div>
-
-          {lastResult.level_up && (
-            <p className="text-sm font-bold text-accent-magic mt-4 bg-accent-magic/10 py-2 rounded">
-              🎉 Naik Level! Kamu sekarang Level {lastResult.new_level}!
-            </p>
-          )}
-          {lastResult.quest_completed && (
-            <div className="flex flex-col items-center gap-4 mt-4">
-              <p className="text-sm font-bold text-accent-nature">
-                🏆 Misi Selesai! Cek beranda untuk mengambil peti hadiahmu.
-              </p>
-              <Link to="/">
-                <Button variant="primary">Ambil Hadiah</Button>
-              </Link>
-            </div>
-          )}
-        </Card>
-      )}
-
-      {/* Story Memory Form */}
-      {lastResult && lastResult.next_action === 'CREATE_MEMORY' && (
-        <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
-          <SubmissionForm
-            questId={quest.id}
-            challengeId={challenges[challenges.length - 1]?.id || 1}
-            onComplete={() => setLastResult({ ...lastResult, next_action: undefined })}
-            onSkip={() => setLastResult({ ...lastResult, next_action: undefined })}
-          />
-        </div>
-      )}
-
-      {/* Start Button */}
+      {/* Start Button & Pending State */}
       {quest.status === 'PENDING' && onStartQuest && (
-        <Button
-          size="lg"
-          isLoading={starting}
-          onClick={handleStart}
-          className="w-full shadow-lg shadow-accent-magic/20 text-lg"
-        >
-          Mulai Misi
-        </Button>
+        <Card className="text-center p-8 bg-surface-elevated">
+          <p className="text-text-secondary mb-6">Misi ini belum dimulai. Siap belajar?</p>
+          <Button
+            size="lg"
+            isLoading={starting}
+            onClick={handleStart}
+            className="w-full shadow-lg shadow-accent-reward/20 text-lg"
+          >
+            Mulai Belajar
+          </Button>
+        </Card>
       )}
 
       {/* Relay rotation panel */}
@@ -257,24 +172,26 @@ export function QuestDetail({
         <RelayRotation quest={quest} challenges={challenges} members={members} myUID={myUID} />
       )}
 
-      {/* Learn Section */}
-      {quest.status === 'ACTIVE' && quest.learn_text && !starting && (
-        <Card className="p-6 border-accent-magic/40 bg-surface-elevated flex flex-col gap-4 animate-in fade-in slide-in-from-bottom-4">
-          <div className="flex items-center gap-3">
-            <span className="text-3xl">📖</span>
-            <h2 className="font-heading text-2xl text-text-primary">BELAJAR</h2>
+      {/* Step 1: Learn Section */}
+      {activeStep === 1 && quest.status !== 'PENDING' && (
+        <Card className="p-6 bg-surface-elevated flex flex-col gap-4 animate-in fade-in slide-in-from-right-4">
+          <div className="flex items-center gap-3 mb-2">
+            <h2 className="font-heading text-xl font-bold text-text-primary uppercase">Materi Belajar</h2>
           </div>
-          <p className="text-base text-text-primary leading-relaxed whitespace-pre-wrap bg-surface p-4 rounded-lg border border-border-subtle">
-            {quest.learn_text}
+          <p className="text-base text-text-primary leading-relaxed whitespace-pre-wrap bg-surface p-5 rounded-xl border border-border-subtle">
+            {quest.learn_text || 'Tidak ada materi spesifik. Silakan lanjut ke latihan.'}
           </p>
+          <Button onClick={handleNextStep} size="lg" className="mt-4">
+            Lanjut ke Latihan
+          </Button>
         </Card>
       )}
 
-      {/* Challenges List (Practice) */}
-      <div className="mt-4">
-        <h2 className="font-heading text-2xl text-text-primary mb-6">
-          {quest.status === 'ACTIVE' ? 'LATIHAN' : 'Daftar Latihan'}
-        </h2>
+      {/* Step 2: Challenges List (Practice) */}
+      {activeStep === 2 && (
+        <div className="animate-in fade-in slide-in-from-right-4">
+          <div className="flex flex-col gap-4">
+            <h2 className="font-heading text-xl font-bold text-text-primary uppercase mb-2">Latihan</h2>
         {challenges.length === 0 ? (
           <p className="text-text-secondary italic">
             Belum ada latihan yang tersedia.
@@ -416,20 +333,54 @@ export function QuestDetail({
             })}
           </div>
         )}
-      </div>
-
-      {/* RESULT & REWARD Section (Shows at the bottom when quest is DONE or last challenge completes) */}
-      {lastResult && lastResult.quest_completed && quest.result_text && (
-        <Card className="mt-4 border-accent-magic/50 bg-surface-elevated p-6 animate-in fade-in slide-in-from-bottom-4">
-          <div className="flex items-center gap-3 mb-4">
-            <span className="text-3xl">🎯</span>
-            <h2 className="font-heading text-2xl text-text-primary">HASIL</h2>
+        
+        {challenges.length > 0 && challenges.every(c => c.status === 'DONE') && (
+           <Button onClick={handleNextStep} size="lg" className="w-full mt-6">
+             Lihat Hasil
+           </Button>
+        )}
           </div>
-          <p className="text-base text-text-primary mb-6 p-4 bg-surface rounded-lg border border-border-subtle">
-            {quest.result_text}
+        </div>
+      )}
+
+
+      {/* Step 3: RESULT Section */}
+      {activeStep === 3 && (
+        <Card className="bg-surface-elevated p-6 animate-in fade-in slide-in-from-right-4">
+          <div className="flex items-center gap-3 mb-4">
+            <h2 className="font-heading text-xl font-bold text-text-primary uppercase">HASIL & PENJELASAN</h2>
+          </div>
+          <p className="text-base text-text-primary mb-6 p-5 bg-surface rounded-xl border border-border-subtle">
+            {quest.result_text || 'Kerja bagus! Latihan berhasil diselesaikan.'}
           </p>
-          <div className="w-full h-px bg-border-subtle mb-6"></div>
-          {/* Rewards are rendered above, but wait, I can just show the result text here */}
+          <Button onClick={handleNextStep} size="lg" className="w-full">
+             Ambil Reward
+          </Button>
+        </Card>
+      )}
+
+      {/* Step 4: REWARD Section */}
+      {activeStep === 4 && (
+        <Card className="border-accent-reward bg-accent-reward/5 p-6 text-center shadow-lg animate-in fade-in zoom-in-95">
+          <span className="block text-5xl mb-4">✨</span>
+          <h3 className="font-heading text-2xl font-bold text-accent-reward mb-2">Petualangan Selesai!</h3>
+          <p className="text-text-secondary mb-6">Kamu telah menyelesaikan materi ini dengan baik.</p>
+          
+          <div className="flex justify-center gap-6 mb-8">
+            <div className="text-center bg-surface px-6 py-4 rounded-xl border border-border-subtle shadow-sm">
+              <span className="block text-2xl mb-1">⭐</span>
+              <span className="font-bold text-text-primary text-lg">+{lastResult?.xp || 100} Poin</span>
+            </div>
+          </div>
+
+          <div className="flex flex-col items-center gap-4">
+            <p className="text-sm font-bold text-text-primary">
+              🏆 Cek beranda untuk melanjutkan perjalananmu!
+            </p>
+            <Link to="/" className="w-full">
+              <Button variant="primary" size="lg" className="w-full">Kembali ke Beranda</Button>
+            </Link>
+          </div>
         </Card>
       )}
     </div>

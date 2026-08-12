@@ -54,7 +54,7 @@ test.describe('PROD smoke: role mastery flavor text (read-only)', () => {
     expect(after.role).toBe(before.role);
     expect(after.level).toBe(before.level);
 
-    // eslint-disable-next-line no-console
+     
     console.log('[PROD SMOKE]', JSON.stringify({ role: before.role, level: before.level, mastery, before, after }));
   });
 });

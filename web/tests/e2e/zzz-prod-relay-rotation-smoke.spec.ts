@@ -55,7 +55,7 @@ test.describe('PROD smoke: relay rotation UI (Slice 2.6)', () => {
       await expect(page.locator('section[aria-label="Relay rotation"]')).toContainText('Your turn', { timeout: 15_000 });
     }
 
-    // eslint-disable-next-line no-console
+     
     console.log('[PROD SMOKE]', JSON.stringify({ relay_quest: detail.body.template_slug, assignee: assigned, members: names }));
   });
 });

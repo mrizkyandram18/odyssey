@@ -88,7 +88,7 @@ test.describe('PROD smoke: quest 102 completion flow (real demo path)', () => {
     expect(xp2.xp).toBe(xp1.xp);
     expect(xp2.coins).toBe(xp1.coins);
 
-    // eslint-disable-next-line no-console
+     
     console.log('[PROD SMOKE]', JSON.stringify({ initial: xp0, after: xp1, replay: xp2, completion: json }));
   });
 });

@@ -8,11 +8,11 @@ export interface CardProps extends HTMLMotionProps<"div"> {
 
 export const Card = forwardRef<HTMLDivElement, CardProps>(
   ({ children, className = '', hoverable = false, ...props }, ref) => {
-    const hoverStyles = hoverable ? 'cursor-pointer transition-all duration-300 hover:border-accent-nature/50 hover:shadow-[0_4px_20px_rgba(16,185,129,0.1)] hover:-translate-y-1' : ''
+    const hoverStyles = hoverable ? 'cursor-pointer transition-all duration-300 hover:border-accent-reward/50 hover:shadow-lg hover:-translate-y-1' : ''
     return (
       <motion.div
         ref={ref}
-        className={`glass-panel rounded-xl p-5 ${hoverStyles} ${className}`}
+        className={`bg-surface rounded-[24px] p-5 shadow-sm border border-border-subtle ${hoverStyles} ${className}`}
         whileHover={hoverable ? { y: -4 } : {}}
         whileTap={hoverable ? { scale: 0.98 } : {}}
         {...props}

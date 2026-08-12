@@ -139,7 +139,7 @@ test.describe('PROD smoke: photo submission (Slice 2.9)', () => {
       expect(meAfter.coins, 'Coins must not change from a pending PHOTO submission').toBe(meBefore.coins);
     }
 
-    // eslint-disable-next-line no-console
+     
       console.log(
         '[PROD SMOKE]',
         JSON.stringify({

@@ -3,22 +3,22 @@
 @tailwind utilities;
 
 :root {
-  /* Core Palette: Midnight / Deep Navy base */
-  --bg-app: 10 12 21;
-  --bg-realm: 15 23 42;
-  --surface: 20 28 50;
-  --surface-elevated: 28 38 65;
-  --surface-glass: 20 28 50 / 0.7;
-  --border-subtle: 40 55 90;
+  /* Core Palette: Warm Off-White / Beige base */
+  --bg-app: 250 248 245;       /* #FAF8F5 */
+  --bg-realm: 243 239 234;     /* #F3EFEA */
+  --surface: 255 255 255;      /* #FFFFFF */
+  --surface-elevated: 255 255 255;
+  --surface-glass: 255 255 255 / 0.8;
+  --border-subtle: 229 223 213; /* #E5DFD5 */
 
   /* Typography */
-  --text-primary: 248 250 252;
-  --text-secondary: 148 163 184;
+  --text-primary: 44 39 36;    /* #2C2724 Charcoal/Dark Brown */
+  --text-secondary: 122 112 103; /* #7A7067 Muted Brown */
 
   /* Semantic Accents */
-  --accent-magic: 6 182 222;       /* Cyan / teal */
-  --accent-nature: 16 185 129;     /* Forest emerald */
-  --accent-reward: 245 158 11;     /* Gold / amber */
+  --accent-magic: 14 165 233;      /* Soft Blue */
+  --accent-nature: 22 163 74;      /* Earthy Green */
+  --accent-reward: 234 88 12;      /* Terracotta / Soft Orange */
   --accent-rare: 139 92 246;       /* Violet */
   --accent-danger: 239 68 68;      /* Warm red */
   
@@ -41,27 +41,27 @@
 }
 
 html.dark {
-  --bg-app: 10 12 21;
-  --bg-realm: 15 23 42;
-  --surface: 20 28 50;
-  --surface-elevated: 28 38 65;
-  --surface-glass: 20 28 50 / 0.7;
-  --border-subtle: 40 55 90;
-  --text-primary: 248 250 252;
-  --text-secondary: 148 163 184;
+  /* Dark mode variants for accessibility if needed, though light is default */
+  --bg-app: 30 27 24;
+  --bg-realm: 38 34 31;
+  --surface: 43 38 35;
+  --surface-elevated: 54 48 45;
+  --surface-glass: 43 38 35 / 0.8;
+  --border-subtle: 68 62 58;
+  --text-primary: 245 242 239;
+  --text-secondary: 168 159 152;
 }
 
 html.light {
-  /* Odyssey is fundamentally a dark/night themed adventure game.
-     We force dark theme colors even in light mode to maintain the atmosphere. */
-  --bg-app: 10 12 21;
-  --bg-realm: 15 23 42;
-  --surface: 20 28 50;
-  --surface-elevated: 28 38 65;
-  --surface-glass: 20 28 50 / 0.7;
-  --border-subtle: 40 55 90;
-  --text-primary: 248 250 252;
-  --text-secondary: 148 163 184;
+  /* Default light theme */
+  --bg-app: 250 248 245;
+  --bg-realm: 243 239 234;
+  --surface: 255 255 255;
+  --surface-elevated: 255 255 255;
+  --surface-glass: 255 255 255 / 0.8;
+  --border-subtle: 229 223 213;
+  --text-primary: 44 39 36;
+  --text-secondary: 122 112 103;
 }
 
 [data-theme="forest"] {
