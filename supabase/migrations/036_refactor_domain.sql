@@ -3,7 +3,7 @@
 
 -- 1. Rename Crews to Families
 ALTER TABLE odyssey_crews RENAME TO odyssey_families;
-ALTER TABLE odyssey_users RENAME COLUMN crew_id TO family_id;
+ALTER TABLE odyssey_user_profiles RENAME COLUMN crew_id TO family_id;
 ALTER TABLE odyssey_realm_progress RENAME COLUMN crew_id TO family_id;
 ALTER TABLE odyssey_chapter_progress RENAME COLUMN crew_id TO family_id;
 ALTER TABLE odyssey_lore_unlocks RENAME COLUMN crew_id TO family_id;
