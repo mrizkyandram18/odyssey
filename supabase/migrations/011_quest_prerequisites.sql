@@ -1,7 +1,7 @@
 -- Migration 011: Add required_quest_slugs for multi-prerequisite quest chains
 -- Adds a JSONB column to odyssey_quest_definitions to support multiple
 -- quest prerequisites. Existing single prerequisite is preserved in
--- required_mission_slug for backward compatibility.
+-- required_quest_slug for backward compatibility.
 --
 -- Prerequisites: migrations 001-010 must be applied first.
 

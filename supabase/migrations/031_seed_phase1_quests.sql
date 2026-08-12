@@ -1,5 +1,5 @@
--- Migration 031: Seed Phase 1 Missions
--- Adds learn_text, result_text, and converts exercises to MCQ for 12 important missions.
+-- Migration 031: Seed Phase 1 Quests
+-- Adds learn_text, result_text, and converts challenges to MCQ for 12 important quests.
 
 UPDATE odyssey_quest_definitions
 SET 

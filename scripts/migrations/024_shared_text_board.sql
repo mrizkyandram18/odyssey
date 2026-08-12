@@ -11,7 +11,7 @@ ALTER TABLE odyssey_reactions
 
 -- Helpful index for listing board posts by crew + kind
 CREATE INDEX IF NOT EXISTS idx_odyssey_creative_items_crew_kind
-  ON odyssey_creative_items (family_id, kind, created_at DESC);
+  ON odyssey_creative_items (crew_id, kind, created_at DESC);
 
 INSERT INTO odyssey_schema_version (key, value)
 VALUES ('schema_version', '024_shared_text_board')

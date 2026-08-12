@@ -3,7 +3,7 @@
 
 CREATE TABLE IF NOT EXISTS odyssey_story_fragments (
     slug TEXT PRIMARY KEY,
-    journey TEXT NOT NULL,
+    realm TEXT NOT NULL,
     title TEXT NOT NULL,
     content TEXT NOT NULL,
     set_name TEXT NOT NULL DEFAULT 'general',
@@ -14,17 +14,17 @@ CREATE TABLE IF NOT EXISTS odyssey_story_fragments (
 CREATE TABLE IF NOT EXISTS odyssey_player_story_fragments (
     id BIGSERIAL PRIMARY KEY,
     uid TEXT NOT NULL,
-    family_id TEXT NOT NULL,
+    crew_id TEXT NOT NULL,
     fragment_slug TEXT NOT NULL REFERENCES odyssey_story_fragments(slug) ON DELETE CASCADE,
     discovered_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     CONSTRAINT uq_player_fragment UNIQUE (uid, fragment_slug)
 );
 
 CREATE INDEX IF NOT EXISTS idx_player_story_fragments_uid ON odyssey_player_story_fragments(uid);
-CREATE INDEX IF NOT EXISTS idx_player_story_fragments_crew ON odyssey_player_story_fragments(family_id);
+CREATE INDEX IF NOT EXISTS idx_player_story_fragments_crew ON odyssey_player_story_fragments(crew_id);
 
 -- Seed minimal playable story fragments for Whispering Woods & Clockwork City
-INSERT INTO odyssey_story_fragments (slug, journey, title, content, set_name, is_hidden)
+INSERT INTO odyssey_story_fragments (slug, realm, title, content, set_name, is_hidden)
 VALUES
   ('ancient-bark-whisper', 'whispering-woods', 'Bisikan Pepohonan Tua', 'Pohon-pohon raksasa di Hutan Berbisik menyimpan gema langkah penjelajah pertama.', 'whispering-set', false),
   ('echo-of-the-first-explorer', 'whispering-woods', 'Gema Penjelajah Perdana', 'Rahasia Replay: Di balik lumut tua, terukir ukiran kompas kuno yang ditinggalkan ribuan purnama lalu.', 'whispering-set', true),

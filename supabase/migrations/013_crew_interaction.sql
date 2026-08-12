@@ -1,11 +1,11 @@
--- Migration 013: Family Interaction (Reactions & Activity Tracking)
+-- Migration 013: Crew Interaction (Reactions & Activity Tracking)
 
 -- Reactions table (Prototype schema)
 CREATE TABLE IF NOT EXISTS odyssey_reactions (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     creator_id TEXT NOT NULL,
     target_user_id TEXT NOT NULL,
-    mission_id UUID, -- nullable, for when reaction is linked to a specific quest
+    quest_id UUID, -- nullable, for when reaction is linked to a specific quest
     emoji_code TEXT NOT NULL,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );

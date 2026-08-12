@@ -1,4 +1,4 @@
--- Migration 030: Add learn_text and result_text to missions for Phase 1
+-- Migration 030: Add learn_text and result_text to quests for Phase 1
 
 ALTER TABLE odyssey_quest_definitions
 ADD COLUMN IF NOT EXISTS learn_text TEXT NULL,

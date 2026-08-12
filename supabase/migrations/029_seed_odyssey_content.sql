@@ -1,15 +1,15 @@
 
 -- Migration 029: Seed Odyssey Learning Content
--- Seeds 36 missions covering Digital Literacy, Finance, Work, Productivity, Math, Creativity, and Daily Life.
+-- Seeds 36 quests covering Digital Literacy, Finance, Work, Productivity, Math, Creativity, and Daily Life.
 
-INSERT INTO odyssey_course_definitions (slug, journey, title, description, "order", published, version)
+INSERT INTO odyssey_chapter_definitions (slug, realm, title, description, "order", published, version)
 VALUES
   ('forest-wisdom', 'whispering-woods', 'Kebijaksanaan Hutan', 'Pelajari kebijaksanaan dari alam untuk kehidupan sehari-harimu.', 3, true, 1),
   ('mechanical-efficiency', 'clockwork-city', 'Efisiensi Mekanis', 'Pahami angka, waktu, dan uang untuk menggerakkan mesin kehidupanmu.', 2, true, 1),
   ('modern-knowledge', 'starlit-library', 'Pengetahuan Modern', 'Buku-buku ini menyimpan rahasia dunia kerja dan digital.', 2, true, 1)
 ON CONFLICT (slug) DO NOTHING;
 
-INSERT INTO odyssey_quest_definitions (slug, journey, course, title, description, quest_type, challenge_defs, reward_xp, reward_chest, is_mandatory, required_level, published, version)
+INSERT INTO odyssey_quest_definitions (slug, realm, chapter, title, description, quest_type, challenge_defs, reward_xp, reward_chest, is_mandatory, required_level, published, version)
 VALUES
   ('ww-schedule', 'whispering-woods', 'forest-wisdom', 'Jadwal Hutan', 'Buatlah rencana kegiatan sehari-hari agar waktumu lebih teratur.', 'SOLO', '[{"slug":"buat-jadwal","description":"Tuliskan daftar kegiatanmu dari pagi hingga malam hari ini.","type":"WRITE"},{"slug":"prioritas","description":"Pilih satu kegiatan yang paling penting dan jelaskan alasannya.","type":"WRITE"}]', 100, 'wooden-chest', true, 0, true, 1),
   ('ww-message', 'whispering-woods', 'forest-wisdom', 'Pesan Angin', 'Belajar menulis pesan yang jelas dan sopan.', 'SOLO', '[{"slug":"pesan-sopan","description":"Tuliskan contoh pesan singkat untuk meminta maaf karena terlambat.","type":"WRITE"},{"slug":"perbaiki-pesan","description":"Perbaiki kalimat ini: \"Bales woy, gw nungguin nih!\"","type":"WRITE"}]', 100, 'wooden-chest', true, 0, true, 1),

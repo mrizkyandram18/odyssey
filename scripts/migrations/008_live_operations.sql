@@ -25,8 +25,8 @@
 -- Versioning + Soft Delete columns for definition tables
 -- ============================================================
 
--- odyssey_journey_definitions
-ALTER TABLE odyssey_journey_definitions
+-- odyssey_realm_definitions
+ALTER TABLE odyssey_realm_definitions
     ADD COLUMN IF NOT EXISTS published     BOOLEAN NOT NULL DEFAULT TRUE,
     ADD COLUMN IF NOT EXISTS draft           JSONB,
     ADD COLUMN IF NOT EXISTS version       INTEGER NOT NULL DEFAULT 1,
@@ -34,8 +34,8 @@ ALTER TABLE odyssey_journey_definitions
     ADD COLUMN IF NOT EXISTS published_at  TIMESTAMPTZ,
     ADD COLUMN IF NOT EXISTS deleted_at    TIMESTAMPTZ;
 
--- odyssey_course_definitions
-ALTER TABLE odyssey_course_definitions
+-- odyssey_chapter_definitions
+ALTER TABLE odyssey_chapter_definitions
     ADD COLUMN IF NOT EXISTS published     BOOLEAN NOT NULL DEFAULT TRUE,
     ADD COLUMN IF NOT EXISTS draft         JSONB,
     ADD COLUMN IF NOT EXISTS version       INTEGER NOT NULL DEFAULT 1,
@@ -79,8 +79,8 @@ ALTER TABLE odyssey_season_definitions
     ADD COLUMN IF NOT EXISTS published_at  TIMESTAMPTZ,
     ADD COLUMN IF NOT EXISTS deleted_at    TIMESTAMPTZ;
 
--- odyssey_concept_definitions
-ALTER TABLE odyssey_concept_definitions
+-- odyssey_lore_definitions
+ALTER TABLE odyssey_lore_definitions
     ADD COLUMN IF NOT EXISTS published     BOOLEAN NOT NULL DEFAULT TRUE,
     ADD COLUMN IF NOT EXISTS draft         JSONB,
     ADD COLUMN IF NOT EXISTS version       INTEGER NOT NULL DEFAULT 1,
@@ -121,13 +121,13 @@ ALTER TABLE odyssey_drop_tables
 -- Backfill published_at for existing rows (use created_at)
 -- Must run after ALTER TABLE adds the published_at column.
 -- ============================================================
-UPDATE odyssey_journey_definitions      SET published_at = created_at WHERE published_at IS NULL;
-UPDATE odyssey_course_definitions    SET published_at = created_at WHERE published_at IS NULL;
+UPDATE odyssey_realm_definitions      SET published_at = created_at WHERE published_at IS NULL;
+UPDATE odyssey_chapter_definitions    SET published_at = created_at WHERE published_at IS NULL;
 UPDATE odyssey_quest_definitions      SET published_at = created_at WHERE published_at IS NULL;
 UPDATE odyssey_creative_prompt_definitions SET published_at = created_at WHERE published_at IS NULL;
 UPDATE odyssey_achievement_definitions SET published_at = created_at WHERE published_at IS NULL;
 UPDATE odyssey_season_definitions     SET published_at = created_at WHERE published_at IS NULL;
-UPDATE odyssey_concept_definitions       SET published_at = created_at WHERE published_at IS NULL;
+UPDATE odyssey_lore_definitions       SET published_at = created_at WHERE published_at IS NULL;
 UPDATE odyssey_chest_definitions      SET published_at = created_at WHERE published_at IS NULL;
 UPDATE odyssey_relic_definitions      SET published_at = created_at WHERE published_at IS NULL;
 
@@ -137,11 +137,11 @@ UPDATE odyssey_relic_definitions      SET published_at = created_at WHERE publis
 -- ContentService queries filter on (published = true, deleted_at IS NULL)
 -- Add partial indexes for performance.
 
-CREATE INDEX IF NOT EXISTS idx_odyssey_journey_definitions_published  ON odyssey_journey_definitions (published) WHERE deleted_at IS NULL;
-CREATE INDEX IF NOT EXISTS idx_odyssey_journey_definitions_deleted  ON odyssey_journey_definitions (deleted_at) WHERE deleted_at IS NOT NULL;
+CREATE INDEX IF NOT EXISTS idx_odyssey_realm_definitions_published  ON odyssey_realm_definitions (published) WHERE deleted_at IS NULL;
+CREATE INDEX IF NOT EXISTS idx_odyssey_realm_definitions_deleted  ON odyssey_realm_definitions (deleted_at) WHERE deleted_at IS NOT NULL;
 
-CREATE INDEX IF NOT EXISTS idx_odyssey_course_definitions_published  ON odyssey_course_definitions (published) WHERE deleted_at IS NULL;
-CREATE INDEX IF NOT EXISTS idx_odyssey_course_definitions_deleted  ON odyssey_course_definitions (deleted_at) WHERE deleted_at IS NOT NULL;
+CREATE INDEX IF NOT EXISTS idx_odyssey_chapter_definitions_published  ON odyssey_chapter_definitions (published) WHERE deleted_at IS NULL;
+CREATE INDEX IF NOT EXISTS idx_odyssey_chapter_definitions_deleted  ON odyssey_chapter_definitions (deleted_at) WHERE deleted_at IS NOT NULL;
 
 CREATE INDEX IF NOT EXISTS idx_odyssey_quest_definitions_published  ON odyssey_quest_definitions (published) WHERE deleted_at IS NULL;
 CREATE INDEX IF NOT EXISTS idx_odyssey_quest_definitions_deleted  ON odyssey_quest_definitions (deleted_at) WHERE deleted_at IS NOT NULL;
@@ -155,8 +155,8 @@ CREATE INDEX IF NOT EXISTS idx_odyssey_achievement_definitions_deleted  ON odyss
 CREATE INDEX IF NOT EXISTS idx_odyssey_season_definitions_published  ON odyssey_season_definitions (published) WHERE deleted_at IS NULL;
 CREATE INDEX IF NOT EXISTS idx_odyssey_season_definitions_deleted  ON odyssey_season_definitions (deleted_at) WHERE deleted_at IS NOT NULL;
 
-CREATE INDEX IF NOT EXISTS idx_odyssey_concept_definitions_published  ON odyssey_concept_definitions (published) WHERE deleted_at IS NULL;
-CREATE INDEX IF NOT EXISTS idx_odyssey_concept_definitions_deleted  ON odyssey_concept_definitions (deleted_at) WHERE deleted_at IS NOT NULL;
+CREATE INDEX IF NOT EXISTS idx_odyssey_lore_definitions_published  ON odyssey_lore_definitions (published) WHERE deleted_at IS NULL;
+CREATE INDEX IF NOT EXISTS idx_odyssey_lore_definitions_deleted  ON odyssey_lore_definitions (deleted_at) WHERE deleted_at IS NOT NULL;
 
 CREATE INDEX IF NOT EXISTS idx_odyssey_chest_definitions_published  ON odyssey_chest_definitions (published) WHERE deleted_at IS NULL;
 CREATE INDEX IF NOT EXISTS idx_odyssey_chest_definitions_deleted  ON odyssey_chest_definitions (deleted_at) WHERE deleted_at IS NOT NULL;

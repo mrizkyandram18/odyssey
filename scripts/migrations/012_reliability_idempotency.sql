@@ -1,14 +1,14 @@
 -- Migration 012: Reliability & idempotency schema changes
--- 1. Drop the overly restrictive unique index on odyssey_daily_missions(uid, date)
+-- 1. Drop the overly restrictive unique index on odyssey_daily_turns(uid, date)
 --    The application supports MaxTurnsPerDay > 1, so multiple rows per user per day
 --    are valid. The unique index prevented legitimate multiple daily turns.
 -- 2. Add a version column to odyssey_user_profiles for optimistic concurrency
 --    control on XP/level updates to prevent lost-update races.
 
 -- ============================================================
--- odyssey_daily_missions: remove restrictive unique index
+-- odyssey_daily_turns: remove restrictive unique index
 -- ============================================================
-DROP INDEX IF EXISTS uniq_odyssey_daily_missions_uid_date;
+DROP INDEX IF EXISTS uniq_odyssey_daily_turns_uid_date;
 
 -- ============================================================
 -- odyssey_user_profiles: add version column for optimistic locking

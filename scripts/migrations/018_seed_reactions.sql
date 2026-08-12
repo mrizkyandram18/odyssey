@@ -1,7 +1,7 @@
 -- Migration 016: Seed Reactions
 -- Seed reaction data using the correct schema mapped to demo-uid target users
 
-INSERT INTO odyssey_reactions (id, creator_id, target_user_id, mission_id, emoji_code, created_at)
+INSERT INTO odyssey_reactions (id, creator_id, target_user_id, quest_id, emoji_code, created_at)
 VALUES
   ('00000000-0000-0000-0000-000000000001', 'demo-uid-2', 'demo-uid-1', NULL, '✨', timezone('utc'::text, now() - interval '2 days')),
   ('00000000-0000-0000-0000-000000000002', 'demo-uid-3', 'demo-uid-1', NULL, '❤️', timezone('utc'::text, now() - interval '2 days')),
