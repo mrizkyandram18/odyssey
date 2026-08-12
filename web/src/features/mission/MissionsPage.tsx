@@ -179,9 +179,9 @@ export function MissionsPage() {
   return (
     <div className="max-w-5xl mx-auto flex flex-col gap-6">
       <header className="mb-2">
-        <h1 className="font-heading text-4xl text-text-primary mb-2">Misi & Topik</h1>
+        <h1 className="font-heading text-4xl text-text-primary mb-2">Topik Belajar</h1>
         <p className="text-text-secondary">
-          Tantangan petualangan keluarga di berbagai topik cerita.
+          Daftar materi dan topik pembelajaran keluarga.
         </p>
       </header>
 
@@ -247,21 +247,21 @@ export function MissionsPage() {
       )}
 
       <MissionList
-        title="Misi Aktif"
+        title="Modul Aktif"
         list={activeMissions}
-        emptyMsg="Tidak ada misi aktif untuk topik ini."
+        emptyMsg="Tidak ada modul aktif untuk topik ini."
         uid={session?.uid}
       />
       <MissionList
-        title="Misi Tersedia"
+        title="Modul Tersedia"
         list={pendingMissions}
-        emptyMsg="Tidak ada misi baru tersedia di topik ini."
+        emptyMsg="Tidak ada modul baru tersedia di topik ini."
         uid={session?.uid}
       />
       <MissionList
         title="Selesai"
         list={completedMissions}
-        emptyMsg="Belum ada misi yang diselesaikan di topik ini."
+        emptyMsg="Belum ada modul yang diselesaikan di topik ini."
         uid={session?.uid}
       />
     </div>

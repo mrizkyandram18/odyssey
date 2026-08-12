@@ -69,7 +69,7 @@ export const DailyActivitySection = () => {
     return (
       <div className="p-4 rounded-xl border border-success/30 bg-success/10 flex flex-col items-center text-center gap-2">
         <h3 className="font-semibold text-text-primary text-lg">✅ Aktivitas Hari Ini Selesai</h3>
-        <p className="text-sm text-success font-medium">+{activity.xp_reward} Poin</p>
+        <p className="text-sm text-success font-medium">+{activity.xp_reward} Koin 🪙</p>
         <p className="text-sm text-text-secondary mt-1">Kembali lagi besok untuk aktivitas berikutnya.</p>
       </div>
     );
@@ -109,7 +109,7 @@ export const DailyActivitySection = () => {
           <p className="font-semibold">{result.correct ? '✅ Benar!' : '❌ Belum tepat.'}</p>
           <p className="text-sm mt-1 text-text-primary">{result.explanation}</p>
           {result.correct && result.xp_awarded && (
-            <p className="text-sm font-bold mt-1">+{result.xp_awarded} Poin</p>
+            <p className="text-sm font-bold mt-1">+{result.xp_awarded} Koin 🪙</p>
           )}
           {!result.correct && (
             <p className="text-sm mt-1 italic opacity-80">Coba lagi.</p>
