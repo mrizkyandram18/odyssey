@@ -202,7 +202,7 @@ export function QuestDetail({
           <div className="flex justify-center gap-6 mb-4">
             <div className="text-center">
               <span className="block text-2xl mb-1">✨</span>
-              <span className="font-bold text-text-primary">+{lastResult.xp} XP</span>
+              <span className="font-bold text-text-primary">+{lastResult.xp} Poin</span>
             </div>
             <div className="text-center">
               <span className="block text-2xl mb-1">🪙</span>

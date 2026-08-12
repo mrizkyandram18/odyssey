@@ -1,9 +1,10 @@
 import { useState, useEffect } from 'react'
-import { useParams, Link, Navigate } from 'react-router-dom'
+import { useParams, Link, Navigate, useNavigate } from 'react-router-dom'
 import { apiClient } from '../../shared/lib/api'
 import type { InventoryItem } from '../../shared/types'
 import { Card } from '../../shared/components/atoms/Card'
 import { useSession } from '../../shared/hooks/useSession'
+import { Button } from '../../shared/components/atoms/Button'
 
 export function RelicDetailPage() {
   const { slug } = useParams<{ slug: string }>()
@@ -11,6 +12,7 @@ export function RelicDetailPage() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const { profile } = useSession()
+  const navigate = useNavigate()
 
   useEffect(() => {
     const load = async () => {
@@ -37,9 +39,9 @@ export function RelicDetailPage() {
   if (loading) {
     return (
       <div className="flex h-64 w-full items-center justify-center max-w-4xl mx-auto">
-        <div className="flex flex-col items-center gap-4 animate-pulse">
-          <div className="text-4xl">🔍</div>
-          <p className="text-sm text-text-secondary">Inspecting relic...</p>
+        <div className="flex flex-col items-center justify-center h-64 opacity-50 animate-pulse">
+          <span className="text-4xl mb-4">🔍</span>
+          <p className="text-sm text-text-secondary">Memeriksa hadiah...</p>
         </div>
       </div>
     )
@@ -48,11 +50,14 @@ export function RelicDetailPage() {
   if (error || !relic) {
     return (
       <div className="flex flex-col max-w-4xl mx-auto py-8">
-        <Link to="/relics" className="text-sm font-medium text-text-secondary hover:text-text-primary transition-colors mb-8 inline-flex items-center gap-2">
-          <span>←</span> Back to Collection
-        </Link>
-        <div className="bg-accent-danger/10 border border-accent-danger/30 p-6 rounded-lg text-center">
-          <p className="text-lg font-medium text-accent-danger">{error || 'Relic not found.'}</p>
+        <Button variant="ghost" size="sm" onClick={() => navigate('/relics')} className="mb-4 w-fit">
+          ← Kembali ke Koleksi
+        </Button>
+        <div className="bg-accent-danger/10 border border-accent-danger/20 p-8 rounded-xl text-center max-w-md mx-auto">
+          <p className="text-lg font-medium text-accent-danger">{error || 'Hadiah tidak ditemukan.'}</p>
+          <Button variant="secondary" className="mt-4" onClick={() => navigate('/relics')}>
+            Kembali ke Koleksi
+          </Button>
         </div>
       </div>
     )
@@ -77,7 +82,7 @@ export function RelicDetailPage() {
   return (
     <div className="flex flex-col gap-6 max-w-4xl mx-auto py-4">
       <Link to="/relics" className="text-sm font-medium text-text-secondary hover:text-text-primary transition-colors inline-flex items-center gap-2 w-fit">
-        <span>←</span> Back to Collection
+        <span>←</span> Kembali ke Koleksi
       </Link>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-8 animate-in fade-in duration-500">
@@ -105,7 +110,7 @@ export function RelicDetailPage() {
             
             {relic.is_new && (
               <span className="inline-block bg-accent-magic text-black text-xs font-bold px-3 py-1 rounded shadow-[0_0_10px_rgba(6,182,222,0.5)] mb-4">
-                NEW DISCOVERY
+                PENEMUAN BARU
               </span>
             )}
           </div>
@@ -119,11 +124,11 @@ export function RelicDetailPage() {
 
           <div className="flex items-center justify-between border-t border-border-subtle pt-6 mt-auto">
             <div>
-              <p className="text-xs text-text-secondary uppercase tracking-wider mb-1">Discovered</p>
+              <p className="text-xs text-text-secondary uppercase tracking-wider mb-1">Ditemukan pada</p>
               <p className="text-sm text-text-primary font-medium">{new Date(relic.discovered_at).toLocaleDateString()}</p>
             </div>
             <div className="text-right">
-              <p className="text-xs text-text-secondary uppercase tracking-wider mb-1">Copies Owned</p>
+              <p className="text-xs text-text-secondary uppercase tracking-wider mb-1">Jumlah Dimiliki</p>
               <p className="text-sm text-text-primary font-medium bg-surface-elevated px-3 py-1 rounded inline-block">x{relic.owned_count}</p>
             </div>
           </div>

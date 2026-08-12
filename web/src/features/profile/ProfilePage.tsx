@@ -293,7 +293,7 @@ export function ProfilePage() {
             <div className="w-full max-w-md bg-surface p-4 rounded-lg border border-border-subtle">
               <div className="flex justify-between text-xs font-bold uppercase tracking-wider mb-2">
                 <span className="text-accent-reward">Level {profile.level}</span>
-                <span className="text-text-secondary">{profile.xp} XP</span>
+                <span className="text-text-secondary">{profile.xp} Poin</span>
               </div>
               <ProgressBar progress={xpPercent} colorClass="bg-accent-reward shadow-[0_0_10px_rgba(245,158,11,0.5)]" />
               <div

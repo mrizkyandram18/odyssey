@@ -49,15 +49,15 @@ export function RelicInventoryPage() {
   return (
     <div className="flex flex-col gap-8 max-w-6xl mx-auto py-4">
       <header className="flex flex-col gap-2 mb-4">
-        <h1 className="font-heading text-4xl md:text-5xl text-text-primary">Collection</h1>
-        <p className="text-text-secondary text-lg">Treasures and artifacts discovered across the realms.</p>
+        <h1 className="font-heading text-4xl text-text-primary mb-1">Koleksi Hadiah</h1>
+        <p className="text-text-secondary text-lg">Harta karun dan kenangan yang ditemukan di berbagai topik.</p>
       </header>
 
       {/* Stats Summary */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         <Card className="text-center p-4">
           <p className="text-3xl font-heading text-accent-reward mb-1">{relics.length}</p>
-          <p className="text-xs text-text-secondary uppercase tracking-wider font-bold">Unique Relics</p>
+          <p className="text-xs text-text-secondary uppercase tracking-wider font-bold">Peti Hadiah Unik</p>
         </Card>
         <Card className="text-center p-4">
           <p className="text-3xl font-heading text-accent-magic mb-1">{totalCollected}</p>
@@ -74,8 +74,8 @@ export function RelicInventoryPage() {
       {relics.length === 0 && !error ? (
         <Card className="text-center py-16 opacity-60 border-dashed border-border-subtle bg-transparent">
           <span className="text-6xl mb-4 block">🗝️</span>
-          <p className="text-text-secondary text-lg">The vault is empty.</p>
-          <p className="text-sm text-text-secondary">Complete quests and open chests to discover relics!</p>
+          <h3 className="font-semibold text-lg text-text-primary">Belum Ada Hadiah</h3>
+          <p className="text-sm text-text-secondary">Selesaikan misi dan buka peti untuk menemukan hadiah!</p>
         </Card>
       ) : (
         <RelicGrid relics={relics} />

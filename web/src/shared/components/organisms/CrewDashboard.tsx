@@ -13,7 +13,7 @@ export function CrewDashboard({ crew, members }: CrewDashboardProps) {
 
   return (
     <div className="flex flex-col gap-3">
-      <h2 className="text-lg font-semibold">Crew Dashboard</h2>
+      <h2 className="text-lg font-semibold">Dashboard Keluarga</h2>
       <ul className="flex flex-col gap-2">
         {members.map((m) => (
           <li key={m.uid} className="flex items-center justify-between">

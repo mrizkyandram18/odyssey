@@ -62,7 +62,7 @@ describe('RelayRotation', () => {
         members={members}
       />,
     )
-    expect(screen.getByRole('heading', { name: 'Crew Relay' })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: 'Giliran Keluarga' })).toBeInTheDocument()
     expect(screen.getByText('Done by Leo')).toBeInTheDocument()
     expect(screen.getByText("Maya's turn")).toBeInTheDocument()
     expect(screen.queryByText('Your turn')).not.toBeInTheDocument()
@@ -89,7 +89,7 @@ describe('RelayRotation', () => {
         myUID="u1"
       />,
     )
-    expect(screen.getByText('Open')).toBeInTheDocument()
+    expect(screen.getByText('Siapa saja')).toBeInTheDocument()
     expect(screen.queryByText('Your turn')).not.toBeInTheDocument()
   })
 
@@ -115,6 +115,6 @@ describe('RelayRotation', () => {
     expect(screen.getByText('1')).toBeInTheDocument()
     expect(screen.getByText('done')).toBeInTheDocument()
     expect(screen.getByText('Maya')).toBeInTheDocument()
-    expect(screen.getByText('now')).toBeInTheDocument()
+    expect(screen.getByText('sekarang')).toBeInTheDocument()
   })
 })

@@ -45,9 +45,9 @@ export function RelayRotation({ quest, challenges, members, myUID }: RelayRotati
       className="rounded-xl border border-border-subtle bg-surface p-5 md:p-6"
     >
       <div className="mb-4">
-        <h2 className="font-heading text-xl text-text-primary">Crew Relay</h2>
+        <h2 className="font-heading text-xl text-text-primary">Giliran Keluarga</h2>
         <p className="text-xs text-text-secondary mt-0.5">
-          Pass the torch — each leg belongs to one explorer, in turn.
+          Lanjutkan petualangan — setiap misi dikerjakan bergantian.
         </p>
       </div>
 
@@ -100,10 +100,10 @@ export function RelayRotation({ quest, challenges, members, myUID }: RelayRotati
         </span>
         {active && (
           <span>
-            <span className="font-bold text-accent-magic">{memberName(members, active.challenge.assigned_to) || 'Open'}</span> now
+          <span className="font-bold text-accent-magic">{memberName(members, active.challenge.assigned_to) || 'Siapa saja'}</span> sekarang
           </span>
         )}
-        {next && <span>next: {memberName(members, next.challenge.assigned_to) || 'open leg'}</span>}
+        {next && <span>selanjutnya: {memberName(members, next.challenge.assigned_to) || 'siapa saja'}</span>}
       </div>
     </section>
   )

@@ -48,7 +48,7 @@ export function Sidebar() {
           <div className="w-full relative group">
             <ProgressBar progress={xpPercent} colorClass="bg-accent-nature" />
             <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-              <span className="text-[10px] font-bold text-white shadow-black drop-shadow-md">{xpPercent}% XP</span>
+              <span className="text-[10px] font-bold text-white shadow-black drop-shadow-md">{xpPercent}% Poin</span>
             </div>
           </div>
         </div>

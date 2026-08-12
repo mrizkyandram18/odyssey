@@ -43,8 +43,8 @@ export function JournalPage() {
   return (
     <div className="flex flex-col gap-6 max-w-5xl mx-auto py-4">
       <header className="mb-2">
-        <h1 className="font-heading text-4xl text-text-primary mb-2">Milestones & Jurnal Ranah</h1>
-        <p className="text-text-secondary">Chronicles of your crew's legendary feats, lore, and collectible story fragments.</p>
+        <h1 className="font-heading text-4xl text-text-primary mb-2">Milestones & Jurnal Topik</h1>
+        <p className="text-text-secondary">Catatan petualangan keluarga, cerita, dan kepingan kenangan yang terkumpul.</p>
       </header>
 
       {/* Tabs */}
@@ -228,7 +228,7 @@ export function JournalPage() {
                     </span>
                     {frag.discovered ? (
                       <span className="text-xs font-bold bg-accent-nature/20 text-accent-nature px-2 py-0.5 rounded border border-accent-nature/30">
-                        DISCOVERED (+20 XP)
+                        DISCOVERED (+20 Poin)
                       </span>
                     ) : (
                       <span className="text-xs font-bold bg-surface border border-border-subtle text-text-secondary px-2 py-0.5 rounded">

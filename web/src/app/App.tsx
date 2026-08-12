@@ -1,4 +1,5 @@
 import { Routes, Route, Navigate, useParams } from 'react-router-dom'
+import { useSession } from '../shared/hooks/useSession'
 import { ProtectedRoute } from '../shared/components/ProtectedRoute'
 import { PublicRoute } from '../shared/components/PublicRoute'
 import { LoginPage } from '../features/login/LoginPage'
@@ -36,8 +37,8 @@ export function App() {
         <Route path="/profile" element={<ProfilePage />} />
         <Route path="/chests" element={<ChestPage />} />
         <Route path="/chests/open/:chestId" element={<ChestOpeningPage />} />
-        <Route path="/relics" element={<RelicInventoryPage />} />
-        <Route path="/relics/:slug" element={<RelicDetailPage />} />
+        <Route path="/relics" element={<RelicRoute><RelicInventoryPage /></RelicRoute>} />
+        <Route path="/relics/:slug" element={<RelicRoute><RelicDetailPage /></RelicRoute>} />
         <Route path="/admin" element={<AdminPage />} />
       </Route>
 
@@ -49,4 +50,10 @@ export function App() {
 function QuestRoute() {
   const params = useParams()
   return <QuestView questId={Number(params?.questId)} />
+}
+
+function RelicRoute({ children }: { children: React.ReactNode }) {
+  const { profile } = useSession()
+  if (profile?.role !== 'GUIDE') return <Navigate to="/profile" replace />
+  return <>{children}</>
 }

@@ -173,7 +173,7 @@ export function HomePage() {
       )}
 
       {/* Season Indicator — Slice 5.1 */}
-      {home.current_season && session?.role === 'GUIDE' && (
+      {home.current_season && home.current_season.state === 'ACTIVE' && session?.role === 'GUIDE' && (
         <motion.section variants={itemVariants}>
           <SeasonBadge
             season={home.current_season}
@@ -238,7 +238,7 @@ export function HomePage() {
                   <h3 className="font-medium text-text-primary text-lg mb-1">{quest.title}</h3>
                   <div className="flex items-center gap-2">
                     <p className="text-xs text-text-secondary">
-                      {quest.completed_count}/{quest.challenge_count} Tantangan Selesai
+                      {quest.completed_count}/{quest.challenge_count} Latihan Selesai
                     </p>
                     {isMyRelayTurn(quest, session?.uid) && <YourTurnBadge />}
                   </div>
