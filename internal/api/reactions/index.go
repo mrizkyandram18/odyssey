@@ -51,7 +51,7 @@ func Handler(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		reactions, err := svc.ListReactionsForTarget(r.Context(), claims.CrewID, targetType, targetID)
+		reactions, err := svc.ListReactionsForTarget(r.Context(), claims.FamilyID, targetType, targetID)
 		if err != nil {
 			shared.WriteJSONError(w, "failed to list reactions", http.StatusInternalServerError)
 			return
@@ -73,7 +73,7 @@ func Handler(w http.ResponseWriter, r *http.Request) {
 		}
 
 		// Security: Always use claims.UID as the actor! Spoof rejection!
-		reaction, err := svc.AddReaction(r.Context(), claims.CrewID, claims.UID, req.TargetType, req.TargetID, req.ReactionType)
+		reaction, err := svc.AddReaction(r.Context(), claims.FamilyID, claims.UID, req.TargetType, req.TargetID, req.ReactionType)
 		if err != nil {
 			// Do not leak internal error strings directly if they are generic, but for now we'll pass it to client for debugging
 			shared.WriteJSONError(w, err.Error(), http.StatusBadRequest)

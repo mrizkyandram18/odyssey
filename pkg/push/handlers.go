@@ -28,8 +28,8 @@ func (h *DailyTurnHandler) Handle(ctx context.Context, event events.Event) error
 	n := Notification{
 		Type:  TypeDailyTurn,
 		Title: "Your Turn",
-		Body:  "It's your turn in Family Quest.",
-		URL:   "/quests",
+		Body:  "It's your turn in Family Mission.",
+		URL:   "/missions",
 	}
 	if err := h.sender.SendToUser(ctx, e.UID, n); err != nil {
 		// Log but do not fail the event pipeline — push is best-effort.
@@ -56,7 +56,7 @@ func (h *RelayHandoffHandler) Handle(ctx context.Context, event events.Event) er
 	if !ok {
 		return nil
 	}
-	body := "It's your turn in Family Quest."
+	body := "It's your turn in Family Mission."
 	if e.QuestTitle != "" {
 		body = "It's your turn in \"" + e.QuestTitle + "\"."
 	}
@@ -64,7 +64,7 @@ func (h *RelayHandoffHandler) Handle(ctx context.Context, event events.Event) er
 		Type:  TypeRelayHandoff,
 		Title: "Your Turn",
 		Body:  body,
-		URL:   "/quests",
+		URL:   "/missions",
 	}
 	if err := h.sender.SendToUser(ctx, e.ToUID, n); err != nil {
 		log.Printf("push: relay handoff notification for uid %q: %v", e.ToUID, err)

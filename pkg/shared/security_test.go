@@ -335,7 +335,7 @@ func TestMaxBodyForPath(t *testing.T) {
 		{"/api/creative", 8 << 20},
 		{"/api/creative/1/approve", 8 << 20},
 		{"/api/login", 1 << 20},
-		{"/api/quests", 1 << 20},
+		{"/api/missions", 1 << 20},
 	}
 	for _, c := range cases {
 		if got := cfg.MaxBodyForPath(c.path); got != c.want {

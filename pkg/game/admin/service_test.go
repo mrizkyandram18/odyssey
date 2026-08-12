@@ -15,14 +15,14 @@ func (m *mockSupabase) Get(ctx context.Context, table string, params string) ([]
 	if table == "odyssey_user_profiles" {
 		return []byte(`[{"updated_at":"2030-01-01T00:00:00Z"}]`), nil
 	}
-	if table == "odyssey_quests" {
-		return []byte(`[{"quest_slug":"test-quest","status":"DONE"}]`), nil
+	if table == "odyssey_missions" {
+		return []byte(`[{"mission_slug":"test-quest","status":"DONE"}]`), nil
 	}
 	if table == "odyssey_daily_activity_completions" {
 		return []byte(`[{"id":1,"activity_id":100}]`), nil
 	}
 	if table == "odyssey_quest_definitions" {
-		return []byte(`[{"slug":"test-quest","title":"Test Quest","published":true}]`), nil
+		return []byte(`[{"slug":"test-quest","title":"Test Mission","published":true}]`), nil
 	}
 	if table == "odyssey_daily_activities" {
 		return []byte(`[{"id":100,"slug":"test-activity","title":"Test Activity","active":true}]`), nil
@@ -51,15 +51,15 @@ func TestGetStats(t *testing.T) {
 
 func TestGetQuests(t *testing.T) {
 	svc := NewAdminService(&mockSupabase{})
-	quests, err := svc.GetQuests(context.Background())
+	missions, err := svc.GetQuests(context.Background())
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(quests) != 1 {
-		t.Fatalf("expected 1 quest, got %d", len(quests))
+	if len(missions) != 1 {
+		t.Fatalf("expected 1 quest, got %d", len(missions))
 	}
-	if quests[0].Slug != "test-quest" || quests[0].CompletionCount != 1 {
-		t.Errorf("unexpected quest data: %+v", quests[0])
+	if missions[0].Slug != "test-quest" || missions[0].CompletionCount != 1 {
+		t.Errorf("unexpected quest data: %+v", missions[0])
 	}
 }
 

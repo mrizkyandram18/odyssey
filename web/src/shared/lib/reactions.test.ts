@@ -4,7 +4,7 @@ import type { ReactionRow, ReactionType } from '../lib/api'
 
 const makeRow = (actorUID: string, reactionType: ReactionType, id = 1): ReactionRow => ({
   id,
-  crew_id: 'crew-1',
+  family_id: 'crew-1',
   target_type: 'JOURNAL',
   target_id: 42,
   actor_uid: actorUID,

@@ -15,7 +15,7 @@
 | Target | `PLAYWRIGHT_TEST_BASE_URL=https://odyssey-beta-nine.vercel.app` |
 | Result | **15 passed / 1 failed / 0 skipped / 0 retries** |
 | Duration | ~3.2 minutes |
-| Failed test | `golden-path.spec.ts` → **Test 1: Login -> Home -> Quest list appears** |
+| Failed test | `golden-path.spec.ts` → **Test 1: Login -> Home -> Mission list appears** |
 | Assertion | `helpers/home.ts` → `expect(locator('text="Loading..."')).toBeHidden({ timeout: 15000 })` |
 | Observed UI | Full-screen / page body stuck on `Loading...` for entire assertion window |
 
@@ -35,8 +35,8 @@ These are from the **same** production E2E execution (not prior reports):
 | Multi-user demo1 / demo2 / demo3 | PASS |
 | Session persist after reload | PASS |
 | State after logout/login | PASS |
-| Quest Domain complete challenge | PASS |
-| Deep-link `/#/quests/103` | PASS |
+| Mission Domain complete challenge | PASS |
+| Deep-link `/#/missions/103` | PASS |
 | Browser back/forward | PASS |
 | Unauthenticated redirect to `/#/login` | PASS |
 
@@ -51,7 +51,7 @@ Target: `https://odyssey-beta-nine.vercel.app`
 | Check | Result | Evidence |
 | --- | --- | --- |
 | Frontend shell `GET /` | **PASS** 200 | HTML, `#root`, assets present |
-| `GET /api/status` | **PASS** 200 | `app=odyssey`, `schema_version=11`, quests=12 |
+| `GET /api/status` | **PASS** 200 | `app=odyssey`, `schema_version=11`, missions=12 |
 | `POST /api/login` demo1 | **PASS** 200 | `uid=demo-uid-1`, `role=SEEKER` |
 | `POST /api/login` demo2 | **PASS** 200 | `uid=demo-uid-2`, `role=GUIDE` |
 | `POST /api/login` demo3 | **PASS** 200 | `uid=demo-uid-3`, `role=BUILDER` |
@@ -60,16 +60,16 @@ Target: `https://odyssey-beta-nine.vercel.app`
 | `GET /api/me` demo1 session | **PASS** 200 | explorer **Leo**, SEEKER, level 23 |
 | `GET /api/me` demo2 session | **PASS** 200 | explorer **Maya**, GUIDE |
 | `GET /api/me` demo3 session | **PASS** 200 | explorer **Sam**, BUILDER |
-| `GET /api/quests` | **PASS** 200 | includes id 103 `Riddle of the Stones` |
-| `GET /api/quests/103` | **PASS** 200 | title matches; challenges present |
+| `GET /api/missions` | **PASS** 200 | includes id 103 `Riddle of the Stones` |
+| `GET /api/missions/103` | **PASS** 200 | title matches; exercises present |
 | `GET /api/home` (post-login) | **PASS** 200 | **~8084–8732 ms** per call (3 rapid probes all ~8s) |
 
 Session tokens were obtained and used for authenticated calls; tokens are **not** copied into this report.
 
-### Quest 103 observation (non-blocking for routing)
+### Mission 103 observation (non-blocking for routing)
 
 - List view: status `ACTIVE`, `completed_count=2`
-- Detail view: status `DONE`, both challenges `DONE`
+- Detail view: status `DONE`, both exercises `DONE`
 
 No production data was mutated for this verification.
 

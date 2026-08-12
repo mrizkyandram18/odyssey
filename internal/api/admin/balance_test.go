@@ -36,14 +36,14 @@ func (m *mockBalanceService) LoadedAt() time.Time { return m.loadedAt }
 func TestAdmin_BalanceOverrides(t *testing.T) {
 	mockContent := &mockContentServiceForAdmin{}
 	svc := NewAdminService(mockContent, newMockAdminStore(), nil)
-	svc.SetBalance(&mockBalanceService{overrides: map[string]int64{"daily_turn_xp": 20}, loadedAt: time.Now()})
+	svc.SetBalance(&mockBalanceService{overrides: map[string]int64{"daily_mission_xp": 20}, loadedAt: time.Now()})
 
 	got, err := svc.BalanceOverrides(context.Background())
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
-	if got["daily_turn_xp"] != int64(20) {
-		t.Errorf("expected daily_turn_xp=20, got %v", got["daily_turn_xp"])
+	if got["daily_mission_xp"] != int64(20) {
+		t.Errorf("expected daily_mission_xp=20, got %v", got["daily_mission_xp"])
 	}
 	if got["count"] != 1 {
 		t.Errorf("expected count=1, got %v", got["count"])

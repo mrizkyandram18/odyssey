@@ -12,13 +12,13 @@ type ConfigKey string
 
 const (
 	KeyXPPerLevel                ConfigKey = "xp_per_level"
-	KeyMaxNewQuestsPerDay        ConfigKey = "max_new_quests_per_day"
+	KeyMaxNewQuestsPerDay        ConfigKey = "max_new_missions_per_day"
 	KeyChallengeXP               ConfigKey = "challenge_xp"
 	KeyCompletionBonusXP         ConfigKey = "completion_bonus_xp"
 	KeyDropRate                  ConfigKey = "drop_rate_multiplier"
-	KeyDailyTurnXP               ConfigKey = "daily_turn_xp"
-	KeyRealmProgressPerQuest     ConfigKey = "realm_progress_per_quest"
-	KeyRealmCompletionThreshold  ConfigKey = "realm_completion_threshold"
+	KeyDailyTurnXP               ConfigKey = "daily_mission_xp"
+	KeyRealmProgressPerQuest     ConfigKey = "journey_progress_per_quest"
+	KeyRealmCompletionThreshold  ConfigKey = "journey_completion_threshold"
 	KeyAchievementThreshold      ConfigKey = "achievement_threshold_multiplier"
 	KeyQuestRewardXP             ConfigKey = "quest_reward_xp_multiplier"
 	KeyChestRewardCountCommon    ConfigKey = "chest_reward_count_common"

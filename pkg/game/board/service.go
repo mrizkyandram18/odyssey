@@ -49,8 +49,8 @@ func (s *Service) PostText(ctx context.Context, crewID, authorUID, content strin
 	}
 
 	item := &game.CreativeItem{
-		CrewID:    crewID,
-		Realm:     game.RealmSharedBoard,
+		FamilyID:    crewID,
+		Journey:     game.RealmSharedBoard,
 		AuthorUID: authorUID,
 		Kind:      game.KindSharedText,
 		Payload:   text,
@@ -83,7 +83,7 @@ func (s *Service) GetForCrew(ctx context.Context, crewID string, id int64) (*gam
 		}
 		return nil, err
 	}
-	if item.CrewID != crewID || item.Kind != game.KindSharedText {
+	if item.FamilyID != crewID || item.Kind != game.KindSharedText {
 		return nil, ErrForbidden
 	}
 	return item, nil

@@ -12,14 +12,14 @@ import (
 
 func TestChestStore_CreateChest(t *testing.T) {
 	now := time.Date(2026, 8, 3, 12, 0, 0, 0, time.UTC)
-	data, _ := json.Marshal([]Chest{
-		{ID: 1, UID: "user-1", Source: "quest", ChestSlug: "wooden-chest", Rarity: "COMMON", Icon: "📦", Description: "A chest", Opened: false, CreatedAt: now},
+	data, _ := json.Marshal([]Gift{
+		{ID: 1, UID: "user-1", Source: "quest", GiftSlug: "wooden-chest", Rarity: "COMMON", Icon: "📦", Description: "A chest", Opened: false, CreatedAt: now},
 	})
 	store := NewChestStore(&mockSupabaseClient{data: data})
-	ch := &game.Chest{
+	ch := &game.Gift{
 		UID:       "user-1",
 		Source:    "quest",
-		ChestSlug: "wooden-chest",
+		GiftSlug: "wooden-chest",
 		Rarity:    "COMMON",
 		Icon:      "📦",
 	}
@@ -34,8 +34,8 @@ func TestChestStore_CreateChest(t *testing.T) {
 
 func TestChestStore_GetChest(t *testing.T) {
 	now := time.Date(2026, 8, 3, 12, 0, 0, 0, time.UTC)
-	data, _ := json.Marshal([]Chest{
-		{ID: 1, UID: "user-1", Source: "quest", ChestSlug: "wooden-chest", Opened: false, CreatedAt: now},
+	data, _ := json.Marshal([]Gift{
+		{ID: 1, UID: "user-1", Source: "quest", GiftSlug: "wooden-chest", Opened: false, CreatedAt: now},
 	})
 	store := NewChestStore(&mockSupabaseClient{data: data})
 	ch, err := store.GetChest(context.Background(), 1)
@@ -65,16 +65,16 @@ func TestChestStore_UpdateChest(t *testing.T) {
 
 func TestChestStore_ListChestsByUser(t *testing.T) {
 	now := time.Date(2026, 8, 3, 12, 0, 0, 0, time.UTC)
-	data, _ := json.Marshal([]Chest{
+	data, _ := json.Marshal([]Gift{
 		{ID: 1, UID: "user-1", Source: "quest", Opened: false, CreatedAt: now},
 	})
 	store := NewChestStore(&mockSupabaseClient{data: data})
-	chests, err := store.ListChestsByUser(context.Background(), "user-1")
+	gifts, err := store.ListChestsByUser(context.Background(), "user-1")
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
-	if len(chests) != 1 {
-		t.Errorf("expected 1 chest, got %d", len(chests))
+	if len(gifts) != 1 {
+		t.Errorf("expected 1 chest, got %d", len(gifts))
 	}
 }
 

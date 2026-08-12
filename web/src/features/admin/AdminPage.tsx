@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Navigate } from 'react-router-dom'
 import { useSession } from '../../shared/hooks/useSession'
-import { adminApi, type AdminStats, type QuestStat, type ActivityStat } from '../../shared/lib/api'
+import { adminApi, type AdminStats, type MissionStat, type ActivityStat } from '../../shared/lib/api'
 import { Card } from '../../shared/components/atoms/Card'
 import { Button } from '../../shared/components/atoms/Button'
 
@@ -9,7 +9,7 @@ export function AdminPage() {
   const { session, loading } = useSession()
 
   const [stats, setStats] = useState<AdminStats | null>(null)
-  const [quests, setQuests] = useState<QuestStat[]>([])
+  const [missions, setMissions] = useState<MissionStat[]>([])
   const [activities, setActivities] = useState<ActivityStat[]>([])
   const [error, setError] = useState<string | null>(null)
   const [isFetching, setIsFetching] = useState(true)
@@ -19,11 +19,11 @@ export function AdminPage() {
       setIsFetching(true)
       const [s, q, a] = await Promise.all([
         adminApi.getStats(),
-        adminApi.getQuests(),
+        adminApi.getMissions(),
         adminApi.getDailyActivities(),
       ])
       setStats(s)
-      setQuests(q)
+      setMissions(q)
       setActivities(a)
     } catch (err: any) {
       setError(err.message || 'Gagal mengambil data admin')
@@ -37,10 +37,10 @@ export function AdminPage() {
     fetchData()
   }, [session])
 
-  const handleToggleQuest = async (slug: string) => {
+  const handleToggleMission = async (slug: string) => {
     try {
-      await adminApi.toggleQuest(slug)
-      setQuests((prev) =>
+      await adminApi.toggleMission(slug)
+      setMissions((prev) =>
         prev.map((q) => (q.slug === slug ? { ...q, published: !q.published } : q))
       )
     } catch (err: any) {
@@ -97,7 +97,7 @@ export function AdminPage() {
             </Card>
             <Card className="p-4 flex flex-col items-center">
               <span className="text-sm text-text-secondary">Misi Selesai</span>
-              <span className="text-2xl font-bold text-accent-magic">{stats.quest_completions}</span>
+              <span className="text-2xl font-bold text-accent-magic">{stats.Mission_completions}</span>
             </Card>
             <Card className="p-4 flex flex-col items-center">
               <span className="text-sm text-text-secondary">Aktivitas Hari Ini</span>
@@ -120,7 +120,7 @@ export function AdminPage() {
               </tr>
             </thead>
             <tbody className="divide-y divide-surface-base">
-              {quests.map((q) => (
+              {missions.map((q) => (
                 <tr key={q.slug}>
                   <td className="p-3">
                     <div className="font-medium">{q.title}</div>
@@ -138,7 +138,7 @@ export function AdminPage() {
                     <Button 
                       variant={q.published ? 'ghost' : 'primary'}
                       size="sm"
-                      onClick={() => handleToggleQuest(q.slug)}
+                      onClick={() => handleToggleMission(q.slug)}
                     >
                       {q.published ? 'Hide' : 'Publish'}
                     </Button>

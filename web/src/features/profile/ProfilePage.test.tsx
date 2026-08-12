@@ -18,13 +18,13 @@ const mockApiClientGet = vi.fn((url: string) => {
       explorer_effect: 'none',
     })
   }
-  if (url === '/api/relics/inventory') {
+  if (url === '/api/collections/inventory') {
     return Promise.resolve([])
   }
-  if (url === '/api/quests') {
+  if (url === '/api/missions') {
     return Promise.resolve([])
   }
-  if (url === '/api/crews') {
+  if (url === '/api/families') {
     return Promise.resolve({ banner_url: '', theme: 'default' })
   }
   if (url === '/api/rewards') {
@@ -50,7 +50,7 @@ vi.mock('../../shared/lib/api', () => ({
     patch: (...args: any[]) => mockApiClientPatch(...args),
     members: () => Promise.resolve([]),
   },
-  questsApi: {
+  MissionsApi: {
     list: () => Promise.resolve([]),
   },
 }))
@@ -71,13 +71,13 @@ describe('ProfilePage explorer effects', () => {
           explorer_effect: 'none',
         })
       }
-      if (url === '/api/relics/inventory') {
+      if (url === '/api/collections/inventory') {
         return Promise.resolve([])
       }
-      if (url === '/api/quests') {
+      if (url === '/api/missions') {
         return Promise.resolve([])
       }
-      if (url === '/api/crews') {
+      if (url === '/api/families') {
         return Promise.resolve({ banner_url: '', theme: 'default' })
       }
       if (url === '/api/rewards') {
@@ -89,10 +89,10 @@ describe('ProfilePage explorer effects', () => {
     mockApiClientPatch.mockResolvedValue({})
 
     vi.mocked(useSession).mockReturnValue({
-      session: { uid: 'u1', crew_id: 'crew-1', role: 'SEEKER' } as any,
+      session: { uid: 'u1', family_id: 'crew-1', role: 'SEEKER' } as any,
       profile: {
         uid: 'u1',
-        crew_id: 'crew-1',
+        family_id: 'crew-1',
         explorer_name: 'Tester',
         role: 'SEEKER',
         level: 1,

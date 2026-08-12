@@ -33,7 +33,7 @@ func NewService(repo *game.Repository) *Service {
 	}
 }
 
-// GrantQuestReward credits +5 coins for completing a quest (once per quest_id).
+// GrantQuestReward credits +5 coins for completing a quest (once per mission_id).
 func (s *Service) GrantQuestReward(ctx context.Context, uid string, questID int64, xp int64) error {
 	_ = xp // XP is awarded elsewhere; coins use fixed Slice 2.1 amount.
 	coins := CoinsPerQuestComplete
@@ -45,7 +45,7 @@ func (s *Service) GrantQuestReward(ctx context.Context, uid string, questID int6
 		return nil
 	}
 
-	err := s.grantReward(ctx, uid, SourceQuestCompleted, coins, RewardTypeCoins, map[string]any{"quest_id": questID})
+	err := s.grantReward(ctx, uid, SourceQuestCompleted, coins, RewardTypeCoins, map[string]any{"mission_id": questID})
 	if err != nil {
 		return fmt.Errorf("grant quest reward ledger: %w", err)
 	}
@@ -129,7 +129,7 @@ func (s *Service) hasQuestCoinGrant(ctx context.Context, uid string, questID int
 		if l.Metadata == nil {
 			continue
 		}
-		// Metadata may be a JSON object string: {"quest_id":102}
+		// Metadata may be a JSON object string: {"mission_id":102}
 		if metadataHasQuestID(*l.Metadata, want) {
 			return true, nil
 		}
@@ -140,7 +140,7 @@ func (s *Service) hasQuestCoinGrant(ctx context.Context, uid string, questID int
 func metadataHasQuestID(meta, questID string) bool {
 	var m map[string]any
 	if err := json.Unmarshal([]byte(meta), &m); err == nil {
-		switch v := m["quest_id"].(type) {
+		switch v := m["mission_id"].(type) {
 		case float64:
 			return strconv.FormatInt(int64(v), 10) == questID
 		case json.Number:
@@ -150,6 +150,6 @@ func metadataHasQuestID(meta, questID string) bool {
 		}
 	}
 	// Fallback substring for loosely stored metadata.
-	return strings.Contains(meta, `"quest_id":`+questID) ||
-		strings.Contains(meta, `"quest_id": `+questID)
+	return strings.Contains(meta, `"mission_id":`+questID) ||
+		strings.Contains(meta, `"mission_id": `+questID)
 }

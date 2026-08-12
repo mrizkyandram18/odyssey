@@ -13,13 +13,13 @@ import (
 func TestPlayerRelicStore_CreatePlayerRelic(t *testing.T) {
 	now := time.Date(2026, 8, 3, 12, 0, 0, 0, time.UTC)
 	data, _ := json.Marshal([]PlayerRelic{
-		{ID: 1, UID: "user-1", RelicSlug: "ancient-compass", RelicID: 1, OwnedCount: 1, IsNew: true, DiscoveredAt: now, CreatedAt: now, UpdatedAt: now},
+		{ID: 1, UID: "user-1", CollectionSlug: "ancient-compass", CollectionID: 1, OwnedCount: 1, IsNew: true, DiscoveredAt: now, CreatedAt: now, UpdatedAt: now},
 	})
 	store := NewPlayerRelicStore(&mockSupabaseClient{data: data})
 	pr := &game.PlayerRelic{
 		UID:       "user-1",
-		RelicSlug: "ancient-compass",
-		RelicID:   1,
+		CollectionSlug: "ancient-compass",
+		CollectionID:   1,
 	}
 	result, err := store.CreatePlayerRelic(context.Background(), pr)
 	if err != nil {
@@ -36,7 +36,7 @@ func TestPlayerRelicStore_CreatePlayerRelic(t *testing.T) {
 func TestPlayerRelicStore_GetPlayerRelic(t *testing.T) {
 	now := time.Date(2026, 8, 3, 12, 0, 0, 0, time.UTC)
 	data, _ := json.Marshal([]PlayerRelic{
-		{ID: 1, UID: "user-1", RelicSlug: "ancient-compass", RelicID: 1, OwnedCount: 2, CreatedAt: now, UpdatedAt: now},
+		{ID: 1, UID: "user-1", CollectionSlug: "ancient-compass", CollectionID: 1, OwnedCount: 2, CreatedAt: now, UpdatedAt: now},
 	})
 	store := NewPlayerRelicStore(&mockSupabaseClient{data: data})
 	pr, err := store.GetPlayerRelic(context.Background(), "user-1", "ancient-compass")
@@ -67,25 +67,25 @@ func TestPlayerRelicStore_UpdatePlayerRelic(t *testing.T) {
 func TestPlayerRelicStore_ListPlayerRelics(t *testing.T) {
 	now := time.Date(2026, 8, 3, 12, 0, 0, 0, time.UTC)
 	data, _ := json.Marshal([]PlayerRelic{
-		{ID: 1, UID: "user-1", RelicSlug: "r1", OwnedCount: 1, CreatedAt: now, UpdatedAt: now},
-		{ID: 2, UID: "user-1", RelicSlug: "r2", OwnedCount: 3, CreatedAt: now, UpdatedAt: now},
+		{ID: 1, UID: "user-1", CollectionSlug: "r1", OwnedCount: 1, CreatedAt: now, UpdatedAt: now},
+		{ID: 2, UID: "user-1", CollectionSlug: "r2", OwnedCount: 3, CreatedAt: now, UpdatedAt: now},
 	})
 	store := NewPlayerRelicStore(&mockSupabaseClient{data: data})
-	relics, err := store.ListPlayerRelics(context.Background(), "user-1")
+	collections, err := store.ListPlayerRelics(context.Background(), "user-1")
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
-	if len(relics) != 2 {
-		t.Errorf("expected 2 player relics, got %d", len(relics))
+	if len(collections) != 2 {
+		t.Errorf("expected 2 player collections, got %d", len(collections))
 	}
 }
 
 func TestPlayerRelicStore_CountUniqueRelics(t *testing.T) {
 	now := time.Date(2026, 8, 3, 12, 0, 0, 0, time.UTC)
 	data, _ := json.Marshal([]PlayerRelic{
-		{ID: 1, UID: "user-1", RelicSlug: "r1", OwnedCount: 1, CreatedAt: now, UpdatedAt: now},
-		{ID: 2, UID: "user-1", RelicSlug: "r2", OwnedCount: 3, CreatedAt: now, UpdatedAt: now},
-		{ID: 3, UID: "user-1", RelicSlug: "r1", OwnedCount: 2, CreatedAt: now, UpdatedAt: now},
+		{ID: 1, UID: "user-1", CollectionSlug: "r1", OwnedCount: 1, CreatedAt: now, UpdatedAt: now},
+		{ID: 2, UID: "user-1", CollectionSlug: "r2", OwnedCount: 3, CreatedAt: now, UpdatedAt: now},
+		{ID: 3, UID: "user-1", CollectionSlug: "r1", OwnedCount: 2, CreatedAt: now, UpdatedAt: now},
 	})
 	store := NewPlayerRelicStore(&mockSupabaseClient{data: data})
 	count, err := store.CountUniqueRelics(context.Background(), "user-1")
@@ -93,7 +93,7 @@ func TestPlayerRelicStore_CountUniqueRelics(t *testing.T) {
 		t.Fatalf("unexpected error: %v", err)
 	}
 	if count != 2 {
-		t.Errorf("expected 2 unique relics, got %d", count)
+		t.Errorf("expected 2 unique collections, got %d", count)
 	}
 }
 

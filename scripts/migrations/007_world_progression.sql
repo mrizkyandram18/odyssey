@@ -1,5 +1,5 @@
 -- Migration 007: World Progression System
--- Adds tables and columns for chapter progression, lore unlocks,
+-- Adds tables and columns for course progression, concept unlocks,
 -- seasonal content filtering, quest prerequisites, and achievement triggers.
 -- All new columns are additive (nullable with defaults) — no breaking changes.
 -- Follows ADR-003 conventions: odyssey_ prefix, snake_case, timestamps, RLS,
@@ -10,30 +10,30 @@
 -- ============================================================
 ALTER TABLE odyssey_quest_definitions
     ADD COLUMN IF NOT EXISTS is_mandatory      BOOLEAN NOT NULL DEFAULT TRUE,
-    ADD COLUMN IF NOT EXISTS required_quest_slug TEXT,
-    ADD COLUMN IF NOT EXISTS required_chapter     TEXT,
-    ADD COLUMN IF NOT EXISTS required_realm       TEXT,
+    ADD COLUMN IF NOT EXISTS required_mission_slug TEXT,
+    ADD COLUMN IF NOT EXISTS required_course     TEXT,
+    ADD COLUMN IF NOT EXISTS required_journey       TEXT,
     ADD COLUMN IF NOT EXISTS required_level       INTEGER NOT NULL DEFAULT 0,
     ADD COLUMN IF NOT EXISTS season_slug          TEXT;
 
 CREATE INDEX IF NOT EXISTS idx_odyssey_quest_definitions_season
     ON odyssey_quest_definitions (season_slug);
-CREATE INDEX IF NOT EXISTS idx_odyssey_quest_definitions_required_chapter
-    ON odyssey_quest_definitions (required_chapter);
-CREATE INDEX IF NOT EXISTS idx_odyssey_quest_definitions_chapter
-    ON odyssey_quest_definitions (chapter);
+CREATE INDEX IF NOT EXISTS idx_odyssey_quest_definitions_required_course
+    ON odyssey_quest_definitions (required_course);
+CREATE INDEX IF NOT EXISTS idx_odyssey_quest_definitions_course
+    ON odyssey_quest_definitions (course);
 
 -- ============================================================
--- ALTER: odyssey_lore_definitions — link lore to chapters & seasons
+-- ALTER: odyssey_concept_definitions — link concept to chapters & seasons
 -- ============================================================
-ALTER TABLE odyssey_lore_definitions
-    ADD COLUMN IF NOT EXISTS chapter     TEXT NOT NULL DEFAULT '',
+ALTER TABLE odyssey_concept_definitions
+    ADD COLUMN IF NOT EXISTS course     TEXT NOT NULL DEFAULT '',
     ADD COLUMN IF NOT EXISTS season_slug TEXT;
 
-CREATE INDEX IF NOT EXISTS idx_odyssey_lore_definitions_chapter
-    ON odyssey_lore_definitions (chapter);
-CREATE INDEX IF NOT EXISTS idx_odyssey_lore_definitions_season
-    ON odyssey_lore_definitions (season_slug);
+CREATE INDEX IF NOT EXISTS idx_odyssey_concept_definitions_course
+    ON odyssey_concept_definitions (course);
+CREATE INDEX IF NOT EXISTS idx_odyssey_concept_definitions_season
+    ON odyssey_concept_definitions (season_slug);
 
 -- ============================================================
 -- ALTER: odyssey_achievement_definitions — add trigger & seasonality
@@ -79,76 +79,76 @@ CREATE INDEX IF NOT EXISTS idx_odyssey_achievements_trigger
 CREATE UNIQUE INDEX IF NOT EXISTS uniq_odyssey_achievements_uid_code
     ON odyssey_achievements (uid, code)
     WHERE uid IS NOT NULL;
-CREATE UNIQUE INDEX IF NOT EXISTS uniq_odyssey_achievements_crew_id_code
-    ON odyssey_achievements (crew_id, code)
-    WHERE crew_id IS NOT NULL AND uid IS NULL;
+CREATE UNIQUE INDEX IF NOT EXISTS uniq_odyssey_achievements_family_id_code
+    ON odyssey_achievements (family_id, code)
+    WHERE family_id IS NOT NULL AND uid IS NULL;
 
 -- ============================================================
--- CREATE: odyssey_chapter_progress
--- Tracks a crew's progress through each chapter.
+-- CREATE: odyssey_course_progress
+-- Tracks a crew's progress through each course.
 -- ============================================================
-CREATE TABLE IF NOT EXISTS odyssey_chapter_progress (
-    crew_id      TEXT    NOT NULL,
-    chapter      TEXT    NOT NULL,
-    realm        TEXT    NOT NULL,
+CREATE TABLE IF NOT EXISTS odyssey_course_progress (
+    family_id      TEXT    NOT NULL,
+    course      TEXT    NOT NULL,
+    journey        TEXT    NOT NULL,
     status       TEXT    NOT NULL DEFAULT 'LOCKED',
     completed_at TIMESTAMPTZ,
     created_at   TIMESTAMPTZ DEFAULT timezone('utc'::text, now()) NOT NULL,
     updated_at   TIMESTAMPTZ DEFAULT timezone('utc'::text, now()) NOT NULL,
-    PRIMARY KEY (crew_id, chapter)
+    PRIMARY KEY (family_id, course)
 );
 
-CREATE INDEX IF NOT EXISTS idx_odyssey_chapter_progress_crew_id
-    ON odyssey_chapter_progress (crew_id);
-CREATE INDEX IF NOT EXISTS idx_odyssey_chapter_progress_realm
-    ON odyssey_chapter_progress (realm);
-CREATE INDEX IF NOT EXISTS idx_odyssey_chapter_progress_status
-    ON odyssey_chapter_progress (status);
+CREATE INDEX IF NOT EXISTS idx_odyssey_course_progress_family_id
+    ON odyssey_course_progress (family_id);
+CREATE INDEX IF NOT EXISTS idx_odyssey_course_progress_journey
+    ON odyssey_course_progress (journey);
+CREATE INDEX IF NOT EXISTS idx_odyssey_course_progress_status
+    ON odyssey_course_progress (status);
 
 -- ============================================================
--- CREATE: odyssey_lore_unlocks
--- Tracks which lore entries a crew has unlocked.
+-- CREATE: odyssey_concept_unlocks
+-- Tracks which concept entries a crew has unlocked.
 -- ============================================================
-CREATE TABLE IF NOT EXISTS odyssey_lore_unlocks (
-    crew_id     TEXT NOT NULL,
-    lore_slug   TEXT NOT NULL,
-    realm       TEXT NOT NULL,
-    chapter     TEXT NOT NULL DEFAULT '',
+CREATE TABLE IF NOT EXISTS odyssey_concept_unlocks (
+    family_id     TEXT NOT NULL,
+    concept_slug   TEXT NOT NULL,
+    journey       TEXT NOT NULL,
+    course     TEXT NOT NULL DEFAULT '',
     unlocked_at TIMESTAMPTZ DEFAULT timezone('utc'::text, now()) NOT NULL,
     created_at  TIMESTAMPTZ DEFAULT timezone('utc'::text, now()) NOT NULL,
-    PRIMARY KEY (crew_id, lore_slug)
+    PRIMARY KEY (family_id, concept_slug)
 );
 
-CREATE INDEX IF NOT EXISTS idx_odyssey_lore_unlocks_crew_id
-    ON odyssey_lore_unlocks (crew_id);
-CREATE INDEX IF NOT EXISTS idx_odyssey_lore_unlocks_lore_slug
-    ON odyssey_lore_unlocks (lore_slug);
+CREATE INDEX IF NOT EXISTS idx_odyssey_concept_unlocks_family_id
+    ON odyssey_concept_unlocks (family_id);
+CREATE INDEX IF NOT EXISTS idx_odyssey_concept_unlocks_concept_slug
+    ON odyssey_concept_unlocks (concept_slug);
 
 -- ============================================================
--- ALTER: odyssey_quests — add chapter column for instance tracking
+-- ALTER: odyssey_missions — add course column for instance tracking
 -- ============================================================
-ALTER TABLE odyssey_quests
-    ADD COLUMN IF NOT EXISTS chapter TEXT NOT NULL DEFAULT '';
+ALTER TABLE odyssey_missions
+    ADD COLUMN IF NOT EXISTS course TEXT NOT NULL DEFAULT '';
 
-CREATE INDEX IF NOT EXISTS idx_odyssey_quests_chapter
-    ON odyssey_quests (chapter);
-CREATE INDEX IF NOT EXISTS idx_odyssey_quests_status
-    ON odyssey_quests (status);
+CREATE INDEX IF NOT EXISTS idx_odyssey_missions_course
+    ON odyssey_missions (course);
+CREATE INDEX IF NOT EXISTS idx_odyssey_missions_status
+    ON odyssey_missions (status);
 
 -- ============================================================
 -- Row-Level Security for new tables
 -- ============================================================
-ALTER TABLE odyssey_chapter_progress ENABLE ROW LEVEL SECURITY;
-ALTER TABLE odyssey_lore_unlocks ENABLE ROW LEVEL SECURITY;
+ALTER TABLE odyssey_course_progress ENABLE ROW LEVEL SECURITY;
+ALTER TABLE odyssey_concept_unlocks ENABLE ROW LEVEL SECURITY;
 
 DO $$
 BEGIN
     IF NOT EXISTS (
         SELECT 1 FROM pg_policies
-        WHERE schemaname = 'public' AND tablename = 'odyssey_chapter_progress'
+        WHERE schemaname = 'public' AND tablename = 'odyssey_course_progress'
         AND policyname = 'Allow service_role full access'
     ) THEN
-        EXECUTE 'CREATE POLICY "Allow service_role full access" ON odyssey_chapter_progress FOR ALL TO service_role USING (true)';
+        EXECUTE 'CREATE POLICY "Allow service_role full access" ON odyssey_course_progress FOR ALL TO service_role USING (true)';
     END IF;
 END $$;
 
@@ -156,9 +156,9 @@ DO $$
 BEGIN
     IF NOT EXISTS (
         SELECT 1 FROM pg_policies
-        WHERE schemaname = 'public' AND tablename = 'odyssey_lore_unlocks'
+        WHERE schemaname = 'public' AND tablename = 'odyssey_concept_unlocks'
         AND policyname = 'Allow service_role full access'
     ) THEN
-        EXECUTE 'CREATE POLICY "Allow service_role full access" ON odyssey_lore_unlocks FOR ALL TO service_role USING (true)';
+        EXECUTE 'CREATE POLICY "Allow service_role full access" ON odyssey_concept_unlocks FOR ALL TO service_role USING (true)';
     END IF;
 END $$;

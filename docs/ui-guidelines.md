@@ -54,7 +54,7 @@ content, never a separate layout with more features.
   with luminous accents fit the fantasy tone and save OLED battery. A light
   mode is available via system preference but is not the focus.
 - **Action colors:** Primary = adventure progress (blue/cyan). Secondary =
-  creative / social (purple). Accent = rewards / relics (amber/gold).
+  creative / social (purple). Accent = rewards / collections (amber/gold).
 - **Status:** Success (green), error (red). Neutral for everything else.
 
 ## 4. PWA Behavior
@@ -116,10 +116,10 @@ but game-state contributions are sent immediately on submission.
 ### Feedback
 
 - **Tap:** Instant visual state change (opacity or scale 0.96).
-- **Success:** A brief, celebratory animation (Relic collection, Chest open).
+- **Success:** A brief, celebratory animation (Collection collection, Gift open).
   Keep it short (500 ms) and non-blocking.
 - **Error:** Inline, adjacent to the field. No modal alerts for input errors.
-- **Progress:** Always visible. XP bars, Relic indicators, and streak badges
+- **Progress:** Always visible. XP bars, Collection indicators, and streak badges
   are persistent in the top bar.
 
 ## 7. Content & Voice

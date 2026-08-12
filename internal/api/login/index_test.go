@@ -81,7 +81,7 @@ func makeValidClaims() *auth.SessionClaims {
 		Kind:    "user",
 		UID:     "user-1",
 		Role:    "SEEKER",
-		CrewID:  "crew-1",
+		FamilyID:  "crew-1",
 		Issued:  1000,
 		Expires: 9999999999,
 	}
@@ -90,7 +90,7 @@ func makeValidClaims() *auth.SessionClaims {
 func makeValidProfile() *db.UserProfile {
 	return &db.UserProfile{
 		UID:          "user-1",
-		CrewID:       "crew-1",
+		FamilyID:       "crew-1",
 		ExplorerName: "Alice",
 		Role:         "SEEKER",
 		Level:        1,
@@ -136,8 +136,8 @@ func TestLoginHandler_Success(t *testing.T) {
 	if resp.UID != "user-1" {
 		t.Errorf("expected uid user-1, got %s", resp.UID)
 	}
-	if resp.CrewID != "crew-1" {
-		t.Errorf("expected crew_id crew-1, got %s", resp.CrewID)
+	if resp.FamilyID != "crew-1" {
+		t.Errorf("expected family_id crew-1, got %s", resp.FamilyID)
 	}
 	if resp.Kind != "user" {
 		t.Errorf("expected kind user, got %s", resp.Kind)
@@ -506,7 +506,7 @@ func TestLoginHandler_SuccessNoProfile(t *testing.T) {
 	if resp.Status != "success" {
 		t.Errorf("expected status success, got %s", resp.Status)
 	}
-	if resp.CrewID != "" && resp.CrewID != "crew-1" {
-		t.Errorf("expected empty crew_id for no profile, got %s", resp.CrewID)
+	if resp.FamilyID != "" && resp.FamilyID != "crew-1" {
+		t.Errorf("expected empty family_id for no profile, got %s", resp.FamilyID)
 	}
 }

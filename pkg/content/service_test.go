@@ -12,7 +12,7 @@ import (
 type mockDefinitionStore struct {
 	realms   []gamecontent.RealmDefinition
 	chapters []gamecontent.ChapterDefinition
-	quests   []gamecontent.QuestDefinition
+	missions   []gamecontent.QuestDefinition
 }
 
 func (m *mockDefinitionStore) ListRealms(ctx context.Context) ([]gamecontent.RealmDefinition, error) {
@@ -26,13 +26,13 @@ func (m *mockDefinitionStore) GetRealm(ctx context.Context, slug string) (*gamec
 	}
 	return nil, nil
 }
-func (m *mockDefinitionStore) ListChapters(ctx context.Context, realm string) ([]gamecontent.ChapterDefinition, error) {
-	if realm == "" {
+func (m *mockDefinitionStore) ListChapters(ctx context.Context, journey string) ([]gamecontent.ChapterDefinition, error) {
+	if journey == "" {
 		return m.chapters, nil
 	}
 	var result []gamecontent.ChapterDefinition
 	for _, c := range m.chapters {
-		if c.Realm == realm {
+		if c.Journey == journey {
 			result = append(result, c)
 		}
 	}
@@ -46,28 +46,28 @@ func (m *mockDefinitionStore) GetChapter(ctx context.Context, slug string) (*gam
 	}
 	return nil, nil
 }
-func (m *mockDefinitionStore) ListChaptersByRealm(ctx context.Context, realm string) ([]gamecontent.ChapterDefinition, error) {
-	return m.ListChapters(ctx, realm)
+func (m *mockDefinitionStore) ListChaptersByRealm(ctx context.Context, journey string) ([]gamecontent.ChapterDefinition, error) {
+	return m.ListChapters(ctx, journey)
 }
 
 type mockQuestStore struct {
-	quests []gamecontent.QuestDefinition
+	missions []gamecontent.QuestDefinition
 }
 
 func (m *mockQuestStore) ListQuests(ctx context.Context) ([]gamecontent.QuestDefinition, error) {
-	return m.quests, nil
+	return m.missions, nil
 }
-func (m *mockQuestStore) ListQuestsByRealm(ctx context.Context, realm string) ([]gamecontent.QuestDefinition, error) {
+func (m *mockQuestStore) ListQuestsByRealm(ctx context.Context, journey string) ([]gamecontent.QuestDefinition, error) {
 	var result []gamecontent.QuestDefinition
-	for _, q := range m.quests {
-		if q.Realm == realm {
+	for _, q := range m.missions {
+		if q.Journey == journey {
 			result = append(result, q)
 		}
 	}
 	return result, nil
 }
 func (m *mockQuestStore) GetQuest(ctx context.Context, slug string) (*gamecontent.QuestDefinition, error) {
-	for _, q := range m.quests {
+	for _, q := range m.missions {
 		if q.Slug == slug {
 			return &q, nil
 		}
@@ -80,7 +80,7 @@ type mockPromptStore struct{}
 func (m *mockPromptStore) ListPrompts(ctx context.Context) ([]gamecontent.CreativePromptDefinition, error) {
 	return nil, nil
 }
-func (m *mockPromptStore) ListPromptsByRealm(ctx context.Context, realm string) ([]gamecontent.CreativePromptDefinition, error) {
+func (m *mockPromptStore) ListPromptsByRealm(ctx context.Context, journey string) ([]gamecontent.CreativePromptDefinition, error) {
 	return nil, nil
 }
 func (m *mockPromptStore) GetPrompt(ctx context.Context, slug string) (*gamecontent.CreativePromptDefinition, error) {
@@ -110,7 +110,7 @@ type mockLoreStore struct{}
 func (m *mockLoreStore) ListLore(ctx context.Context) ([]gamecontent.LoreDefinition, error) {
 	return nil, nil
 }
-func (m *mockLoreStore) ListLoreByRealm(ctx context.Context, realm string) ([]gamecontent.LoreDefinition, error) {
+func (m *mockLoreStore) ListLoreByRealm(ctx context.Context, journey string) ([]gamecontent.LoreDefinition, error) {
 	return nil, nil
 }
 func (m *mockLoreStore) GetLore(ctx context.Context, slug string) (*gamecontent.LoreDefinition, error) {
@@ -243,8 +243,8 @@ func TestContentService_Reload(t *testing.T) {
 		},
 	}
 	questStore := &mockQuestStore{
-		quests: []gamecontent.QuestDefinition{
-			{ID: 1, Slug: "q1", Realm: "forest", Title: "Quest 1"},
+		missions: []gamecontent.QuestDefinition{
+			{ID: 1, Slug: "q1", Journey: "forest", Title: "Mission 1"},
 		},
 	}
 
@@ -271,15 +271,15 @@ func TestContentService_Reload(t *testing.T) {
 		t.Fatalf("ListRealms failed: %v", err)
 	}
 	if len(realms) != 1 {
-		t.Fatalf("expected 1 realm, got %d", len(realms))
+		t.Fatalf("expected 1 journey, got %d", len(realms))
 	}
 
-	quests, err := svc.ListQuests(ctx)
+	missions, err := svc.ListQuests(ctx)
 	if err != nil {
 		t.Fatalf("ListQuests failed: %v", err)
 	}
-	if len(quests) != 1 {
-		t.Fatalf("expected 1 quest, got %d", len(quests))
+	if len(missions) != 1 {
+		t.Fatalf("expected 1 quest, got %d", len(missions))
 	}
 }
 

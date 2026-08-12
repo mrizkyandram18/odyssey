@@ -199,7 +199,7 @@ func (s *ProgressionService) AwardXP(ctx context.Context, uid string, amount int
 	if levelUp {
 		s.publisher.Publish(ctx, events.LevelReachedEvent{
 			UID:      uid,
-			CrewID:   player.CrewID,
+			FamilyID:   player.FamilyID,
 			OldLevel: oldLevel,
 			NewLevel: newLevel,
 		})

@@ -46,7 +46,7 @@ func TestProfileStore_GetUserProfile_Found(t *testing.T) {
 	data, _ := json.Marshal([]UserProfile{
 		{
 			UID:          "user-1",
-			CrewID:       "crew-1",
+			FamilyID:       "crew-1",
 			ExplorerName: "Alice",
 			Role:         "SEEKER",
 			Level:        1,
@@ -63,8 +63,8 @@ func TestProfileStore_GetUserProfile_Found(t *testing.T) {
 	if profile.UID != "user-1" {
 		t.Errorf("expected UID user-1, got %s", profile.UID)
 	}
-	if profile.CrewID != "crew-1" {
-		t.Errorf("expected CrewID crew-1, got %s", profile.CrewID)
+	if profile.FamilyID != "crew-1" {
+		t.Errorf("expected FamilyID crew-1, got %s", profile.FamilyID)
 	}
 	if profile.ExplorerName != "Alice" {
 		t.Errorf("expected ExplorerName Alice, got %s", profile.ExplorerName)

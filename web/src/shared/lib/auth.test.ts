@@ -34,7 +34,7 @@ describe('HttpAuthClient.current', () => {
 	it('returns the profile on success', async () => {
 		const profile: Explorer = {
 			uid: 'user-1',
-			crew_id: 'crew-1',
+			family_id: 'crew-1',
 			explorer_name: 'Alice',
 			role: 'SEEKER',
 			level: 1,
@@ -80,7 +80,7 @@ describe('HttpAuthClient.login', () => {
 			status: 'success',
 			session: 'token-abc',
 			uid: 'user-1',
-			crew_id: 'crew-1',
+			family_id: 'crew-1',
 			kind: 'user',
 			role: 'SEEKER',
 			expires: 9999999999,
@@ -94,7 +94,7 @@ describe('HttpAuthClient.login', () => {
 		if (result.ok) {
 			expect(result.session.uid).toBe('user-1')
 			expect(result.session.token).toBe('token-abc')
-			expect(result.session.crew_id).toBe('crew-1')
+			expect(result.session.family_id).toBe('crew-1')
 			expect(result.session.kind).toBe('user')
 			expect(result.session.role).toBe('SEEKER')
 			expect(result.session.expires).toBe(9999999999)

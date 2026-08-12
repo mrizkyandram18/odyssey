@@ -127,7 +127,7 @@ src/
 
 - **Components:** `PascalCase`, file name matches export (`Button.tsx`).
 - **Hooks:** `use`-prefixed (`useQuests`).
-- **Types:** `PascalCase` for interfaces/types (`Quest`, `UserSession`).
+- **Types:** `PascalCase` for interfaces/types (`Mission`, `UserSession`).
 - **Variables/functions:** `camelCase`.
 - **Constants:** `UPPER_SNAKE_CASE` for module-level constants.
 

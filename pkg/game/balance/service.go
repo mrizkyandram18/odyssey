@@ -68,7 +68,7 @@ func (s *Service) OverrideXPForLevel(def int64) int64 {
 	return s.GetOverride(KeyXPPerLevel, def)
 }
 
-// OverrideMaxNewQuestsPerDay returns the max new quests per day.
+// OverrideMaxNewQuestsPerDay returns the max new missions per day.
 func (s *Service) OverrideMaxNewQuestsPerDay(def int) int {
 	return int(s.GetOverride(KeyMaxNewQuestsPerDay, int64(def)))
 }
@@ -88,12 +88,12 @@ func (s *Service) OverrideDailyTurnXP(def int64) int64 {
 	return s.GetOverride(KeyDailyTurnXP, def)
 }
 
-// OverrideRealmProgressPerQuest returns the realm progress per completed quest.
+// OverrideRealmProgressPerQuest returns the journey progress per completed quest.
 func (s *Service) OverrideRealmProgressPerQuest(def int) int {
 	return int(s.GetOverride(KeyRealmProgressPerQuest, int64(def)))
 }
 
-// OverrideRealmCompletionThreshold returns the threshold for realm completion.
+// OverrideRealmCompletionThreshold returns the threshold for journey completion.
 func (s *Service) OverrideRealmCompletionThreshold(def int) int {
 	return int(s.GetOverride(KeyRealmCompletionThreshold, int64(def)))
 }

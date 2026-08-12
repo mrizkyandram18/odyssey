@@ -113,7 +113,7 @@ type mockContentServiceForAdmin struct {
 	reloadedResource     string
 	realms               []gamecontent.RealmDefinition
 	chapters             []gamecontent.ChapterDefinition
-	quests               []gamecontent.QuestDefinition
+	missions               []gamecontent.QuestDefinition
 	counter              int64
 }
 
@@ -132,7 +132,7 @@ func (m *mockContentServiceForAdmin) Status(ctx context.Context) (map[string]any
 	return map[string]any{
 		"realms":   len(m.realms),
 		"chapters": len(m.chapters),
-		"quests":   len(m.quests),
+		"missions":   len(m.missions),
 	}, nil
 }
 
@@ -150,19 +150,19 @@ func (m *mockContentServiceForAdmin) ListRealms(ctx context.Context) ([]gamecont
 func (m *mockContentServiceForAdmin) ListChapters(ctx context.Context) ([]gamecontent.ChapterDefinition, error) {
 	return m.chapters, nil
 }
-func (m *mockContentServiceForAdmin) ListChaptersByRealm(ctx context.Context, realm string) ([]gamecontent.ChapterDefinition, error) {
+func (m *mockContentServiceForAdmin) ListChaptersByRealm(ctx context.Context, journey string) ([]gamecontent.ChapterDefinition, error) {
 	return m.chapters, nil
 }
 func (m *mockContentServiceForAdmin) ListQuests(ctx context.Context) ([]gamecontent.QuestDefinition, error) {
-	return m.quests, nil
+	return m.missions, nil
 }
-func (m *mockContentServiceForAdmin) ListQuestsByRealm(ctx context.Context, realm string) ([]gamecontent.QuestDefinition, error) {
-	return m.quests, nil
+func (m *mockContentServiceForAdmin) ListQuestsByRealm(ctx context.Context, journey string) ([]gamecontent.QuestDefinition, error) {
+	return m.missions, nil
 }
 func (m *mockContentServiceForAdmin) ListPrompts(ctx context.Context) ([]gamecontent.CreativePromptDefinition, error) {
 	return nil, nil
 }
-func (m *mockContentServiceForAdmin) ListPromptsByRealm(ctx context.Context, realm string) ([]gamecontent.CreativePromptDefinition, error) {
+func (m *mockContentServiceForAdmin) ListPromptsByRealm(ctx context.Context, journey string) ([]gamecontent.CreativePromptDefinition, error) {
 	return nil, nil
 }
 func (m *mockContentServiceForAdmin) ListAchievements(ctx context.Context) ([]gamecontent.AchievementDefinition, error) {
@@ -174,10 +174,10 @@ func (m *mockContentServiceForAdmin) ListSeasons(ctx context.Context) ([]gamecon
 func (m *mockContentServiceForAdmin) ListLore(ctx context.Context) ([]gamecontent.LoreDefinition, error) {
 	return nil, nil
 }
-func (m *mockContentServiceForAdmin) ListLoreByRealm(ctx context.Context, realm string) ([]gamecontent.LoreDefinition, error) {
+func (m *mockContentServiceForAdmin) ListLoreByRealm(ctx context.Context, journey string) ([]gamecontent.LoreDefinition, error) {
 	return nil, nil
 }
-func (m *mockContentServiceForAdmin) ListLoreByChapter(ctx context.Context, chapter string) ([]gamecontent.LoreDefinition, error) {
+func (m *mockContentServiceForAdmin) ListLoreByChapter(ctx context.Context, course string) ([]gamecontent.LoreDefinition, error) {
 	return nil, nil
 }
 func (m *mockContentServiceForAdmin) ListChests(ctx context.Context) ([]gamecontent.ChestDefinition, error) {
@@ -210,13 +210,13 @@ func TestAdminService_Create(t *testing.T) {
 	mockContent := &mockContentServiceForAdmin{}
 	svc := NewAdminService(mockContent, mockStore, nil)
 
-	data := map[string]any{"slug": "test-realm", "name": "Test Realm"}
+	data := map[string]any{"slug": "test-journey", "name": "Test Journey"}
 	created, err := svc.Create(context.Background(), "realms", data)
 	if err != nil {
 		t.Fatalf("Create failed: %v", err)
 	}
-	if created["slug"] != "test-realm" {
-		t.Errorf("expected slug test-realm, got %v", created["slug"])
+	if created["slug"] != "test-journey" {
+		t.Errorf("expected slug test-journey, got %v", created["slug"])
 	}
 	if !mockContent.reloadResourceCalled {
 		t.Error("expected ReloadResource to be called after Create")
@@ -228,7 +228,7 @@ func TestAdminService_SaveDraft(t *testing.T) {
 	mockContent := &mockContentServiceForAdmin{}
 	svc := NewAdminService(mockContent, mockStore, nil)
 
-	mockStore.data["odyssey_realm_definitions"] = []map[string]any{
+	mockStore.data["odyssey_journey_definitions"] = []map[string]any{
 		{"id": int64(1), "slug": "forest", "name": "Forest", "version": 1},
 	}
 
@@ -250,7 +250,7 @@ func TestAdminService_Publish(t *testing.T) {
 	mockContent := &mockContentServiceForAdmin{}
 	svc := NewAdminService(mockContent, mockStore, nil)
 
-	mockStore.data["odyssey_realm_definitions"] = []map[string]any{
+	mockStore.data["odyssey_journey_definitions"] = []map[string]any{
 		{"id": int64(1), "slug": "forest", "name": "Forest", "published": false, "version": 1},
 	}
 
@@ -269,10 +269,10 @@ func TestAdminService_Delete(t *testing.T) {
 	svc := NewAdminService(mockContent, mockStore, nil)
 
 	mockStore.data["odyssey_quest_definitions"] = []map[string]any{
-		{"id": int64(1), "slug": "quest1", "title": "Quest 1", "published": true, "version": 1},
+		{"id": int64(1), "slug": "quest1", "title": "Mission 1", "published": true, "version": 1},
 	}
 
-	err := svc.Delete(context.Background(), "quests", "quest1")
+	err := svc.Delete(context.Background(), "missions", "quest1")
 	if err != nil {
 		t.Fatalf("Delete failed: %v", err)
 	}
@@ -287,10 +287,10 @@ func TestAdminService_Restore(t *testing.T) {
 	svc := NewAdminService(mockContent, mockStore, nil)
 
 	mockStore.data["odyssey_quest_definitions"] = []map[string]any{
-		{"id": int64(1), "slug": "quest1", "title": "Quest 1", "published": false, "version": 1, "deleted_at": time.Now().Format(time.RFC3339)},
+		{"id": int64(1), "slug": "quest1", "title": "Mission 1", "published": false, "version": 1, "deleted_at": time.Now().Format(time.RFC3339)},
 	}
 
-	err := svc.Restore(context.Background(), "quests", "quest1")
+	err := svc.Restore(context.Background(), "missions", "quest1")
 	if err != nil {
 		t.Fatalf("Restore failed: %v", err)
 	}
@@ -303,7 +303,7 @@ func TestAdminService_Status(t *testing.T) {
 	mockContent := &mockContentServiceForAdmin{
 		realms:   []gamecontent.RealmDefinition{{Slug: "forest"}},
 		chapters: []gamecontent.ChapterDefinition{{Slug: "ch1"}},
-		quests:   []gamecontent.QuestDefinition{{Slug: "q1"}},
+		missions:   []gamecontent.QuestDefinition{{Slug: "q1"}},
 	}
 	svc := NewAdminService(mockContent, nil, nil)
 
@@ -312,10 +312,10 @@ func TestAdminService_Status(t *testing.T) {
 		t.Fatalf("Status failed: %v", err)
 	}
 	if status["realms"] != 1 {
-		t.Errorf("expected 1 realm, got %v", status["realms"])
+		t.Errorf("expected 1 journey, got %v", status["realms"])
 	}
 	if status["chapters"] != 1 {
-		t.Errorf("expected 1 chapter, got %v", status["chapters"])
+		t.Errorf("expected 1 course, got %v", status["chapters"])
 	}
 }
 
@@ -335,15 +335,15 @@ func TestGetTable(t *testing.T) {
 		wantTable string
 		wantOk    bool
 	}{
-		{"realms", "odyssey_realm_definitions", true},
-		{"chapters", "odyssey_chapter_definitions", true},
-		{"quests", "odyssey_quest_definitions", true},
+		{"realms", "odyssey_journey_definitions", true},
+		{"chapters", "odyssey_course_definitions", true},
+		{"missions", "odyssey_quest_definitions", true},
 		{"prompts", "odyssey_creative_prompt_definitions", true},
-		{"chests", "odyssey_chest_definitions", true},
-		{"relics", "odyssey_relic_definitions", true},
+		{"gifts", "odyssey_chest_definitions", true},
+		{"collections", "odyssey_relic_definitions", true},
 		{"achievements", "odyssey_achievement_definitions", true},
 		{"seasons", "odyssey_season_definitions", true},
-		{"lore", "odyssey_lore_definitions", true},
+		{"concept", "odyssey_concept_definitions", true},
 		{"unknown", "", false},
 	}
 	for _, tt := range tests {

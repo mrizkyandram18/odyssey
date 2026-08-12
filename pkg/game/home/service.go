@@ -9,34 +9,34 @@ import (
 
 	"odyssey/pkg/game"
 	"odyssey/pkg/game/achievement"
-	"odyssey/pkg/game/chapter"
-	"odyssey/pkg/game/chest"
+	"odyssey/pkg/game/course"
+	"odyssey/pkg/game/gift"
 	"odyssey/pkg/game/creative"
-	"odyssey/pkg/game/crewstreak"
-	"odyssey/pkg/game/dailyturn"
-	"odyssey/pkg/game/lore"
+	"odyssey/pkg/game/familystreak"
+	"odyssey/pkg/game/dailymission"
+	"odyssey/pkg/game/concepts"
 	"odyssey/pkg/game/progression"
-	"odyssey/pkg/game/quest"
-	"odyssey/pkg/game/relic"
+	"odyssey/pkg/game/mission"
+	"odyssey/pkg/game/collection"
 	"odyssey/pkg/game/season"
 )
 
 // HomeResponse is the aggregated data returned by the Home endpoint.
 type HomeResponse struct {
 	Player                game.Player                   `json:"player"`
-	Quests                []quest.QuestView             `json:"quests"`
-	DailyTurn             DailyTurnView                 `json:"daily_turn"`
-	RealmProgress         []game.RealmProgress          `json:"realm_progress"`
+	Missions                []quest.QuestView             `json:"missions"`
+	DailyMission             DailyTurnView                 `json:"daily_mission"`
+	JourneyProgress         []game.JourneyProgress          `json:"journey_progress"`
 	RelicCount            int                           `json:"relic_count"`
-	ActiveQuests          []quest.QuestView             `json:"active_quests"`
-	CompletedQuestsToday  []quest.QuestView             `json:"completed_quests_today"`
+	ActiveQuests          []quest.QuestView             `json:"active_missions"`
+	CompletedQuestsToday  []quest.QuestView             `json:"completed_missions_today"`
 	PendingCreativeReview int                           `json:"pending_creative_review"`
 	LastSubmission        *creative.SubmissionView      `json:"last_submission,omitempty"`
-	AvailableChests       []chest.ChestView             `json:"available_chests"`
+	AvailableChests       []chest.ChestView             `json:"available_gifts"`
 	LatestRelic           *relic.InventoryItem          `json:"latest_relic,omitempty"`
 	CollectionProgress    CollectionProgress            `json:"collection_progress"`
-	ChapterProgress       *chapter.ChapterProgressView  `json:"chapter_progress,omitempty"`
-	LoreSummary           *lore.LoreSummary             `json:"lore_summary,omitempty"`
+	CourseProgress       *course.ChapterProgressView  `json:"course_progress,omitempty"`
+	LoreSummary           *concept.LoreSummary             `json:"concept_summary,omitempty"`
 	Achievements          []achievement.AchievementView `json:"achievements,omitempty"`
 	CurrentSeason         *season.SeasonSummary         `json:"current_season,omitempty"`
 	SeasonProgress        SeasonProgress                `json:"season_progress"`
@@ -47,9 +47,9 @@ type HomeResponse struct {
 type SeasonProgress struct {
 	SeasonSlug      string `json:"season_slug"`
 	SeasonName      string `json:"season_name"`
-	QuestsCompleted int    `json:"quests_completed"`
-	RealmProgress   int    `json:"realm_progress"`
-	RealmStatus     string `json:"realm_status"`
+	QuestsCompleted int    `json:"missions_completed"`
+	JourneyProgress   int    `json:"journey_progress"`
+	RealmStatus     string `json:"journey_status"`
 }
 
 // CollectionProgress tracks relic collection completion.
@@ -61,14 +61,14 @@ type CollectionProgress struct {
 // HomeSections groups HomeResponse data into logical views.
 type HomeSections struct {
 	Player       PlayerSection       `json:"player"`
-	Quests       QuestsSection       `json:"quests"`
-	DailyTurn    DailyTurnSection    `json:"daily_turn"`
-	Realm        RealmSection        `json:"realm"`
+	Missions       QuestsSection       `json:"missions"`
+	DailyMission    DailyTurnSection    `json:"daily_mission"`
+	Journey        RealmSection        `json:"journey"`
 	World        WorldSection        `json:"world"`
 	Creative     CreativeSection     `json:"creative"`
-	Chests       ChestsSection       `json:"chests"`
-	Relics       RelicsSection       `json:"relics"`
-	Lore         LoreSection         `json:"lore"`
+	Gifts       ChestsSection       `json:"gifts"`
+	Collections       RelicsSection       `json:"collections"`
+	Concept         LoreSection         `json:"concept"`
 	Achievements AchievementsSection `json:"achievements"`
 }
 
@@ -94,12 +94,12 @@ type DailyTurnSection struct {
 	StreakDays     int    `json:"streak_days"`
 	CrewStreak     int    `json:"crew_streak"`
 	RemainingTurns int    `json:"remaining_turns"`
-	QuestSlug      string `json:"quest_slug,omitempty"`
+	MissionSlug      string `json:"mission_slug,omitempty"`
 }
 
-// RealmSection holds the crew's realm progression summary.
+// RealmSection holds the crew's journey progression summary.
 type RealmSection struct {
-	Progress []game.RealmProgress `json:"progress"`
+	Progress []game.JourneyProgress `json:"progress"`
 }
 
 // CreativeSection holds the crew's creative summary.
@@ -108,7 +108,7 @@ type CreativeSection struct {
 	LastSubmission     *creative.SubmissionView `json:"last_submission,omitempty"`
 }
 
-// ChestsSection holds the user's available chests.
+// ChestsSection holds the user's available gifts.
 type ChestsSection struct {
 	Available []chest.ChestView `json:"available"`
 }
@@ -119,19 +119,19 @@ type RelicsSection struct {
 	CollectionProgress CollectionProgress   `json:"collection_progress"`
 }
 
-// WorldSection holds the crew's chapter progression summary.
+// WorldSection holds the crew's course progression summary.
 type WorldSection struct {
-	CurrentChapter    *chapter.ChapterSummary  `json:"current_chapter,omitempty"`
-	NextChapter       *chapter.ChapterSummary  `json:"next_chapter,omitempty"`
-	CompletedChapters []chapter.ChapterSummary `json:"completed_chapters"`
-	UnlockedChapters  []chapter.ChapterSummary `json:"unlocked_chapters"`
-	AllChapters       []chapter.ChapterSummary `json:"all_chapters"`
+	CurrentChapter    *course.ChapterSummary  `json:"current_course,omitempty"`
+	NextChapter       *course.ChapterSummary  `json:"next_course,omitempty"`
+	CompletedChapters []course.ChapterSummary `json:"completed_chapters"`
+	UnlockedChapters  []course.ChapterSummary `json:"unlocked_chapters"`
+	AllChapters       []course.ChapterSummary `json:"all_chapters"`
 }
 
-// LoreSection holds the crew's lore discovery summary.
+// LoreSection holds the crew's concept discovery summary.
 type LoreSection struct {
-	Summary  *lore.LoreSummary `json:"summary,omitempty"`
-	Unlocked []lore.LoreView   `json:"unlocked"`
+	Summary  *concept.LoreSummary `json:"summary,omitempty"`
+	Unlocked []concept.LoreView   `json:"unlocked"`
 }
 
 // AchievementsSection holds the player's achievement progress.
@@ -149,32 +149,32 @@ type DailyTurnView struct {
 	StreakDays     int    `json:"streak_days"`
 	CrewStreak     int    `json:"crew_streak"`
 	RemainingTurns int    `json:"remaining_turns"`
-	QuestSlug      string `json:"quest_slug,omitempty"`
+	MissionSlug      string `json:"mission_slug,omitempty"`
 }
 
 // HomeService aggregates data from multiple sub-services into a
 // single home-screen response.
 type HomeService struct {
 	qs         *quest.QuestService
-	dts        *dailyturn.DailyTurnService
+	dts        *dailymission.DailyTurnService
 	prog       game.ProgressionStore
-	realm      game.RealmProgressStore
+	journey      game.RealmProgressStore
 	users      game.UserStore
 	crea       game.CreativeSubmissionStore
-	chests     game.ChestStore
+	gifts     game.ChestStore
 	relSvc     *relic.RelicService
-	chapterSvc *chapter.ChapterService
-	loreSvc    *lore.LoreService
+	chapterSvc *course.ChapterService
+	loreSvc    *concept.LoreService
 	achieveSvc *achievement.AchievementService
-	crewStreak *crewstreak.Service
+	crewStreak *familystreak.Service
 	seasonSvc  *season.SeasonService
 }
 
-func (s *HomeService) SetChapterService(cs *chapter.ChapterService) {
+func (s *HomeService) SetChapterService(cs *course.ChapterService) {
 	s.chapterSvc = cs
 }
 
-func (s *HomeService) SetLoreService(ls *lore.LoreService) {
+func (s *HomeService) SetLoreService(ls *concept.LoreService) {
 	s.loreSvc = ls
 }
 
@@ -184,7 +184,7 @@ func (s *HomeService) SetAchievementService(as *achievement.AchievementService) 
 
 // SetCrewStreakService attaches the crew-level streak computation. Safe to
 // call with nil (crew streak simply stays 0).
-func (s *HomeService) SetCrewStreakService(cs *crewstreak.Service) {
+func (s *HomeService) SetCrewStreakService(cs *familystreak.Service) {
 	s.crewStreak = cs
 }
 
@@ -195,22 +195,22 @@ func (s *HomeService) SetSeasonService(ss *season.SeasonService) {
 // NewHomeService constructs a HomeService from its collaborators.
 func NewHomeService(
 	qs *quest.QuestService,
-	dts *dailyturn.DailyTurnService,
+	dts *dailymission.DailyTurnService,
 	prog game.ProgressionStore,
-	realm game.RealmProgressStore,
+	journey game.RealmProgressStore,
 	users game.UserStore,
 	crea game.CreativeSubmissionStore,
-	chests game.ChestStore,
+	gifts game.ChestStore,
 	relSvc *relic.RelicService,
 ) *HomeService {
 	return &HomeService{
 		qs:     qs,
 		dts:    dts,
 		prog:   prog,
-		realm:  realm,
+		journey:  journey,
 		users:  users,
 		crea:   crea,
-		chests: chests,
+		gifts: gifts,
 		relSvc: relSvc,
 	}
 }
@@ -229,23 +229,23 @@ func (s *HomeService) GetHome(ctx context.Context, uid string, crewID string) (*
 
 	var (
 		player             *game.Player
-		quests             []quest.QuestView
+		missions             []quest.QuestView
 		today              = s.dts.TodayDate()
 		hasCompleted       bool
 		available          bool
 		streak             int
 		crewStreak         int
-		realmProgress      []game.RealmProgress
+		realmProgress      []game.JourneyProgress
 		relicCount         int
 		availableChests    []chest.ChestView
 		latestRelic        *relic.InventoryItem
 		collectionProgress CollectionProgress
 		pendingCount       int
 		lastSub            *game.Submission
-		chapterProgView    *chapter.ChapterProgressView
-		allChapters        []chapter.ChapterSummary
-		loreSummary        *lore.LoreSummary
-		unlockedLore       []lore.LoreView
+		chapterProgView    *course.ChapterProgressView
+		allChapters        []course.ChapterSummary
+		loreSummary        *concept.LoreSummary
+		unlockedLore       []concept.LoreView
 		achievements       []achievement.AchievementView
 	)
 
@@ -259,12 +259,12 @@ func (s *HomeService) GetHome(ctx context.Context, uid string, crewID string) (*
 		return nil
 	})
 
-	// 2. Quests
+	// 2. Missions
 	g.Go(func() error {
 		var err error
-		quests, err = s.qs.List(gCtx, crewID)
+		missions, err = s.qs.List(gCtx, crewID)
 		if err != nil {
-			return fmt.Errorf("failed to list quests: %w", err)
+			return fmt.Errorf("failed to list missions: %w", err)
 		}
 		return nil
 	})
@@ -297,7 +297,7 @@ func (s *HomeService) GetHome(ctx context.Context, uid string, crewID string) (*
 		return nil
 	})
 
-	// 3b. Crew streak (display-only: failures never break Home)
+	// 3b. Family streak (display-only: failures never break Home)
 	g.Go(func() error {
 		if s.crewStreak == nil {
 			return nil
@@ -306,12 +306,12 @@ func (s *HomeService) GetHome(ctx context.Context, uid string, crewID string) (*
 		return nil
 	})
 
-	// 4. Realm Progress
+	// 4. Journey Progress
 	g.Go(func() error {
 		var err error
-		realmProgress, err = s.realm.ListRealmProgressByCrew(gCtx, crewID)
+		realmProgress, err = s.journey.ListRealmProgressByCrew(gCtx, crewID)
 		if err != nil {
-			return fmt.Errorf("failed to list realm progress: %w", err)
+			return fmt.Errorf("failed to list journey progress: %w", err)
 		}
 		if s.chapterSvc != nil {
 			activeRealm := firstActiveRealm(realmProgress)
@@ -322,22 +322,22 @@ func (s *HomeService) GetHome(ctx context.Context, uid string, crewID string) (*
 		return nil
 	})
 
-	// 5. Relics count
+	// 5. Collections count
 	g.Go(func() error {
 		var err error
 		relicCount, err = s.prog.CountRelics(gCtx, uid)
 		if err != nil {
-			return fmt.Errorf("failed to count relics: %w", err)
+			return fmt.Errorf("failed to count collections: %w", err)
 		}
 		return nil
 	})
 
-	// 6. Chests
-	if s.chests != nil {
+	// 6. Gifts
+	if s.gifts != nil {
 		g.Go(func() error {
-			allChests, err := s.chests.ListChestsByUser(gCtx, uid)
+			allChests, err := s.gifts.ListChestsByUser(gCtx, uid)
 			if err != nil {
-				return fmt.Errorf("failed to list chests: %w", err)
+				return fmt.Errorf("failed to list gifts: %w", err)
 			}
 			for _, ch := range allChests {
 				if !ch.Opened {
@@ -348,7 +348,7 @@ func (s *HomeService) GetHome(ctx context.Context, uid string, crewID string) (*
 		})
 	}
 
-	// 7. Relics Service
+	// 7. Collections Service
 	if s.relSvc != nil {
 		g.Go(func() error {
 			latestRelic, _ = s.relSvc.GetLatestRelic(gCtx, uid)
@@ -383,7 +383,7 @@ func (s *HomeService) GetHome(ctx context.Context, uid string, crewID string) (*
 		})
 	}
 
-	// 9. Chapter Service
+	// 9. Course Service
 	if s.chapterSvc != nil {
 		g.Go(func() error {
 			chapterProgView, _ = s.chapterSvc.GetProgressView(gCtx, crewID)
@@ -395,7 +395,7 @@ func (s *HomeService) GetHome(ctx context.Context, uid string, crewID string) (*
 		})
 	}
 
-	// 10. Lore Service
+	// 10. Concept Service
 	if s.loreSvc != nil {
 		g.Go(func() error {
 			loreSummary, _ = s.loreSvc.GetSummary(gCtx, crewID)
@@ -428,13 +428,13 @@ func (s *HomeService) GetHome(ctx context.Context, uid string, crewID string) (*
 			seasonProgress.SeasonSlug = summary.Definition.Slug
 			seasonProgress.SeasonName = summary.Definition.Name
 			for _, rp := range realmProgress {
-				if rp.Realm == summary.Definition.Realm {
-					seasonProgress.RealmProgress = rp.Progress
+				if rp.Journey == summary.Definition.Journey {
+					seasonProgress.JourneyProgress = rp.Progress
 					seasonProgress.RealmStatus = rp.Status
 					break
 				}
 			}
-			for _, q := range quests {
+			for _, q := range missions {
 				if q.Status == string(quest.QuestStatusDone) && q.SeasonSlug == summary.Definition.Slug {
 					seasonProgress.QuestsCompleted++
 				}
@@ -456,7 +456,7 @@ func (s *HomeService) GetHome(ctx context.Context, uid string, crewID string) (*
 	activeQuests := make([]quest.QuestView, 0)
 	completedToday := make([]quest.QuestView, 0)
 	doneQuests := make([]quest.QuestView, 0)
-	for _, q := range quests {
+	for _, q := range missions {
 		if q.Status != string(quest.QuestStatusDone) {
 			activeQuests = append(activeQuests, q)
 		} else {
@@ -469,8 +469,8 @@ func (s *HomeService) GetHome(ctx context.Context, uid string, crewID string) (*
 
 	resp := &HomeResponse{
 		Player: *player,
-		Quests: quests,
-		DailyTurn: DailyTurnView{
+		Missions: missions,
+		DailyMission: DailyTurnView{
 			Today:          today,
 			Completed:      hasCompleted,
 			Available:      available,
@@ -478,7 +478,7 @@ func (s *HomeService) GetHome(ctx context.Context, uid string, crewID string) (*
 			CrewStreak:     crewStreak,
 			RemainingTurns: remainingTurns,
 		},
-		RealmProgress:        realmProgress,
+		JourneyProgress:        realmProgress,
 		RelicCount:           relicCount,
 		ActiveQuests:         activeQuests,
 		CompletedQuestsToday: completedToday,
@@ -492,13 +492,13 @@ func (s *HomeService) GetHome(ctx context.Context, uid string, crewID string) (*
 				Player:   *player,
 				XPToNext: progression.XPForLevel(player.Level+1) - player.XP,
 			},
-			Quests: QuestsSection{
-				All:       quests,
+			Missions: QuestsSection{
+				All:       missions,
 				Active:    activeQuests,
 				Done:      doneQuests,
 				DoneToday: completedToday,
 			},
-			DailyTurn: DailyTurnSection{
+			DailyMission: DailyTurnSection{
 				Today:          today,
 				Completed:      hasCompleted,
 				Available:      available,
@@ -506,13 +506,13 @@ func (s *HomeService) GetHome(ctx context.Context, uid string, crewID string) (*
 				CrewStreak:     crewStreak,
 				RemainingTurns: remainingTurns,
 			},
-			Realm: RealmSection{
+			Journey: RealmSection{
 				Progress: realmProgress,
 			},
-			Chests: ChestsSection{
+			Gifts: ChestsSection{
 				Available: availableChests,
 			},
-			Relics: RelicsSection{
+			Collections: RelicsSection{
 				Latest:             latestRelic,
 				CollectionProgress: collectionProgress,
 			},
@@ -532,7 +532,7 @@ func (s *HomeService) GetHome(ctx context.Context, uid string, crewID string) (*
 	}
 
 	if s.chapterSvc != nil && chapterProgView != nil {
-		resp.ChapterProgress = chapterProgView
+		resp.CourseProgress = chapterProgView
 		resp.Sections.World = WorldSection{
 			CurrentChapter:    chapterProgView.CurrentChapter,
 			NextChapter:       chapterProgView.NextChapter,
@@ -548,7 +548,7 @@ func (s *HomeService) GetHome(ctx context.Context, uid string, crewID string) (*
 	if s.loreSvc != nil && loreSummary != nil {
 		resp.LoreSummary = loreSummary
 		if unlockedLore != nil {
-			resp.Sections.Lore = LoreSection{
+			resp.Sections.Concept = LoreSection{
 				Summary:  loreSummary,
 				Unlocked: unlockedLore,
 			}
@@ -572,10 +572,10 @@ func (s *HomeService) GetHome(ctx context.Context, uid string, crewID string) (*
 	return resp, nil
 }
 
-func firstActiveRealm(progress []game.RealmProgress) string {
+func firstActiveRealm(progress []game.JourneyProgress) string {
 	for _, rp := range progress {
 		if rp.Status == "ACTIVE" {
-			return rp.Realm
+			return rp.Journey
 		}
 	}
 	return ""

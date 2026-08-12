@@ -143,7 +143,7 @@ func TestSender_SingleSubscription_Success(t *testing.T) {
 		t.Fatalf("makeSender: %v", err)
 	}
 
-	n := Notification{Type: TypeDailyTurn, Title: "Your Turn", Body: "It's your turn.", URL: "/quests"}
+	n := Notification{Type: TypeDailyTurn, Title: "Your Turn", Body: "It's your turn.", URL: "/missions"}
 	err = s.SendToUser(context.Background(), "u1", n)
 	// Note: webpush-go may fail because the test server doesn't handle
 	// encryption negotiation. We accept either nil or a transport-level error.
@@ -238,7 +238,7 @@ func TestSender_CorrectMinimalPayload(t *testing.T) {
 		Type:  TypeRelayHandoff,
 		Title: "Your Turn",
 		Body:  "It's your turn.",
-		URL:   "/quests",
+		URL:   "/missions",
 	}
 	encoded, err := json.Marshal(n)
 	if err != nil {

@@ -40,34 +40,34 @@ strategy, and reward integration deferral.
 **What ships:**
 
 - Gatekeeper BOTH login (device trust via auth adapter + credential) → Odyssey session.
-- A single **home screen** showing the family's crew level, daily turn, and active quests.
-- **One realm** ("The Whispering Woods") with a short introductory story.
-- **6 quests** in that realm, each with 2–3 challenges:
+- A single **home screen** showing the family's crew level, daily turn, and active missions.
+- **One journey** ("The Whispering Woods") with a short introductory story.
+- **6 missions** in that journey, each with 2–3 exercises:
   - One solo quest (observation/research).
   - One relay quest (sequential legs).
-  - One **Creative Quest** (a group Story submission).
+  - One **Creative Mission** (a group Story submission).
 - **Daily turn** system (one per calendar day): a micro-quest and a creative
   prompt.
-- **Basic progression:** Explorer Level (XP), Chests with fixed contents,
-  Relics, Realm Progress bar, crew level.
-- **Realm Progress** — a shared bar that unlocks new quests and the next realm.
+- **Basic progression:** Explorer Level (XP), Gifts with fixed contents,
+  Collections, Journey Progress bar, crew level.
+- **Journey Progress** — a shared bar that unlocks new missions and the next journey.
 - **Minimal admin:** a single system config to toggle maintenance mode and set
   the gatekeeper minimum build number.
 
-**Resources in MVP:** XP, Relics, Chests, Story Fragments, Inspiration.
+**Resources in MVP:** XP, Collections, Gifts, Story Fragments, Inspiration.
 **No** Adventure Tokens, **no** Coins. (Coin currency is Phase 2.)
 
 **What does NOT ship:**
 
 - Multiple realms (beyond the tutorial).
 - Peer reactions / comments (sticker reactions deferred).
-- Rich creative tools (only basic text + a simple draw submission in Creative Quests).
+- Rich creative tools (only basic text + a simple draw submission in Creative Missions).
 - Photo / Video / Comic submission kinds in the MVP (Story only; others added in Phase 2).
 - Offline-first / offline sync.
 - Family Reward integration or reward signals.
 - Role mastery mechanics.
 
-**Exit criteria:** A family of 3–4 can play through all 6 quests, complete
+**Exit criteria:** A family of 3–4 can play through all 6 missions, complete
 daily turns for a week, dan melihat progresi secara nyata.
 
 ### Phase 1 Release Engineering (Micro-Phases)
@@ -91,43 +91,43 @@ Untuk memastikan kualitas rilis, Phase 1 dipecah menjadi beberapa fase kecil seb
 **What ships:**
 
 - **Peer reactions** (stickers) on creative contributions and quest logs.
-- **Quest handoff notifications** for relay quests ("your turn").
-- **Crew streak** tracking and Realm Progress milestones.
+- **Mission handoff notifications** for relay missions ("your turn").
+- **Family streak** tracking and Journey Progress milestones.
 - **Expanded creative space:** drawing tools, color palettes, a shared text canvas
   (Slice 2.3: append-only **shared crew text board** — multi-entry notes, not a
   real-time collaborative editor).
 - **Role rotation** UI and role-mastery flavor text (no stat bonuses).
-- **Coin currency** — a soft currency for family trading (gifting Relics between
+- **Coin currency** — a soft currency for family trading (gifting Collections between
   Explorers) and premium unlocks.
-- **Photo / Comic / Video** submission kinds for Creative Quests.
+- **Photo / Comic / Video** submission kinds for Creative Missions.
 - **Push notifications** (PWA) for daily turns and handoffs.
 
 **Exit criteria:** The family regularly coordinates through the app to complete
-relay quests, and creative spaces feel like a shared living space.
+relay missions, and creative spaces feel like a shared living space.
 
 ---
 
 ## Phase 3 — Deeper Storytelling (Weeks 9–14)
 
 **Status:** **COMPLETE** (2026-08-11) — code + automated unit/integration tests PASS
-**Evidence:** Slice 3.1 (Branch choices, Quest variety PUZZLE/RESEARCH/MOVEMENT), Slice 3.2 (Second Realm `clockwork-city`, Realm replay & hidden dialogue), Slice 3.3 (Story Fragments collectible, +20 XP idempotent reward, 3-tab Journal gallery)
+**Evidence:** Slice 3.1 (Branch choices, Mission variety PUZZLE/RESEARCH/MOVEMENT), Slice 3.2 (Second Journey `clockwork-city`, Journey replay & hidden dialogue), Slice 3.3 (Story Fragments collectible, +20 XP idempotent reward, 3-tab Journal gallery)
 
 **Goal:** Introduce narrative depth and branching.
 
 **What ships:**
 
-- **Branch choices** in quests — different story outcomes based on family
+- **Branch choices** in missions — different story outcomes based on family
   decisions (no currency cost; choices are narrative forks).
 - **Story Fragment** collectible mechanic with a completion reward (+20 XP).
-- **Second realm** (`clockwork-city`) unlocked through crew + Realm Progress.
-- **Quest variety:** puzzle, movement-based, and research challenges.
+- **Second journey** (`clockwork-city`) unlocked through crew + Journey Progress.
+- **Mission variety:** puzzle, movement-based, and research exercises.
 - **Achievement log** (personal + group milestones) accessible from a
   journal screen.
-- **Realm replay:** returning to completed realms reveals new dialogue and
+- **Journey replay:** returning to completed realms reveals new dialogue and
   hidden story fragments.
 - **Economy & Pacing:**
   - `xp_per_level` configurable, default 500.
-  - `max_new_quests_per_day` = 1 (Quest start pacing).
+  - `max_new_missions_per_day` = 1 (Mission start pacing).
   - Deterministic explicit chest rewards (`reward_relic`).
   - Completion/reward idempotency (via CAS).
   - Atomicity debt documented.
@@ -158,11 +158,11 @@ realms to find new content.
 - **Expanded creative tools:** stamp libraries, layering, export to story pages.
 - **Comic Mode** — assemble Story and Comic submissions into illustrated
   chapters viewable in a comic-reader UI.
-- **Custom crew banner** and shared realm themes.
+- **Custom crew banner** and shared journey themes.
 - **Animated Explorer effects** unlocked through milestones.
 - **Family gallery** — a scrollable showcase of all creative contributions
   (Story, Comic, Photo, Video).
-- **Trading** — family members can gift Relics to each other (Phase 2 coins
+- **Trading** — family members can gift Collections to each other (Phase 2 coins
   make this meaningful).
 
 **Exit criteria:** Creative spaces are the most-visited area; family members
@@ -177,7 +177,7 @@ bridge.
 
 **What ships:**
 
-- **Seasonal realms** — a new realm theme every quarter, with a
+- **Seasonal realms** — a new journey theme every quarter, with a
   self-contained story arc.
 - **Family Reward integration:** if deemed worthwhile, a minimal
   `odyssey_reward_signals` table is introduced and achievement signals are

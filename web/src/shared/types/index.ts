@@ -14,14 +14,14 @@ export interface DevicePayload {
 
 export interface Session {
   uid: string
-  crew_id: string
+  family_id: string
   kind: 'user' | 'setup'
   role?: Role
   expires: number
   token: string
 }
 
-export interface LoginRequest {
+export interface Loginrequest {
   uid: string
   credential: string
   device: DevicePayload
@@ -32,14 +32,14 @@ export interface LoginResponse {
   session?: string
   setup_token?: string
   uid?: string
-  crew_id?: string
+  family_id?: string
   kind?: 'user' | 'setup'
   role?: Role
   expires?: number
   message?: string
 }
 
-export interface Crew {
+export interface Family {
   id: string
   name?: string
   banner_url?: string
@@ -50,7 +50,7 @@ export interface Crew {
 
 export interface Explorer {
   uid: string
-  crew_id: string
+  family_id: string
   explorer_name: string
   role: Role
   level: number
@@ -95,16 +95,16 @@ export interface CosmeticPurchaseResult {
 
 export type MeResponse = Explorer
 
-export type QuestStatus = 'PENDING' | 'ACTIVE' | 'DONE'
-export type QuestType = 'SOLO' | 'RELAY' | 'CREATIVE' | 'GROUP'
+export type MissionStatus = 'PENDING' | 'ACTIVE' | 'DONE'
+export type MissionType = 'SOLO' | 'RELAY' | 'CREATIVE' | 'GROUP'
 
-export interface Quest {
+export interface Mission {
   id: number
-  crew_id: string
+  family_id: string
   template_slug: string
   title: string
-  status: QuestStatus
-  quest_type?: QuestType | string
+  status: MissionStatus
+  Mission_type?: MissionType | string
   active_challenge_assigned_to?: string
   started_at?: string | null
   completed_at?: string | null
@@ -114,9 +114,9 @@ export interface Quest {
 export type ChallengeStatus = 'PENDING' | 'DONE'
 export type ChallengeType = 'OBSERVATION' | 'RESEARCH' | 'PUZZLE' | 'MOVEMENT' | 'DRAW' | 'WRITE'
 
-export interface Challenge {
+export interface Exercise {
   id: number
-  quest_id: number
+  mission_id: number
   slug: string
   description: string
   status: ChallengeStatus
@@ -132,9 +132,9 @@ export interface Challenge {
 
 export type RealmStatus = 'LOCKED' | 'ACTIVE' | 'COMPLETE'
 
-export interface RealmProgress {
-  crew_id: string
-  realm: string
+export interface JourneyProgress {
+  family_id: string
+  journey: string
   status: RealmStatus
   story_branch?: string | null
   progress: number
@@ -147,8 +147,8 @@ export type SubmissionStatus = 'PENDING' | 'APPROVED' | 'REJECTED'
 
 export interface CreativeItem {
   id: number
-  crew_id: string
-  realm: string
+  family_id: string
+  journey: string
   author_uid: string
   kind: SubmissionKind
   payload: string
@@ -157,9 +157,9 @@ export interface CreativeItem {
 
 export interface CreativeSubmission {
   id: number
-  quest_id: number
-  challenge_id: number
-  crew_id: string
+  mission_id: number
+  exercise_id: number
+  family_id: string
   author_uid: string
   kind: SubmissionKind
   content: string
@@ -171,11 +171,11 @@ export interface CreativeSubmission {
   updated_at: string
 }
 
-export interface DailyTurn {
+export interface DailyMission {
   id: number
   uid: string
   date: string
-  quest_slug: string
+  mission_slug: string
   completed: boolean
   created_at: string
 }
@@ -183,7 +183,7 @@ export interface DailyTurn {
 export type AchievementKind = 'PERSONAL' | 'GROUP'
 
 export type AchievementTrigger =
-  | 'QUEST_COMPLETED'
+  | 'Mission_COMPLETED'
   | 'REALM_COMPLETED'
   | 'RELIC_COLLECTED'
   | 'DAILY_STREAK'
@@ -193,7 +193,7 @@ export type AchievementTrigger =
 export interface Achievement {
   id: number
   uid: string
-  crew_id?: string | null
+  family_id?: string | null
   code: string
   title?: string
   description?: string
@@ -221,7 +221,7 @@ export interface AchievementView {
 export interface ChapterDefinition {
   id: number
   slug: string
-  realm: string
+  journey: string
   title: string
   description: string
   order: number
@@ -237,9 +237,9 @@ export interface ChapterSummary {
   completed_at?: string | null
 }
 
-export interface ChapterProgressView {
-  current_chapter?: ChapterSummary | null
-  next_chapter?: ChapterSummary | null
+export interface courseProgressView {
+  current_course?: ChapterSummary | null
+  next_course?: ChapterSummary | null
   completed_chapters: ChapterSummary[]
   unlocked_chapters: ChapterSummary[]
   all_chapters: ChapterSummary[]
@@ -248,8 +248,8 @@ export interface ChapterProgressView {
 export interface LoreDefinition {
   id: number
   slug: string
-  realm: string
-  chapter: string
+  journey: string
+  course: string
   title: string
   content: string
   order: number
@@ -258,8 +258,8 @@ export interface LoreDefinition {
 
 export interface LoreView {
   slug: string
-  realm: string
-  chapter: string
+  journey: string
+  course: string
   title: string
   content: string
   order: number
@@ -280,7 +280,7 @@ export interface SeasonDefinition {
   description: string
   start_at: string
   end_at: string
-  realm: string
+  journey: string
   created_at: string
   updated_at: string
 }
@@ -292,25 +292,25 @@ export interface SeasonSummary {
   state: SeasonState
 }
 
-export interface Relic {
+export interface Collection {
   id: number
   uid: string
   code: string
   name: string
   description: string
-  realm: string
+  journey: string
   rarity: string
   image: string
-  lore: string
+  concept: string
   awarded_at: string
   created_at: string
 }
 
-export interface Chest {
+export interface Gift {
   id: number
   uid: string
   source: string
-  chest_slug: string
+  gift_slug: string
   rarity: string
   icon: string
   description: string
@@ -321,14 +321,14 @@ export interface Chest {
 }
 
 export interface PlayerRelic {
-  relic_id: number
-  relic_slug: string
+  collection_id: number
+  collection_slug: string
   name: string
   description: string
-  realm: string
+  journey: string
   rarity: string
   image: string
-  lore: string
+  concept: string
   owned_count: number
   is_new: boolean
   discovered_at: string
@@ -339,7 +339,7 @@ export interface ChestView {
   id: number
   uid: string
   source: string
-  chest_slug: string
+  gift_slug: string
   name: string
   rarity: string
   icon: string
@@ -350,7 +350,7 @@ export interface ChestView {
 }
 
 export interface RewardItem {
-  relic_slug: string
+  collection_slug: string
   name: string
   rarity: string
   is_new: boolean
@@ -368,47 +368,47 @@ export interface RelicDefinition {
   slug: string
   name: string
   description: string
-  realm: string
+  journey: string
   rarity: string
   image: string
-  lore: string
+  concept: string
 }
 
 export interface InventoryItem {
-  relic_id: number
-  relic_slug: string
+  collection_id: number
+  collection_slug: string
   name: string
   description: string
-  realm: string
+  journey: string
   rarity: string
   image: string
-  lore: string
+  concept: string
   owned_count: number
   is_new: boolean
   discovered_at: string
   created_at: string
 }
 
-export interface GiftRelicRequest {
+export interface GiftRelicrequest {
   recipient_uid: string
-  relic_slug: string
+  collection_slug: string
 }
 
 export interface GiftRelicResult {
-  relic_slug: string
+  collection_slug: string
   relic_name: string
   recipient_uid: string
   recipient_name: string
   sender_remaining_count: number
 }
 
-export interface QuestView {
+export interface MissionView {
   id: number
-  crew_id: string
+  family_id: string
   template_slug: string
   title: string
-  status: QuestStatus
-  quest_type?: QuestType | string
+  status: MissionStatus
+  Mission_type?: MissionType | string
   started_at?: string | null
   completed_at?: string | null
   created_at: string
@@ -427,7 +427,7 @@ export interface BranchOption {
 export interface SelectBranchResult {
   success: boolean
   story_branch: string
-  realm: string
+  journey: string
 }
 
 export interface CrewMember {
@@ -437,86 +437,86 @@ export interface CrewMember {
   level?: number
 }
 
-export interface QuestWithChallenges {
+export interface MissionWithChallenges {
   id: number
-  crew_id: string
+  family_id: string
   template_slug: string
   title: string
-  status: QuestStatus
-  quest_type?: QuestType | string
+  status: MissionStatus
+  Mission_type?: MissionType | string
   active_challenge_assigned_to?: string
   started_at?: string | null
   completed_at?: string | null
   created_at: string
   learn_text?: string
   result_text?: string
-  challenges: Challenge[]
+  exercises: Exercise[]
   members?: CrewMember[]
   branch_options?: BranchOption[]
 }
 
 export interface CompleteChallengeResult {
-  quest?: QuestWithChallenges | null
-  quest_completed: boolean
+  Mission?: MissionWithChallenges | null
+  Mission_completed: boolean
   next_action?: string
   xp: number
   new_level: number
   level_up: boolean
 }
 
-export interface DailyTurnView {
+export interface dailyMissionView {
   today: string
   completed: boolean
   available: boolean
   streak_days: number
   crew_streak: number
   remaining_turns: number
-  quest_slug?: string
+  mission_slug?: string
 }
 
 export interface HomeResponse {
   player: Explorer
-  quests: QuestView[]
-  daily_turn: DailyTurnView
-  realm_progress: RealmProgress[]
+  missions: MissionView[]
+  daily_mission: dailyMissionView
+  journey_progress: JourneyProgress[]
   relic_count: number
-  active_quests: QuestView[]
-  completed_quests_today: QuestView[]
+  active_missions: MissionView[]
+  completed_missions_today: MissionView[]
   pending_creative_review: number
   last_submission?: CreativeSubmission | null
   sections: HomeSections
-  available_chests: ChestView[]
+  available_gifts: ChestView[]
   latest_relic?: InventoryItem | null
   collection_progress: { collected: number; total: number }
-  chapter_progress?: ChapterProgressView | null
-  lore_summary?: LoreSummary | null
+  course_progress?: courseProgressView | null
+  concept_summary?: LoreSummary | null
   achievements?: AchievementView[] | null
   current_season?: SeasonSummary | null
   season_progress?: {
     season_slug: string
     season_name: string
-    quests_completed: number
-    realm_progress: number
-    realm_status: string
+    missions_completed: number
+    journey_progress: number
+    journey_status: string
   }
 }
 
 export interface HomeSections {
   player: PlayerSection
-  quests: QuestsSection
-  daily_turn: DailyTurnSection
-  realm: RealmSection
+  missions: MissionsSection
+  daily_mission: dailyMissionSection
+  journey: RealmSection
   world: WorldSection
   creative: CreativeSection
-  chests: ChestsSection
-  relics: RelicsSection
-  lore: LoreSection
+  gifts: ChestsSection
+  collections: RelicsSection
+  concept: LoreSection
   achievements: AchievementsSection
 }
 
 export interface PlayerSection {
   uid: string
-  crew_id: string
+  family_id: string
   explorer_name: string
   role: Role
   level: number
@@ -539,30 +539,30 @@ export interface RewardLedgerEntry {
   created_at: string
 }
 
-export interface QuestsSection {
-  all: QuestView[]
-  active: QuestView[]
-  done: QuestView[]
-  done_today: QuestView[]
+export interface MissionsSection {
+  all: MissionView[]
+  active: MissionView[]
+  done: MissionView[]
+  done_today: MissionView[]
 }
 
-export interface DailyTurnSection {
+export interface dailyMissionSection {
   today: string
   completed: boolean
   available: boolean
   streak_days: number
   crew_streak: number
   remaining_turns: number
-  quest_slug?: string
+  mission_slug?: string
 }
 
 export interface RealmSection {
-  progress: RealmProgress[]
+  progress: JourneyProgress[]
 }
 
 export interface WorldSection {
-  current_chapter?: ChapterSummary | null
-  next_chapter?: ChapterSummary | null
+  current_course?: ChapterSummary | null
+  next_course?: ChapterSummary | null
   completed_chapters: ChapterSummary[]
   unlocked_chapters: ChapterSummary[]
   all_chapters: ChapterSummary[]
@@ -593,9 +593,9 @@ export interface AchievementsSection {
   count: number
 }
 
-export interface StoryFragmentView {
+export interface learningConceptView {
   slug: string
-  realm: string
+  journey: string
   title: string
   content: string
   set_name: string
@@ -605,16 +605,16 @@ export interface StoryFragmentView {
 }
 
 export interface DiscoverResult {
-  fragment: StoryFragmentView
+  fragment: learningConceptView
   discovered: boolean
   xp_granted: number
 }
 
 export interface ReplayResult {
-  realm: string
+  journey: string
   is_replay: boolean
   bonus_dialogue: string
-  unlocked_fragments: StoryFragmentView[]
+  unlocked_fragments: learningConceptView[]
 }
 
 export interface ApiError {

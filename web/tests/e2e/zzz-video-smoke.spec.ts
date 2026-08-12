@@ -39,7 +39,7 @@ const fetchMe = async (page: import('@playwright/test').Page): Promise<MeSnapsho
 
 /**
  * Slice 2.10 VIDEO smoke test — mirrors the PHOTO smoke.
- * Uses quest 102 (DONE) with the last challenge (39).
+ * Uses Mission 102 (DONE) with the last challenge (39).
  */
 test.describe('VIDEO smoke (Slice 2.10)', () => {
   test('accepts valid video mp4; rejects non-video; timeline renders video+caption', async ({ page }) => {
@@ -79,8 +79,8 @@ test.describe('VIDEO smoke (Slice 2.10)', () => {
             credentials: 'include',
             headers,
             body: JSON.stringify({
-              quest_id: 102,
-              challenge_id: 39,
+              mission_id: 102,
+              exercise_id: 39,
               kind: 'VIDEO',
               content: JSON.stringify({ v: 1, video: videoData, caption: cap }),
             }),

@@ -13,9 +13,9 @@ import { adminApi } from '../../shared/lib/api'
 vi.mock('../../shared/lib/api', () => ({
   adminApi: {
     getStats: vi.fn(),
-    getQuests: vi.fn(),
+    getMissions: vi.fn(),
     getDailyActivities: vi.fn(),
-    toggleQuest: vi.fn(),
+    toggleMission: vi.fn(),
     toggleActivity: vi.fn(),
   },
 }))
@@ -27,7 +27,7 @@ describe('AdminPage', () => {
 
   it('redirects unauthorized users', () => {
     vi.spyOn(useSessionModule, 'useSession').mockReturnValue({
-      session: { uid: '1', crew_id: '1', role: 'SEEKER', kind: 'user', expires: 9999999999, token: 'abc' },
+      session: { uid: '1', family_id: '1', role: 'SEEKER', kind: 'user', expires: 9999999999, token: 'abc' },
       loading: false,
     } as any)
 
@@ -43,7 +43,7 @@ describe('AdminPage', () => {
 
   it('renders admin dashboard for GUIDE role', async () => {
     vi.spyOn(useSessionModule, 'useSession').mockReturnValue({
-      session: { uid: '1', crew_id: '1', role: 'GUIDE', kind: 'user', expires: 9999999999, token: 'abc' },
+      session: { uid: '1', family_id: '1', role: 'GUIDE', kind: 'user', expires: 9999999999, token: 'abc' },
       loading: false,
     } as any)
 
@@ -51,11 +51,11 @@ describe('AdminPage', () => {
       total_users: 10,
       active_users_7d: 5,
       active_users_30d: 8,
-      quest_completions: 42,
+      Mission_completions: 42,
       daily_activity_completions_today: 3,
     })
-    vi.mocked(adminApi.getQuests).mockResolvedValueOnce([
-      { slug: 'q1', title: 'Quest 1', published: true, completion_count: 10 },
+    vi.mocked(adminApi.getMissions).mockResolvedValueOnce([
+      { slug: 'q1', title: 'Mission 1', published: true, completion_count: 10 },
     ])
     vi.mocked(adminApi.getDailyActivities).mockResolvedValueOnce([
       { id: 1, slug: 'a1', title: 'Act 1', active: true, completion_count: 5 },
@@ -71,8 +71,8 @@ describe('AdminPage', () => {
     
     await waitFor(() => {
       expect(screen.getByText('Ringkasan')).toBeInTheDocument()
-      expect(screen.getByText('42')).toBeInTheDocument() // quest_completions
-      expect(screen.getByText('Quest 1')).toBeInTheDocument()
+      expect(screen.getByText('42')).toBeInTheDocument() // Mission_completions
+      expect(screen.getByText('Mission 1')).toBeInTheDocument()
       expect(screen.getByText('Act 1')).toBeInTheDocument()
     })
   })

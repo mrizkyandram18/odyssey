@@ -28,7 +28,7 @@ describe('GalleryPage', () => {
   beforeEach(() => {
     vi.resetAllMocks()
     vi.mocked(useSession).mockReturnValue({
-      session: { uid: 'u1', crew_id: 'crew-1' } as any,
+      session: { uid: 'u1', family_id: 'crew-1' } as any,
       loading: false,
       error: null,
       login: vi.fn(),

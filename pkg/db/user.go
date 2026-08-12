@@ -41,7 +41,7 @@ func (s *supabaseUserStore) GetUser(ctx context.Context, uid string) (*game.Play
 	p := profiles[0]
 	return &game.Player{
 		UID:          p.UID,
-		CrewID:       p.CrewID,
+		FamilyID:       p.FamilyID,
 		ExplorerName: p.ExplorerName,
 		Role:         p.Role,
 		Level:        p.Level,
@@ -57,7 +57,7 @@ func (s *supabaseUserStore) GetUser(ctx context.Context, uid string) (*game.Play
 func (s *supabaseUserStore) CreateUser(ctx context.Context, p *game.Player) error {
 	payload := UserProfile{
 		UID:          p.UID,
-		CrewID:       p.CrewID,
+		FamilyID:       p.FamilyID,
 		ExplorerName: p.ExplorerName,
 		Role:         p.Role,
 		Level:        p.Level,
@@ -102,7 +102,7 @@ func (s *supabaseUserStore) UpdateUserIfMatch(ctx context.Context, uid string, v
 
 func (s *supabaseUserStore) ListUsersByCrew(ctx context.Context, crewID string) ([]game.Player, error) {
 	v := url.Values{}
-	v.Set("crew_id", "eq."+crewID)
+	v.Set("family_id", "eq."+crewID)
 	v.Set("order", "created_at.asc") // Consistent ordering for round-robin
 	params := v.Encode()
 
@@ -120,7 +120,7 @@ func (s *supabaseUserStore) ListUsersByCrew(ctx context.Context, crewID string) 
 	for _, p := range profiles {
 		players = append(players, game.Player{
 			UID:          p.UID,
-			CrewID:       p.CrewID,
+			FamilyID:       p.FamilyID,
 			ExplorerName: p.ExplorerName,
 			Role:         p.Role,
 			Level:        p.Level,

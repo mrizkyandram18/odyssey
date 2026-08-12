@@ -8,10 +8,10 @@ import (
 )
 
 type mockRealmReader struct {
-	rp *game.RealmProgress
+	rp *game.JourneyProgress
 }
 
-func (m *mockRealmReader) GetRealmProgress(ctx context.Context, crewID, realm string) (*game.RealmProgress, error) {
+func (m *mockRealmReader) GetRealmProgress(ctx context.Context, crewID, journey string) (*game.JourneyProgress, error) {
 	return m.rp, nil
 }
 
@@ -106,7 +106,7 @@ func TestFragmentService_ListPlayerFragments(t *testing.T) {
 
 func TestFragmentService_ReplayIncompleteRealm(t *testing.T) {
 	rr := &mockRealmReader{
-		rp: &game.RealmProgress{CrewID: "crew-1", Realm: "whispering-woods", Status: "ACTIVE", Progress: 50},
+		rp: &game.JourneyProgress{FamilyID: "crew-1", Journey: "whispering-woods", Status: "ACTIVE", Progress: 50},
 	}
 	svc := NewFragmentService(nil, rr, nil)
 	ctx := context.Background()
@@ -117,7 +117,7 @@ func TestFragmentService_ReplayIncompleteRealm(t *testing.T) {
 	}
 
 	if res.IsReplay {
-		t.Errorf("expected IsReplay=false for incomplete realm, got %+v", res)
+		t.Errorf("expected IsReplay=false for incomplete journey, got %+v", res)
 	}
 	if len(res.UnlockedFragments) != 0 {
 		t.Errorf("expected 0 unlocked fragments, got %d", len(res.UnlockedFragments))
@@ -126,7 +126,7 @@ func TestFragmentService_ReplayIncompleteRealm(t *testing.T) {
 
 func TestFragmentService_ReplayCompletedRealm_UnlocksHiddenFragment(t *testing.T) {
 	rr := &mockRealmReader{
-		rp: &game.RealmProgress{CrewID: "crew-1", Realm: "whispering-woods", Status: "COMPLETE", Progress: 100},
+		rp: &game.JourneyProgress{FamilyID: "crew-1", Journey: "whispering-woods", Status: "COMPLETE", Progress: 100},
 	}
 	svc := NewFragmentService(nil, rr, nil)
 	ctx := context.Background()
@@ -137,7 +137,7 @@ func TestFragmentService_ReplayCompletedRealm_UnlocksHiddenFragment(t *testing.T
 	}
 
 	if !res.IsReplay {
-		t.Fatalf("expected IsReplay=true for completed realm, got %+v", res)
+		t.Fatalf("expected IsReplay=true for completed journey, got %+v", res)
 	}
 
 	if len(res.UnlockedFragments) == 0 {

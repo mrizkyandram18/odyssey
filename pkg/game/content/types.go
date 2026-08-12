@@ -5,15 +5,15 @@ import (
 	"time"
 )
 
-// RealmDefinitionStore provides persistence for realm definitions.
+// RealmDefinitionStore provides persistence for journey definitions.
 type RealmDefinitionStore interface {
 	ListRealms(ctx context.Context) ([]RealmDefinition, error)
 	GetRealm(ctx context.Context, slug string) (*RealmDefinition, error)
 }
 
-// ChapterDefinitionStore provides persistence for chapter definitions.
+// ChapterDefinitionStore provides persistence for course definitions.
 type ChapterDefinitionStore interface {
-	ListChapters(ctx context.Context, realm string) ([]ChapterDefinition, error)
+	ListChapters(ctx context.Context, journey string) ([]ChapterDefinition, error)
 	GetChapter(ctx context.Context, slug string) (*ChapterDefinition, error)
 }
 
@@ -21,14 +21,14 @@ type ChapterDefinitionStore interface {
 type QuestDefinitionStore interface {
 	ListQuests(ctx context.Context) ([]QuestDefinition, error)
 	GetQuest(ctx context.Context, slug string) (*QuestDefinition, error)
-	ListQuestsByRealm(ctx context.Context, realm string) ([]QuestDefinition, error)
+	ListQuestsByRealm(ctx context.Context, journey string) ([]QuestDefinition, error)
 }
 
 // CreativePromptStore provides persistence for creative prompt definitions.
 type CreativePromptStore interface {
 	ListPrompts(ctx context.Context) ([]CreativePromptDefinition, error)
 	GetPrompt(ctx context.Context, slug string) (*CreativePromptDefinition, error)
-	ListPromptsByRealm(ctx context.Context, realm string) ([]CreativePromptDefinition, error)
+	ListPromptsByRealm(ctx context.Context, journey string) ([]CreativePromptDefinition, error)
 }
 
 // AchievementDefinitionStore provides persistence for achievement definitions.
@@ -43,23 +43,23 @@ type SeasonDefinitionStore interface {
 	GetSeason(ctx context.Context, slug string) (*SeasonDefinition, error)
 }
 
-// LoreDefinitionStore provides persistence for lore definitions.
+// LoreDefinitionStore provides persistence for concept definitions.
 type LoreDefinitionStore interface {
 	ListLore(ctx context.Context) ([]LoreDefinition, error)
 	GetLore(ctx context.Context, slug string) (*LoreDefinition, error)
-	ListLoreByRealm(ctx context.Context, realm string) ([]LoreDefinition, error)
+	ListLoreByRealm(ctx context.Context, journey string) ([]LoreDefinition, error)
 }
 
 // Repository groups all content store interfaces for convenient
 // dependency injection, mirroring the pattern in pkg/game/store.go.
 type Repository struct {
-	Realms       RealmDefinitionStore
-	Chapters     ChapterDefinitionStore
-	Quests       QuestDefinitionStore
+	Journeys       RealmDefinitionStore
+	Courses     ChapterDefinitionStore
+	Missions       QuestDefinitionStore
 	Prompts      CreativePromptStore
 	Achievements AchievementDefinitionStore
 	Seasons      SeasonDefinitionStore
-	Lore         LoreDefinitionStore
+	Concept         LoreDefinitionStore
 }
 
 // RealmDefinition describes a themed area of the shared world.
@@ -80,11 +80,11 @@ type RealmDefinition struct {
 	UpdatedAt   time.Time  `json:"updated_at"`
 }
 
-// ChapterDefinition describes a story chapter within a Realm.
+// ChapterDefinition describes a story course within a Journey.
 type ChapterDefinition struct {
 	ID          int64      `json:"id"`
 	Slug        string     `json:"slug"`
-	Realm       string     `json:"realm"`
+	Journey       string     `json:"journey"`
 	Title       string     `json:"title"`
 	Description string     `json:"description"`
 	Order       int        `json:"order"`
@@ -101,8 +101,8 @@ type ChapterDefinition struct {
 type QuestDefinition struct {
 	ID                 int64          `json:"id"`
 	Slug               string         `json:"slug"`
-	Realm              string         `json:"realm"`
-	Chapter            string         `json:"chapter"`
+	Journey              string         `json:"journey"`
+	Course            string         `json:"course"`
 	Title              string         `json:"title"`
 	Description        string         `json:"description"`
 	QuestType          string         `json:"quest_type"`
@@ -113,10 +113,10 @@ type QuestDefinition struct {
 	RewardChest        string         `json:"reward_chest"`
 	RewardRelic        string         `json:"reward_relic,omitempty"`
 	IsMandatory        bool           `json:"is_mandatory"`
-	RequiredQuestSlug  string         `json:"required_quest_slug,omitempty"`
+	RequiredQuestSlug  string         `json:"required_mission_slug,omitempty"`
 	RequiredQuestSlugs []string       `json:"required_quest_slugs,omitempty"`
-	RequiredChapter    string         `json:"required_chapter,omitempty"`
-	RequiredRealm      string         `json:"required_realm,omitempty"`
+	RequiredChapter    string         `json:"required_course,omitempty"`
+	RequiredRealm      string         `json:"required_journey,omitempty"`
 	RequiredLevel      int            `json:"required_level,omitempty"`
 	SeasonSlug         string         `json:"season_slug,omitempty"`
 	Published          bool           `json:"published"`
@@ -143,7 +143,7 @@ type ChallengeDef struct {
 type CreativePromptDefinition struct {
 	ID          int64      `json:"id"`
 	Slug        string     `json:"slug"`
-	Realm       string     `json:"realm"`
+	Journey       string     `json:"journey"`
 	Title       string     `json:"title"`
 	Description string     `json:"description"`
 	Prompt      string     `json:"prompt"`
@@ -179,8 +179,8 @@ type ChestDefinition struct {
 // DropTableEntry is a single rarity-weight pair for a chest definition.
 type DropTableEntry struct {
 	ID        int64     `json:"id"`
-	ChestSlug string    `json:"chest_slug"`
-	RelicID   int64     `json:"relic_id,omitempty"`
+	GiftSlug string    `json:"gift_slug"`
+	CollectionID   int64     `json:"collection_id,omitempty"`
 	Rarity    string    `json:"rarity,omitempty"`
 	Weight    float64   `json:"weight"`
 	Published bool      `json:"published"`
@@ -195,10 +195,10 @@ type RelicDefinition struct {
 	Slug        string     `json:"slug"`
 	Name        string     `json:"name"`
 	Description string     `json:"description"`
-	Realm       string     `json:"realm"`
+	Journey       string     `json:"journey"`
 	Rarity      string     `json:"rarity"`
 	Image       string     `json:"image"`
-	Lore        string     `json:"lore"`
+	Concept        string     `json:"concept"`
 	Published   bool       `json:"published"`
 	Version     int        `json:"version"`
 	UpdatedBy   string     `json:"updated_by,omitempty"`
@@ -238,7 +238,7 @@ type SeasonDefinition struct {
 	Description string     `json:"description"`
 	StartAt     time.Time  `json:"start_at"`
 	EndAt       time.Time  `json:"end_at"`
-	Realm       string     `json:"realm"`
+	Journey       string     `json:"journey"`
 	Published   bool       `json:"published"`
 	Version     int        `json:"version"`
 	UpdatedBy   string     `json:"updated_by,omitempty"`
@@ -248,12 +248,12 @@ type SeasonDefinition struct {
 	UpdatedAt   time.Time  `json:"updated_at"`
 }
 
-// LoreDefinition describes a piece of narrative lore.
+// LoreDefinition describes a piece of narrative concept.
 type LoreDefinition struct {
 	ID          int64      `json:"id"`
 	Slug        string     `json:"slug"`
-	Realm       string     `json:"realm"`
-	Chapter     string     `json:"chapter"`
+	Journey       string     `json:"journey"`
+	Course     string     `json:"course"`
 	Title       string     `json:"title"`
 	Content     string     `json:"content"`
 	Order       int        `json:"order"`

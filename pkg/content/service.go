@@ -260,11 +260,11 @@ func (s *ContentService) Status(ctx context.Context) (map[string]any, error) {
 		status["chapters"] = len(chapters)
 	}
 	if s.questStore != nil {
-		quests, err := s.questStore.ListQuests(ctx)
+		missions, err := s.questStore.ListQuests(ctx)
 		if err != nil {
 			return nil, err
 		}
-		status["quests"] = len(quests)
+		status["missions"] = len(missions)
 	}
 	if s.promptStore != nil {
 		prompts, err := s.promptStore.ListPrompts(ctx)
@@ -288,25 +288,25 @@ func (s *ContentService) Status(ctx context.Context) (map[string]any, error) {
 		status["seasons"] = len(seasons)
 	}
 	if s.loreStore != nil {
-		lore, err := s.loreStore.ListLore(ctx)
+		concept, err := s.loreStore.ListLore(ctx)
 		if err != nil {
 			return nil, err
 		}
-		status["lore"] = len(lore)
+		status["concept"] = len(concept)
 	}
 	if s.chestStore != nil {
-		chests, err := s.chestStore.ListChestDefinitions(ctx)
+		gifts, err := s.chestStore.ListChestDefinitions(ctx)
 		if err != nil {
 			return nil, err
 		}
-		status["chests"] = len(chests)
+		status["gifts"] = len(gifts)
 	}
 	if s.relicStore != nil {
-		relics, err := s.relicStore.ListRelicDefinitions(ctx)
+		collections, err := s.relicStore.ListRelicDefinitions(ctx)
 		if err != nil {
 			return nil, err
 		}
-		status["relics"] = len(relics)
+		status["collections"] = len(collections)
 	}
 	status["cache_generation"] = s.cache.Generation()
 	status["cache_stats"] = s.cache.Stats()
@@ -361,11 +361,11 @@ func (s *ContentService) reload(ctx context.Context) error {
 	}
 
 	if s.questStore != nil {
-		quests, err := s.questStore.ListQuests(ctx)
+		missions, err := s.questStore.ListQuests(ctx)
 		if err != nil {
 			return err
 		}
-		for _, q := range quests {
+		for _, q := range missions {
 			s.cache.setQuest(q)
 		}
 	}
@@ -401,22 +401,22 @@ func (s *ContentService) reload(ctx context.Context) error {
 	}
 
 	if s.loreStore != nil {
-		lore, err := s.loreStore.ListLore(ctx)
+		concept, err := s.loreStore.ListLore(ctx)
 		if err != nil {
 			return err
 		}
-		for _, l := range lore {
+		for _, l := range concept {
 			s.cache.setLore(l)
 		}
 	}
 
 	if s.chestStore != nil {
-		chests, err := s.chestStore.ListChestDefinitions(ctx)
+		gifts, err := s.chestStore.ListChestDefinitions(ctx)
 		if err != nil {
 			return err
 		}
-		result := make([]content.ChestDefinition, 0, len(chests))
-		for _, d := range chests {
+		result := make([]content.ChestDefinition, 0, len(gifts))
+		for _, d := range gifts {
 			result = append(result, content.ChestDefinition{
 				ID:          d.ID,
 				Slug:        d.Slug,
@@ -437,21 +437,21 @@ func (s *ContentService) reload(ctx context.Context) error {
 	}
 
 	if s.relicStore != nil {
-		relics, err := s.relicStore.ListRelicDefinitions(ctx)
+		collections, err := s.relicStore.ListRelicDefinitions(ctx)
 		if err != nil {
 			return err
 		}
-		result := make([]content.RelicDefinition, 0, len(relics))
-		for _, d := range relics {
+		result := make([]content.RelicDefinition, 0, len(collections))
+		for _, d := range collections {
 			result = append(result, content.RelicDefinition{
 				ID:          d.ID,
 				Slug:        d.Slug,
 				Name:        d.Name,
 				Description: d.Description,
-				Realm:       d.Realm,
+				Journey:       d.Journey,
 				Rarity:      d.Rarity,
 				Image:       d.Image,
-				Lore:        d.Lore,
+				Concept:        d.Concept,
 				Published:   d.Published,
 				Version:     d.Version,
 				UpdatedBy:   d.UpdatedBy,
@@ -494,14 +494,14 @@ func (s *ContentService) ReloadResource(ctx context.Context, resourceType string
 				s.cache.setChapter(c)
 			}
 		}
-	case "quests":
-		s.cache.Invalidate("quests:all")
+	case "missions":
+		s.cache.Invalidate("missions:all")
 		if s.questStore != nil {
-			quests, err := s.questStore.ListQuests(ctx)
+			missions, err := s.questStore.ListQuests(ctx)
 			if err != nil {
 				return err
 			}
-			for _, q := range quests {
+			for _, q := range missions {
 				s.cache.setQuest(q)
 			}
 		}
@@ -538,26 +538,26 @@ func (s *ContentService) ReloadResource(ctx context.Context, resourceType string
 				s.cache.setSeason(sd)
 			}
 		}
-	case "lore":
-		s.cache.Invalidate("lore:all")
+	case "concept":
+		s.cache.Invalidate("concept:all")
 		if s.loreStore != nil {
-			lore, err := s.loreStore.ListLore(ctx)
+			concept, err := s.loreStore.ListLore(ctx)
 			if err != nil {
 				return err
 			}
-			for _, l := range lore {
+			for _, l := range concept {
 				s.cache.setLore(l)
 			}
 		}
-	case "chests":
-		s.cache.Invalidate("chests:all")
+	case "gifts":
+		s.cache.Invalidate("gifts:all")
 		if s.chestStore != nil {
-			chests, err := s.chestStore.ListChestDefinitions(ctx)
+			gifts, err := s.chestStore.ListChestDefinitions(ctx)
 			if err != nil {
 				return err
 			}
-			result := make([]content.ChestDefinition, 0, len(chests))
-			for _, d := range chests {
+			result := make([]content.ChestDefinition, 0, len(gifts))
+			for _, d := range gifts {
 				result = append(result, content.ChestDefinition{
 					ID:          d.ID,
 					Slug:        d.Slug,
@@ -576,24 +576,24 @@ func (s *ContentService) ReloadResource(ctx context.Context, resourceType string
 			}
 			s.cache.setChests(result)
 		}
-	case "relics":
-		s.cache.Invalidate("relics:all")
+	case "collections":
+		s.cache.Invalidate("collections:all")
 		if s.relicStore != nil {
-			relics, err := s.relicStore.ListRelicDefinitions(ctx)
+			collections, err := s.relicStore.ListRelicDefinitions(ctx)
 			if err != nil {
 				return err
 			}
-			result := make([]content.RelicDefinition, 0, len(relics))
-			for _, d := range relics {
+			result := make([]content.RelicDefinition, 0, len(collections))
+			for _, d := range collections {
 				result = append(result, content.RelicDefinition{
 					ID:          d.ID,
 					Slug:        d.Slug,
 					Name:        d.Name,
 					Description: d.Description,
-					Realm:       d.Realm,
+					Journey:       d.Journey,
 					Rarity:      d.Rarity,
 					Image:       d.Image,
-					Lore:        d.Lore,
+					Concept:        d.Concept,
 					Published:   d.Published,
 					Version:     d.Version,
 					UpdatedBy:   d.UpdatedBy,
@@ -609,7 +609,7 @@ func (s *ContentService) ReloadResource(ctx context.Context, resourceType string
 }
 
 func (s *ContentService) GetRealm(ctx context.Context, slug string) (*content.RealmDefinition, error) {
-	key := "realm:" + slug
+	key := "journey:" + slug
 	if v, ok := s.cache.Get(key); ok {
 		if def, ok := v.(*content.RealmDefinition); ok {
 			return def, nil
@@ -641,7 +641,7 @@ func (s *ContentService) ListRealms(ctx context.Context) ([]content.RealmDefinit
 }
 
 func (s *ContentService) GetChapter(ctx context.Context, slug string) (*content.ChapterDefinition, error) {
-	key := "chapter:" + slug
+	key := "course:" + slug
 	if v, ok := s.cache.Get(key); ok {
 		if def, ok := v.(*content.ChapterDefinition); ok {
 			return def, nil
@@ -657,14 +657,14 @@ func (s *ContentService) GetChapter(ctx context.Context, slug string) (*content.
 	return def, nil
 }
 
-func (s *ContentService) ListChaptersByRealm(ctx context.Context, realm string) ([]content.ChapterDefinition, error) {
-	key := "chapters:realm:" + realm
+func (s *ContentService) ListChaptersByRealm(ctx context.Context, journey string) ([]content.ChapterDefinition, error) {
+	key := "chapters:journey:" + journey
 	if v, ok := s.cache.Get(key); ok {
 		if defs, ok := v.([]content.ChapterDefinition); ok {
 			return defs, nil
 		}
 	}
-	defs, err := s.chapterStore.ListChapters(ctx, realm)
+	defs, err := s.chapterStore.ListChapters(ctx, journey)
 	if err != nil {
 		return nil, err
 	}
@@ -748,7 +748,7 @@ func (s *ContentService) GetQuest(ctx context.Context, slug string) (*content.Qu
 }
 
 func (s *ContentService) ListQuests(ctx context.Context) ([]content.QuestDefinition, error) {
-	key := "quests:all"
+	key := "missions:all"
 	if v, ok := s.cache.Get(key); ok {
 		if defs, ok := v.([]content.QuestDefinition); ok {
 			return defs, nil
@@ -762,14 +762,14 @@ func (s *ContentService) ListQuests(ctx context.Context) ([]content.QuestDefinit
 	return defs, nil
 }
 
-func (s *ContentService) ListQuestsByRealm(ctx context.Context, realm string) ([]content.QuestDefinition, error) {
-	key := "quests:realm:" + realm
+func (s *ContentService) ListQuestsByRealm(ctx context.Context, journey string) ([]content.QuestDefinition, error) {
+	key := "missions:journey:" + journey
 	if v, ok := s.cache.Get(key); ok {
 		if defs, ok := v.([]content.QuestDefinition); ok {
 			return defs, nil
 		}
 	}
-	defs, err := s.questStore.ListQuestsByRealm(ctx, realm)
+	defs, err := s.questStore.ListQuestsByRealm(ctx, journey)
 	if err != nil {
 		return nil, err
 	}
@@ -809,14 +809,14 @@ func (s *ContentService) ListPrompts(ctx context.Context) ([]content.CreativePro
 	return defs, nil
 }
 
-func (s *ContentService) ListPromptsByRealm(ctx context.Context, realm string) ([]content.CreativePromptDefinition, error) {
-	key := "prompts:realm:" + realm
+func (s *ContentService) ListPromptsByRealm(ctx context.Context, journey string) ([]content.CreativePromptDefinition, error) {
+	key := "prompts:journey:" + journey
 	if v, ok := s.cache.Get(key); ok {
 		if defs, ok := v.([]content.CreativePromptDefinition); ok {
 			return defs, nil
 		}
 	}
-	defs, err := s.promptStore.ListPromptsByRealm(ctx, realm)
+	defs, err := s.promptStore.ListPromptsByRealm(ctx, journey)
 	if err != nil {
 		return nil, err
 	}
@@ -889,7 +889,7 @@ func (s *ContentService) ListSeasons(ctx context.Context) ([]content.SeasonDefin
 }
 
 func (s *ContentService) GetLore(ctx context.Context, slug string) (*content.LoreDefinition, error) {
-	key := "lore:" + slug
+	key := "concept:" + slug
 	if v, ok := s.cache.Get(key); ok {
 		if def, ok := v.(*content.LoreDefinition); ok {
 			return def, nil
@@ -906,7 +906,7 @@ func (s *ContentService) GetLore(ctx context.Context, slug string) (*content.Lor
 }
 
 func (s *ContentService) ListLore(ctx context.Context) ([]content.LoreDefinition, error) {
-	key := "lore:all"
+	key := "concept:all"
 	if v, ok := s.cache.Get(key); ok {
 		if defs, ok := v.([]content.LoreDefinition); ok {
 			return defs, nil
@@ -920,14 +920,14 @@ func (s *ContentService) ListLore(ctx context.Context) ([]content.LoreDefinition
 	return defs, nil
 }
 
-func (s *ContentService) ListLoreByRealm(ctx context.Context, realm string) ([]content.LoreDefinition, error) {
-	key := "lore:realm:" + realm
+func (s *ContentService) ListLoreByRealm(ctx context.Context, journey string) ([]content.LoreDefinition, error) {
+	key := "concept:journey:" + journey
 	if v, ok := s.cache.Get(key); ok {
 		if defs, ok := v.([]content.LoreDefinition); ok {
 			return defs, nil
 		}
 	}
-	defs, err := s.loreStore.ListLoreByRealm(ctx, realm)
+	defs, err := s.loreStore.ListLoreByRealm(ctx, journey)
 	if err != nil {
 		return nil, err
 	}
@@ -935,8 +935,8 @@ func (s *ContentService) ListLoreByRealm(ctx context.Context, realm string) ([]c
 	return defs, nil
 }
 
-func (s *ContentService) ListLoreByChapter(ctx context.Context, chapter string) ([]content.LoreDefinition, error) {
-	key := "lore:chapter:" + chapter
+func (s *ContentService) ListLoreByChapter(ctx context.Context, course string) ([]content.LoreDefinition, error) {
+	key := "concept:course:" + course
 	if v, ok := s.cache.Get(key); ok {
 		if defs, ok := v.([]content.LoreDefinition); ok {
 			return defs, nil
@@ -948,7 +948,7 @@ func (s *ContentService) ListLoreByChapter(ctx context.Context, chapter string) 
 	}
 	result := make([]content.LoreDefinition, 0)
 	for _, ld := range all {
-		if ld.Chapter == chapter {
+		if ld.Course == course {
 			result = append(result, ld)
 		}
 	}
@@ -957,7 +957,7 @@ func (s *ContentService) ListLoreByChapter(ctx context.Context, chapter string) 
 }
 
 func (s *ContentService) ListChests(ctx context.Context) ([]content.ChestDefinition, error) {
-	key := "chests:all"
+	key := "gifts:all"
 	if v, ok := s.cache.Get(key); ok {
 		if defs, ok := v.([]content.ChestDefinition); ok {
 			return defs, nil
@@ -1023,7 +1023,7 @@ func (s *ContentService) GetChest(ctx context.Context, slug string) (*content.Ch
 }
 
 func (s *ContentService) ListRelics(ctx context.Context) ([]content.RelicDefinition, error) {
-	key := "relics:all"
+	key := "collections:all"
 	if v, ok := s.cache.Get(key); ok {
 		if defs, ok := v.([]content.RelicDefinition); ok {
 			return defs, nil
@@ -1040,10 +1040,10 @@ func (s *ContentService) ListRelics(ctx context.Context) ([]content.RelicDefinit
 			Slug:        d.Slug,
 			Name:        d.Name,
 			Description: d.Description,
-			Realm:       d.Realm,
+			Journey:       d.Journey,
 			Rarity:      d.Rarity,
 			Image:       d.Image,
-			Lore:        d.Lore,
+			Concept:        d.Concept,
 			Published:   d.Published,
 			Version:     d.Version,
 			UpdatedBy:   d.UpdatedBy,
@@ -1074,10 +1074,10 @@ func (s *ContentService) GetRelic(ctx context.Context, slug string) (*content.Re
 			Slug:        def.Slug,
 			Name:        def.Name,
 			Description: def.Description,
-			Realm:       def.Realm,
+			Journey:       def.Journey,
 			Rarity:      def.Rarity,
 			Image:       def.Image,
-			Lore:        def.Lore,
+			Concept:        def.Concept,
 			Published:   def.Published,
 			Version:     def.Version,
 			UpdatedBy:   def.UpdatedBy,
@@ -1160,21 +1160,21 @@ func tableToResource(table string) string {
 	case content.TableChapters:
 		return "chapters"
 	case content.TableQuests:
-		return "quests"
+		return "missions"
 	case content.TablePrompts:
 		return "prompts"
 	case content.TableChests:
-		return "chests"
+		return "gifts"
 	case content.TableDropTables:
 		return "droptables"
 	case content.TableRelics:
-		return "relics"
+		return "collections"
 	case content.TableAchievements:
 		return "achievements"
 	case content.TableSeasons:
 		return "seasons"
 	case content.TableLore:
-		return "lore"
+		return "concept"
 	default:
 		return table
 	}
@@ -1185,7 +1185,7 @@ func (c *Cache) setChest(def content.ChestDefinition) {
 }
 
 func (c *Cache) setChests(defs []content.ChestDefinition) {
-	c.Set("chests:all", defs)
+	c.Set("gifts:all", defs)
 }
 
 func (c *Cache) setRelic(def content.RelicDefinition) {
@@ -1193,11 +1193,11 @@ func (c *Cache) setRelic(def content.RelicDefinition) {
 }
 
 func (c *Cache) setRelics(defs []content.RelicDefinition) {
-	c.Set("relics:all", defs)
+	c.Set("collections:all", defs)
 }
 
 func (c *Cache) setRealm(def content.RealmDefinition) {
-	c.Set("realm:"+def.Slug, def)
+	c.Set("journey:"+def.Slug, def)
 }
 
 func (c *Cache) setRealms(defs []content.RealmDefinition) {
@@ -1205,7 +1205,7 @@ func (c *Cache) setRealms(defs []content.RealmDefinition) {
 }
 
 func (c *Cache) setChapter(def content.ChapterDefinition) {
-	c.Set("chapter:"+def.Slug, def)
+	c.Set("course:"+def.Slug, def)
 }
 
 func (c *Cache) setChapters(defs []content.ChapterDefinition) {
@@ -1217,7 +1217,7 @@ func (c *Cache) setQuest(def content.QuestDefinition) {
 }
 
 func (c *Cache) setQuests(defs []content.QuestDefinition) {
-	c.Set("quests:all", defs)
+	c.Set("missions:all", defs)
 }
 
 func (c *Cache) setPrompt(def content.CreativePromptDefinition) {
@@ -1245,9 +1245,9 @@ func (c *Cache) setSeasons(defs []content.SeasonDefinition) {
 }
 
 func (c *Cache) setLore(def content.LoreDefinition) {
-	c.Set("lore:"+def.Slug, def)
+	c.Set("concept:"+def.Slug, def)
 }
 
 func (c *Cache) setLoreEntries(defs []content.LoreDefinition) {
-	c.Set("lore:all", defs)
+	c.Set("concept:all", defs)
 }

@@ -64,15 +64,15 @@ func (s *AdminService) GetStats(ctx context.Context) (*AdminStats, error) {
 		}
 	}
 
-	// Quest completions
-	type Quest struct {
+	// Mission completions
+	type Mission struct {
 		Status string `json:"status"`
 	}
-	var quests []Quest
-	qb, err := s.client.Get(ctx, "odyssey_quests", "select=status&status=eq.DONE")
+	var missions []Mission
+	qb, err := s.client.Get(ctx, "odyssey_missions", "select=status&status=eq.DONE")
 	if err == nil && len(qb) > 0 {
-		_ = json.Unmarshal(qb, &quests)
-		stats.QuestCompletions = len(quests)
+		_ = json.Unmarshal(qb, &missions)
+		stats.QuestCompletions = len(missions)
 	}
 
 	// Daily activity completions today
@@ -91,7 +91,7 @@ func (s *AdminService) GetStats(ctx context.Context) (*AdminStats, error) {
 }
 
 func (s *AdminService) GetQuests(ctx context.Context) ([]QuestStat, error) {
-	// Need definitions and quests status
+	// Need definitions and missions status
 	type QDef struct {
 		Slug      string `json:"slug"`
 		Title     string `json:"title"`
@@ -107,18 +107,18 @@ func (s *AdminService) GetQuests(ctx context.Context) ([]QuestStat, error) {
 	}
 
 	type QRun struct {
-		QuestSlug string `json:"quest_slug"`
+		MissionSlug string `json:"mission_slug"`
 		Status    string `json:"status"`
 	}
 	var runs []QRun
-	rb, _ := s.client.Get(ctx, "odyssey_quests", "select=quest_slug,status&status=eq.DONE")
+	rb, _ := s.client.Get(ctx, "odyssey_missions", "select=mission_slug,status&status=eq.DONE")
 	if len(rb) > 0 {
 		_ = json.Unmarshal(rb, &runs)
 	}
 
 	counts := make(map[string]int)
 	for _, r := range runs {
-		counts[r.QuestSlug]++
+		counts[r.MissionSlug]++
 	}
 
 	var res []QuestStat

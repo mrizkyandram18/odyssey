@@ -71,7 +71,7 @@ export function StoryPage() {
 
       <div className="flex items-center gap-2">
         <span className="text-xs font-medium text-muted-foreground">
-          Misi #{submission.quest_id} · Gambar
+          Misi #{submission.mission_id} · Gambar
         </span>
         <span className="text-xs text-muted-foreground">oleh {submission.author_uid}</span>
       </div>

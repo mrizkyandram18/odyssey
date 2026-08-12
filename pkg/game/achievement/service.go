@@ -247,7 +247,7 @@ func (s *AchievementService) evaluate(ctx context.Context, trigger AchievementTr
 			now := time.Now().UTC()
 			a := &game.Achievement{
 				UID:       uid,
-				CrewID:    crewID,
+				FamilyID:    crewID,
 				Code:      def.Code,
 				Kind:      def.Kind,
 				Trigger:   def.Trigger,
@@ -260,7 +260,7 @@ func (s *AchievementService) evaluate(ctx context.Context, trigger AchievementTr
 
 			s.publisher.Publish(ctx, events.AchievementEarnedEvent{
 				UID:             uid,
-				CrewID:          crewID,
+				FamilyID:          crewID,
 				AchievementCode: def.Code,
 			})
 
@@ -285,7 +285,7 @@ func (h *QuestCompletedHandler) Handle(ctx context.Context, event events.Event) 
 	if !ok {
 		return nil
 	}
-	return h.svc.evaluate(ctx, TriggerQuestCompleted, e.PlayerUID, e.CrewID)
+	return h.svc.evaluate(ctx, TriggerQuestCompleted, e.PlayerUID, e.FamilyID)
 }
 
 type ChapterCompletedHandler struct {
@@ -301,7 +301,7 @@ func (h *ChapterCompletedHandler) Handle(ctx context.Context, event events.Event
 	if !ok {
 		return nil
 	}
-	return h.svc.evaluate(ctx, TriggerChapterCompleted, e.PlayerUID, e.CrewID)
+	return h.svc.evaluate(ctx, TriggerChapterCompleted, e.PlayerUID, e.FamilyID)
 }
 
 type RelicCollectedHandler struct {
@@ -317,7 +317,7 @@ func (h *RelicCollectedHandler) Handle(ctx context.Context, event events.Event) 
 	if !ok {
 		return nil
 	}
-	return h.svc.evaluate(ctx, TriggerRelicCollected, e.UID, e.CrewID)
+	return h.svc.evaluate(ctx, TriggerRelicCollected, e.UID, e.FamilyID)
 }
 
 type DailyTurnCompletedHandler struct {
@@ -349,7 +349,7 @@ func (h *LevelReachedHandler) Handle(ctx context.Context, event events.Event) er
 	if !ok {
 		return nil
 	}
-	return h.svc.evaluate(ctx, TriggerLevelReached, e.UID, e.CrewID)
+	return h.svc.evaluate(ctx, TriggerLevelReached, e.UID, e.FamilyID)
 }
 
 type CreativeSubmissionHandler struct {
@@ -365,5 +365,5 @@ func (h *CreativeSubmissionHandler) Handle(ctx context.Context, event events.Eve
 	if !ok {
 		return nil
 	}
-	return h.svc.evaluate(ctx, TriggerCreativeSubmission, e.UID, e.CrewID)
+	return h.svc.evaluate(ctx, TriggerCreativeSubmission, e.UID, e.FamilyID)
 }

@@ -1,7 +1,7 @@
 # RCA: Missing `odyssey_local_users` Table in Production
 
 ## 1. Problem Description
-During Phase 8.5 (Prototype Data Verification), we verified the existence and content of Supabase tables. While all core domain tables (`odyssey_user_profiles`, `odyssey_quests`, `odyssey_reactions`) exist and are populated correctly, the `odyssey_local_users` table is missing from the production database schema. 
+During Phase 8.5 (Prototype Data Verification), we verified the existence and content of Supabase tables. While all core domain tables (`odyssey_user_profiles`, `odyssey_missions`, `odyssey_reactions`) exist and are populated correctly, the `odyssey_local_users` table is missing from the production database schema. 
 
 This is a critical Release Blocker because the frontend `LoginPage` (web-pwa) expects to authenticate users using `demo1`, `demo2`, and `demo3`, which relies on `odyssey_local_users` to map local credentials to `profile_uid`.
 

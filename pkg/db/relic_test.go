@@ -12,11 +12,11 @@ import (
 
 func TestRelicStore_CreateRelic(t *testing.T) {
 	now := time.Date(2026, 8, 3, 12, 0, 0, 0, time.UTC)
-	data, _ := json.Marshal([]Relic{
+	data, _ := json.Marshal([]Collection{
 		{ID: 1, UID: "user-1", Code: "ancient-compass", Name: "Ancient Compass", Rarity: "COMMON", AwardedAt: now, CreatedAt: now},
 	})
 	store := NewRelicStore(&mockSupabaseClient{data: data})
-	r := &game.Relic{
+	r := &game.Collection{
 		UID:  "user-1",
 		Code: "ancient-compass",
 		Name: "Ancient Compass",
@@ -32,7 +32,7 @@ func TestRelicStore_CreateRelic(t *testing.T) {
 
 func TestRelicStore_GetRelic(t *testing.T) {
 	now := time.Date(2026, 8, 3, 12, 0, 0, 0, time.UTC)
-	data, _ := json.Marshal([]Relic{
+	data, _ := json.Marshal([]Collection{
 		{ID: 1, UID: "user-1", Code: "ancient-compass", AwardedAt: now, CreatedAt: now},
 	})
 	store := NewRelicStore(&mockSupabaseClient{data: data})
@@ -55,23 +55,23 @@ func TestRelicStore_GetRelic_NotFound(t *testing.T) {
 
 func TestRelicStore_ListRelics(t *testing.T) {
 	now := time.Date(2026, 8, 3, 12, 0, 0, 0, time.UTC)
-	data, _ := json.Marshal([]Relic{
+	data, _ := json.Marshal([]Collection{
 		{ID: 1, UID: "user-1", Code: "r1", AwardedAt: now, CreatedAt: now},
 		{ID: 2, UID: "user-1", Code: "r2", AwardedAt: now, CreatedAt: now},
 	})
 	store := NewRelicStore(&mockSupabaseClient{data: data})
-	relics, err := store.ListRelics(context.Background())
+	collections, err := store.ListRelics(context.Background())
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
-	if len(relics) != 2 {
-		t.Errorf("expected 2 relics, got %d", len(relics))
+	if len(collections) != 2 {
+		t.Errorf("expected 2 collections, got %d", len(collections))
 	}
 }
 
 func TestRelicStore_CountRelics(t *testing.T) {
 	now := time.Date(2026, 8, 3, 12, 0, 0, 0, time.UTC)
-	data, _ := json.Marshal([]Relic{
+	data, _ := json.Marshal([]Collection{
 		{ID: 1, UID: "user-1", AwardedAt: now, CreatedAt: now},
 		{ID: 2, UID: "user-1", AwardedAt: now, CreatedAt: now},
 	})
@@ -81,7 +81,7 @@ func TestRelicStore_CountRelics(t *testing.T) {
 		t.Fatalf("unexpected error: %v", err)
 	}
 	if count != 2 {
-		t.Errorf("expected 2 relics, got %d", count)
+		t.Errorf("expected 2 collections, got %d", count)
 	}
 }
 

@@ -37,7 +37,7 @@ func (m *mockFragmentHandler) DiscoverFragment(ctx context.Context, uid, crewID,
 	return m.discRes, nil
 }
 
-func (m *mockFragmentHandler) ReplayRealm(ctx context.Context, uid, crewID, realm string) (*fragment.ReplayResult, error) {
+func (m *mockFragmentHandler) ReplayRealm(ctx context.Context, uid, crewID, journey string) (*fragment.ReplayResult, error) {
 	if m.err != nil {
 		return nil, m.err
 	}
@@ -48,7 +48,7 @@ func makeUserToken(t *testing.T, issuer *auth.HMACSessionIssuer) string {
 	t.Helper()
 	token, _, err := issuer.IssueSession(auth.SessionKindUser, "user-1", &auth.SessionConfig{
 		Role:   auth.RoleSeeker,
-		CrewID: "crew-1",
+		FamilyID: "crew-1",
 	})
 	if err != nil {
 		t.Fatalf("IssueSession: %v", err)
@@ -142,7 +142,7 @@ func TestStoryFragmentsHandler_DiscoverNotFound(t *testing.T) {
 
 func TestStoryFragmentsHandler_ReplayRealm(t *testing.T) {
 	mockRep := &fragment.ReplayResult{
-		Realm:         "whispering-woods",
+		Journey:         "whispering-woods",
 		IsReplay:      true,
 		BonusDialogue: "Selamat datang kembali!",
 		UnlockedFragments: []fragment.StoryFragmentView{
@@ -154,7 +154,7 @@ func TestStoryFragmentsHandler_ReplayRealm(t *testing.T) {
 	mw := auth.NewMiddleware(issuer)
 	token := makeUserToken(t, issuer)
 
-	body := strings.NewReader(`{"realm":"whispering-woods"}`)
+	body := strings.NewReader(`{"journey":"whispering-woods"}`)
 	req := httptest.NewRequest(http.MethodPost, "/api/story_fragments/replay", body)
 	req.Header.Set("Authorization", "Bearer "+token)
 	w := httptest.NewRecorder()

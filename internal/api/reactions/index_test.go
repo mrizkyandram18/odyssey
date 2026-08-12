@@ -24,7 +24,7 @@ func (m *mockReactionService) AddReaction(ctx context.Context, crewID, actorUID 
 		return nil, m.addErr
 	}
 	r := &game.Reaction{
-		CrewID:       crewID,
+		FamilyID:       crewID,
 		TargetType:   targetType,
 		TargetID:     targetID,
 		ActorUID:     actorUID,
@@ -45,7 +45,7 @@ func makeUserToken(t *testing.T, issuer *auth.HMACSessionIssuer, uid, crewID str
 	t.Helper()
 	token, _, err := issuer.IssueSession(auth.SessionKindUser, uid, &auth.SessionConfig{
 		Role:   auth.RoleSeeker,
-		CrewID: crewID,
+		FamilyID: crewID,
 	})
 	if err != nil {
 		t.Fatalf("IssueSession: %v", err)
@@ -95,8 +95,8 @@ func TestReactionsHandler_SpoofRejection(t *testing.T) {
 	}
 	
 	// Verify crew isolation is maintained
-	if svc.addedReaction.CrewID != "crew-A" {
-		t.Errorf("expected crew_id to be 'crew-A', got '%s'", svc.addedReaction.CrewID)
+	if svc.addedReaction.FamilyID != "crew-A" {
+		t.Errorf("expected family_id to be 'crew-A', got '%s'", svc.addedReaction.FamilyID)
 	}
 }
 

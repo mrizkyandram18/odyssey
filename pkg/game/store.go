@@ -27,33 +27,33 @@ type UserStore interface {
 
 // CrewStore provides persistence operations for crew (family group) data.
 type CrewStore interface {
-	GetCrew(ctx context.Context, crewID string) (*Crew, error)
-	CreateCrew(ctx context.Context, c *Crew) error
+	GetCrew(ctx context.Context, crewID string) (*Family, error)
+	CreateCrew(ctx context.Context, c *Family) error
 	UpdateCrew(ctx context.Context, crewID string, patch map[string]any) error
 }
 
-// QuestStore provides persistence operations for quests and their challenges.
+// QuestStore provides persistence operations for missions and their exercises.
 type QuestStore interface {
-	GetQuest(ctx context.Context, questID int64) (*Quest, error)
-	CreateQuest(ctx context.Context, q *Quest) (*Quest, error)
-	ListQuestByCrew(ctx context.Context, crewID string) ([]Quest, error)
+	GetQuest(ctx context.Context, questID int64) (*Mission, error)
+	CreateQuest(ctx context.Context, q *Mission) (*Mission, error)
+	ListQuestByCrew(ctx context.Context, crewID string) ([]Mission, error)
 	UpdateQuest(ctx context.Context, questID int64, patch map[string]any) error
 	UpdateQuestIfMatch(ctx context.Context, questID int64, oldStatus string, patch map[string]any) (bool, error)
 
-	GetChallenges(ctx context.Context, questID int64) ([]Challenge, error)
-	CreateChallenge(ctx context.Context, c *Challenge) (*Challenge, error)
+	GetChallenges(ctx context.Context, questID int64) ([]Exercise, error)
+	CreateChallenge(ctx context.Context, c *Exercise) (*Exercise, error)
 	UpdateChallenge(ctx context.Context, challengeID int64, patch map[string]any) error
 	UpdateChallengeIfMatch(ctx context.Context, challengeID int64, oldStatus string, patch map[string]any) (bool, error)
 }
 
-// RealmProgressStore provides persistence for shared realm progress.
-// Multiple rows per crew are supported (one per realm).
+// RealmProgressStore provides persistence for shared journey progress.
+// Multiple rows per crew are supported (one per journey).
 type RealmProgressStore interface {
-	GetRealmProgress(ctx context.Context, crewID, realm string) (*RealmProgress, error)
-	CreateRealmProgress(ctx context.Context, rp *RealmProgress) (*RealmProgress, error)
-	UpdateRealmProgress(ctx context.Context, crewID, realm string, patch map[string]any) error
-	UpdateRealmProgressIfMatch(ctx context.Context, crewID, realm string, oldProgress int, patch map[string]any) (bool, error)
-	ListRealmProgressByCrew(ctx context.Context, crewID string) ([]RealmProgress, error)
+	GetRealmProgress(ctx context.Context, crewID, journey string) (*JourneyProgress, error)
+	CreateRealmProgress(ctx context.Context, rp *JourneyProgress) (*JourneyProgress, error)
+	UpdateRealmProgress(ctx context.Context, crewID, journey string, patch map[string]any) error
+	UpdateRealmProgressIfMatch(ctx context.Context, crewID, journey string, oldProgress int, patch map[string]any) (bool, error)
+	ListRealmProgressByCrew(ctx context.Context, crewID string) ([]JourneyProgress, error)
 }
 
 // CreativeStore provides persistence for creative-space contributions.
@@ -76,15 +76,15 @@ type CreativeSubmissionStore interface {
 
 // DailyTurnStore provides persistence for daily turn tracking.
 type DailyTurnStore interface {
-	CreateDailyTurn(ctx context.Context, dt *DailyTurn) (*DailyTurn, error)
+	CreateDailyTurn(ctx context.Context, dt *DailyMission) (*DailyMission, error)
 	UpdateDailyTurn(ctx context.Context, turnID int64, patch map[string]any) error
-	ListDailyTurns(ctx context.Context, uid string) ([]DailyTurn, error)
+	ListDailyTurns(ctx context.Context, uid string) ([]DailyMission, error)
 }
 
 // ProgressionStore provides persistence for rewards and achievements.
 type ProgressionStore interface {
-	CreateRelic(ctx context.Context, r *Relic) (*Relic, error)
-	CreateChest(ctx context.Context, ch *Chest) (*Chest, error)
+	CreateRelic(ctx context.Context, r *Collection) (*Collection, error)
+	CreateChest(ctx context.Context, ch *Gift) (*Gift, error)
 	UpdateChest(ctx context.Context, chestID int64, patch map[string]any) error
 	CreateAchievement(ctx context.Context, a *Achievement) (*Achievement, error)
 	CountRelics(ctx context.Context, uid string) (int, error)
@@ -92,11 +92,11 @@ type ProgressionStore interface {
 
 // ChestStore provides persistence operations for chest instances.
 type ChestStore interface {
-	CreateChest(ctx context.Context, ch *Chest) (*Chest, error)
-	GetChest(ctx context.Context, chestID int64) (*Chest, error)
+	CreateChest(ctx context.Context, ch *Gift) (*Gift, error)
+	GetChest(ctx context.Context, chestID int64) (*Gift, error)
 	UpdateChest(ctx context.Context, chestID int64, patch map[string]any) error
 	UpdateChestIfMatch(ctx context.Context, chestID int64, oldOpened bool, patch map[string]any) (bool, error)
-	ListChestsByUser(ctx context.Context, uid string) ([]Chest, error)
+	ListChestsByUser(ctx context.Context, uid string) ([]Gift, error)
 }
 
 // ChestDefinitionStore provides persistence for chest template definitions.
@@ -108,9 +108,9 @@ type ChestDefinitionStore interface {
 
 // RelicStore provides persistence for relic definitions and instances.
 type RelicStore interface {
-	CreateRelic(ctx context.Context, r *Relic) (*Relic, error)
-	GetRelic(ctx context.Context, relicID int64) (*Relic, error)
-	ListRelics(ctx context.Context) ([]Relic, error)
+	CreateRelic(ctx context.Context, r *Collection) (*Collection, error)
+	GetRelic(ctx context.Context, relicID int64) (*Collection, error)
+	ListRelics(ctx context.Context) ([]Collection, error)
 	CountRelics(ctx context.Context, uid string) (int, error)
 }
 
@@ -129,15 +129,15 @@ type PlayerRelicStore interface {
 	CountUniqueRelics(ctx context.Context, uid string) (int, error)
 }
 
-// ChapterProgressStore provides persistence for crew chapter progress.
+// ChapterProgressStore provides persistence for crew course progress.
 type ChapterProgressStore interface {
-	GetChapterProgress(ctx context.Context, crewID, chapter string) (*ChapterProgress, error)
-	CreateChapterProgress(ctx context.Context, cp *ChapterProgress) (*ChapterProgress, error)
-	UpdateChapterProgress(ctx context.Context, crewID, chapter string, patch map[string]any) error
-	ListChapterProgressByCrew(ctx context.Context, crewID string) ([]ChapterProgress, error)
+	GetChapterProgress(ctx context.Context, crewID, course string) (*CourseProgress, error)
+	CreateChapterProgress(ctx context.Context, cp *CourseProgress) (*CourseProgress, error)
+	UpdateChapterProgress(ctx context.Context, crewID, course string, patch map[string]any) error
+	ListChapterProgressByCrew(ctx context.Context, crewID string) ([]CourseProgress, error)
 }
 
-// LoreUnlockStore provides persistence for crew lore unlocks.
+// LoreUnlockStore provides persistence for crew concept unlocks.
 type LoreUnlockStore interface {
 	GetLoreUnlock(ctx context.Context, crewID, loreSlug string) (*LoreUnlock, error)
 	CreateLoreUnlock(ctx context.Context, lu *LoreUnlock) (*LoreUnlock, error)
@@ -207,19 +207,19 @@ type PushSubscriptionStore interface {
 // Repository groups all persistence interfaces for convenient dependency injection.
 type Repository struct {
 	Users               UserStore
-	Crews               CrewStore
-	Quests              QuestStore
-	RealmProgress       RealmProgressStore
+	Families               CrewStore
+	Missions              QuestStore
+	JourneyProgress       RealmProgressStore
 	Creatives           CreativeStore
 	CreativeSubmissions CreativeSubmissionStore
 	DailyTurns          DailyTurnStore
 	Progression         ProgressionStore
-	Chests              ChestStore
+	Gifts              ChestStore
 	ChestDefinitions    ChestDefinitionStore
-	Relics              RelicStore
+	Collections              RelicStore
 	RelicDefinitions    RelicDefinitionStore
 	PlayerRelics        PlayerRelicStore
-	ChapterProgress     ChapterProgressStore
+	CourseProgress     ChapterProgressStore
 	LoreUnlocks         LoreUnlockStore
 	Achievements        AchievementStore
 	Config              ConfigStore

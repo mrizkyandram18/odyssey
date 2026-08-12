@@ -1,13 +1,13 @@
 import { useState, useEffect, useCallback } from 'react'
 
-import { achievementsApi, loreApi, storyFragmentsApi } from '../../shared/lib/api'
-import type { AchievementView, LoreView, StoryFragmentView } from '../../shared/types'
+import { achievementsApi, loreApi, learningConceptsApi } from '../../shared/lib/api'
+import type { AchievementView, LoreView, learningConceptView } from '../../shared/types'
 import { Card } from '../../shared/components/atoms/Card'
 
 export function JournalPage() {
   const [achievements, setAchievements] = useState<AchievementView[]>([])
   const [loreEntries, setLoreEntries] = useState<LoreView[]>([])
-  const [fragments, setFragments] = useState<StoryFragmentView[]>([])
+  const [fragments, setFragments] = useState<learningConceptView[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
@@ -18,7 +18,7 @@ export function JournalPage() {
       const [achData, loreData, fragData] = await Promise.all([
         achievementsApi.list().catch(() => []),
         loreApi.list().catch(() => []),
-        storyFragmentsApi.list().catch(() => []),
+        learningConceptsApi.list().catch(() => []),
       ])
       setAchievements(achData || [])
       setLoreEntries(loreData || [])
@@ -54,7 +54,7 @@ export function JournalPage() {
     })),
     ...unlockedLore.map(l => ({
       type: 'LORE',
-      id: `lore-${l.slug}`,
+      id: `concept-${l.slug}`,
       title: l.title,
       description: l.content,
       date: l.unlocked_at ? new Date(l.unlocked_at).getTime() : 0,

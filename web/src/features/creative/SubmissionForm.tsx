@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { apiClient } from '../../shared/lib/api'
-import { CreativeCanvas } from '../quest/CreativeCanvas'
+import { CreativeCanvas } from '../mission/CreativeCanvas'
 import {
   buildComicPayload,
   isComicReady,
@@ -23,8 +23,8 @@ import {
 } from '../../shared/utils/media'
 
 export interface SubmissionFormProps {
-  questId: number
-  challengeId: number
+  missionId: number
+  exerciseId: number
   onComplete: () => void
   onSkip: () => void
 }
@@ -36,7 +36,7 @@ const emptyPanels = (): ComicPanel[] => [
   { caption: '' },
 ]
 
-export function SubmissionForm({ questId, challengeId, onComplete, onSkip }: SubmissionFormProps) {
+export function SubmissionForm({ missionId, exerciseId, onComplete, onSkip }: SubmissionFormProps) {
   const [mode, setMode] = useState<Mode>('STORY')
   const [content, setContent] = useState('')
   const [panels, setPanels] = useState<ComicPanel[]>(emptyPanels)
@@ -89,8 +89,8 @@ export function SubmissionForm({ questId, challengeId, onComplete, onSkip }: Sub
     setError(null)
     try {
       await apiClient.post('/api/creative', {
-        quest_id: questId,
-        challenge_id: challengeId,
+        mission_id: missionId,
+        exercise_id: exerciseId,
         kind,
         content: payload,
       })

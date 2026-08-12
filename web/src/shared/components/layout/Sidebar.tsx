@@ -11,7 +11,7 @@ export function Sidebar() {
 
   const navItems = [
     { label: 'Beranda', path: '/', icon: <Home size={20} /> },
-    { label: 'Misi', path: '/quests', icon: <Scroll size={20} /> },
+    { label: 'Misi', path: '/missions', icon: <Scroll size={20} /> },
     { label: 'Jurnal', path: '/journal', icon: <Book size={20} /> },
     { label: 'Profil', path: '/profile', icon: <User size={20} /> },
   ]

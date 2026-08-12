@@ -10,7 +10,7 @@ Odyssey and Family Reward share the **same Supabase (PostgreSQL) project**.
 Family Reward uses tables such as `user_profiles`, `user_kuota_request`,
 `work_logs`, `system_configs`, `gts26_events`, `gts26_rewards`, and others.
 
-Odyssey needs persistent storage for game state (quests, progression,
+Odyssey needs persistent storage for game state (missions, progression,
 creative contributions, world state) but must:
 
 1. Never modify existing business tables.
@@ -29,26 +29,26 @@ implementation is fully independent.
 | Element | Convention | Example |
 |---|---|---|
 | Tables | `odyssey_` + `snake_case` | `odyssey_user_profiles` |
-| Columns | `snake_case` | `crew_id`, `completed_at` |
+| Columns | `snake_case` | `family_id`, `completed_at` |
 | Primary key | `id` (BIGINT, identity) or `uid` (TEXT, natural) | `id`, `uid` |
 | Timestamps | `created_at`, `updated_at` | `TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now())` |
-| Indexes | `idx_<table>_<column>` | `idx_odyssey_quests_crew_id` |
-| Unique indexes | `uniq_<table>_<column>` | `uniq_odyssey_quests_crew_id_slug` |
+| Indexes | `idx_<table>_<column>` | `idx_odyssey_missions_family_id` |
+| Unique indexes | `uniq_<table>_<column>` | `uniq_odyssey_missions_family_id_slug` |
 
 ### Tables (MVP)
 
 | Table | Columns | Notes |
 |---|---|---|
-| `odyssey_user_profiles` | `uid TEXT PK`, `crew_id TEXT`, `explorer_name TEXT`, `role TEXT`, `level INTEGER`, `xp BIGINT`, `created_at`, `updated_at` | UID is shared with Gatekeeper. One user → one crew. Stores hashed password for credential verification. |
-| `odyssey_crews` | `id TEXT PK` (UUID), `name TEXT`, `created_at`, `updated_at` | A family group. Seeded manually per family. |
-| `odyssey_quests` | `id BIGINT PK`, `crew_id TEXT`, `template_slug TEXT`, `title TEXT`, `status TEXT` (`ACTIVE`/`DONE`), `started_at`, `completed_at`, `created_at` | One row per quest instance per crew. |
-| `odyssey_challenges` | `id BIGINT PK`, `quest_id BIGINT FK`, `slug TEXT`, `description TEXT`, `status TEXT` (`PENDING`/`DONE`), `completed_by TEXT` (uid), `completed_at`, `created_at` | |
-| `odyssey_realm_progress` | `crew_id TEXT PK`, `realm TEXT`, `status TEXT` (`LOCKED`/`ACTIVE`/`COMPLETE`), `story_branch TEXT`, `progress INTEGER` (0–100), `last_unlocked_at`, `updated_at` | The family's shared realm progress. Renamed from `odyssey_world_state` for clarity. |
-| `odyssey_creative_items` | `id BIGINT PK`, `crew_id TEXT`, `realm TEXT`, `author_uid TEXT`, `kind TEXT` (`STORY`/`COMIC`/`PHOTO`/`VIDEO`), `payload JSONB`, `created_at` | Append-only: contributions to creative spaces. |
-| `odyssey_daily_turns` | `id BIGINT PK`, `uid TEXT`, `date DATE`, `quest_slug TEXT`, `completed BOOLEAN`, `created_at` | One per user per calendar day. |
+| `odyssey_user_profiles` | `uid TEXT PK`, `family_id TEXT`, `explorer_name TEXT`, `role TEXT`, `level INTEGER`, `xp BIGINT`, `created_at`, `updated_at` | UID is shared with Gatekeeper. One user → one crew. Stores hashed password for credential verification. |
+| `odyssey_families` | `id TEXT PK` (UUID), `name TEXT`, `created_at`, `updated_at` | A family group. Seeded manually per family. |
+| `odyssey_missions` | `id BIGINT PK`, `family_id TEXT`, `template_slug TEXT`, `title TEXT`, `status TEXT` (`ACTIVE`/`DONE`), `started_at`, `completed_at`, `created_at` | One row per quest instance per crew. |
+| `odyssey_exercises` | `id BIGINT PK`, `mission_id BIGINT FK`, `slug TEXT`, `description TEXT`, `status TEXT` (`PENDING`/`DONE`), `completed_by TEXT` (uid), `completed_at`, `created_at` | |
+| `odyssey_journey_progress` | `family_id TEXT PK`, `journey TEXT`, `status TEXT` (`LOCKED`/`ACTIVE`/`COMPLETE`), `story_branch TEXT`, `progress INTEGER` (0–100), `last_unlocked_at`, `updated_at` | The family's shared journey progress. Renamed from `odyssey_world_state` for clarity. |
+| `odyssey_creative_items` | `id BIGINT PK`, `family_id TEXT`, `journey TEXT`, `author_uid TEXT`, `kind TEXT` (`STORY`/`COMIC`/`PHOTO`/`VIDEO`), `payload JSONB`, `created_at` | Append-only: contributions to creative spaces. |
+| `odyssey_daily_missions` | `id BIGINT PK`, `uid TEXT`, `date DATE`, `mission_slug TEXT`, `completed BOOLEAN`, `created_at` | One per user per calendar day. |
 | `odyssey_achievements` | `id BIGINT PK`, `uid TEXT`, `code TEXT`, `kind TEXT` (`PERSONAL`/`GROUP`), `awarded_at`, `created_at` | Personal and group milestones. |
-| `odyssey_relics` | `id BIGINT PK`, `uid TEXT`, `code TEXT`, `awarded_at`, `created_at` | Collected Relics, personal. |
-| `odyssey_chests` | `id BIGINT PK`, `uid TEXT`, `source TEXT`, `opened BOOLEAN`, `opened_at`, `created_at` | Reward containers with known, fixed contents. |
+| `odyssey_collections` | `id BIGINT PK`, `uid TEXT`, `code TEXT`, `awarded_at`, `created_at` | Collected Collections, personal. |
+| `odyssey_gifts` | `id BIGINT PK`, `uid TEXT`, `source TEXT`, `opened BOOLEAN`, `opened_at`, `created_at` | Reward containers with known, fixed contents. |
 
 ### Tables Deferred to Phase 5
 

@@ -11,7 +11,7 @@ import (
 )
 
 func TestProgressionStore_CountRelics(t *testing.T) {
-	data, _ := json.Marshal([]Relic{
+	data, _ := json.Marshal([]Collection{
 		{ID: 1, UID: "user-1", Code: "relic-1"},
 		{ID: 2, UID: "user-1", Code: "relic-2"},
 		{ID: 3, UID: "user-1", Code: "relic-3"},
@@ -22,19 +22,19 @@ func TestProgressionStore_CountRelics(t *testing.T) {
 		t.Fatalf("unexpected error: %v", err)
 	}
 	if count != 3 {
-		t.Errorf("expected 3 relics, got %d", count)
+		t.Errorf("expected 3 collections, got %d", count)
 	}
 }
 
 func TestProgressionStore_CountRelics_Empty(t *testing.T) {
-	data, _ := json.Marshal([]Relic{})
+	data, _ := json.Marshal([]Collection{})
 	store := NewProgressionStore(&mockSupabaseClient{data: data})
 	count, err := store.CountRelics(context.Background(), "user-1")
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
 	if count != 0 {
-		t.Errorf("expected 0 relics, got %d", count)
+		t.Errorf("expected 0 collections, got %d", count)
 	}
 }
 
@@ -48,11 +48,11 @@ func TestProgressionStore_CountRelics_Error(t *testing.T) {
 
 func TestProgressionStore_CreateRelic(t *testing.T) {
 	now := time.Date(2026, 8, 3, 12, 0, 0, 0, time.UTC)
-	data, _ := json.Marshal([]Relic{
+	data, _ := json.Marshal([]Collection{
 		{ID: 1, UID: "user-1", Code: "relic-1", AwardedAt: now, CreatedAt: now},
 	})
 	store := NewProgressionStore(&mockSupabaseClient{data: data})
-	r := &game.Relic{
+	r := &game.Collection{
 		UID:  "user-1",
 		Code: "relic-1",
 	}
@@ -67,11 +67,11 @@ func TestProgressionStore_CreateRelic(t *testing.T) {
 
 func TestProgressionStore_CreateChest(t *testing.T) {
 	now := time.Date(2026, 8, 3, 12, 0, 0, 0, time.UTC)
-	data, _ := json.Marshal([]Chest{
+	data, _ := json.Marshal([]Gift{
 		{ID: 1, UID: "user-1", Source: "daily", Opened: false, CreatedAt: now},
 	})
 	store := NewProgressionStore(&mockSupabaseClient{data: data})
-	ch := &game.Chest{
+	ch := &game.Gift{
 		UID:    "user-1",
 		Source: "daily",
 		Opened: false,
@@ -96,12 +96,12 @@ func TestProgressionStore_UpdateChest(t *testing.T) {
 func TestProgressionStore_CreateAchievement(t *testing.T) {
 	now := time.Date(2026, 8, 3, 12, 0, 0, 0, time.UTC)
 	data, _ := json.Marshal([]Achievement{
-		{ID: 1, UID: "user-1", CrewID: "crew-1", Code: "first-step", Kind: "PERSONAL", AwardedAt: now, CreatedAt: now},
+		{ID: 1, UID: "user-1", FamilyID: "crew-1", Code: "first-step", Kind: "PERSONAL", AwardedAt: now, CreatedAt: now},
 	})
 	store := NewProgressionStore(&mockSupabaseClient{data: data})
 	a := &game.Achievement{
 		UID:    "user-1",
-		CrewID: "crew-1",
+		FamilyID: "crew-1",
 		Code:   "first-step",
 		Kind:   "PERSONAL",
 	}

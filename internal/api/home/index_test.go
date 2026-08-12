@@ -11,7 +11,7 @@ import (
 	"odyssey/pkg/auth"
 	"odyssey/pkg/game"
 	gamehome "odyssey/pkg/game/home"
-	"odyssey/pkg/game/quest"
+	"odyssey/pkg/game/mission"
 )
 
 type mockHomeService struct {
@@ -30,7 +30,7 @@ func makeUserToken(t *testing.T, issuer *auth.HMACSessionIssuer) string {
 	t.Helper()
 	token, _, err := issuer.IssueSession(auth.SessionKindUser, "user-1", &auth.SessionConfig{
 		Role:   auth.RoleSeeker,
-		CrewID: "crew-1",
+		FamilyID: "crew-1",
 	})
 	if err != nil {
 		t.Fatalf("IssueSession: %v", err)
@@ -42,7 +42,7 @@ func makeHomeResponse() *gamehome.HomeResponse {
 	return &gamehome.HomeResponse{
 		Player: game.Player{
 			UID:          "user-1",
-			CrewID:       "crew-1",
+			FamilyID:       "crew-1",
 			ExplorerName: "Alice",
 			Role:         "SEEKER",
 			Level:        3,
@@ -50,15 +50,15 @@ func makeHomeResponse() *gamehome.HomeResponse {
 			CreatedAt:    time.Date(2026, 8, 3, 12, 0, 0, 0, time.UTC),
 			UpdatedAt:    time.Date(2026, 8, 3, 12, 0, 0, 0, time.UTC),
 		},
-		Quests: []quest.QuestView{},
-		DailyTurn: gamehome.DailyTurnView{
+		Missions: []quest.QuestView{},
+		DailyMission: gamehome.DailyTurnView{
 			Today:          "2026-08-03",
 			Completed:      false,
 			Available:      true,
 			StreakDays:     2,
 			RemainingTurns: 1,
 		},
-		RealmProgress:        []game.RealmProgress{},
+		JourneyProgress:        []game.JourneyProgress{},
 		RelicCount:           5,
 		ActiveQuests:         []quest.QuestView{},
 		CompletedQuestsToday: []quest.QuestView{},
@@ -123,8 +123,8 @@ func TestHomeHandler_Success(t *testing.T) {
 	if resp.Player.UID != "user-1" {
 		t.Errorf("expected UID user-1, got %s", resp.Player.UID)
 	}
-	if resp.DailyTurn.StreakDays != 2 {
-		t.Errorf("expected streak 2, got %d", resp.DailyTurn.StreakDays)
+	if resp.DailyMission.StreakDays != 2 {
+		t.Errorf("expected streak 2, got %d", resp.DailyMission.StreakDays)
 	}
 	if resp.RelicCount != 5 {
 		t.Errorf("expected relic count 5, got %d", resp.RelicCount)

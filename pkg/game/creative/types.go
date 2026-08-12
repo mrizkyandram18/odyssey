@@ -10,9 +10,9 @@ import (
 // JSON tags are snake_case to match the frontend CreativeSubmission contract.
 type SubmissionView struct {
 	ID              int64                 `json:"id"`
-	QuestID         int64                 `json:"quest_id"`
-	ChallengeID     int64                 `json:"challenge_id"`
-	CrewID          string                `json:"crew_id"`
+	MissionID         int64                 `json:"mission_id"`
+	ExerciseID     int64                 `json:"exercise_id"`
+	FamilyID          string                `json:"family_id"`
 	AuthorUID       string                `json:"author_uid"`
 	Kind            game.SubmissionKind   `json:"kind"`
 	Content         string                `json:"content"`
@@ -26,8 +26,8 @@ type SubmissionView struct {
 
 // SubmitRequest is the incoming payload for creating a submission.
 type SubmitRequest struct {
-	QuestID     int64               `json:"quest_id"`
-	ChallengeID int64               `json:"challenge_id"`
+	MissionID     int64               `json:"mission_id"`
+	ExerciseID int64               `json:"exercise_id"`
 	Kind        game.SubmissionKind `json:"kind"`
 	Content     string              `json:"content"`
 }

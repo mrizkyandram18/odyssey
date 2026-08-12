@@ -1,16 +1,16 @@
 import { useState } from 'react'
-import type { RealmProgress, ReplayResult } from '../../types'
+import type { JourneyProgress, ReplayResult } from '../../types'
 import { Card } from '../atoms/Card'
 import { Button } from '../atoms/Button'
 import { ProgressBar } from '../atoms/ProgressBar'
-import { getMergedRealmProgress, isRealmUnlocked } from '../../utils/realm'
-import { storyFragmentsApi } from '../../lib/api'
+import { getMergedJourneyProgress, isRealmUnlocked } from '../../utils/journey'
+import { learningConceptsApi } from '../../lib/api'
 
 export interface WorldMapProps {
-  realms?: RealmProgress[]
+  realms?: JourneyProgress[]
   selectedRealm?: string
   onRealmSelect?: (realmSlug: string) => void
-  onRealmPress?: (realm: RealmProgress) => void
+  onRealmPress?: (journey: JourneyProgress) => void
 }
 
 export function WorldMap({
@@ -19,7 +19,7 @@ export function WorldMap({
   onRealmSelect,
   onRealmPress,
 }: WorldMapProps) {
-  const mergedRealms = getMergedRealmProgress(realms)
+  const mergedRealms = getMergedJourneyProgress(realms)
   const [replayingSlug, setReplayingSlug] = useState<string | null>(null)
   const [replayModal, setReplayModal] = useState<ReplayResult | null>(null)
 
@@ -29,9 +29,9 @@ export function WorldMap({
       onRealmSelect(r.slug)
     }
     if (onRealmPress) {
-      const rp: RealmProgress = r.raw || {
-        crew_id: '',
-        realm: r.slug,
+      const rp: JourneyProgress = r.raw || {
+        family_id: '',
+        journey: r.slug,
         status: r.status,
         progress: r.progress,
         updated_at: new Date().toISOString(),
@@ -44,7 +44,7 @@ export function WorldMap({
     e.stopPropagation()
     setReplayingSlug(slug)
     try {
-      const res = await storyFragmentsApi.replay(slug)
+      const res = await learningConceptsApi.replay(slug)
       setReplayModal(res)
     } catch {
       // Best-effort error handle
@@ -64,7 +64,7 @@ export function WorldMap({
           return (
             <Card
               key={r.slug}
-              data-testid={`world-map-realm-${r.slug}`}
+              data-testid={`world-map-journey-${r.slug}`}
               className={`flex flex-col justify-between p-5 relative overflow-hidden transition-all duration-300 ${
                 !unlocked
                   ? 'opacity-60 grayscale bg-surface-elevated/30 border-border-subtle cursor-not-allowed'
@@ -102,7 +102,7 @@ export function WorldMap({
                   </span>
                 </div>
 
-                {/* Realm Info */}
+                {/* Journey Info */}
                 <div>
                   <h3 className="font-heading text-lg text-text-primary mb-1">
                     {r.name}
@@ -155,7 +155,7 @@ export function WorldMap({
               <div className="flex items-center gap-2 mb-1">
                 <span className="text-2xl">✨</span>
                 <h4 className="font-heading text-xl text-text-primary">
-                  Dialog Bonus Replay: {replayModal.realm.replace(/-/g, ' ')}
+                  Dialog Bonus Replay: {replayModal.journey.replace(/-/g, ' ')}
                 </h4>
               </div>
               <p className="text-sm text-text-secondary italic mb-3">

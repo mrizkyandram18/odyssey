@@ -24,10 +24,10 @@ export async function verifyHomeLoaded(page: Page) {
 
   await expect(page.locator('text="Memuat dunia..."')).toBeHidden({ timeout: HOME_LOAD_TIMEOUT_MS });
   await expect(
-    page.locator('text="Buku Misi Aktif"').or(page.locator('text="Quests"')),
+    page.locator('text="Buku Misi Aktif"').or(page.locator('text="Missions"')),
   ).toBeVisible({ timeout: HOME_LOAD_TIMEOUT_MS });
 }
 
-export async function verifyQuestExists(page: Page, questTitle: string) {
-  await expect(page.locator(`text="${questTitle}"`)).toBeVisible();
+export async function verifyMissionExists(page: Page, MissionTitle: string) {
+  await expect(page.locator(`text="${MissionTitle}"`)).toBeVisible();
 }

@@ -1,15 +1,15 @@
-import type { Challenge, CrewMember } from '../types'
+import type { Exercise, CrewMember } from '../types'
 
 export type RelayLegState = 'done' | 'active' | 'next' | 'open'
 
 export interface RelayLeg {
-  challenge: Challenge
+  challenge: Exercise
   state: RelayLegState
   isMyTurn: boolean
 }
 
 /**
- * Derives the relay rotation state for each leg of a RELAY quest.
+ * Derives the relay rotation state for each leg of a RELAY Mission.
  *
  * The active leg is anchored to `active_challenge_assigned_to` (the backend
  * source of truth, set by the round-robin rotation after each completion).
@@ -26,21 +26,21 @@ export interface RelayLeg {
  *  - open:   any remaining PENDING leg
  */
 export function deriveRelayLegs(
-  challenges: Challenge[],
+  exercises: Exercise[],
   activeAssignee: string | undefined,
   myUID?: string | null,
 ): RelayLeg[] {
-  if (challenges.length === 0) return []
+  if (exercises.length === 0) return []
 
-  const assignedIndex = challenges.findIndex(
+  const assignedIndex = exercises.findIndex(
     (c) => c.status === 'PENDING' && activeAssignee != null && c.assigned_to === activeAssignee,
   )
   const activeIndex = assignedIndex >= 0
     ? assignedIndex
-    : challenges.findIndex((c) => c.status === 'PENDING')
+    : exercises.findIndex((c) => c.status === 'PENDING')
 
   let nextMarked = false
-  return challenges.map((challenge, i) => {
+  return exercises.map((challenge, i) => {
     if (challenge.status === 'DONE') {
       return { challenge, state: 'done' as const, isMyTurn: false }
     }

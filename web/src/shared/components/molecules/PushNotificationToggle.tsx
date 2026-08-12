@@ -18,7 +18,7 @@ export function PushNotificationToggle() {
               Push Notifications (PWA)
             </h3>
             <p className="text-xs text-text-secondary mt-1">
-              Receive updates for daily turns &amp; quest handoffs even when Odyssey is closed.
+              Receive updates for daily turns &amp; Mission handoffs even when Odyssey is closed.
             </p>
           </div>
         </div>

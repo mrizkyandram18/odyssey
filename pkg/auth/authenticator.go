@@ -38,7 +38,7 @@ type Authenticator interface {
 // Pass nil for setup tokens or when role/crew information is unavailable.
 type SessionConfig struct {
 	Role   Role
-	CrewID string
+	FamilyID string
 }
 
 type SessionClaims struct {
@@ -46,7 +46,7 @@ type SessionClaims struct {
 	Kind    string `json:"k"`
 	UID     string `json:"uid"`
 	Role    string `json:"role,omitempty"`
-	CrewID  string `json:"crew_id,omitempty"`
+	FamilyID  string `json:"family_id,omitempty"`
 	Issued  int64  `json:"iat"`
 	Expires int64  `json:"exp"`
 }

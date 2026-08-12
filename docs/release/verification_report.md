@@ -25,14 +25,14 @@ This document records the results of **Stage E.1 (Technical Verification)** and 
 | Step | Expected Behavior | Actual Behavior | Status | Evidence |
 | :---: | :--- | :--- | :---: | :--- |
 | **1. Login** | Enter credentials & obtain session token | Session auth logic verified via `auth.test.ts` (8 tests pass) | **NOT VERIFIED** | Requires live Firestore/Gatekeeper connection & active backend instance. |
-| **2. Home Screen** | Load explorer level, streak, and realm progress | `useEffect` added in RCA-01 fix; code verified | **PASS** | Unit & build verified (`HomePage.tsx`). Live E2E NOT VERIFIED. |
-| **3. Daily Turn** | Consume turn, increment streak, award XP | API handler unit tested (`pkg/game/dailyturn/`) | **NOT VERIFIED** | Requires active server execution. |
-| **4. Start Quest** | Change pending quest status to ACTIVE | `useQuest` startQuest hook unit tested | **NOT VERIFIED** | Requires active server execution. |
-| **5. Challenge List** | View challenges associated with active quest | `QuestDetail.tsx` component rendered cleanly in build | **PASS** | Component build verified. Live E2E NOT VERIFIED. |
-| **6. Complete Challenge** | Complete challenge, receive `CompleteChallengeResult` | `useQuest.ts` RCA-06 fix updated local state directly | **PASS** | Code inspect & TypeScript check PASS (`useQuest.ts`). Live E2E NOT VERIFIED. |
+| **2. Home Screen** | Load explorer level, streak, and journey progress | `useEffect` added in RCA-01 fix; code verified | **PASS** | Unit & build verified (`HomePage.tsx`). Live E2E NOT VERIFIED. |
+| **3. Daily Turn** | Consume turn, increment streak, award XP | API handler unit tested (`pkg/game/dailymission/`) | **NOT VERIFIED** | Requires active server execution. |
+| **4. Start Mission** | Change pending quest status to ACTIVE | `useQuest` startQuest hook unit tested | **NOT VERIFIED** | Requires active server execution. |
+| **5. Exercise List** | View exercises associated with active quest | `QuestDetail.tsx` component rendered cleanly in build | **PASS** | Component build verified. Live E2E NOT VERIFIED. |
+| **6. Complete Exercise** | Complete challenge, receive `CompleteChallengeResult` | `useQuest.ts` RCA-06 fix updated local state directly | **PASS** | Code inspect & TypeScript check PASS (`useQuest.ts`). Live E2E NOT VERIFIED. |
 | **7. XP Progression** | XP bar updates and triggers Level Up if threshold met | Progression logic unit tested (`pkg/game/progression/`) | **NOT VERIFIED** | Requires active server execution. |
-| **8. Realm Progress** | Progress bar advances upon quest completion | Realm handler unit tested (`pkg/game/world/`) | **NOT VERIFIED** | Requires active server execution. |
-| **9. Family Journal** | New Milestone / Lore entry unlocked | `JournalPage.tsx` RCA-04 fix added skeletons & retry | **PASS** | Component build verified. Live E2E NOT VERIFIED. |
+| **8. Journey Progress** | Progress bar advances upon quest completion | Journey handler unit tested (`pkg/game/world/`) | **NOT VERIFIED** | Requires active server execution. |
+| **9. Family Journal** | New Milestone / Concept entry unlocked | `JournalPage.tsx` RCA-04 fix added skeletons & retry | **PASS** | Component build verified. Live E2E NOT VERIFIED. |
 | **10. Logout** | Clear session cookies & state | Session clear verified via `session.test.ts` (8 tests pass) | **NOT VERIFIED** | Requires browser session clear. |
 | **11. Session Re-auth** | Sign in again with same user | Auth handler unit tested | **NOT VERIFIED** | Requires live Firestore connection. |
 | **12. State Persistence** | Explorer level, XP, and progress remain intact | Supabase persistence layer unit tested (`pkg/db/`) | **NOT VERIFIED** | Requires active Supabase instance. |

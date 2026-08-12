@@ -15,7 +15,7 @@ func newTestIssuer(t *testing.T) *HMACSessionIssuer {
 
 func TestIssueSession_UserCreatesTokenAndClaims(t *testing.T) {
 	issuer := newTestIssuer(t)
-	cfg := &SessionConfig{Role: RoleSeeker, CrewID: "crew-1"}
+	cfg := &SessionConfig{Role: RoleSeeker, FamilyID: "crew-1"}
 
 	token, claims, err := issuer.IssueSession(SessionKindUser, "alice", cfg)
 	if err != nil {
@@ -37,8 +37,8 @@ func TestIssueSession_UserCreatesTokenAndClaims(t *testing.T) {
 	if claims.Role != "SEEKER" {
 		t.Errorf("expected role SEEKER, got %s", claims.Role)
 	}
-	if claims.CrewID != "crew-1" {
-		t.Errorf("expected crew_id crew-1, got %s", claims.CrewID)
+	if claims.FamilyID != "crew-1" {
+		t.Errorf("expected family_id crew-1, got %s", claims.FamilyID)
 	}
 	if claims.Version != 1 {
 		t.Errorf("expected version 1, got %d", claims.Version)
@@ -63,8 +63,8 @@ func TestIssueSession_SetupUsesShorterTTL(t *testing.T) {
 	if claims.Expires-claims.Issued != int64(SetupTokenTTL.Seconds()) {
 		t.Errorf("expected setup TTL %v, got %v", SetupTokenTTL, time.Duration(claims.Expires-claims.Issued)*time.Second)
 	}
-	if claims.Role != "" || claims.CrewID != "" {
-		t.Errorf("setup session should not carry role/crew, got role=%s crew=%s", claims.Role, claims.CrewID)
+	if claims.Role != "" || claims.FamilyID != "" {
+		t.Errorf("setup session should not carry role/crew, got role=%s crew=%s", claims.Role, claims.FamilyID)
 	}
 }
 
@@ -86,7 +86,7 @@ func TestIssueSession_EmptyUID(t *testing.T) {
 
 func TestParseSession_ValidToken(t *testing.T) {
 	issuer := newTestIssuer(t)
-	token, _, err := issuer.IssueSession(SessionKindUser, "alice", &SessionConfig{Role: RoleBuilder, CrewID: "crew-7"})
+	token, _, err := issuer.IssueSession(SessionKindUser, "alice", &SessionConfig{Role: RoleBuilder, FamilyID: "crew-7"})
 	if err != nil {
 		t.Fatalf("issue: %v", err)
 	}
@@ -104,8 +104,8 @@ func TestParseSession_ValidToken(t *testing.T) {
 	if claims.Role != "BUILDER" {
 		t.Errorf("expected role BUILDER, got %s", claims.Role)
 	}
-	if claims.CrewID != "crew-7" {
-		t.Errorf("expected crew_id crew-7, got %s", claims.CrewID)
+	if claims.FamilyID != "crew-7" {
+		t.Errorf("expected family_id crew-7, got %s", claims.FamilyID)
 	}
 }
 

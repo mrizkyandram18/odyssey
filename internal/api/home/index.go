@@ -40,7 +40,7 @@ func Handler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	resp, err := svc.GetHome(r.Context(), claims.UID, claims.CrewID)
+	resp, err := svc.GetHome(r.Context(), claims.UID, claims.FamilyID)
 	if err != nil {
 		shared.WriteJSONError(w, "failed to load home data", http.StatusInternalServerError)
 		return

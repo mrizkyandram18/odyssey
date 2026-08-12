@@ -12,17 +12,17 @@ type ReactionService struct {
 	store     game.ReactionStore
 	creatives game.CreativeSubmissionStore
 	items     game.CreativeStore
-	quests    game.QuestStore
+	missions    game.QuestStore
 }
 
 // NewReactionService returns a new ReactionService.
-func NewReactionService(store game.ReactionStore, creatives game.CreativeSubmissionStore, quests game.QuestStore) *ReactionService {
-	return &ReactionService{store: store, creatives: creatives, quests: quests}
+func NewReactionService(store game.ReactionStore, creatives game.CreativeSubmissionStore, missions game.QuestStore) *ReactionService {
+	return &ReactionService{store: store, creatives: creatives, missions: missions}
 }
 
 // NewReactionServiceWithItems includes creative_items for TEXT_BOARD reactions.
-func NewReactionServiceWithItems(store game.ReactionStore, creatives game.CreativeSubmissionStore, items game.CreativeStore, quests game.QuestStore) *ReactionService {
-	return &ReactionService{store: store, creatives: creatives, items: items, quests: quests}
+func NewReactionServiceWithItems(store game.ReactionStore, creatives game.CreativeSubmissionStore, items game.CreativeStore, missions game.QuestStore) *ReactionService {
+	return &ReactionService{store: store, creatives: creatives, items: items, missions: missions}
 }
 
 // AddReaction adds or updates a reaction idempotently.
@@ -39,15 +39,15 @@ func (s *ReactionService) AddReaction(ctx context.Context, crewID, actorUID stri
 		if err != nil {
 			return nil, fmt.Errorf("target not found")
 		}
-		if sub.CrewID != crewID {
+		if sub.FamilyID != crewID {
 			return nil, fmt.Errorf("cross-crew reaction not allowed")
 		}
 	case game.ReactionTargetQuest:
-		quest, err := s.quests.GetQuest(ctx, targetID)
+		quest, err := s.missions.GetQuest(ctx, targetID)
 		if err != nil {
 			return nil, fmt.Errorf("target not found")
 		}
-		if quest.CrewID != crewID {
+		if quest.FamilyID != crewID {
 			return nil, fmt.Errorf("cross-crew reaction not allowed")
 		}
 	case game.ReactionTargetTextBoard:
@@ -58,7 +58,7 @@ func (s *ReactionService) AddReaction(ctx context.Context, crewID, actorUID stri
 		if err != nil {
 			return nil, fmt.Errorf("target not found")
 		}
-		if item.CrewID != crewID || item.Kind != game.KindSharedText {
+		if item.FamilyID != crewID || item.Kind != game.KindSharedText {
 			return nil, fmt.Errorf("cross-crew reaction not allowed")
 		}
 	default:
@@ -74,7 +74,7 @@ func (s *ReactionService) AddReaction(ctx context.Context, crewID, actorUID stri
 	}
 
 	r := &game.Reaction{
-		CrewID:       crewID,
+		FamilyID:       crewID,
 		TargetType:   targetType,
 		TargetID:     targetID,
 		ActorUID:     actorUID,

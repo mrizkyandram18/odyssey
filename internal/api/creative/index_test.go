@@ -38,7 +38,7 @@ func (m *mockCreativeHandler) Submit(ctx context.Context, uid string, req *game.
 	}
 	return &creative.SubmissionView{
 		ID:      1,
-		QuestID: req.QuestID,
+		MissionID: req.MissionID,
 		Kind:    req.Kind,
 		Content: req.Content,
 		Status:  game.SubmissionStatusPending,
@@ -106,7 +106,7 @@ func makeUserToken(t *testing.T, issuer *auth.HMACSessionIssuer, role auth.Role)
 	t.Helper()
 	token, _, err := issuer.IssueSession(auth.SessionKindUser, "user-1", &auth.SessionConfig{
 		Role:   role,
-		CrewID: "crew-1",
+		FamilyID: "crew-1",
 	})
 	if err != nil {
 		t.Fatalf("IssueSession: %v", err)
@@ -121,15 +121,15 @@ func makeReviewerToken(t *testing.T, issuer *auth.HMACSessionIssuer) string {
 
 func TestHandler_Submit_Success(t *testing.T) {
 	Setup(&mockCreativeHandler{
-		sub: &creative.SubmissionView{ID: 1, QuestID: 1, Kind: game.SubmissionStory, Content: "My creative story", Status: game.SubmissionStatusPending},
+		sub: &creative.SubmissionView{ID: 1, MissionID: 1, Kind: game.SubmissionStory, Content: "My creative story", Status: game.SubmissionStatusPending},
 	})
 	issuer := auth.NewSessionIssuer("test-secret")
 	mw := auth.NewMiddleware(issuer)
 	token := makeUserToken(t, issuer, auth.RoleSeeker)
 
 	body, _ := json.Marshal(map[string]any{
-		"quest_id":     1,
-		"challenge_id": 1,
+		"mission_id":     1,
+		"exercise_id": 1,
 		"kind":         "STORY",
 		"content":      "My creative story",
 	})
@@ -177,15 +177,15 @@ func TestHandler_Submit_InvalidBody(t *testing.T) {
 func TestHandler_ListByQuest(t *testing.T) {
 	Setup(&mockCreativeHandler{
 		subs: []creative.SubmissionView{
-			{ID: 1, QuestID: 1, Kind: game.SubmissionStory, Content: "s1", Status: game.SubmissionStatusPending},
-			{ID: 2, QuestID: 1, Kind: game.SubmissionComic, Content: "c1", Status: game.SubmissionStatusPending},
+			{ID: 1, MissionID: 1, Kind: game.SubmissionStory, Content: "s1", Status: game.SubmissionStatusPending},
+			{ID: 2, MissionID: 1, Kind: game.SubmissionComic, Content: "c1", Status: game.SubmissionStatusPending},
 		},
 	})
 	issuer := auth.NewSessionIssuer("test-secret")
 	mw := auth.NewMiddleware(issuer)
 	token := makeReviewerToken(t, issuer)
 
-	req := httptest.NewRequest(http.MethodGet, "/api/creative?quest_id=1", nil)
+	req := httptest.NewRequest(http.MethodGet, "/api/creative?mission_id=1", nil)
 	req.Header.Set("Authorization", "Bearer "+token)
 
 	w := httptest.NewRecorder()
@@ -207,9 +207,9 @@ func TestHandler_ListByQuest(t *testing.T) {
 func TestHandler_ListByCrewAndKind(t *testing.T) {
 	Setup(&mockCreativeHandler{
 		subs: []creative.SubmissionView{
-			{ID: 1, CrewID: "crew-1", Kind: game.SubmissionStory, Content: "s1", Status: game.SubmissionStatusPending},
-			{ID: 2, CrewID: "crew-1", Kind: game.SubmissionComic, Content: "c1", Status: game.SubmissionStatusPending},
-			{ID: 3, CrewID: "crew-1", Kind: game.SubmissionPhoto, Content: "p1", Status: game.SubmissionStatusPending},
+			{ID: 1, FamilyID: "crew-1", Kind: game.SubmissionStory, Content: "s1", Status: game.SubmissionStatusPending},
+			{ID: 2, FamilyID: "crew-1", Kind: game.SubmissionComic, Content: "c1", Status: game.SubmissionStatusPending},
+			{ID: 3, FamilyID: "crew-1", Kind: game.SubmissionPhoto, Content: "p1", Status: game.SubmissionStatusPending},
 		},
 	})
 	issuer := auth.NewSessionIssuer("test-secret")
@@ -241,8 +241,8 @@ func TestHandler_ListByCrewAndKind(t *testing.T) {
 func TestHandler_ListByCrew_AllWhenKindMissing(t *testing.T) {
 	Setup(&mockCreativeHandler{
 		subs: []creative.SubmissionView{
-			{ID: 1, CrewID: "crew-1", Kind: game.SubmissionStory, Content: "s1", Status: game.SubmissionStatusPending},
-			{ID: 2, CrewID: "crew-1", Kind: game.SubmissionComic, Content: "c1", Status: game.SubmissionStatusPending},
+			{ID: 1, FamilyID: "crew-1", Kind: game.SubmissionStory, Content: "s1", Status: game.SubmissionStatusPending},
+			{ID: 2, FamilyID: "crew-1", Kind: game.SubmissionComic, Content: "c1", Status: game.SubmissionStatusPending},
 		},
 	})
 	issuer := auth.NewSessionIssuer("test-secret")
@@ -270,7 +270,7 @@ func TestHandler_ListByCrew_AllWhenKindMissing(t *testing.T) {
 
 func TestHandler_GetSubmission(t *testing.T) {
 	Setup(&mockCreativeHandler{
-		sub: &creative.SubmissionView{ID: 1, QuestID: 1, Kind: game.SubmissionStory, Content: "s1", Status: game.SubmissionStatusPending},
+		sub: &creative.SubmissionView{ID: 1, MissionID: 1, Kind: game.SubmissionStory, Content: "s1", Status: game.SubmissionStatusPending},
 	})
 	issuer := auth.NewSessionIssuer("test-secret")
 	mw := auth.NewMiddleware(issuer)
@@ -289,7 +289,7 @@ func TestHandler_GetSubmission(t *testing.T) {
 
 func TestHandler_GetSubmission_ForbiddenForSeeker(t *testing.T) {
 	Setup(&mockCreativeHandler{
-		sub: &creative.SubmissionView{ID: 1, QuestID: 1, Kind: game.SubmissionStory, Content: "s1", Status: game.SubmissionStatusPending, AuthorUID: "other-user"},
+		sub: &creative.SubmissionView{ID: 1, MissionID: 1, Kind: game.SubmissionStory, Content: "s1", Status: game.SubmissionStatusPending, AuthorUID: "other-user"},
 	})
 	issuer := auth.NewSessionIssuer("test-secret")
 	mw := auth.NewMiddleware(issuer)
@@ -308,7 +308,7 @@ func TestHandler_GetSubmission_ForbiddenForSeeker(t *testing.T) {
 
 func TestHandler_Approve(t *testing.T) {
 	Setup(&mockCreativeHandler{
-		sub: &creative.SubmissionView{ID: 1, QuestID: 1, Kind: game.SubmissionStory, Content: "s1", Status: game.SubmissionStatusApproved},
+		sub: &creative.SubmissionView{ID: 1, MissionID: 1, Kind: game.SubmissionStory, Content: "s1", Status: game.SubmissionStatusApproved},
 	})
 	issuer := auth.NewSessionIssuer("test-secret")
 	mw := auth.NewMiddleware(issuer)
@@ -327,7 +327,7 @@ func TestHandler_Approve(t *testing.T) {
 
 func TestHandler_Approve_ForbiddenForSeeker(t *testing.T) {
 	Setup(&mockCreativeHandler{
-		sub: &creative.SubmissionView{ID: 1, QuestID: 1, Kind: game.SubmissionStory, Content: "s1", Status: game.SubmissionStatusApproved},
+		sub: &creative.SubmissionView{ID: 1, MissionID: 1, Kind: game.SubmissionStory, Content: "s1", Status: game.SubmissionStatusApproved},
 	})
 	issuer := auth.NewSessionIssuer("test-secret")
 	mw := auth.NewMiddleware(issuer)
@@ -346,7 +346,7 @@ func TestHandler_Approve_ForbiddenForSeeker(t *testing.T) {
 
 func TestHandler_Reject(t *testing.T) {
 	Setup(&mockCreativeHandler{
-		sub: &creative.SubmissionView{ID: 1, QuestID: 1, Kind: game.SubmissionStory, Content: "s1", Status: game.SubmissionStatusRejected, RejectionReason: "too short"},
+		sub: &creative.SubmissionView{ID: 1, MissionID: 1, Kind: game.SubmissionStory, Content: "s1", Status: game.SubmissionStatusRejected, RejectionReason: "too short"},
 	})
 	issuer := auth.NewSessionIssuer("test-secret")
 	mw := auth.NewMiddleware(issuer)
@@ -367,7 +367,7 @@ func TestHandler_Reject(t *testing.T) {
 
 func TestHandler_Reject_ForbiddenForSeeker(t *testing.T) {
 	Setup(&mockCreativeHandler{
-		sub: &creative.SubmissionView{ID: 1, QuestID: 1, Kind: game.SubmissionStory, Content: "s1", Status: game.SubmissionStatusRejected, RejectionReason: "too short"},
+		sub: &creative.SubmissionView{ID: 1, MissionID: 1, Kind: game.SubmissionStory, Content: "s1", Status: game.SubmissionStatusRejected, RejectionReason: "too short"},
 	})
 	issuer := auth.NewSessionIssuer("test-secret")
 	mw := auth.NewMiddleware(issuer)
@@ -417,8 +417,8 @@ func minVideoBytes() []byte {
 func videoSubmitBody(t *testing.T, content string) []byte {
 	t.Helper()
 	body, _ := json.Marshal(map[string]any{
-		"quest_id":     1,
-		"challenge_id": 1,
+		"mission_id":     1,
+		"exercise_id": 1,
 		"kind":         "VIDEO",
 		"content":      content,
 	})
@@ -427,7 +427,7 @@ func videoSubmitBody(t *testing.T, content string) []byte {
 
 func TestHandler_Submit_Video_Success(t *testing.T) {
 	Setup(&mockCreativeHandler{
-		sub: &creative.SubmissionView{ID: 1, QuestID: 1, Kind: game.SubmissionVideo, Content: "{}", Status: game.SubmissionStatusPending},
+		sub: &creative.SubmissionView{ID: 1, MissionID: 1, Kind: game.SubmissionVideo, Content: "{}", Status: game.SubmissionStatusPending},
 	})
 	issuer := auth.NewSessionIssuer("test-secret")
 	mw := auth.NewMiddleware(issuer)

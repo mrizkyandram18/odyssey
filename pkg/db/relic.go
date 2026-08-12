@@ -20,64 +20,64 @@ func NewRelicStore(client SupabaseClient) game.RelicStore {
 	return &supabaseRelicStore{client: client}
 }
 
-func (s *supabaseRelicStore) CreateRelic(ctx context.Context, r *game.Relic) (*game.Relic, error) {
-	payload := Relic{
+func (s *supabaseRelicStore) CreateRelic(ctx context.Context, r *game.Collection) (*game.Collection, error) {
+	payload := Collection{
 		UID:         r.UID,
 		Code:        r.Code,
 		Name:        r.Name,
 		Description: r.Description,
-		Realm:       r.Realm,
+		Journey:       r.Journey,
 		Rarity:      r.Rarity,
 		Image:       r.Image,
-		Lore:        r.Lore,
+		Concept:        r.Concept,
 		AwardedAt:   r.AwardedAt,
 	}
-	raw, err := s.client.Mutate(ctx, "POST", "odyssey_relics", payload, "return=representation")
+	raw, err := s.client.Mutate(ctx, "POST", "odyssey_collections", payload, "return=representation")
 	if err != nil {
 		return nil, fmt.Errorf("create relic: %w", err)
 	}
 
-	var relics []Relic
-	if err := json.Unmarshal(raw, &relics); err != nil {
+	var collections []Collection
+	if err := json.Unmarshal(raw, &collections); err != nil {
 		return nil, fmt.Errorf("parse created relic: %w", err)
 	}
-	if len(relics) == 0 {
+	if len(collections) == 0 {
 		return r, nil
 	}
-	return mapRelic(relics[0]), nil
+	return mapRelic(collections[0]), nil
 }
 
-func (s *supabaseRelicStore) GetRelic(ctx context.Context, relicID int64) (*game.Relic, error) {
+func (s *supabaseRelicStore) GetRelic(ctx context.Context, relicID int64) (*game.Collection, error) {
 	v := url.Values{}
 	v.Set("id", "eq."+strconv.FormatInt(relicID, 10))
 	params := v.Encode()
 
-	raw, err := s.client.Get(ctx, "odyssey_relics", params)
+	raw, err := s.client.Get(ctx, "odyssey_collections", params)
 	if err != nil {
 		return nil, fmt.Errorf("get relic: %w", err)
 	}
 
-	var relics []Relic
-	if err := json.Unmarshal(raw, &relics); err != nil {
+	var collections []Collection
+	if err := json.Unmarshal(raw, &collections); err != nil {
 		return nil, fmt.Errorf("parse relic: %w", err)
 	}
-	if len(relics) == 0 {
+	if len(collections) == 0 {
 		return nil, game.ErrNotFound
 	}
-	return mapRelic(relics[0]), nil
+	return mapRelic(collections[0]), nil
 }
 
-func (s *supabaseRelicStore) ListRelics(ctx context.Context) ([]game.Relic, error) {
-	raw, err := s.client.Get(ctx, "odyssey_relics", "")
+func (s *supabaseRelicStore) ListRelics(ctx context.Context) ([]game.Collection, error) {
+	raw, err := s.client.Get(ctx, "odyssey_collections", "")
 	if err != nil {
-		return nil, fmt.Errorf("list relics: %w", err)
+		return nil, fmt.Errorf("list collections: %w", err)
 	}
 
-	var dbRelics []Relic
+	var dbRelics []Collection
 	if err := json.Unmarshal(raw, &dbRelics); err != nil {
-		return nil, fmt.Errorf("parse relics: %w", err)
+		return nil, fmt.Errorf("parse collections: %w", err)
 	}
-	result := make([]game.Relic, 0, len(dbRelics))
+	result := make([]game.Collection, 0, len(dbRelics))
 	for i := range dbRelics {
 		result = append(result, *mapRelic(dbRelics[i]))
 	}
@@ -90,16 +90,16 @@ func (s *supabaseRelicStore) CountRelics(ctx context.Context, uid string) (int, 
 	v.Set("select", "id")
 	params := v.Encode()
 
-	raw, err := s.client.Get(ctx, "odyssey_relics", params)
+	raw, err := s.client.Get(ctx, "odyssey_collections", params)
 	if err != nil {
-		return 0, fmt.Errorf("count relics: %w", err)
+		return 0, fmt.Errorf("count collections: %w", err)
 	}
 
-	var relics []Relic
-	if err := json.Unmarshal(raw, &relics); err != nil {
-		return 0, fmt.Errorf("parse relics count: %w", err)
+	var collections []Collection
+	if err := json.Unmarshal(raw, &collections); err != nil {
+		return 0, fmt.Errorf("parse collections count: %w", err)
 	}
-	return len(relics), nil
+	return len(collections), nil
 }
 
 var _ game.RelicStore = (*supabaseRelicStore)(nil)

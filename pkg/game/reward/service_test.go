@@ -124,7 +124,7 @@ func TestGrantDailyReward_AddsOneCoinAndLedger(t *testing.T) {
 
 func TestGrantQuestReward_NoDuplicateCreditForSameQuest(t *testing.T) {
 	player := &game.Player{UID: "u1", Coins: 0, Version: 1}
-	meta := `{"quest_id":102}`
+	meta := `{"mission_id":102}`
 	ledger := &mockLedgerStore{rows: []game.RewardLedger{
 		{
 			ID:         "existing",

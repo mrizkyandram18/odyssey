@@ -4,18 +4,18 @@ import type {
   OpenResult,
   InventoryItem,
   RelicDefinition,
-  QuestView,
-  QuestWithChallenges,
+  MissionView,
+  MissionWithChallenges,
   CompleteChallengeResult,
   AchievementView,
   LoreView,
-  RealmProgress,
+  JourneyProgress,
   SelectBranchResult,
-  StoryFragmentView,
+  learningConceptView,
   DiscoverResult,
   ReplayResult,
   CreativeSubmission,
-  Crew,
+  Family,
   Explorer,
 } from '../types'
 import { getSession, isSessionExpired } from './session'
@@ -116,7 +116,7 @@ export class ApiClient {
       } catch {
         err = { error: resp.statusText }
       }
-      throw new Error(err.error || 'Request failed')
+      throw new Error(err.error || 'request failed')
     }
 
     if (resp.status === 204) {
@@ -130,26 +130,26 @@ export class ApiClient {
 export const apiClient = new ApiClient()
 
 export const chestsApi = {
-  list: () => apiClient.get<ChestView[]>('/api/chests').then(d => d || []),
-  get: (id: number) => apiClient.get<ChestView>(`/api/chests/${id}`),
-  open: (id: number) => apiClient.post<OpenResult>(`/api/chests/${id}/open`, {}),
+  list: () => apiClient.get<ChestView[]>('/api/gifts').then(d => d || []),
+  get: (id: number) => apiClient.get<ChestView>(`/api/gifts/${id}`),
+  open: (id: number) => apiClient.post<OpenResult>(`/api/gifts/${id}/open`, {}),
 }
 
 export const relicsApi = {
-  list: () => apiClient.get<InventoryItem[]>('/api/relics').then(d => d || []),
-  get: (slug: string) => apiClient.get<RelicDefinition>(`/api/relics/${slug}`),
-  inventory: () => apiClient.get<InventoryItem[]>('/api/relics/inventory').then(d => d || []),
+  list: () => apiClient.get<InventoryItem[]>('/api/collections').then(d => d || []),
+  get: (slug: string) => apiClient.get<RelicDefinition>(`/api/collections/${slug}`),
+  inventory: () => apiClient.get<InventoryItem[]>('/api/collections/inventory').then(d => d || []),
 }
 
-export const questsApi = {
-  list: () => apiClient.get<QuestView[]>('/api/quests').then(d => d || []),
-  available: () => apiClient.get<QuestView[]>('/api/quests/available').then(d => d || []),
-  get: (id: number) => apiClient.get<QuestWithChallenges>(`/api/quests/${id}`),
-  start: (id: number) => apiClient.post<{ started: boolean }>(`/api/quests/${id}/start`, {}),
-  completeChallenge: (questId: number, challengeId: number, payload?: { answer?: string, content?: string }) =>
-    apiClient.post<CompleteChallengeResult>(`/api/quests/${questId}/challenges/${challengeId}/complete`, payload || {}),
-  selectBranch: (questId: number, branch: string) =>
-    apiClient.post<SelectBranchResult>(`/api/quests/${questId}/branch`, { branch }),
+export const MissionsApi = {
+  list: () => apiClient.get<MissionView[]>('/api/missions').then(d => d || []),
+  available: () => apiClient.get<MissionView[]>('/api/missions/available').then(d => d || []),
+  get: (id: number) => apiClient.get<MissionWithChallenges>(`/api/missions/${id}`),
+  start: (id: number) => apiClient.post<{ started: boolean }>(`/api/missions/${id}/start`, {}),
+  completeChallenge: (missionId: number, exerciseId: number, payload?: { answer?: string, content?: string }) =>
+    apiClient.post<CompleteChallengeResult>(`/api/missions/${missionId}/exercises/${exerciseId}/complete`, payload || {}),
+  selectBranch: (missionId: number, branch: string) =>
+    apiClient.post<SelectBranchResult>(`/api/missions/${missionId}/branch`, { branch }),
 }
 
 export const achievementsApi = {
@@ -157,33 +157,33 @@ export const achievementsApi = {
 }
 
 export const loreApi = {
-  list: () => apiClient.get<LoreView[]>('/api/lore/unlocked').then(d => d || []),
+  list: () => apiClient.get<LoreView[]>('/api/concepts/unlocked').then(d => d || []),
 }
 
-export const storyFragmentsApi = {
-  list: () => apiClient.get<StoryFragmentView[]>('/api/story_fragments').then(d => d || []),
+export const learningConceptsApi = {
+  list: () => apiClient.get<learningConceptView[]>('/api/story_fragments').then(d => d || []),
   discover: (slug: string) => apiClient.post<DiscoverResult>('/api/story_fragments/discover', { slug }),
-  replay: (realm: string) => apiClient.post<ReplayResult>('/api/story_fragments/replay', { realm }),
+  replay: (journey: string) => apiClient.post<ReplayResult>('/api/story_fragments/replay', { journey }),
 }
 
-export const realmProgressApi = {
-  list: () => apiClient.get<RealmProgress[]>('/api/realm_progress').then(d => d || []),
+export const JourneyProgressApi = {
+  list: () => apiClient.get<JourneyProgress[]>('/api/journey_progress').then(d => d || []),
 }
 
 export const crewsApi = {
-  get: () => apiClient.get<Crew>('/api/crews'),
+  get: () => apiClient.get<Family>('/api/families'),
   patch: (body: { banner_url?: string; theme?: string }) =>
-    apiClient.patch<Crew>('/api/crews', body),
-  members: () => apiClient.get<Explorer[]>('/api/crews/members').then(d => d || []),
+    apiClient.patch<Family>('/api/families', body),
+  members: () => apiClient.get<Explorer[]>('/api/families/members').then(d => d || []),
 }
 
 export type ReactionType = 'HEART' | 'CLAP' | 'STAR'
-export type TargetType = 'JOURNAL' | 'QUEST' | 'TEXT_BOARD'
+export type TargetType = 'JOURNAL' | 'Mission' | 'TEXT_BOARD'
 
 export interface BoardPost {
   id: number
-  crew_id: string
-  realm: string
+  family_id: string
+  journey: string
   author_uid: string
   kind: string
   payload: string
@@ -199,7 +199,7 @@ export const boardApi = {
 
 export interface ReactionRow {
   id: number
-  crew_id: string
+  family_id: string
   target_type: TargetType
   target_id: number
   actor_uid: string
@@ -264,11 +264,11 @@ export interface AdminStats {
   total_users: number
   active_users_7d: number
   active_users_30d: number
-  quest_completions: number
+  Mission_completions: number
   daily_activity_completions_today: number
 }
 
-export interface QuestStat {
+export interface MissionStat {
   slug: string
   title: string
   published: boolean
@@ -285,9 +285,9 @@ export interface ActivityStat {
 
 export const adminApi = {
   getStats: () => apiClient.get<AdminStats>('/api/admin/stats'),
-  getQuests: () => apiClient.get<QuestStat[]>('/api/admin/quests'),
+  getMissions: () => apiClient.get<MissionStat[]>('/api/admin/missions'),
   getDailyActivities: () => apiClient.get<ActivityStat[]>('/api/admin/daily-activities'),
-  toggleQuest: (slug: string) => apiClient.post<{ status: string }>(`/api/admin/quests/${slug}/toggle`, {}),
+  toggleMission: (slug: string) => apiClient.post<{ status: string }>(`/api/admin/missions/${slug}/toggle`, {}),
   toggleActivity: (id: number) => apiClient.post<{ status: string }>(`/api/admin/daily-activities/${id}/toggle`, {}),
 }
 

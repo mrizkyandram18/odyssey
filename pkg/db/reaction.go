@@ -22,14 +22,14 @@ func (s *reactionStore) UpsertReaction(ctx context.Context, r *game.Reaction) (*
 	// Omit id and created_at so PostgREST assigns identity + DB default timestamps.
 	// Sending id=0 / zero time creates invalid rows (same class of bug as creative submit).
 	payload := map[string]any{
-		"crew_id":       r.CrewID,
+		"family_id":       r.FamilyID,
 		"target_type":   r.TargetType,
 		"target_id":     r.TargetID,
 		"actor_uid":     r.ActorUID,
 		"reaction_type": r.ReactionType,
 	}
 	prefer := "return=representation,resolution=merge-duplicates"
-	params := "on_conflict=crew_id,target_type,target_id,actor_uid"
+	params := "on_conflict=family_id,target_type,target_id,actor_uid"
 
 	raw, err := s.client.MutateAtomic(ctx, "POST", "odyssey_reactions", payload, params, prefer)
 	if err != nil {
@@ -50,7 +50,7 @@ func (s *reactionStore) UpsertReaction(ctx context.Context, r *game.Reaction) (*
 
 func (s *reactionStore) ListReactionsForTarget(ctx context.Context, crewID, targetType string, targetID int64) ([]game.Reaction, error) {
 	v := url.Values{}
-	v.Set("crew_id", "eq."+crewID)
+	v.Set("family_id", "eq."+crewID)
 	v.Set("target_type", "eq."+targetType)
 	v.Set("target_id", fmt.Sprintf("eq.%d", targetID))
 	v.Set("order", "created_at.desc")

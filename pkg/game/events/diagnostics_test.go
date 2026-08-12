@@ -43,11 +43,11 @@ func TestDispatcher_Diagnostics(t *testing.T) {
 	err1 := &captureHandler{err: errors.New("boom")}
 	d.Subscribe("quest_completed", ok1)
 	d.Subscribe("quest_completed", err1)
-	d.Subscribe("chapter_completed", &captureHandler{})
+	d.Subscribe("course_completed", &captureHandler{})
 
 	d.Publish(context.Background(), testEvent{et: "quest_completed"})
 	d.Publish(context.Background(), testEvent{et: "quest_completed"})
-	d.Publish(context.Background(), testEvent{et: "chapter_completed"})
+	d.Publish(context.Background(), testEvent{et: "course_completed"})
 
 	diag := d.Diagnostics()
 	qc := diag["quest_completed"]
@@ -66,15 +66,15 @@ func TestDispatcher_Diagnostics(t *testing.T) {
 	if qc.AvgHandlerDurationMs < 0 {
 		t.Error("expected non-negative avg duration")
 	}
-	cc := diag["chapter_completed"]
+	cc := diag["course_completed"]
 	if cc.Published != 1 {
-		t.Errorf("chapter_completed published = %d, want 1", cc.Published)
+		t.Errorf("course_completed published = %d, want 1", cc.Published)
 	}
 	if cc.Handled != 1 {
-		t.Errorf("chapter_completed handled = %d, want 1", cc.Handled)
+		t.Errorf("course_completed handled = %d, want 1", cc.Handled)
 	}
 	if cc.HandlerCount != 1 {
-		t.Errorf("chapter_completed handler_count = %d, want 1", cc.HandlerCount)
+		t.Errorf("course_completed handler_count = %d, want 1", cc.HandlerCount)
 	}
 	if len(diag) != 2 {
 		t.Errorf("expected 2 event types in diagnostics, got %d", len(diag))

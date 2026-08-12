@@ -34,7 +34,7 @@ func TestAchievementEarnedHandler(t *testing.T) {
 
 		event := events.AchievementEarnedEvent{
 			UID:             "usr_123",
-			CrewID:          "crew_456",
+			FamilyID:          "crew_456",
 			AchievementCode: "LEVEL_10",
 		}
 
@@ -74,7 +74,7 @@ func TestAchievementEarnedHandler(t *testing.T) {
 
 		event := events.AchievementEarnedEvent{
 			UID:             "usr_123",
-			CrewID:          "crew_456",
+			FamilyID:          "crew_456",
 			AchievementCode: "LEVEL_10",
 		}
 

@@ -18,13 +18,13 @@ feature creep and to keep the team focused on the cooperative adventure core.
 ## Product Shape
 
 - **NOT an MMORPG.** No massive open world, no thousands of concurrent users,
-  no persistent realm servers. The scale is a handful of family members.
+  no persistent journey servers. The scale is a handful of family members.
 - **NOT a social network.** No public leaderboards, no friend-finding, no
   user-generated content from strangers, no viral loops designed for growth.
 - **NOT an employee management tool.** No time tracking, no productivity
   scoring, no work-hour logging, no performance metrics.
 - **NOT a work tracker.** No deadlines, no obligations, no "must complete"
-  pressure. Quests are invitations, never requirements.
+  pressure. Missions are invitations, never requirements.
 - **NOT a gamified productivity app.** We do not gamify real-life chores,
   habits, or obligations. The adventure is its own thing.
 - **NO single-player mode.** Odyssey is cooperative by design. A solo mode

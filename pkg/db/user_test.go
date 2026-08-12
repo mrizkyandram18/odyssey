@@ -15,7 +15,7 @@ func TestUserStore_GetUser_Success(t *testing.T) {
 	data, _ := json.Marshal([]UserProfile{
 		{
 			UID:          "user-1",
-			CrewID:       "crew-1",
+			FamilyID:       "crew-1",
 			ExplorerName: "Alice",
 			Role:         "SEEKER",
 			Level:        3,

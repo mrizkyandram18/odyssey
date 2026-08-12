@@ -26,7 +26,7 @@ beforeEach(() => {
 function makeSession(overrides: Partial<Session> = {}): Session {
   return {
     uid: 'alice',
-    crew_id: 'crew-1',
+    family_id: 'crew-1',
     kind: 'user',
     role: 'SEEKER',
     expires: Math.floor(Date.now() / 1000) + 3600,

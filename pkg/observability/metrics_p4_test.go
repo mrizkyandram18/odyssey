@@ -25,7 +25,7 @@ func TestMetrics_RecordRealmCompleted(t *testing.T) {
 	m.RecordRealmCompleted()
 
 	if m.Snapshot().RealmCompleted != 3 {
-		t.Errorf("expected 3 realm completions, got %d", m.Snapshot().RealmCompleted)
+		t.Errorf("expected 3 journey completions, got %d", m.Snapshot().RealmCompleted)
 	}
 }
 
@@ -35,7 +35,7 @@ func TestMetrics_RecordChestCreated(t *testing.T) {
 	m.RecordChestCreated()
 
 	if m.Snapshot().ChestsCreated != 2 {
-		t.Errorf("expected 2 chests created, got %d", m.Snapshot().ChestsCreated)
+		t.Errorf("expected 2 gifts created, got %d", m.Snapshot().ChestsCreated)
 	}
 }
 
@@ -84,11 +84,11 @@ func TestMetrics_RecordEventPipeline(t *testing.T) {
 	m := NewMetrics()
 	m.RecordEventPublished("quest_completed")
 	m.RecordEventPublished("quest_completed")
-	m.RecordEventPublished("chapter_completed")
+	m.RecordEventPublished("course_completed")
 	m.RecordEventHandler("quest_completed", 2*time.Millisecond, nil)
 	m.RecordEventHandler("quest_completed", 4*time.Millisecond, nil)
-	m.RecordEventHandler("chapter_completed", 1*time.Millisecond, nil)
-	m.RecordEventHandler("chapter_completed", 0, errHandler)
+	m.RecordEventHandler("course_completed", 1*time.Millisecond, nil)
+	m.RecordEventHandler("course_completed", 0, errHandler)
 
 	snap := m.Snapshot()
 	if snap.EventsPublished != 3 {
@@ -124,8 +124,8 @@ func TestMetrics_RecordEventPipeline(t *testing.T) {
 	if err := json.Unmarshal(data, &dec); err != nil {
 		t.Fatalf("unmarshal: %v", err)
 	}
-	if dec.EventTypes["chapter_completed"].Errors != 1 {
-		t.Errorf("expected 1 error in JSON for chapter_completed, got %d", dec.EventTypes["chapter_completed"].Errors)
+	if dec.EventTypes["course_completed"].Errors != 1 {
+		t.Errorf("expected 1 error in JSON for course_completed, got %d", dec.EventTypes["course_completed"].Errors)
 	}
 }
 

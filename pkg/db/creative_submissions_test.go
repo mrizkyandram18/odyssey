@@ -14,9 +14,9 @@ func TestCreativeSubmissionStore_Create(t *testing.T) {
 	data, _ := json.Marshal([]CreativeSubmission{
 		{
 			ID:          1,
-			QuestID:     1,
-			ChallengeID: 1,
-			CrewID:      "crew-1",
+			MissionID:     1,
+			ExerciseID: 1,
+			FamilyID:      "crew-1",
 			AuthorUID:   "user-1",
 			Kind:        "STORY",
 			Content:     "A short story",
@@ -29,9 +29,9 @@ func TestCreativeSubmissionStore_Create(t *testing.T) {
 	store := NewCreativeSubmissionStore(client)
 
 	sub := &game.Submission{
-		QuestID:     1,
-		ChallengeID: 1,
-		CrewID:      "crew-1",
+		MissionID:     1,
+		ExerciseID: 1,
+		FamilyID:      "crew-1",
 		AuthorUID:   "user-1",
 		Kind:        game.SubmissionStory,
 		Content:     "A short story",
@@ -52,8 +52,8 @@ func TestCreativeSubmissionStore_Create(t *testing.T) {
 func TestCreativeSubmissionStore_ListByQuest(t *testing.T) {
 	now := time.Date(2026, 8, 3, 12, 0, 0, 0, time.UTC)
 	data, _ := json.Marshal([]CreativeSubmission{
-		{ID: 1, QuestID: 1, ChallengeID: 1, CrewID: "c1", AuthorUID: "u1", Kind: "STORY", Content: "s1", Status: "PENDING", CreatedAt: now, UpdatedAt: now},
-		{ID: 2, QuestID: 1, ChallengeID: 1, CrewID: "c1", AuthorUID: "u1", Kind: "COMIC", Content: "c1", Status: "PENDING", CreatedAt: now, UpdatedAt: now},
+		{ID: 1, MissionID: 1, ExerciseID: 1, FamilyID: "c1", AuthorUID: "u1", Kind: "STORY", Content: "s1", Status: "PENDING", CreatedAt: now, UpdatedAt: now},
+		{ID: 2, MissionID: 1, ExerciseID: 1, FamilyID: "c1", AuthorUID: "u1", Kind: "COMIC", Content: "c1", Status: "PENDING", CreatedAt: now, UpdatedAt: now},
 	})
 	store := NewCreativeSubmissionStore(&mockSupabaseClient{data: data})
 
@@ -69,8 +69,8 @@ func TestCreativeSubmissionStore_ListByQuest(t *testing.T) {
 func TestCreativeSubmissionStore_ListByCrew(t *testing.T) {
 	now := time.Date(2026, 8, 3, 12, 0, 0, 0, time.UTC)
 	data, _ := json.Marshal([]CreativeSubmission{
-		{ID: 1, QuestID: 1, ChallengeID: 1, CrewID: "c1", AuthorUID: "u1", Kind: "STORY", Content: "s1", Status: "PENDING", CreatedAt: now, UpdatedAt: now},
-		{ID: 2, QuestID: 1, ChallengeID: 1, CrewID: "c1", AuthorUID: "u1", Kind: "COMIC", Content: "c1", Status: "PENDING", CreatedAt: now, UpdatedAt: now},
+		{ID: 1, MissionID: 1, ExerciseID: 1, FamilyID: "c1", AuthorUID: "u1", Kind: "STORY", Content: "s1", Status: "PENDING", CreatedAt: now, UpdatedAt: now},
+		{ID: 2, MissionID: 1, ExerciseID: 1, FamilyID: "c1", AuthorUID: "u1", Kind: "COMIC", Content: "c1", Status: "PENDING", CreatedAt: now, UpdatedAt: now},
 	})
 	store := NewCreativeSubmissionStore(&mockSupabaseClient{data: data})
 
@@ -86,7 +86,7 @@ func TestCreativeSubmissionStore_ListByCrew(t *testing.T) {
 func TestCreativeSubmissionStore_GetSubmission(t *testing.T) {
 	now := time.Date(2026, 8, 3, 12, 0, 0, 0, time.UTC)
 	data, _ := json.Marshal([]CreativeSubmission{
-		{ID: 1, QuestID: 1, ChallengeID: 1, CrewID: "c1", AuthorUID: "u1", Kind: "STORY", Content: "s1", Status: "PENDING", CreatedAt: now, UpdatedAt: now},
+		{ID: 1, MissionID: 1, ExerciseID: 1, FamilyID: "c1", AuthorUID: "u1", Kind: "STORY", Content: "s1", Status: "PENDING", CreatedAt: now, UpdatedAt: now},
 	})
 	store := NewCreativeSubmissionStore(&mockSupabaseClient{data: data})
 
@@ -112,7 +112,7 @@ func TestCreativeSubmissionStore_GetSubmission_NotFound(t *testing.T) {
 func TestCreativeSubmissionStore_UpdateSubmission(t *testing.T) {
 	now := time.Date(2026, 8, 3, 12, 0, 0, 0, time.UTC)
 	data, _ := json.Marshal([]CreativeSubmission{
-		{ID: 1, QuestID: 1, ChallengeID: 1, CrewID: "c1", AuthorUID: "u1", Kind: "STORY", Content: "s1", Status: "PENDING", CreatedAt: now, UpdatedAt: now},
+		{ID: 1, MissionID: 1, ExerciseID: 1, FamilyID: "c1", AuthorUID: "u1", Kind: "STORY", Content: "s1", Status: "PENDING", CreatedAt: now, UpdatedAt: now},
 	})
 	store := NewCreativeSubmissionStore(&mockSupabaseClient{data: data})
 

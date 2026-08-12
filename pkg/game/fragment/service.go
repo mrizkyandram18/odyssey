@@ -16,27 +16,27 @@ var ErrUnauthorized = errors.New("unauthorized fragment access")
 
 // FragmentStore abstracts persistence for story fragments.
 type FragmentStore interface {
-	ListCatalog(ctx context.Context) ([]game.StoryFragment, error)
+	ListCatalog(ctx context.Context) ([]game.LearningConcept, error)
 	ListByPlayer(ctx context.Context, uid string) ([]game.PlayerStoryFragment, error)
-	GetFragment(ctx context.Context, slug string) (*game.StoryFragment, error)
+	GetFragment(ctx context.Context, slug string) (*game.LearningConcept, error)
 	DiscoverFragment(ctx context.Context, uid, crewID, slug string) (*game.PlayerStoryFragment, bool, error)
 }
 
-// RealmProgressReader provides realm status checks for replay detection.
+// RealmProgressReader provides journey status checks for replay detection.
 type RealmProgressReader interface {
-	GetRealmProgress(ctx context.Context, crewID, realm string) (*game.RealmProgress, error)
+	GetRealmProgress(ctx context.Context, crewID, journey string) (*game.JourneyProgress, error)
 }
 
 // InMemoryFragmentStore provides a thread-safe in-memory store for testing and fallbacks.
 type InMemoryFragmentStore struct {
 	mu          sync.RWMutex
-	catalog     map[string]game.StoryFragment
+	catalog     map[string]game.LearningConcept
 	playerStash map[string]map[string]game.PlayerStoryFragment // uid -> slug -> row
 	nextID      int64
 }
 
 func NewInMemoryFragmentStore() *InMemoryFragmentStore {
-	cat := make(map[string]game.StoryFragment)
+	cat := make(map[string]game.LearningConcept)
 	for _, f := range DefaultFragments {
 		cat[f.Slug] = f
 	}
@@ -47,10 +47,10 @@ func NewInMemoryFragmentStore() *InMemoryFragmentStore {
 	}
 }
 
-func (s *InMemoryFragmentStore) ListCatalog(ctx context.Context) ([]game.StoryFragment, error) {
+func (s *InMemoryFragmentStore) ListCatalog(ctx context.Context) ([]game.LearningConcept, error) {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
-	res := make([]game.StoryFragment, 0, len(s.catalog))
+	res := make([]game.LearningConcept, 0, len(s.catalog))
 	for _, f := range s.catalog {
 		res = append(res, f)
 	}
@@ -68,7 +68,7 @@ func (s *InMemoryFragmentStore) ListByPlayer(ctx context.Context, uid string) ([
 	return res, nil
 }
 
-func (s *InMemoryFragmentStore) GetFragment(ctx context.Context, slug string) (*game.StoryFragment, error) {
+func (s *InMemoryFragmentStore) GetFragment(ctx context.Context, slug string) (*game.LearningConcept, error) {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 	f, ok := s.catalog[slug]
@@ -98,7 +98,7 @@ func (s *InMemoryFragmentStore) DiscoverFragment(ctx context.Context, uid, crewI
 	row := game.PlayerStoryFragment{
 		ID:           s.nextID,
 		UID:          uid,
-		CrewID:       crewID,
+		FamilyID:       crewID,
 		FragmentSlug: slug,
 		DiscoveredAt: now,
 	}
@@ -147,7 +147,7 @@ func (s *FragmentService) ListPlayerFragments(ctx context.Context, uid string) (
 		discTime, found := discoveredMap[f.Slug]
 		v := StoryFragmentView{
 			Slug:       f.Slug,
-			Realm:      f.Realm,
+			Journey:      f.Journey,
 			Title:      f.Title,
 			Content:    f.Content,
 			SetName:    f.SetName,
@@ -190,7 +190,7 @@ func (s *FragmentService) DiscoverFragment(ctx context.Context, uid, crewID, slu
 	return &DiscoverResult{
 		Fragment: StoryFragmentView{
 			Slug:         fragDef.Slug,
-			Realm:        fragDef.Realm,
+			Journey:        fragDef.Journey,
 			Title:        fragDef.Title,
 			Content:      fragDef.Content,
 			SetName:      fragDef.SetName,
@@ -203,32 +203,32 @@ func (s *FragmentService) DiscoverFragment(ctx context.Context, uid, crewID, slu
 	}, nil
 }
 
-// ReplayRealm detects if a realm is completed, unlocking bonus dialogue and hidden story fragments.
-func (s *FragmentService) ReplayRealm(ctx context.Context, uid, crewID, realm string) (*ReplayResult, error) {
+// ReplayRealm detects if a journey is completed, unlocking bonus dialogue and hidden story fragments.
+func (s *FragmentService) ReplayRealm(ctx context.Context, uid, crewID, journey string) (*ReplayResult, error) {
 	if uid == "" || crewID == "" {
 		return nil, ErrUnauthorized
 	}
 
-	var rp *game.RealmProgress
+	var rp *game.JourneyProgress
 	if s.realmReader != nil {
 		var err error
-		rp, err = s.realmReader.GetRealmProgress(ctx, crewID, realm)
+		rp, err = s.realmReader.GetRealmProgress(ctx, crewID, journey)
 		if err != nil {
-			return nil, fmt.Errorf("get realm progress: %w", err)
+			return nil, fmt.Errorf("get journey progress: %w", err)
 		}
 	}
 
 	isComplete := rp != nil && (rp.Status == "COMPLETE" || rp.Progress >= 100)
 	if !isComplete {
 		return &ReplayResult{
-			Realm:             realm,
+			Journey:             journey,
 			IsReplay:          false,
 			BonusDialogue:     "Ranah ini masih aktif! Selesaikan petualangan utama kru untuk membuka rahasia tersembunyi.",
 			UnlockedFragments: []StoryFragmentView{},
 		}, nil
 	}
 
-	// Realm is completed — trigger realm replay logic
+	// Journey is completed — trigger journey replay logic
 	catalog, err := s.store.ListCatalog(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("list catalog: %w", err)
@@ -236,7 +236,7 @@ func (s *FragmentService) ReplayRealm(ctx context.Context, uid, crewID, realm st
 
 	var unlocked []StoryFragmentView
 	for _, f := range catalog {
-		if f.Realm == realm && f.IsHidden {
+		if f.Journey == journey && f.IsHidden {
 			res, err := s.DiscoverFragment(ctx, uid, crewID, f.Slug)
 			if err == nil && res != nil {
 				unlocked = append(unlocked, res.Fragment)
@@ -244,10 +244,10 @@ func (s *FragmentService) ReplayRealm(ctx context.Context, uid, crewID, realm st
 		}
 	}
 
-	dialogue := fmt.Sprintf("Selamat datang kembali di %s! Sebagai penjelajah veteran, kamu menemukan rahasia tersembunyi yang tak terlihat saat kunjungan pertama.", realm)
+	dialogue := fmt.Sprintf("Selamat datang kembali di %s! Sebagai penjelajah veteran, kamu menemukan rahasia tersembunyi yang tak terlihat saat kunjungan pertama.", journey)
 
 	return &ReplayResult{
-		Realm:             realm,
+		Journey:             journey,
 		IsReplay:          true,
 		BonusDialogue:     dialogue,
 		UnlockedFragments: unlocked,

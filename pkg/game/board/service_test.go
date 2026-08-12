@@ -38,7 +38,7 @@ func (m *mockItems) GetCreativeItem(ctx context.Context, id int64) (*game.Creati
 func (m *mockItems) ListCreativeItemsByCrew(ctx context.Context, crewID, kind string) ([]game.CreativeItem, error) {
 	var out []game.CreativeItem
 	for _, it := range m.byID {
-		if it.CrewID == crewID && (kind == "" || it.Kind == kind) {
+		if it.FamilyID == crewID && (kind == "" || it.Kind == kind) {
 			out = append(out, *it)
 		}
 	}
@@ -51,13 +51,13 @@ func TestPostText_Success(t *testing.T) {
 	if err != nil {
 		t.Fatalf("PostText: %v", err)
 	}
-	if item.Kind != game.KindSharedText || item.Realm != game.RealmSharedBoard {
-		t.Fatalf("unexpected kind/realm: %+v", item)
+	if item.Kind != game.KindSharedText || item.Journey != game.RealmSharedBoard {
+		t.Fatalf("unexpected kind/journey: %+v", item)
 	}
 	if item.Payload != "Hello family" {
 		t.Fatalf("payload trimmed expected, got %q", item.Payload)
 	}
-	if item.CrewID != "crew-A" || item.AuthorUID != "u1" {
+	if item.FamilyID != "crew-A" || item.AuthorUID != "u1" {
 		t.Fatalf("crew/author wrong: %+v", item)
 	}
 }

@@ -109,12 +109,12 @@ A single Supabase (PostgreSQL) project shared with Family Reward.
 | Table | Purpose |
 |---|---|
 | `odyssey_user_profiles` | Explorer data, UID, crew, role, level, XP. |
-| `odyssey_crews` | Family-group metadata. |
-| `odyssey_quests` | Quest instances (per crew). |
-| `odyssey_challenges` | Individual challenge instances. |
-| `odyssey_realm_progress` | Shared realm progress and story branch. |
+| `odyssey_families` | Family-group metadata. |
+| `odyssey_missions` | Mission instances (per crew). |
+| `odyssey_exercises` | Individual challenge instances. |
+| `odyssey_journey_progress` | Shared journey progress and story branch. |
 | `odyssey_creative_items` | Creative-space contributions (Story/Comic/Photo/Video). |
-| `odyssey_daily_turns` | One-per-user-per-day turn tracking. |
+| `odyssey_daily_missions` | One-per-user-per-day turn tracking. |
 | `odyssey_achievements` | Personal and group milestones. |
 
 The `odyssey_reward_signals` table from earlier drafts is **removed** from

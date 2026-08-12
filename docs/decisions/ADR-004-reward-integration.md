@@ -13,7 +13,7 @@ payouts, and eligibility.
 Odyssey is **not** a reward application. Inside Odyssey there is no money and
 no real-world payout. However, Odyssey tracks achievements and milestones that
 *could* be meaningful signals for Family Reward to act upon — for example,
-"family completed 50 quests" or "every member reached Explorer Level 10."
+"family completed 50 missions" or "every member reached Explorer Level 10."
 
 The question is: how, if at all, does Odyssey communicate these achievements
 to Family Reward without tight coupling?
@@ -31,8 +31,8 @@ consumes through a **stable, narrow interface**.
 introduced as a new table only when the Phase 5 integration is activated. Until
 then:
 
-- Achievement data is stored in `odyssey_achievements`, `odyssey_relics`, and
-  `odyssey_quests` — all fully queryable for retrospective signal generation.
+- Achievement data is stored in `odyssey_achievements`, `odyssey_collections`, and
+  `odyssey_missions` — all fully queryable for retrospective signal generation.
 - No webhooks, no polling, no signal emission code exists.
 - The integration contract is documented here as a decision record and
   revisited in Phase 5.

@@ -7,7 +7,7 @@ export function MobileNav() {
   // Simplified nav for mobile - exactly 4 pillars
   const navItems = [
     { label: 'Beranda', path: '/', icon: <Home size={20} /> },
-    { label: 'Misi', path: '/quests', icon: <Scroll size={20} /> },
+    { label: 'Misi', path: '/missions', icon: <Scroll size={20} /> },
     { label: 'Jurnal', path: '/journal', icon: <BookOpen size={20} /> },
     { label: 'Profil', path: '/profile', icon: <User size={20} /> },
   ]

@@ -19,10 +19,10 @@ Cooperative adventure platform for private family groups.
 | `docs/non-goals.md` | Explicit boundaries — what Odyssey will never become. |
 | `docs/domain-model.md` | Core domain entities, layers, and table mapping. |
 | `docs/architecture.md` | High-level architecture, module map, deployment. |
-| `docs/gameplay.md` | Core gameplay, quests, roles, daily turn, creative quests. |
+| `docs/gameplay.md` | Core gameplay, missions, roles, daily turn, creative missions. |
 | `docs/game-loop.md` | Moment-to-moment, daily, quest, progression loops. |
-| `docs/progression.md` | Explorer Level, crew level, Realm Progress, milestones. |
-| `docs/economy.md` | XP / Relics / Chests / Inspiration design. |
+| `docs/progression.md` | Explorer Level, crew level, Journey Progress, milestones. |
+| `docs/economy.md` | XP / Collections / Gifts / Inspiration design. |
 | `docs/integrations.md` | Gatekeeper (adapter), Family Reward (deferred), Supabase. |
 | `docs/roadmap.md` | Phase 0–5 roadmap, MVP scope. |
 | `docs/glossary.md` | Domain terminology. |
@@ -41,8 +41,8 @@ Cooperative adventure platform for private family groups.
 
 - ONLY new tables prefixed `odyssey_` in shared Supabase (never modify existing business tables).
 - Real rewards via Family Reward integration only — deferred to Phase 5 (approved by ADR-004).
-- NO real money inside Odyssey — XP, Relics, Chests, and Inspiration are fictional only.
-- MVP resources: XP, Relics, Chests, Story Fragments, Inspiration. No Adventure Tokens, no Coins (Coin currency is Phase 2).
+- NO real money inside Odyssey — XP, Collections, Gifts, and Inspiration are fictional only.
+- MVP resources: XP, Collections, Gifts, Story Fragments, Inspiration. No Adventure Tokens, no Coins (Coin currency is Phase 2).
 - Mobile-first, PWA-first (offline-first deferred to a future phase).
 - Gatekeeper BOTH login mode (device trust + credential) is the ONLY authentication path.
   Verified through an Authentication Provider adapter — the domain never touches Firestore directly.

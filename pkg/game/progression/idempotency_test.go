@@ -58,7 +58,7 @@ func (m *concurrentUserStore) UpdateUserIfMatch(ctx context.Context, uid string,
 
 func TestAwardXP_Idempotent_ConcurrentCalls(t *testing.T) {
 	store := newConcurrentUserStore(&game.Player{
-		UID: "user-1", CrewID: "crew-1", Level: 1, XP: 0, Version: 1,
+		UID: "user-1", FamilyID: "crew-1", Level: 1, XP: 0, Version: 1,
 	})
 	svc := NewProgressionService(store, nil)
 
@@ -108,7 +108,7 @@ func TestAwardXP_Idempotent_ConcurrentCalls(t *testing.T) {
 
 func TestAwardXP_OptimisticConflict_ReturnsCurrentState(t *testing.T) {
 	store := newConcurrentUserStore(&game.Player{
-		UID: "user-1", CrewID: "crew-1", Level: 1, XP: 0, Version: 1,
+		UID: "user-1", FamilyID: "crew-1", Level: 1, XP: 0, Version: 1,
 	})
 	svc := NewProgressionService(store, nil)
 
@@ -134,7 +134,7 @@ func TestAwardXP_OptimisticConflict_ReturnsCurrentState(t *testing.T) {
 
 func TestAwardXP_NoDuplicateLevelUpEvents(t *testing.T) {
 	store := newConcurrentUserStore(&game.Player{
-		UID: "user-1", CrewID: "crew-1", Level: 1, XP: 490, Version: 1,
+		UID: "user-1", FamilyID: "crew-1", Level: 1, XP: 490, Version: 1,
 	})
 	pub := &capturePublisher{}
 	svc := NewProgressionServiceWithPublisher(store, nil, pub)
@@ -162,7 +162,7 @@ func TestAwardXP_NoDuplicateLevelUpEvents(t *testing.T) {
 
 func TestAwardXP_StoreConflictError(t *testing.T) {
 	store := newConcurrentUserStore(&game.Player{
-		UID: "user-1", CrewID: "crew-1", Level: 1, XP: 0, Version: 1,
+		UID: "user-1", FamilyID: "crew-1", Level: 1, XP: 0, Version: 1,
 	})
 	store.updateErr = errors.New("db conflict")
 	svc := NewProgressionService(store, nil)

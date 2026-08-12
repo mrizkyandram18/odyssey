@@ -15,7 +15,7 @@ import (
 type FragmentHandler interface {
 	ListPlayerFragments(ctx context.Context, uid string) ([]fragment.StoryFragmentView, error)
 	DiscoverFragment(ctx context.Context, uid, crewID, slug string) (*fragment.DiscoverResult, error)
-	ReplayRealm(ctx context.Context, uid, crewID, realm string) (*fragment.ReplayResult, error)
+	ReplayRealm(ctx context.Context, uid, crewID, journey string) (*fragment.ReplayResult, error)
 }
 
 var handler FragmentHandler
@@ -74,7 +74,7 @@ func handleDiscover(w http.ResponseWriter, r *http.Request, claims *auth.Session
 		return
 	}
 
-	result, err := handler.DiscoverFragment(r.Context(), claims.UID, claims.CrewID, req.Slug)
+	result, err := handler.DiscoverFragment(r.Context(), claims.UID, claims.FamilyID, req.Slug)
 	if err != nil {
 		if errors.Is(err, fragment.ErrFragmentNotFound) {
 			shared.WriteJSONError(w, "story fragment not found", http.StatusNotFound)
@@ -92,23 +92,23 @@ func handleDiscover(w http.ResponseWriter, r *http.Request, claims *auth.Session
 }
 
 type replayReq struct {
-	Realm string `json:"realm"`
+	Journey string `json:"journey"`
 }
 
 func handleReplay(w http.ResponseWriter, r *http.Request, claims *auth.SessionClaims) {
 	var req replayReq
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil || req.Realm == "" {
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil || req.Journey == "" {
 		shared.WriteJSONError(w, "invalid request body", http.StatusBadRequest)
 		return
 	}
 
-	result, err := handler.ReplayRealm(r.Context(), claims.UID, claims.CrewID, req.Realm)
+	result, err := handler.ReplayRealm(r.Context(), claims.UID, claims.FamilyID, req.Journey)
 	if err != nil {
 		if errors.Is(err, fragment.ErrUnauthorized) {
 			shared.WriteUnauthorized(w)
 			return
 		}
-		shared.WriteJSONError(w, "failed to replay realm", http.StatusInternalServerError)
+		shared.WriteJSONError(w, "failed to replay journey", http.StatusInternalServerError)
 		return
 	}
 

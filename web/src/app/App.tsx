@@ -5,18 +5,18 @@ import { ProtectedRoute } from '../shared/components/ProtectedRoute'
 import { PublicRoute } from '../shared/components/PublicRoute'
 import { LoginPage } from '../features/login/LoginPage'
 import { HomePage } from '../features/home/HomePage'
-import { QuestsPage } from '../features/quest/QuestsPage'
-import { QuestView } from '../features/quest/QuestView'
+import { MissionsPage } from '../features/mission/MissionsPage'
+import { MissionView } from '../features/mission/MissionView'
 import { FamilyTimeline } from '../features/creative/FamilyTimeline'
 import { GalleryPage } from '../features/creative/GalleryPage'
 import { ComicReaderPage } from '../features/creative/ComicReaderPage'
 import { StoryPage } from '../features/creative/StoryPage'
 import { JournalPage } from '../features/journal/JournalPage'
 import { ProfilePage } from '../features/profile/ProfilePage'
-import { ChestPage } from '../features/chests/ChestPage'
-import { ChestOpeningPage } from '../features/chests/ChestOpeningPage'
-import { RelicInventoryPage } from '../features/relics/RelicInventoryPage'
-import { RelicDetailPage } from '../features/relics/RelicDetailPage'
+import { GiftPage } from '../features/gifts/GiftPage'
+import { GiftOpeningPage } from '../features/gifts/GiftOpeningPage'
+import { CollectionInventoryPage } from '../features/collections/CollectionInventoryPage'
+import { CollectionDetailPage } from '../features/collections/CollectionDetailPage'
 import { AdminPage } from '../features/admin/AdminPage'
 
 export function App() {
@@ -29,18 +29,18 @@ export function App() {
 
         <Route element={<ProtectedRoute />}>
           <Route index element={<HomePage />} />
-          <Route path="/quests" element={<QuestsPage />} />
-          <Route path="/quests/:questId" element={<QuestRoute />} />
+          <Route path="/missions" element={<MissionsPage />} />
+          <Route path="/missions/:missionId" element={<MissionRoute />} />
         <Route path="/creative" element={<FamilyTimeline />} />
         <Route path="/gallery" element={<GalleryPage />} />
         <Route path="/comics/:id" element={<ComicReaderPage />} />
         <Route path="/stories/:id" element={<StoryPage />} />
         <Route path="/journal" element={<JournalPage />} />
           <Route path="/profile" element={<ProfilePage />} />
-          <Route path="/chests" element={<ChestPage />} />
-          <Route path="/chests/open/:chestId" element={<ChestOpeningPage />} />
-          <Route path="/relics" element={<RelicRoute><RelicInventoryPage /></RelicRoute>} />
-          <Route path="/relics/:slug" element={<RelicRoute><RelicDetailPage /></RelicRoute>} />
+          <Route path="/gifts" element={<GiftPage />} />
+          <Route path="/gifts/open/:chestId" element={<GiftOpeningPage />} />
+          <Route path="/collections" element={<RelicRoute><CollectionInventoryPage /></RelicRoute>} />
+          <Route path="/collections/:slug" element={<RelicRoute><CollectionDetailPage /></RelicRoute>} />
           <Route path="/admin" element={<AdminPage />} />
         </Route>
 
@@ -50,9 +50,9 @@ export function App() {
   )
 }
 
-function QuestRoute() {
+function MissionRoute() {
   const params = useParams()
-  return <QuestView questId={Number(params?.questId)} />
+  return <MissionView missionId={Number(params?.missionId)} />
 }
 
 function RelicRoute({ children }: { children: React.ReactNode }) {

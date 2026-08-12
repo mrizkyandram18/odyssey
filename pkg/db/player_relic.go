@@ -23,10 +23,10 @@ func NewPlayerRelicStore(client SupabaseClient) game.PlayerRelicStore {
 func (s *supabasePlayerRelicStore) GetPlayerRelic(ctx context.Context, uid, relicSlug string) (*game.PlayerRelic, error) {
 	v := url.Values{}
 	v.Set("uid", "eq."+uid)
-	v.Set("relic_slug", "eq."+relicSlug)
+	v.Set("collection_slug", "eq."+relicSlug)
 	params := v.Encode()
 
-	raw, err := s.client.Get(ctx, "odyssey_player_relics", params)
+	raw, err := s.client.Get(ctx, "odyssey_player_collections", params)
 	if err != nil {
 		return nil, fmt.Errorf("get player relic: %w", err)
 	}
@@ -45,15 +45,15 @@ func (s *supabasePlayerRelicStore) CreatePlayerRelic(ctx context.Context, pr *ga
 	now := time.Now().UTC()
 	payload := PlayerRelic{
 		UID:          pr.UID,
-		RelicSlug:    pr.RelicSlug,
-		RelicID:      pr.RelicID,
+		CollectionSlug:    pr.CollectionSlug,
+		CollectionID:      pr.CollectionID,
 		OwnedCount:   pr.OwnedCount,
 		IsNew:        pr.IsNew,
 		DiscoveredAt: pr.DiscoveredAt,
 		CreatedAt:    now,
 		UpdatedAt:    now,
 	}
-	raw, err := s.client.Mutate(ctx, "POST", "odyssey_player_relics", payload, "return=representation")
+	raw, err := s.client.Mutate(ctx, "POST", "odyssey_player_collections", payload, "return=representation")
 	if err != nil {
 		return nil, fmt.Errorf("create player relic: %w", err)
 	}
@@ -71,9 +71,9 @@ func (s *supabasePlayerRelicStore) CreatePlayerRelic(ctx context.Context, pr *ga
 func (s *supabasePlayerRelicStore) UpdatePlayerRelic(ctx context.Context, uid, relicSlug string, patch map[string]any) error {
 	v := url.Values{}
 	v.Set("uid", "eq."+uid)
-	v.Set("relic_slug", "eq."+relicSlug)
+	v.Set("collection_slug", "eq."+relicSlug)
 	params := v.Encode()
-	_, err := s.client.Mutate(ctx, "PATCH", "odyssey_player_relics", patch, params)
+	_, err := s.client.Mutate(ctx, "PATCH", "odyssey_player_collections", patch, params)
 	if err != nil {
 		return fmt.Errorf("update player relic: %w", err)
 	}
@@ -85,14 +85,14 @@ func (s *supabasePlayerRelicStore) ListPlayerRelics(ctx context.Context, uid str
 	v.Set("uid", "eq."+uid)
 	params := v.Encode()
 
-	raw, err := s.client.Get(ctx, "odyssey_player_relics", params)
+	raw, err := s.client.Get(ctx, "odyssey_player_collections", params)
 	if err != nil {
-		return nil, fmt.Errorf("list player relics: %w", err)
+		return nil, fmt.Errorf("list player collections: %w", err)
 	}
 
 	var items []PlayerRelic
 	if err := json.Unmarshal(raw, &items); err != nil {
-		return nil, fmt.Errorf("parse player relics: %w", err)
+		return nil, fmt.Errorf("parse player collections: %w", err)
 	}
 	result := make([]game.PlayerRelic, 0, len(items))
 	for i := range items {
@@ -104,23 +104,23 @@ func (s *supabasePlayerRelicStore) ListPlayerRelics(ctx context.Context, uid str
 func (s *supabasePlayerRelicStore) CountUniqueRelics(ctx context.Context, uid string) (int, error) {
 	v := url.Values{}
 	v.Set("uid", "eq."+uid)
-	v.Set("select", "relic_slug")
+	v.Set("select", "collection_slug")
 	params := v.Encode()
 
-	raw, err := s.client.Get(ctx, "odyssey_player_relics", params)
+	raw, err := s.client.Get(ctx, "odyssey_player_collections", params)
 	if err != nil {
-		return 0, fmt.Errorf("count unique relics: %w", err)
+		return 0, fmt.Errorf("count unique collections: %w", err)
 	}
 
 	var items []PlayerRelic
 	if err := json.Unmarshal(raw, &items); err != nil {
-		return 0, fmt.Errorf("parse unique relics count: %w", err)
+		return 0, fmt.Errorf("parse unique collections count: %w", err)
 	}
 	seen := make(map[string]bool)
 	count := 0
 	for _, item := range items {
-		if !seen[item.RelicSlug] {
-			seen[item.RelicSlug] = true
+		if !seen[item.CollectionSlug] {
+			seen[item.CollectionSlug] = true
 			count++
 		}
 	}
@@ -130,8 +130,8 @@ func (s *supabasePlayerRelicStore) CountUniqueRelics(ctx context.Context, uid st
 func mapPlayerRelic(pr PlayerRelic) *game.PlayerRelic {
 	return &game.PlayerRelic{
 		UID:          pr.UID,
-		RelicSlug:    pr.RelicSlug,
-		RelicID:      pr.RelicID,
+		CollectionSlug:    pr.CollectionSlug,
+		CollectionID:      pr.CollectionID,
 		OwnedCount:   pr.OwnedCount,
 		IsNew:        pr.IsNew,
 		DiscoveredAt: pr.DiscoveredAt,

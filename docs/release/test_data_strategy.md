@@ -4,7 +4,7 @@ Dokumen ini mendefinisikan strategi pengelolaan data untuk _Runtime Validation A
 
 ## Prinsip Utama
 1. **Isolated State**: Setiap tes (*spec*) dimulai dari kondisi basis (baseline) yang sama.
-2. **Deterministic Seed**: Data alam semesta (realm, chapter, quest, dll.) harus berasal dari _seed_ migrasi resmi tanpa intervensi data *random*.
+2. **Deterministic Seed**: Data alam semesta (journey, course, quest, dll.) harus berasal dari _seed_ migrasi resmi tanpa intervensi data *random*.
 3. **Automated Reset**: Skrip CI harus mengatur ulang (*reset*) database ke *baseline* setiap kali *suite* dijalankan.
 
 ## 1. Lingkungan Integrasi (Integration Environment)
@@ -20,12 +20,12 @@ Untuk memastikan *login flow* dapat diprediksi:
 
 ## 3. Seed Data Basis (Phase 1.1)
 Berdasarkan `010_seed_definitions.sql`, data berikut dijamin keberadaannya dalam setiap *run*:
-- **Realm**: `whispering-woods` (ter-publish)
-- **Chapter**: `the-awakening` dan `the-deep-woods`
-- **Quest MVP (6 Quests)**: 
+- **Journey**: `whispering-woods` (ter-publish)
+- **Course**: `the-awakening` dan `the-deep-woods`
+- **Mission MVP (6 Missions)**: 
   - `morning-light`, `gather-herbs`, `riddle-of-the-stones` (Awakening)
   - `shadow-trail`, `the-old-growth`, `forest-riddle` (Deep Woods)
-- **Challenge**: Setiap *quest* memiliki setidaknya 2 tipe tantangan (*Observation*, *Research*, dll.).
+- **Exercise**: Setiap *quest* memiliki setidaknya 2 tipe tantangan (*Observation*, *Research*, dll.).
 
 ## 4. Expected State & Reset
 - **Before Each Suite**: Database ephemeral di-drop dan di-recreate. Migrasi dan *seed* dijalankan ulang.

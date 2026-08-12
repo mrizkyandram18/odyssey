@@ -26,11 +26,11 @@ func (m *mockSeasonHandler) ListAll(ctx context.Context) ([]season.SeasonSummary
 	return m.all, m.err
 }
 
-func makeSeasonDef(slug, name, realm string, start, end time.Time) gamecontent.SeasonDefinition {
+func makeSeasonDef(slug, name, journey string, start, end time.Time) gamecontent.SeasonDefinition {
 	return gamecontent.SeasonDefinition{
 		Slug:      slug,
 		Name:      name,
-		Realm:     realm,
+		Journey:     journey,
 		StartAt:   start,
 		EndAt:     end,
 		Published: true,
@@ -47,7 +47,7 @@ func TestSeasons_ListAll(t *testing.T) {
 	})
 	defer func() { handler = nil }()
 
-	claims := &auth.SessionClaims{UID: "u1", CrewID: "c1", Kind: "user"}
+	claims := &auth.SessionClaims{UID: "u1", FamilyID: "c1", Kind: "user"}
 	req := httptest.NewRequest(http.MethodGet, "/api/seasons", nil)
 	req = req.WithContext(auth.ContextWithClaims(req.Context(), claims))
 	w := httptest.NewRecorder()

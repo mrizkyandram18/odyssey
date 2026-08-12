@@ -15,8 +15,8 @@ import (
 func TestActivityStore_ListActivityDatesByUsers(t *testing.T) {
 	now := time.Date(2026, 8, 11, 12, 0, 0, 0, time.UTC)
 	data, _ := json.Marshal([]game.DailyActivity{
-		{UserID: "u1", ActivityDate: "2026-08-11", ActivityType: "daily_turn", CreatedAt: now},
-		{UserID: "u2", ActivityDate: "2026-08-10", ActivityType: "daily_turn", CreatedAt: now},
+		{UserID: "u1", ActivityDate: "2026-08-11", ActivityType: "daily_mission", CreatedAt: now},
+		{UserID: "u2", ActivityDate: "2026-08-10", ActivityType: "daily_mission", CreatedAt: now},
 	})
 	mock := &mockSupabaseClient{data: data}
 	store := NewActivityStore(mock)

@@ -42,9 +42,9 @@ func Handler(w http.ResponseWriter, r *http.Request) {
 
 	switch r.Method {
 	case http.MethodGet:
-		handleList(w, r, claims.CrewID)
+		handleList(w, r, claims.FamilyID)
 	case http.MethodPost:
-		handlePost(w, r, claims.UID, claims.CrewID)
+		handlePost(w, r, claims.UID, claims.FamilyID)
 	default:
 		shared.WriteJSONError(w, "method not allowed", http.StatusMethodNotAllowed)
 	}

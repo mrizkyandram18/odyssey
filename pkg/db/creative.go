@@ -23,8 +23,8 @@ func NewCreativeStore(client SupabaseClient) game.CreativeStore {
 func (s *supabaseCreativeStore) CreateCreativeItem(ctx context.Context, item *game.CreativeItem) (*game.CreativeItem, error) {
 	// Omit id so identity is assigned by PostgREST.
 	payload := map[string]any{
-		"crew_id":    item.CrewID,
-		"realm":      item.Realm,
+		"family_id":    item.FamilyID,
+		"journey":      item.Journey,
 		"author_uid": item.AuthorUID,
 		"kind":       item.Kind,
 		"payload":    item.Payload,
@@ -64,7 +64,7 @@ func (s *supabaseCreativeStore) GetCreativeItem(ctx context.Context, id int64) (
 
 func (s *supabaseCreativeStore) ListCreativeItemsByCrew(ctx context.Context, crewID, kind string) ([]game.CreativeItem, error) {
 	v := url.Values{}
-	v.Set("crew_id", "eq."+crewID)
+	v.Set("family_id", "eq."+crewID)
 	if kind != "" {
 		v.Set("kind", "eq."+kind)
 	}
@@ -87,8 +87,8 @@ func (s *supabaseCreativeStore) ListCreativeItemsByCrew(ctx context.Context, cre
 func mapCreativeItem(i CreativeItem) *game.CreativeItem {
 	return &game.CreativeItem{
 		ID:        i.ID,
-		CrewID:    i.CrewID,
-		Realm:     i.Realm,
+		FamilyID:    i.FamilyID,
+		Journey:     i.Journey,
 		AuthorUID: i.AuthorUID,
 		Kind:      i.Kind,
 		Payload:   i.Payload,

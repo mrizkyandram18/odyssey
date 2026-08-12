@@ -17,7 +17,7 @@ Evidence: (E3)
 - Inspection of lines 1-60 reveals NO `useEffect` hook to call `loadHome()` on component mount.
 
 Root Cause:
-`HomePage.tsx` was created with `loadHome()` defined as a handler function for manual refresh (e.g. after consuming daily turns or opening chests), but the initial mount lifecycle trigger (`useEffect(() => { loadHome() }, [])`) was omitted.
+`HomePage.tsx` was created with `loadHome()` defined as a handler function for manual refresh (e.g. after consuming daily turns or opening gifts), but the initial mount lifecycle trigger (`useEffect(() => { loadHome() }, [])`) was omitted.
 
 Impact:
 Navigating to the home screen results in an infinite "Loading..." screen unless an external action triggers `loadHome()`.
@@ -146,10 +146,10 @@ Verification Plan:
 
 ```text
 Issue:
-Chest catalog initialization and lookup in `pkg/game/chest/catalog.go` uses standard library `log.Printf` instead of the structured `observability.Logger`.
+Gift catalog initialization and lookup in `pkg/game/gift/catalog.go` uses standard library `log.Printf` instead of the structured `observability.Logger`.
 
 Evidence: (E3)
-- File: pkg/game/chest/catalog.go
+- File: pkg/game/gift/catalog.go
   - Line 68: `log.Printf("WARN: loading drop table %s: %v", def.Slug, err)`
   - Line 75: `log.Printf("WARN: no fallback exists for %s", slug)`
   - Line 99: `log.Printf("WARN: loading drop table %s: %v", def.Slug, err)`
@@ -159,7 +159,7 @@ Root Cause:
 `ContentChestCatalog` was constructed prior to standardizing on `observability.Logger` and was not refactored to receive a logger dependency.
 
 Impact:
-Chest drop table warnings bypass JSON structured logging formats and request ID correlation headers in server logs.
+Gift drop table warnings bypass JSON structured logging formats and request ID correlation headers in server logs.
 
 Risk:
 P2 (Observability Audit Gate).
@@ -171,13 +171,13 @@ Regression Risk:
 Low. Refactors logging call site only.
 
 Verification Plan:
-1. Run `go test ./pkg/game/chest/...`.
+1. Run `go test ./pkg/game/gift/...`.
 2. Inspect log outputs during test execution to verify structured JSON log output for catalog warnings.
 ```
 
 ---
 
-## RCA-06: Redundant Network Fetch on Challenge Completion
+## RCA-06: Redundant Network Fetch on Exercise Completion
 
 ```text
 Issue:
@@ -186,7 +186,7 @@ Issue:
 Evidence: (E3)
 - File: web/src/shared/hooks/useQuest.ts (lines 43-54)
   Line 46: `const result = await questsApi.completeChallenge(questId, challengeId)`
-  Line 47: `await fetchQuest()` (makes a GET `/api/quests/${questId}` request despite `result` already containing the updated `quest` object).
+  Line 47: `await fetchQuest()` (makes a GET `/api/missions/${questId}` request despite `result` already containing the updated `quest` object).
 
 Root Cause:
 `useQuest` was written defensively to ensure local state matched the server by re-fetching the entire quest object upon completion.
@@ -205,7 +205,7 @@ Low. Preserves state sync while eliminating the extra GET request.
 
 Verification Plan:
 1. Run `npm run test` in `web/`.
-2. Perform challenge completion in browser Network tab and verify only 1 POST request occurs (`/api/quests/:id/challenges/:cid/complete`) without a subsequent GET `/api/quests/:id`.
+2. Perform challenge completion in browser Network tab and verify only 1 POST request occurs (`/api/missions/:id/exercises/:cid/complete`) without a subsequent GET `/api/missions/:id`.
 ```
 
 ---

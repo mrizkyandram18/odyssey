@@ -12,9 +12,9 @@ type Event interface {
 
 const (
 	EventTypeQuestCompleted     = "quest_completed"
-	EventTypeChapterCompleted   = "chapter_completed"
+	EventTypeChapterCompleted   = "course_completed"
 	EventTypeRelicCollected     = "relic_collected"
-	EventTypeDailyTurnCompleted = "daily_turn_completed"
+	EventTypeDailyTurnCompleted = "daily_mission_completed"
 	EventTypeLevelReached       = "level_reached"
 	EventTypeCreativeSubmission = "creative_submission"
 	EventTypeRelayHandoff       = "relay_handoff"
@@ -22,11 +22,11 @@ const (
 )
 
 type QuestCompletedEvent struct {
-	QuestID      int64
-	CrewID       string
+	MissionID      int64
+	FamilyID       string
 	TemplateSlug string
-	Realm        string
-	Chapter      string
+	Journey        string
+	Course      string
 	SeasonSlug   string
 	PlayerUID    string
 }
@@ -34,9 +34,9 @@ type QuestCompletedEvent struct {
 func (e QuestCompletedEvent) EventType() string { return EventTypeQuestCompleted }
 
 type ChapterCompletedEvent struct {
-	CrewID     string
-	Chapter    string
-	Realm      string
+	FamilyID     string
+	Course    string
+	Journey      string
 	SeasonSlug string
 	PlayerUID  string
 }
@@ -45,9 +45,9 @@ func (e ChapterCompletedEvent) EventType() string { return EventTypeChapterCompl
 
 type RelicCollectedEvent struct {
 	UID       string
-	CrewID    string
-	RelicSlug string
-	Realm     string
+	FamilyID    string
+	CollectionSlug string
+	Journey     string
 }
 
 func (e RelicCollectedEvent) EventType() string { return EventTypeRelicCollected }
@@ -64,16 +64,16 @@ func (e DailyTurnCompletedEvent) EventType() string { return EventTypeDailyTurnC
 type RelayHandoffEvent struct {
 	FromUID    string // Explorer who completed the previous leg
 	ToUID      string // Explorer now assigned the next leg
-	QuestID    int64
+	MissionID    int64
 	QuestTitle string
-	CrewID     string
+	FamilyID     string
 }
 
 func (e RelayHandoffEvent) EventType() string { return EventTypeRelayHandoff }
 
 type LevelReachedEvent struct {
 	UID      string
-	CrewID   string
+	FamilyID   string
 	OldLevel int
 	NewLevel int
 }
@@ -82,7 +82,7 @@ func (e LevelReachedEvent) EventType() string { return EventTypeLevelReached }
 
 type AchievementEarnedEvent struct {
 	UID             string
-	CrewID          string
+	FamilyID          string
 	AchievementCode string
 }
 
@@ -90,9 +90,9 @@ func (e AchievementEarnedEvent) EventType() string { return EventTypeAchievement
 
 type CreativeSubmissionEvent struct {
 	UID         string
-	CrewID      string
-	QuestID     int64
-	ChallengeID int64
+	FamilyID      string
+	MissionID     int64
+	ExerciseID int64
 	Kind        string
 }
 

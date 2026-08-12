@@ -34,7 +34,7 @@ func makeSeason(slug, name string, start, end time.Time) gamecontent.SeasonDefin
 		Name:      name,
 		StartAt:   start,
 		EndAt:     end,
-		Realm:     "realm-1",
+		Journey:     "journey-1",
 		CreatedAt: time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC),
 		UpdatedAt: time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC),
 	}

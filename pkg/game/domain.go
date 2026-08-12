@@ -10,7 +10,7 @@ import "time"
 // Identity is the shared UID from Gatekeeper; game state lives here.
 type Player struct {
 	UID                    string    `json:"uid"`
-	CrewID                 string    `json:"crew_id"`
+	FamilyID                 string    `json:"family_id"`
 	ExplorerName           string    `json:"explorer_name"`
 	Role                   string    `json:"role"`
 	Level                  int       `json:"level"`
@@ -23,8 +23,8 @@ type Player struct {
 	UpdatedAt              time.Time `json:"updated_at"`
 }
 
-// Crew is the family group — the shared party for all progression.
-type Crew struct {
+// Family is the family group — the shared party for all progression.
+type Family struct {
 	ID        string
 	Name      string
 	BannerURL string
@@ -33,11 +33,11 @@ type Crew struct {
 	UpdatedAt time.Time
 }
 
-// Quest is an instance of a quest template, activated by a specific crew.
+// Mission is an instance of a quest template, activated by a specific crew.
 // The template_slug references code-embedded definitions (see docs/domain-model.md).
-type Quest struct {
+type Mission struct {
 	ID           int64      `json:"id"`
-	CrewID       string     `json:"crew_id"`
+	FamilyID       string     `json:"family_id"`
 	TemplateSlug string     `json:"template_slug"`
 	Title        string     `json:"title"`
 	Status       string     `json:"status"`
@@ -47,10 +47,10 @@ type Quest struct {
 	CreatedAt    time.Time  `json:"created_at"`
 }
 
-// Challenge is a single task within a Quest.
-type Challenge struct {
+// Exercise is a single task within a Mission.
+type Exercise struct {
 	ID          int64      `json:"id"`
-	QuestID     int64      `json:"quest_id"`
+	MissionID     int64      `json:"mission_id"`
 	Slug        string     `json:"slug"`
 	Description string     `json:"description"`
 	Status      string     `json:"status"`
@@ -60,11 +60,11 @@ type Challenge struct {
 	CreatedAt   time.Time  `json:"created_at"`
 }
 
-// RealmProgress is the family's shared progress within a specific realm.
-// Multiple rows per crew are expected — one per realm.
-type RealmProgress struct {
-	CrewID         string    `json:"crew_id"`
-	Realm          string    `json:"realm"`
+// JourneyProgress is the family's shared progress within a specific journey.
+// Multiple rows per crew are expected — one per journey.
+type JourneyProgress struct {
+	FamilyID         string    `json:"family_id"`
+	Journey          string    `json:"journey"`
 	Status         string    `json:"status"`
 	StoryBranch    string    `json:"story_branch,omitempty"`
 	Progress       int       `json:"progress"`
@@ -72,10 +72,10 @@ type RealmProgress struct {
 	UpdatedAt      time.Time `json:"updated_at"`
 }
 
-// StoryFragment is a collectible narrative piece in a realm.
-type StoryFragment struct {
+// LearningConcept is a collectible narrative piece in a journey.
+type LearningConcept struct {
 	Slug      string    `json:"slug"`
-	Realm     string    `json:"realm"`
+	Journey     string    `json:"journey"`
 	Title     string    `json:"title"`
 	Content   string    `json:"content"`
 	SetName   string    `json:"set_name"`
@@ -87,7 +87,7 @@ type StoryFragment struct {
 type PlayerStoryFragment struct {
 	ID           int64     `json:"id"`
 	UID          string    `json:"uid"`
-	CrewID       string    `json:"crew_id"`
+	FamilyID       string    `json:"family_id"`
 	FragmentSlug string    `json:"fragment_slug"`
 	DiscoveredAt time.Time `json:"discovered_at"`
 }
@@ -95,8 +95,8 @@ type PlayerStoryFragment struct {
 // CreativeItem is an append-only contribution to a creative space.
 type CreativeItem struct {
 	ID        int64     `json:"id"`
-	CrewID    string    `json:"crew_id"`
-	Realm     string    `json:"realm"`
+	FamilyID    string    `json:"family_id"`
+	Journey     string    `json:"journey"`
 	AuthorUID string    `json:"author_uid"`
 	Kind      string    `json:"kind"`
 	Payload   string    `json:"payload"`
@@ -107,7 +107,7 @@ type CreativeItem struct {
 // (odyssey_creative_items). Not a real-time collaborative editor.
 const KindSharedText = "SHARED_TEXT"
 
-// Realm shared board posts use a fixed realm tag (not quest-bound).
+// Journey shared board posts use a fixed journey tag (not quest-bound).
 const RealmSharedBoard = "shared-board"
 
 // Reaction target types (odyssey_reactions.target_type).
@@ -140,9 +140,9 @@ const (
 // Submission is a creative quest submission awaiting review.
 type Submission struct {
 	ID              int64
-	QuestID         int64
-	ChallengeID     int64
-	CrewID          string
+	MissionID         int64
+	ExerciseID     int64
+	FamilyID          string
 	AuthorUID       string
 	Kind            SubmissionKind
 	Content         string
@@ -165,12 +165,12 @@ const (
 	RarityLegendary Rarity = "LEGENDARY"
 )
 
-// DailyTurn is one-per-user-per-calendar-day engagement.
-type DailyTurn struct {
+// DailyMission is one-per-user-per-calendar-day engagement.
+type DailyMission struct {
 	ID        int64     `json:"id"`
 	UID       string    `json:"uid"`
 	Date      string    `json:"date"`
-	QuestSlug string    `json:"quest_slug"`
+	MissionSlug string    `json:"mission_slug"`
 	Completed bool      `json:"completed"`
 	CreatedAt time.Time `json:"created_at"`
 }
@@ -179,7 +179,7 @@ type DailyTurn struct {
 type Achievement struct {
 	ID              int64
 	UID             string
-	CrewID          string
+	FamilyID          string
 	Code            string
 	Kind            string
 	Trigger         string
@@ -188,27 +188,27 @@ type Achievement struct {
 	CreatedAt       time.Time
 }
 
-// Relic is a personal collectible displayed in the crew gallery.
-type Relic struct {
+// Collection is a personal collectible displayed in the crew gallery.
+type Collection struct {
 	ID          int64     `json:"id"`
 	UID         string    `json:"uid"`
 	Code        string    `json:"code"`
 	Name        string    `json:"name"`
 	Description string    `json:"description"`
-	Realm       string    `json:"realm"`
+	Journey       string    `json:"journey"`
 	Rarity      string    `json:"rarity"`
 	Image       string    `json:"image"`
-	Lore        string    `json:"lore"`
+	Concept        string    `json:"concept"`
 	AwardedAt   time.Time `json:"awarded_at"`
 	CreatedAt   time.Time `json:"created_at"`
 }
 
-// Chest is a reward container with known, fixed contents.
-type Chest struct {
+// Gift is a reward container with known, fixed contents.
+type Gift struct {
 	ID          int64      `json:"id"`
 	UID         string     `json:"uid"`
 	Source      string     `json:"source"`
-	ChestSlug   string     `json:"chest_slug"`
+	GiftSlug   string     `json:"gift_slug"`
 	Rarity      string     `json:"rarity"`
 	Icon        string     `json:"icon"`
 	Description string     `json:"description"`
@@ -222,8 +222,8 @@ type Chest struct {
 // PlayerRelic tracks a player's ownership state for a specific relic.
 type PlayerRelic struct {
 	UID          string    `json:"uid"`
-	RelicSlug    string    `json:"relic_slug"`
-	RelicID      int64     `json:"relic_id"`
+	CollectionSlug    string    `json:"collection_slug"`
+	CollectionID      int64     `json:"collection_id"`
 	OwnedCount   int       `json:"owned_count"`
 	IsNew        bool      `json:"is_new"`
 	DiscoveredAt time.Time `json:"discovered_at"`
@@ -252,8 +252,8 @@ type ChestDefinition struct {
 // DropTableEntry is a single rarity-weight pair for a chest definition.
 type DropTableEntry struct {
 	ID        int64     `json:"id"`
-	ChestSlug string    `json:"chest_slug"`
-	RelicID   int64     `json:"relic_id,omitempty"`
+	GiftSlug string    `json:"gift_slug"`
+	CollectionID   int64     `json:"collection_id,omitempty"`
 	Rarity    string    `json:"rarity,omitempty"`
 	Weight    float64   `json:"weight"`
 	Published bool      `json:"published"`
@@ -268,10 +268,10 @@ type RelicDefinition struct {
 	Slug        string     `json:"slug"`
 	Name        string     `json:"name"`
 	Description string     `json:"description"`
-	Realm       string     `json:"realm"`
+	Journey       string     `json:"journey"`
 	Rarity      string     `json:"rarity"`
 	Image       string     `json:"image"`
-	Lore        string     `json:"lore"`
+	Concept        string     `json:"concept"`
 	Published   bool       `json:"published"`
 	Version     int        `json:"version"`
 	UpdatedBy   string     `json:"updated_by,omitempty"`
@@ -281,25 +281,25 @@ type RelicDefinition struct {
 	UpdatedAt   time.Time  `json:"updated_at"`
 }
 
-// ChapterProgress tracks a crew's progression through a single chapter.
-// One row per (crew_id, chapter) — created when the chapter is unlocked.
-type ChapterProgress struct {
-	CrewID      string     `json:"crew_id"`
-	Chapter     string     `json:"chapter"`
-	Realm       string     `json:"realm"`
+// CourseProgress tracks a crew's progression through a single course.
+// One row per (family_id, course) — created when the course is unlocked.
+type CourseProgress struct {
+	FamilyID      string     `json:"family_id"`
+	Course     string     `json:"course"`
+	Journey       string     `json:"journey"`
 	Status      string     `json:"status"`
 	CompletedAt *time.Time `json:"completed_at,omitempty"`
 	CreatedAt   time.Time  `json:"created_at"`
 	UpdatedAt   time.Time  `json:"updated_at"`
 }
 
-// LoreUnlock tracks a crew's discovered lore entries.
-// One row per (crew_id, lore_slug) — created when the lore is unlocked.
+// LoreUnlock tracks a crew's discovered concept entries.
+// One row per (family_id, concept_slug) — created when the concept is unlocked.
 type LoreUnlock struct {
-	CrewID     string    `json:"crew_id"`
-	LoreSlug   string    `json:"lore_slug"`
-	Realm      string    `json:"realm"`
-	Chapter    string    `json:"chapter"`
+	FamilyID     string    `json:"family_id"`
+	ConceptSlug   string    `json:"concept_slug"`
+	Journey      string    `json:"journey"`
+	Course    string    `json:"course"`
 	UnlockedAt time.Time `json:"unlocked_at"`
 	CreatedAt  time.Time `json:"created_at"`
 }
@@ -310,7 +310,7 @@ type LoreUnlock struct {
 type PlayerAchievement struct {
 	ID        int64     `json:"id"`
 	UID       string    `json:"uid"`
-	CrewID    string    `json:"crew_id"`
+	FamilyID    string    `json:"family_id"`
 	Code      string    `json:"code"`
 	Kind      string    `json:"kind"`
 	Trigger   string    `json:"trigger"`
@@ -322,7 +322,7 @@ type PlayerAchievement struct {
 // Reaction represents a peer reaction to a crew's action (e.g. quest, submission).
 type Reaction struct {
 	ID           int64     `json:"id"`
-	CrewID       string    `json:"crew_id"`
+	FamilyID       string    `json:"family_id"`
 	TargetType   string    `json:"target_type"`
 	TargetID     int64     `json:"target_id"`
 	ActorUID     string    `json:"actor_uid"`

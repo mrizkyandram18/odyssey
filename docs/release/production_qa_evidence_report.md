@@ -40,7 +40,7 @@ E2E: PASS
 | Router | React `HashRouter` (`/#/...`) |
 | Schema | `schema_version = "11"` (DB + live `/api/status`) |
 
-Hash routes exercised by E2E: `/#/login`, `/#/`, `/#/journal`, `/#/quests/103`, `/#/profile`.
+Hash routes exercised by E2E: `/#/login`, `/#/`, `/#/journal`, `/#/missions/103`, `/#/profile`.
 
 ---
 
@@ -67,13 +67,13 @@ Hash routes exercised by E2E: `/#/login`, `/#/`, `/#/journal`, `/#/quests/103`, 
 
 | Migration | Role |
 | --- | --- |
-| 001 | Core tables: crews, profiles, quests, challenges, realm_progress, creative_items, daily_turns, achievements, relics, chests |
+| 001 | Core tables: families, profiles, missions, exercises, journey_progress, creative_items, daily_missions, achievements, collections, gifts |
 | 002 | Indexes |
 | 003 | creative_submissions, system_config, schema_version |
-| 004 | player_relics + chest/relic expansion columns |
+| 004 | player_collections + chest/relic expansion columns |
 | 005 | chest/drop/relic definition tables |
-| 006 | realm/chapter/quest/prompt/achievement/season/lore definition tables |
-| 007 | chapter_progress, lore_unlocks + progression columns |
+| 006 | journey/course/quest/prompt/achievement/season/concepts definition tables |
+| 007 | course_progress, concept_unlocks + progression columns |
 | 008 | balance_configs, audit_logs + live ops |
 | 009 | request correlation + schema_version bump |
 | 011 | quest prerequisites |
@@ -86,8 +86,8 @@ Hash routes exercised by E2E: `/#/login`, `/#/`, `/#/journal`, `/#/quests/103`, 
 
 | Migration | Tables seeded | Idempotent? |
 | --- | --- | --- |
-| **010** | realm/chapter/quest/prompt/achievement/lore/chest/drop/relic/season definitions + balance_configs | Yes (`ON CONFLICT DO NOTHING` / key update for balance) |
-| **017** | crews, profiles, realm_progress, quests, challenges, creative_items, daily_turns, relics, chests; schema_version→11 | Yes (`ON CONFLICT DO NOTHING`) |
+| **010** | journey/course/quest/prompt/achievement/concepts/chest/drop/relic/season definitions + balance_configs | Yes (`ON CONFLICT DO NOTHING` / key update for balance) |
+| **017** | families, profiles, journey_progress, missions, exercises, creative_items, daily_missions, collections, gifts; schema_version→11 | Yes (`ON CONFLICT DO NOTHING`) |
 | **018** | reactions (5 seed IDs) | Yes (`ON CONFLICT (id) DO NOTHING`) |
 | **019** | `odyssey_local_users` DDL + 3 demo users | Yes (`CREATE IF NOT EXISTS`, `ON CONFLICT (username) DO NOTHING`) |
 
@@ -111,33 +111,33 @@ odyssey_schema_version: key=schema_version value=11
 | --- | --- | --- | --- | --- | --- |
 | `odyssey_schema_version` | 017 | 11 | 11 | Matches `/api/status` | **PASS** |
 | `odyssey_local_users` | 019 | 3 | 3 | demo1→demo-uid-1, demo2→demo-uid-2, demo3→demo-uid-3 (hashes not logged) | **PASS** |
-| `odyssey_crews` | 017 | 1 | 1 | demo-crew-1 / The Starseekers | **PASS** |
+| `odyssey_families` | 017 | 1 | 1 | demo-crew-1 / The Starseekers | **PASS** |
 | `odyssey_user_profiles` | 017 | 3 | 3 | Leo/Maya/Sam present; **Leo XP/level advanced by QA** (level 23 / xp 2210 vs seed 2/150) | **PASS** (present; evolved) |
-| `odyssey_quests` | 017 | 3 | 3 | 101 Morning Light DONE; 102 Gather Herbs ACTIVE; 103 Riddle of the Stones present | **PASS** |
-| `odyssey_challenges` | 017 | 6 | 6 | All 6 challenge rows for 101–103 exist; **103 challenges DONE via QA** (seed PENDING) | **PASS** (present; evolved) |
-| `odyssey_realm_progress` | 017 | ≥1 | 2 | Seed: whispering-woods ACTIVE 50; **now COMPLETE 100 + clockwork-city ACTIVE 0** (gameplay) | **PASS** (superset) |
+| `odyssey_missions` | 017 | 3 | 3 | 101 Morning Light DONE; 102 Gather Herbs ACTIVE; 103 Riddle of the Stones present | **PASS** |
+| `odyssey_exercises` | 017 | 6 | 6 | All 6 challenge rows for 101–103 exist; **103 exercises DONE via QA** (seed PENDING) | **PASS** (present; evolved) |
+| `odyssey_journey_progress` | 017 | ≥1 | 2 | Seed: whispering-woods ACTIVE 50; **now COMPLETE 100 + clockwork-city ACTIVE 0** (gameplay) | **PASS** (superset) |
 | `odyssey_creative_items` | 017 | 5 | 5 | Journal/gallery stories match seed samples | **PASS** |
-| `odyssey_daily_turns` | 017 | 6 | 6 | Present | **PASS** |
-| `odyssey_relics` (instance) | 017 | 2 | 2 | acorn-shard, whispering-leaf | **PASS** |
-| `odyssey_chests` (instance) | 017 | 3 | 4 | Seed 3 + **1 extra from gameplay** | **PASS** (superset) |
+| `odyssey_daily_missions` | 017 | 6 | 6 | Present | **PASS** |
+| `odyssey_collections` (instance) | 017 | 2 | 2 | acorn-shard, whispering-leaf | **PASS** |
+| `odyssey_gifts` (instance) | 017 | 3 | 4 | Seed 3 + **1 extra from gameplay** | **PASS** (superset) |
 | `odyssey_reactions` | 018 | 5 | 5 | Seed UUIDs 000…001–005 | **PASS** |
-| `odyssey_realm_definitions` | 010 | 3 | 3 | whispering-woods, clockwork-city, starlit-library | **PASS** |
-| `odyssey_chapter_definitions` | 010 | 4 | 4 | the-awakening, the-deep-woods, gears-and-gold, first-stars | **PASS** |
+| `odyssey_journey_definitions` | 010 | 3 | 3 | whispering-woods, clockwork-city, starlit-library | **PASS** |
+| `odyssey_course_definitions` | 010 | 4 | 4 | the-awakening, the-deep-woods, gears-and-gold, first-stars | **PASS** |
 | `odyssey_quest_definitions` | 010 | 12 | 12 | includes `riddle-of-the-stones` | **PASS** |
 | `odyssey_creative_prompt_definitions` | 010 | 6 | 6 | | **PASS** |
 | `odyssey_achievement_definitions` | 010 | 10 | 10 | codes match seed | **PASS** |
-| `odyssey_lore_definitions` | 010 | 8 | 8 | | **PASS** |
+| `odyssey_concept_definitions` | 010 | 8 | 8 | | **PASS** |
 | `odyssey_chest_definitions` | 010 | 5 | 5 | wooden…mystic | **PASS** |
 | `odyssey_drop_tables` | 010 | 22 | 22 | | **PASS** |
 | `odyssey_relic_definitions` | 010 | 15 | 15 | | **PASS** |
 | `odyssey_season_definitions` | 010 | 1 | 1 | season-spring-2026 | **PASS** |
 | `odyssey_balance_configs` | 010 | 9 | 9 | all 9 keys present | **PASS** |
 | `odyssey_achievements` (instance) | — | 0 seeded | 2 | Gameplay awards; not a seed gap | N/A (runtime) |
-| `odyssey_chapter_progress` | — | 0 seeded | 1 | Gameplay | N/A (runtime) |
-| `odyssey_player_relics` | — | 0 | 0 | Schema only | OK |
+| `odyssey_course_progress` | — | 0 seeded | 1 | Gameplay | N/A (runtime) |
+| `odyssey_player_collections` | — | 0 | 0 | Schema only | OK |
 | `odyssey_system_config` | — | 0 | 0 | Schema only | OK |
 | `odyssey_creative_submissions` | — | 0 | 0 | Schema only | OK |
-| `odyssey_lore_unlocks` | — | 0 | 0 | Schema only | OK |
+| `odyssey_concept_unlocks` | — | 0 | 0 | Schema only | OK |
 | `odyssey_audit_logs` | — | 0 | 0 | Runtime | OK |
 | `odyssey_daily_activity` | — | 0 | 0 | Runtime | OK |
 | `odyssey_reward_ledgers` | — | 0 | 0 | Runtime | OK |
@@ -145,12 +145,12 @@ odyssey_schema_version: key=schema_version value=11
 ### Critical content spot-check
 
 ```text
-Quest 103:
+Mission 103:
   id=103
   title=Riddle of the Stones
   template_slug=riddle-of-the-stones
   status (list)=ACTIVE  status (detail)=DONE   # QA progress / path drift; content present
-  challenges: stone-shape DONE, solve-riddle DONE
+  exercises: stone-shape DONE, solve-riddle DONE
 
 Local users:
   demo1 → demo-uid-1
@@ -194,16 +194,16 @@ Target: `https://odyssey-beta-nine.vercel.app`
 | Endpoint | Method | Result | Evidence |
 | --- | --- | --- | --- |
 | `/` | GET | **PASS** 200 | HTML shell, `#root` |
-| `/api/status` | GET | **PASS** 200 | app=odyssey, schema_version=11, quests=12, realms=3, achievements=10, lore=8, chapters=4, relics=15, chests=5, prompts=6, seasons=1 |
-| `/api/login` demo1 | POST | **PASS** 200 | uid=demo-uid-1, role=SEEKER, crew_id=demo-crew-1 |
+| `/api/status` | GET | **PASS** 200 | app=odyssey, schema_version=11, missions=12, realms=3, achievements=10, concept=8, chapters=4, collections=15, gifts=5, prompts=6, seasons=1 |
+| `/api/login` demo1 | POST | **PASS** 200 | uid=demo-uid-1, role=SEEKER, family_id=demo-crew-1 |
 | `/api/login` demo2 | POST | **PASS** 200 | uid=demo-uid-2, role=GUIDE |
 | `/api/login` demo3 | POST | **PASS** 200 | uid=demo-uid-3, role=BUILDER |
 | `/api/login` invalid user | POST | **PASS** 401 | rejected |
 | `/api/login` wrong password | POST | **PASS** 401 then 429 under load | rate limiter **enabled** (not disabled) |
 | `/api/me` unauthenticated | GET | **PASS** 401 | |
 | `/api/me` + Bearer demo1 | GET | **PASS** 200 | Leo SEEKER |
-| `/api/quests` | GET | **PASS** 200 | ids 101, 102, 103 |
-| `/api/quests/103` | GET | **PASS** 200 | title Riddle of the Stones |
+| `/api/missions` | GET | **PASS** 200 | ids 101, 102, 103 |
+| `/api/missions/103` | GET | **PASS** 200 | title Riddle of the Stones |
 
 Session tokens **redacted** from this report.
 
@@ -260,18 +260,18 @@ npm run test:e2e -- --reporter=list
 Running 16 tests using 1 worker
   ok  1 Auth Domain › can login successfully
   ok  2 Auth Domain › can logout successfully
-  ok  3 Golden Path › Test 1: Login -> Home -> Quest list appears
-  ok  4 Golden Path › Test 2: Start Quest -> Complete Challenge -> XP increases -> Journal updates
+  ok  3 Golden Path › Test 1: Login -> Home -> Mission list appears
+  ok  4 Golden Path › Test 2: Start Mission -> Complete Exercise -> XP increases -> Journal updates
   ok  5 Golden Path › Test 3: Logout -> Login -> Progress persists
-  ok  6 Home Domain › displays home dashboard and quests
+  ok  6 Home Domain › displays home dashboard and missions
   ok  7 Journal Domain › can view journal entries
   ok  8 Multi-user › can login as demo1 and see dashboard
   ok  9 Multi-user › can login as demo2 and see dashboard
   ok 10 Multi-user › can login as demo3 and see dashboard
   ok 11 Persistence › session persists after reload
   ok 12 Persistence › state persists after logout and login
-  ok 13 Quest Domain › can complete a challenge in a quest
-  ok 14 Regression › deep-link to /#/quests/103 after login
+  ok 13 Mission Domain › can complete a challenge in a quest
+  ok 14 Regression › deep-link to /#/missions/103 after login
   ok 15 Regression › browser back and forward navigation
   ok 16 Regression › unauthenticated deep-link redirects to login
   16 passed (3.0m)
@@ -298,7 +298,7 @@ Intentional (reviewed) changes:
 | `web/playwright.config.ts` | Production-capable baseURL; no webServer for prod |
 | `web/tests/e2e/**` | Production-hardened helpers, multi-user + regression specs |
 | `pkg/db/supabase.go` | Prefer header handling for `return=representation` |
-| `pkg/game/quest/service.go` | ACTIVE status when quest started but compute returns PENDING |
+| `pkg/game/mission/service.go` | ACTIVE status when quest started but compute returns PENDING |
 | `internal/api/dev/main.go` | dotenv path for local dev |
 | `docs/release/*` | Evidence / RCA reports |
 
@@ -340,7 +340,7 @@ Remote CI status is recorded after push/PR.
 | --- | --- | --- |
 | `/api/home` cold/warm latency | Medium (perf) | Functional PASS; E2E uses 45s home wait |
 | Login rate limit → 429 under rapid automation | Low | Expected; do not disable |
-| Quest 103 list vs detail status drift | Low | Content intact; challenges complete from QA |
+| Mission 103 list vs detail status drift | Low | Content intact; exercises complete from QA |
 | Leo level/XP advanced vs seed baseline | Info | Expected QA progress — do not reseed |
 | CLAUDE.md Gatekeeper wording vs Local Auth prototype | Docs | Runtime is Local Auth; Gatekeeper not modified |
 | CI integration job uses dummy Supabase + incomplete backend start | Medium (CI fidelity) | Production E2E is the true release gate for this prototype |
@@ -353,7 +353,7 @@ Remote CI status is recorded after push/PR.
 ### Verified
 
 - Production frontend HTTP 200
-- Production API status/login/me/quests/103
+- Production API status/login/me/missions/103
 - Local Auth for demo1/2/3 + invalid rejection
 - Complete seed/content matrix via production DB counts + content samples
 - schema_version 11

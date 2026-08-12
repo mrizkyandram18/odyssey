@@ -1,5 +1,5 @@
 import type { SeasonSummary } from '../../types'
-import { getRealmMetadata } from '../../utils/realm'
+import { getRealmMetadata } from '../../utils/journey'
 
 const STATE_LABEL: Record<string, string> = {
   ACTIVE: 'Aktif',
@@ -18,14 +18,14 @@ const STATE_STYLE: Record<string, string> = {
 export interface SeasonBadgeProps {
   season: SeasonSummary
   progress?: {
-    quests_completed: number
-    realm_progress: number
-    realm_status: string
+    missions_completed: number
+    journey_progress: number
+    journey_status: string
   }
 }
 
 export function SeasonBadge({ season, progress }: SeasonBadgeProps) {
-  const realmMeta = getRealmMetadata(season.definition.realm)
+  const realmMeta = getRealmMetadata(season.definition.journey)
   const isActive = season.state === 'ACTIVE'
 
   return (
@@ -47,7 +47,7 @@ export function SeasonBadge({ season, progress }: SeasonBadgeProps) {
               {season.definition.name}
             </p>
             <p className="text-[10px] text-text-secondary uppercase tracking-wider">
-              {realmMeta?.name || season.definition.realm}
+              {realmMeta?.name || season.definition.journey}
             </p>
           </div>
         </div>
@@ -64,17 +64,17 @@ export function SeasonBadge({ season, progress }: SeasonBadgeProps) {
         <div className="flex flex-col gap-1 mt-1">
           <div className="flex items-center justify-between text-[11px] text-text-secondary">
             <span>Progres Ranah</span>
-            <span className="tabular-nums">{progress.realm_progress}%</span>
+            <span className="tabular-nums">{progress.journey_progress}%</span>
           </div>
           <div className="h-1.5 w-full rounded-full bg-surface-elevated overflow-hidden">
             <div
               className="h-full rounded-full bg-accent-nature transition-all duration-500"
-              style={{ width: `${Math.min(100, Math.max(0, progress.realm_progress))}%` }}
+              style={{ width: `${Math.min(100, Math.max(0, progress.journey_progress))}%` }}
             />
           </div>
           <div className="flex items-center justify-between text-[11px] text-text-secondary">
             <span>Misi Selesai</span>
-            <span className="tabular-nums">{progress.quests_completed}</span>
+            <span className="tabular-nums">{progress.missions_completed}</span>
           </div>
         </div>
       )}

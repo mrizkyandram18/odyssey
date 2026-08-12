@@ -20,11 +20,11 @@ func NewChestStore(client SupabaseClient) game.ChestStore {
 	return &supabaseChestStore{client: client}
 }
 
-func (s *supabaseChestStore) CreateChest(ctx context.Context, ch *game.Chest) (*game.Chest, error) {
-	payload := Chest{
+func (s *supabaseChestStore) CreateChest(ctx context.Context, ch *game.Gift) (*game.Gift, error) {
+	payload := Gift{
 		UID:         ch.UID,
 		Source:      ch.Source,
-		ChestSlug:   ch.ChestSlug,
+		GiftSlug:   ch.GiftSlug,
 		Rarity:      ch.Rarity,
 		Icon:        ch.Icon,
 		Description: ch.Description,
@@ -32,46 +32,46 @@ func (s *supabaseChestStore) CreateChest(ctx context.Context, ch *game.Chest) (*
 		DropTable:   ch.DropTable,
 		Opened:      ch.Opened,
 	}
-	raw, err := s.client.Mutate(ctx, "POST", "odyssey_chests", payload, "return=representation")
+	raw, err := s.client.Mutate(ctx, "POST", "odyssey_gifts", payload, "return=representation")
 	if err != nil {
 		return nil, fmt.Errorf("create chest: %w", err)
 	}
 
-	var chests []Chest
-	if err := json.Unmarshal(raw, &chests); err != nil {
+	var gifts []Gift
+	if err := json.Unmarshal(raw, &gifts); err != nil {
 		return nil, fmt.Errorf("parse created chest: %w", err)
 	}
-	if len(chests) == 0 {
+	if len(gifts) == 0 {
 		return ch, nil
 	}
-	return mapChest(chests[0]), nil
+	return mapChest(gifts[0]), nil
 }
 
-func (s *supabaseChestStore) GetChest(ctx context.Context, chestID int64) (*game.Chest, error) {
+func (s *supabaseChestStore) GetChest(ctx context.Context, chestID int64) (*game.Gift, error) {
 	v := url.Values{}
 	v.Set("id", "eq."+strconv.FormatInt(chestID, 10))
 	params := v.Encode()
 
-	raw, err := s.client.Get(ctx, "odyssey_chests", params)
+	raw, err := s.client.Get(ctx, "odyssey_gifts", params)
 	if err != nil {
 		return nil, fmt.Errorf("get chest: %w", err)
 	}
 
-	var chests []Chest
-	if err := json.Unmarshal(raw, &chests); err != nil {
+	var gifts []Gift
+	if err := json.Unmarshal(raw, &gifts); err != nil {
 		return nil, fmt.Errorf("parse chest: %w", err)
 	}
-	if len(chests) == 0 {
+	if len(gifts) == 0 {
 		return nil, game.ErrNotFound
 	}
-	return mapChest(chests[0]), nil
+	return mapChest(gifts[0]), nil
 }
 
 func (s *supabaseChestStore) UpdateChest(ctx context.Context, chestID int64, patch map[string]any) error {
 	v := url.Values{}
 	v.Set("id", "eq."+strconv.FormatInt(chestID, 10))
 	params := v.Encode()
-	_, err := s.client.Mutate(ctx, "PATCH", "odyssey_chests", patch, params)
+	_, err := s.client.Mutate(ctx, "PATCH", "odyssey_gifts", patch, params)
 	if err != nil {
 		return fmt.Errorf("update chest: %w", err)
 	}
@@ -87,45 +87,45 @@ func (s *supabaseChestStore) UpdateChestIfMatch(ctx context.Context, chestID int
 		v.Set("opened", "eq.false")
 	}
 	params := v.Encode()
-	raw, err := s.client.Mutate(ctx, "PATCH", "odyssey_chests", patch, params+"&return=representation")
+	raw, err := s.client.Mutate(ctx, "PATCH", "odyssey_gifts", patch, params+"&return=representation")
 	if err != nil {
 		return false, fmt.Errorf("update chest if match: %w", err)
 	}
 
-	var chests []Chest
-	if err := json.Unmarshal(raw, &chests); err != nil {
+	var gifts []Gift
+	if err := json.Unmarshal(raw, &gifts); err != nil {
 		return false, fmt.Errorf("parse update chest response: %w", err)
 	}
-	return len(chests) > 0, nil
+	return len(gifts) > 0, nil
 }
 
-func (s *supabaseChestStore) ListChestsByUser(ctx context.Context, uid string) ([]game.Chest, error) {
+func (s *supabaseChestStore) ListChestsByUser(ctx context.Context, uid string) ([]game.Gift, error) {
 	v := url.Values{}
 	v.Set("uid", "eq."+uid)
 	params := v.Encode()
 
-	raw, err := s.client.Get(ctx, "odyssey_chests", params)
+	raw, err := s.client.Get(ctx, "odyssey_gifts", params)
 	if err != nil {
-		return nil, fmt.Errorf("list chests: %w", err)
+		return nil, fmt.Errorf("list gifts: %w", err)
 	}
 
-	var chests []Chest
-	if err := json.Unmarshal(raw, &chests); err != nil {
-		return nil, fmt.Errorf("parse chests: %w", err)
+	var gifts []Gift
+	if err := json.Unmarshal(raw, &gifts); err != nil {
+		return nil, fmt.Errorf("parse gifts: %w", err)
 	}
-	result := make([]game.Chest, 0, len(chests))
-	for i := range chests {
-		result = append(result, *mapChest(chests[i]))
+	result := make([]game.Gift, 0, len(gifts))
+	for i := range gifts {
+		result = append(result, *mapChest(gifts[i]))
 	}
 	return result, nil
 }
 
-func mapChest(ch Chest) *game.Chest {
-	return &game.Chest{
+func mapChest(ch Gift) *game.Gift {
+	return &game.Gift{
 		ID:          ch.ID,
 		UID:         ch.UID,
 		Source:      ch.Source,
-		ChestSlug:   ch.ChestSlug,
+		GiftSlug:   ch.GiftSlug,
 		Rarity:      ch.Rarity,
 		Icon:        ch.Icon,
 		Description: ch.Description,

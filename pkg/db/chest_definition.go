@@ -58,7 +58,7 @@ func (s *supabaseChestDefinitionStore) GetChestDefinition(ctx context.Context, s
 
 func (s *supabaseChestDefinitionStore) ListDropTableEntries(ctx context.Context, chestSlug string) ([]game.DropTableEntry, error) {
 	v := url.Values{}
-	v.Set("chest_slug", "eq."+chestSlug)
+	v.Set("gift_slug", "eq."+chestSlug)
 	params := v.Encode()
 
 	raw, err := s.client.Get(ctx, "odyssey_drop_tables", params)
@@ -98,8 +98,8 @@ func mapChestDefinition(d ChestDefinition) *game.ChestDefinition {
 func mapDropTableEntry(e DropTableEntry) *game.DropTableEntry {
 	return &game.DropTableEntry{
 		ID:        e.ID,
-		ChestSlug: e.ChestSlug,
-		RelicID:   e.RelicID,
+		GiftSlug: e.GiftSlug,
+		CollectionID:   e.CollectionID,
 		Rarity:    e.Rarity,
 		Weight:    e.Weight,
 		CreatedAt: e.CreatedAt,

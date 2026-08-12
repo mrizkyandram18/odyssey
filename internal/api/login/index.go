@@ -21,7 +21,7 @@ type loginResponse struct {
 	Session    string `json:"session,omitempty"`
 	SetupToken string `json:"setup_token,omitempty"`
 	UID        string `json:"uid,omitempty"`
-	CrewID     string `json:"crew_id,omitempty"`
+	FamilyID     string `json:"family_id,omitempty"`
 	Kind       string `json:"kind,omitempty"`
 	Role       string `json:"role,omitempty"`
 	Expires    int64  `json:"expires,omitempty"`
@@ -75,7 +75,7 @@ func writeSuccess(w http.ResponseWriter, r *http.Request, ctx context.Context, u
 		if profile, err := profiles.GetUserProfile(ctx, uid); err == nil && profile != nil {
 			cfg = &auth.SessionConfig{
 				Role:   auth.Role(profile.Role),
-				CrewID: profile.CrewID,
+				FamilyID: profile.FamilyID,
 			}
 		}
 	}
@@ -92,7 +92,7 @@ func writeSuccess(w http.ResponseWriter, r *http.Request, ctx context.Context, u
 		Status:  "success",
 		Session: token,
 		UID:     uid,
-		CrewID:  claims.CrewID,
+		FamilyID:  claims.FamilyID,
 		Kind:    "user",
 		Role:    claims.Role,
 		Expires: claims.Expires,

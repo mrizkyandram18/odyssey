@@ -18,8 +18,8 @@ func TestLogger_LogRequest(t *testing.T) {
 	logger.LogRequest(LogFields{
 		RequestID: "req-123",
 		UserID:    "user-1",
-		CrewID:    "crew-1",
-		Endpoint:  "/api/quests",
+		FamilyID:    "crew-1",
+		Endpoint:  "/api/missions",
 		Method:    "GET",
 		Duration:  42 * time.Millisecond,
 		Status:    200,
@@ -37,11 +37,11 @@ func TestLogger_LogRequest(t *testing.T) {
 	if entry["user_id"] != "user-1" {
 		t.Errorf("expected user_id user-1, got %v", entry["user_id"])
 	}
-	if entry["crew_id"] != "crew-1" {
-		t.Errorf("expected crew_id crew-1, got %v", entry["crew_id"])
+	if entry["family_id"] != "crew-1" {
+		t.Errorf("expected family_id crew-1, got %v", entry["family_id"])
 	}
-	if entry["endpoint"] != "/api/quests" {
-		t.Errorf("expected endpoint /api/quests, got %v", entry["endpoint"])
+	if entry["endpoint"] != "/api/missions" {
+		t.Errorf("expected endpoint /api/missions, got %v", entry["endpoint"])
 	}
 	if entry["method"] != "GET" {
 		t.Errorf("expected method GET, got %v", entry["method"])
@@ -86,7 +86,7 @@ func TestLogger_LogRequest_WithError(t *testing.T) {
 	logger.LogRequest(LogFields{
 		RequestID: "req-789",
 		UserID:    "user-2",
-		Endpoint:  "/api/quests",
+		Endpoint:  "/api/missions",
 		Method:    "POST",
 		Duration:  5 * time.Millisecond,
 		Status:    500,
@@ -191,7 +191,7 @@ func TestExtractIdentityFromToken_Empty(t *testing.T) {
 
 func TestExtractIdentityFromToken_Bearer(t *testing.T) {
 	// Create a valid-looking token (we just need the payload format right)
-	claims := `{"uid":"user-1","crew_id":"crew-1","role":"SEEKER"}`
+	claims := `{"uid":"user-1","family_id":"crew-1","role":"SEEKER"}`
 	payload := base64.RawURLEncoding.EncodeToString([]byte(claims))
 	sig := "fakesig"
 	token := payload + "." + sig
@@ -203,7 +203,7 @@ func TestExtractIdentityFromToken_Bearer(t *testing.T) {
 		t.Errorf("expected uid user-1, got %s", uid)
 	}
 	if crewID != "crew-1" {
-		t.Errorf("expected crew_id crew-1, got %s", crewID)
+		t.Errorf("expected family_id crew-1, got %s", crewID)
 	}
 	if adminUID != "" {
 		t.Errorf("expected empty admin_uid, got %s", adminUID)
@@ -211,7 +211,7 @@ func TestExtractIdentityFromToken_Bearer(t *testing.T) {
 }
 
 func TestExtractIdentityFromToken_Admin(t *testing.T) {
-	claims := `{"uid":"admin-1","crew_id":"crew-1","role":"ADMIN"}`
+	claims := `{"uid":"admin-1","family_id":"crew-1","role":"ADMIN"}`
 	payload := base64.RawURLEncoding.EncodeToString([]byte(claims))
 	token := payload + ".sig"
 
@@ -224,7 +224,7 @@ func TestExtractIdentityFromToken_Admin(t *testing.T) {
 }
 
 func TestExtractIdentityFromToken_XUserSession(t *testing.T) {
-	claims := `{"uid":"user-2","crew_id":"crew-2","role":"SEEKER"}`
+	claims := `{"uid":"user-2","family_id":"crew-2","role":"SEEKER"}`
 	payload := base64.RawURLEncoding.EncodeToString([]byte(claims))
 	token := payload + ".sig"
 
@@ -235,12 +235,12 @@ func TestExtractIdentityFromToken_XUserSession(t *testing.T) {
 		t.Errorf("expected uid user-2, got %s", uid)
 	}
 	if crewID != "crew-2" {
-		t.Errorf("expected crew_id crew-2, got %s", crewID)
+		t.Errorf("expected family_id crew-2, got %s", crewID)
 	}
 }
 
 func TestExtractIdentityFromToken_Cookie(t *testing.T) {
-	claims := `{"uid":"user-3","crew_id":"crew-3","role":"GUIDE"}`
+	claims := `{"uid":"user-3","family_id":"crew-3","role":"GUIDE"}`
 	payload := base64.RawURLEncoding.EncodeToString([]byte(claims))
 	token := payload + ".sig"
 
@@ -251,7 +251,7 @@ func TestExtractIdentityFromToken_Cookie(t *testing.T) {
 		t.Errorf("expected uid user-3, got %s", uid)
 	}
 	if crewID != "crew-3" {
-		t.Errorf("expected crew_id crew-3, got %s", crewID)
+		t.Errorf("expected family_id crew-3, got %s", crewID)
 	}
 }
 

@@ -105,8 +105,8 @@ func handleSubmit(w http.ResponseWriter, r *http.Request, claims *auth.SessionCl
 	}
 
 	sub := &game.Submission{
-		QuestID:     req.QuestID,
-		ChallengeID: req.ChallengeID,
+		MissionID:     req.MissionID,
+		ExerciseID: req.ExerciseID,
 		Kind:        req.Kind,
 		Content:     req.Content,
 	}
@@ -149,7 +149,7 @@ func handleSubmit(w http.ResponseWriter, r *http.Request, claims *auth.SessionCl
 }
 
 func handleList(w http.ResponseWriter, r *http.Request, claims *auth.SessionClaims) {
-	questIDStr := r.URL.Query().Get("quest_id")
+	questIDStr := r.URL.Query().Get("mission_id")
 
 	if questIDStr != "" {
 		if !isReviewer(claims) {
@@ -158,7 +158,7 @@ func handleList(w http.ResponseWriter, r *http.Request, claims *auth.SessionClai
 		}
 		questID, err := strconv.ParseInt(questIDStr, 10, 64)
 		if err != nil {
-			shared.WriteJSONError(w, "invalid quest_id", http.StatusBadRequest)
+			shared.WriteJSONError(w, "invalid mission_id", http.StatusBadRequest)
 			return
 		}
 		views, err := handler.ListByQuest(r.Context(), questID)
@@ -172,7 +172,7 @@ func handleList(w http.ResponseWriter, r *http.Request, claims *auth.SessionClai
 
 	kind := r.URL.Query().Get("kind")
 	if kind != "" {
-		views, err := handler.ListByCrewAndKind(r.Context(), claims.CrewID, kind)
+		views, err := handler.ListByCrewAndKind(r.Context(), claims.FamilyID, kind)
 		if err != nil {
 			shared.WriteJSONError(w, "failed to list submissions", http.StatusInternalServerError)
 			return
@@ -181,7 +181,7 @@ func handleList(w http.ResponseWriter, r *http.Request, claims *auth.SessionClai
 		return
 	}
 
-	views, err := handler.ListByCrew(r.Context(), claims.CrewID)
+	views, err := handler.ListByCrew(r.Context(), claims.FamilyID)
 	if err != nil {
 		shared.WriteJSONError(w, "failed to list submissions", http.StatusInternalServerError)
 		return

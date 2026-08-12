@@ -9,13 +9,13 @@ import { apiClient } from '../../lib/api'
  */
 export interface ReactionPickerProps {
   targetUserId: string
-  questId?: string
+  missionId?: string
   onReactionAdded?: () => void
 }
 
 const EMOJIS = ['❤️', '🔥', '👍', '👏', '🎉', '😂']
 
-export function ReactionPicker({ targetUserId, questId, onReactionAdded }: ReactionPickerProps) {
+export function ReactionPicker({ targetUserId, missionId, onReactionAdded }: ReactionPickerProps) {
   const [isOpen, setIsOpen] = useState(false)
   const [loading, setLoading] = useState(false)
 
@@ -24,7 +24,7 @@ export function ReactionPicker({ targetUserId, questId, onReactionAdded }: React
     try {
       await apiClient.post('/api/reactions', {
         target_user_id: targetUserId,
-        quest_id: questId,
+        mission_id: missionId,
         emoji_code: emojiCode,
       })
       if (onReactionAdded) {

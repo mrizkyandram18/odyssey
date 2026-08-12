@@ -14,9 +14,9 @@ export function getRoleMastery(role: Role | string | undefined | null, level: nu
       return { title: 'Master Seeker', flavor: 'Master Seeker whose gaze pierces through illusions and uncovers the deepest secrets.' }
     }
     if (safeLevel >= 5) {
-      return { title: 'Adept Seeker', flavor: 'Keen-eyed tracker who uncovers the realm\'s hidden mysteries and subtle details.' }
+      return { title: 'Adept Seeker', flavor: 'Keen-eyed tracker who uncovers the journey\'s hidden mysteries and subtle details.' }
     }
-    return { title: 'Novice Seeker', flavor: 'Curious explorer who seeks out hidden details, riddles, and lore.' }
+    return { title: 'Novice Seeker', flavor: 'Curious explorer who seeks out hidden details, riddles, and concept.' }
   }
 
   if (normRole === 'BUILDER') {
@@ -34,7 +34,7 @@ export function getRoleMastery(role: Role | string | undefined | null, level: nu
       return { title: 'Master Guide', flavor: 'Master Guide whose wisdom leads the crew through any storm and inspires greatness.' }
     }
     if (safeLevel >= 5) {
-      return { title: 'Adept Guide', flavor: 'Seasoned pathfinder who navigates treacherous routes and coordinates complex quests.' }
+      return { title: 'Adept Guide', flavor: 'Seasoned pathfinder who navigates treacherous routes and coordinates complex missions.' }
     }
     return { title: 'Novice Guide', flavor: 'Helpful companion who points the way and mentors the crew.' }
   }

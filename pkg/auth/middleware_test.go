@@ -26,7 +26,7 @@ func TestRequireAuth_ValidSession(t *testing.T) {
 	mw := newTestMiddleware(t)
 	issuer := NewSessionIssuer("test-secret-key")
 	token := issueTestToken(t, issuer, SessionKindUser, "alice", &SessionConfig{
-		Role: RoleSeeker, CrewID: "crew-1",
+		Role: RoleSeeker, FamilyID: "crew-1",
 	})
 
 	called := false
@@ -38,8 +38,8 @@ func TestRequireAuth_ValidSession(t *testing.T) {
 		if claims.UID != "alice" {
 			t.Errorf("expected UID alice, got %s", claims.UID)
 		}
-		if claims.CrewID != "crew-1" {
-			t.Errorf("expected crew_id crew-1, got %s", claims.CrewID)
+		if claims.FamilyID != "crew-1" {
+			t.Errorf("expected family_id crew-1, got %s", claims.FamilyID)
 		}
 		called = true
 	})

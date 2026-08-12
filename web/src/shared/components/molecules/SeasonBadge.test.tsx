@@ -14,7 +14,7 @@ const activeSeason = (): SeasonSummary => ({
     description: 'Autumn in Clockwork City',
     start_at: '2026-09-01T00:00:00Z',
     end_at: '2026-11-30T23:59:59Z',
-    realm: 'clockwork-city',
+    journey: 'clockwork-city',
     created_at: '2026-01-01T00:00:00Z',
     updated_at: '2026-01-01T00:00:00Z',
   },
@@ -29,7 +29,7 @@ const upcomingSeason = (): SeasonSummary => ({
     description: 'Winter in Starlit Library',
     start_at: '2026-12-01T00:00:00Z',
     end_at: '2026-12-31T23:59:59Z',
-    realm: 'starlit-library',
+    journey: 'starlit-library',
     created_at: '2026-01-01T00:00:00Z',
     updated_at: '2026-01-01T00:00:00Z',
   },
@@ -43,7 +43,7 @@ describe('SeasonBadge', () => {
     render(
       <SeasonBadge
         season={activeSeason()}
-        progress={{ quests_completed: 3, realm_progress: 65, realm_status: 'ACTIVE' }}
+        progress={{ missions_completed: 3, journey_progress: 65, journey_status: 'ACTIVE' }}
       />
     )
 
@@ -63,7 +63,7 @@ describe('SeasonBadge', () => {
     expect(screen.queryByText('65%')).not.toBeInTheDocument()
   })
 
-  it('renders realm name from metadata', () => {
+  it('renders journey name from metadata', () => {
     render(<SeasonBadge season={activeSeason()} />)
 
     expect(screen.getByText('Clockwork City')).toBeInTheDocument()

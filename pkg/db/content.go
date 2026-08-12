@@ -26,7 +26,7 @@ type RealmDefinition struct {
 type ChapterDefinition struct {
 	ID          int64           `json:"id"`
 	Slug        string          `json:"slug"`
-	Realm       string          `json:"realm"`
+	Journey       string          `json:"journey"`
 	Title       string          `json:"title"`
 	Description string          `json:"description"`
 	Order       int             `json:"order"`
@@ -43,8 +43,8 @@ type ChapterDefinition struct {
 type QuestDefinition struct {
 	ID                 int64           `json:"id"`
 	Slug               string          `json:"slug"`
-	Realm              string          `json:"realm"`
-	Chapter            string          `json:"chapter"`
+	Journey              string          `json:"journey"`
+	Course            string          `json:"course"`
 	Title              string          `json:"title"`
 	Description        string          `json:"description"`
 	QuestType          string          `json:"quest_type"`
@@ -55,10 +55,10 @@ type QuestDefinition struct {
 	RewardChest        string          `json:"reward_chest"`
 	RewardRelic        string          `json:"reward_relic"`
 	IsMandatory        bool            `json:"is_mandatory"`
-	RequiredQuestSlug  string          `json:"required_quest_slug"`
+	RequiredQuestSlug  string          `json:"required_mission_slug"`
 	RequiredQuestSlugs []string        `json:"required_quest_slugs"`
-	RequiredChapter    string          `json:"required_chapter"`
-	RequiredRealm      string          `json:"required_realm"`
+	RequiredChapter    string          `json:"required_course"`
+	RequiredRealm      string          `json:"required_journey"`
 	RequiredLevel      int             `json:"required_level"`
 	SeasonSlug         string          `json:"season_slug"`
 	Published          bool            `json:"published"`
@@ -74,7 +74,7 @@ type QuestDefinition struct {
 type CreativePromptDefinition struct {
 	ID          int64           `json:"id"`
 	Slug        string          `json:"slug"`
-	Realm       string          `json:"realm"`
+	Journey       string          `json:"journey"`
 	Title       string          `json:"title"`
 	Description string          `json:"description"`
 	Prompt      string          `json:"prompt"`
@@ -119,7 +119,7 @@ type SeasonDefinition struct {
 	Description string          `json:"description"`
 	StartAt     time.Time       `json:"start_at"`
 	EndAt       time.Time       `json:"end_at"`
-	Realm       string          `json:"realm"`
+	Journey       string          `json:"journey"`
 	Published   bool            `json:"published"`
 	Draft       json.RawMessage `json:"draft"`
 	Version     int             `json:"version"`
@@ -133,8 +133,8 @@ type SeasonDefinition struct {
 type LoreDefinition struct {
 	ID          int64           `json:"id"`
 	Slug        string          `json:"slug"`
-	Realm       string          `json:"realm"`
-	Chapter     string          `json:"chapter"`
+	Journey       string          `json:"journey"`
+	Course     string          `json:"course"`
 	Title       string          `json:"title"`
 	Content     string          `json:"content"`
 	Order       int             `json:"order"`

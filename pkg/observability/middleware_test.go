@@ -105,7 +105,7 @@ func TestObservability_Wrap_PreservesExistingRequestID(t *testing.T) {
 }
 
 func TestObservability_Wrap_LogsUserIdentity(t *testing.T) {
-	claims := `{"uid":"user-abc","crew_id":"crew-xyz","role":"SEEKER"}`
+	claims := `{"uid":"user-abc","family_id":"crew-xyz","role":"SEEKER"}`
 	payload := base64.RawURLEncoding.EncodeToString([]byte(claims))
 	token := payload + ".sig"
 
@@ -121,7 +121,7 @@ func TestObservability_Wrap_LogsUserIdentity(t *testing.T) {
 	})
 
 	handler := obs.Wrap(inner)
-	req := httptest.NewRequest(http.MethodGet, "/api/quests", nil)
+	req := httptest.NewRequest(http.MethodGet, "/api/missions", nil)
 	req.Header.Set("Authorization", "Bearer "+token)
 	w := httptest.NewRecorder()
 	handler.ServeHTTP(w, req)
@@ -135,13 +135,13 @@ func TestObservability_Wrap_LogsUserIdentity(t *testing.T) {
 	if entry["user_id"] != "user-abc" {
 		t.Errorf("expected user_id user-abc, got %v", entry["user_id"])
 	}
-	if entry["crew_id"] != "crew-xyz" {
-		t.Errorf("expected crew_id crew-xyz, got %v", entry["crew_id"])
+	if entry["family_id"] != "crew-xyz" {
+		t.Errorf("expected family_id crew-xyz, got %v", entry["family_id"])
 	}
 }
 
 func TestObservability_Wrap_LogsAdminIdentity(t *testing.T) {
-	claims := `{"uid":"admin-1","crew_id":"crew-1","role":"ADMIN"}`
+	claims := `{"uid":"admin-1","family_id":"crew-1","role":"ADMIN"}`
 	payload := base64.RawURLEncoding.EncodeToString([]byte(claims))
 	token := payload + ".sig"
 

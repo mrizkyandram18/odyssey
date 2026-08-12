@@ -3,7 +3,7 @@
 ## One-Liner
 
 Odyssey is a cooperative adventure platform where a private family group works
-together to explore a shared world, complete quests, and grow together — purely
+together to explore a shared world, complete missions, and grow together — purely
 for fun, learning, and engagement.
 
 ## The Big Picture
@@ -32,7 +32,7 @@ satisfaction of completing something as a group.
 
 - Family members log in regularly, not because they *must*, but because they
   *want* to see what happens next.
-- Quests are completed collaboratively — a younger member might do research,
+- Missions are completed collaboratively — a younger member might do research,
   a parent might verify a real-world step, and together they advance the story.
 - The family develops inside jokes, nicknames, and shared milestones.
 - Parents report that Odyssey sparked a real-world conversation, a learning
@@ -43,7 +43,7 @@ satisfaction of completing something as a group.
 | Aspect | Decision |
 |---|---|
 | Experience | A persistent, story-driven cooperative adventure |
-| Core mechanic | Shared quests, collaborative challenges, group progression |
+| Core mechanic | Shared missions, collaborative exercises, group progression |
 | Identity model | Each family member has an Explorer with a role; the family has a shared crew |
 | Progression | Experience, skills, achievements, and story chapters |
 | Economy | Soft resources only (no currency exchange, no real money) |

@@ -25,64 +25,64 @@ func NewAchievementStore(client SupabaseClient) game.AchievementStore {
 	return &supabaseProgressionStore{client: client}
 }
 
-func (s *supabaseProgressionStore) CreateRelic(ctx context.Context, r *game.Relic) (*game.Relic, error) {
-	payload := Relic{
+func (s *supabaseProgressionStore) CreateRelic(ctx context.Context, r *game.Collection) (*game.Collection, error) {
+	payload := Collection{
 		UID:         r.UID,
 		Code:        r.Code,
 		Name:        r.Name,
 		Description: r.Description,
-		Realm:       r.Realm,
+		Journey:       r.Journey,
 		Rarity:      r.Rarity,
 		Image:       r.Image,
-		Lore:        r.Lore,
+		Concept:        r.Concept,
 		AwardedAt:   r.AwardedAt,
 	}
-	raw, err := s.client.Mutate(ctx, "POST", "odyssey_relics", payload, "return=representation")
+	raw, err := s.client.Mutate(ctx, "POST", "odyssey_collections", payload, "return=representation")
 	if err != nil {
 		return nil, fmt.Errorf("create relic: %w", err)
 	}
 
-	var relics []Relic
-	if err := json.Unmarshal(raw, &relics); err != nil {
+	var collections []Collection
+	if err := json.Unmarshal(raw, &collections); err != nil {
 		return nil, fmt.Errorf("parse created relic: %w", err)
 	}
-	if len(relics) == 0 {
+	if len(collections) == 0 {
 		return r, nil
 	}
-	return mapRelic(relics[0]), nil
+	return mapRelic(collections[0]), nil
 }
 
-func (s *supabaseProgressionStore) CreateChest(ctx context.Context, ch *game.Chest) (*game.Chest, error) {
-	payload := Chest{
+func (s *supabaseProgressionStore) CreateChest(ctx context.Context, ch *game.Gift) (*game.Gift, error) {
+	payload := Gift{
 		UID:         ch.UID,
 		Source:      ch.Source,
-		ChestSlug:   ch.ChestSlug,
+		GiftSlug:   ch.GiftSlug,
 		Rarity:      ch.Rarity,
 		Icon:        ch.Icon,
 		Description: ch.Description,
 		DropTable:   ch.DropTable,
 		Opened:      ch.Opened,
 	}
-	raw, err := s.client.Mutate(ctx, "POST", "odyssey_chests", payload, "return=representation")
+	raw, err := s.client.Mutate(ctx, "POST", "odyssey_gifts", payload, "return=representation")
 	if err != nil {
 		return nil, fmt.Errorf("create chest: %w", err)
 	}
 
-	var chests []Chest
-	if err := json.Unmarshal(raw, &chests); err != nil {
+	var gifts []Gift
+	if err := json.Unmarshal(raw, &gifts); err != nil {
 		return nil, fmt.Errorf("parse created chest: %w", err)
 	}
-	if len(chests) == 0 {
+	if len(gifts) == 0 {
 		return ch, nil
 	}
-	return mapChest(chests[0]), nil
+	return mapChest(gifts[0]), nil
 }
 
 func (s *supabaseProgressionStore) UpdateChest(ctx context.Context, chestID int64, patch map[string]any) error {
 	v := url.Values{}
 	v.Set("id", "eq."+strconv.FormatInt(chestID, 10))
 	params := v.Encode()
-	_, err := s.client.Mutate(ctx, "PATCH", "odyssey_chests", patch, params)
+	_, err := s.client.Mutate(ctx, "PATCH", "odyssey_gifts", patch, params)
 	if err != nil {
 		return fmt.Errorf("update chest: %w", err)
 	}
@@ -92,7 +92,7 @@ func (s *supabaseProgressionStore) UpdateChest(ctx context.Context, chestID int6
 func (s *supabaseProgressionStore) CreateAchievement(ctx context.Context, a *game.Achievement) (*game.Achievement, error) {
 	payload := map[string]any{
 		"uid":        a.UID,
-		"crew_id":    a.CrewID,
+		"family_id":    a.FamilyID,
 		"code":       a.Code,
 		"kind":       a.Kind,
 		"awarded_at": a.AwardedAt,
@@ -124,29 +124,29 @@ func (s *supabaseProgressionStore) CountRelics(ctx context.Context, uid string) 
 	v.Set("select", "id")
 	params := v.Encode()
 
-	raw, err := s.client.Get(ctx, "odyssey_relics", params)
+	raw, err := s.client.Get(ctx, "odyssey_collections", params)
 	if err != nil {
-		return 0, fmt.Errorf("count relics: %w", err)
+		return 0, fmt.Errorf("count collections: %w", err)
 	}
 
-	var relics []Relic
-	if err := json.Unmarshal(raw, &relics); err != nil {
-		return 0, fmt.Errorf("parse relics count: %w", err)
+	var collections []Collection
+	if err := json.Unmarshal(raw, &collections); err != nil {
+		return 0, fmt.Errorf("parse collections count: %w", err)
 	}
-	return len(relics), nil
+	return len(collections), nil
 }
 
-func mapRelic(r Relic) *game.Relic {
-	return &game.Relic{
+func mapRelic(r Collection) *game.Collection {
+	return &game.Collection{
 		ID:          r.ID,
 		UID:         r.UID,
 		Code:        r.Code,
 		Name:        r.Name,
 		Description: r.Description,
-		Realm:       r.Realm,
+		Journey:       r.Journey,
 		Rarity:      r.Rarity,
 		Image:       r.Image,
-		Lore:        r.Lore,
+		Concept:        r.Concept,
 		AwardedAt:   r.AwardedAt,
 		CreatedAt:   r.CreatedAt,
 	}
@@ -156,7 +156,7 @@ func mapAchievement(a Achievement) *game.Achievement {
 	return &game.Achievement{
 		ID:              a.ID,
 		UID:             a.UID,
-		CrewID:          a.CrewID,
+		FamilyID:          a.FamilyID,
 		Code:            a.Code,
 		Kind:            a.Kind,
 		Trigger:         a.Trigger,

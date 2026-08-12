@@ -14,9 +14,9 @@ func makeQuestRow(challengeDefsJSON json.RawMessage) QuestDefinition {
 	return QuestDefinition{
 		ID:            1,
 		Slug:          "test-quest",
-		Realm:         "whispering-woods",
-		Chapter:       "the-awakening",
-		Title:         "Test Quest",
+		Journey:         "whispering-woods",
+		Course:       "the-awakening",
+		Title:         "Test Mission",
 		QuestType:     "SOLO",
 		ChallengeDefs: challengeDefsJSON,
 		RewardXP:      100,
@@ -179,7 +179,7 @@ func TestMapQuestDefinition_RoundTripSerialization(t *testing.T) {
 }
 
 func TestQuestStore_GetQuest_WithChallengeDefs(t *testing.T) {
-	questJSON := `[{"id":1,"slug":"morning-light","realm":"whispering-woods","chapter":"the-awakening","title":"Morning Light","quest_type":"SOLO","challenge_defs":[{"slug":"find-the-dew","description":"Find something glistening.","type":"OBSERVATION"},{"slug":"morning-fact","description":"Look up a fact.","type":"RESEARCH"}],"reward_xp":80,"reward_chest":"wooden-chest","is_mandatory":true,"published":true,"version":1,"created_at":"2026-08-03T12:00:00Z","updated_at":"2026-08-03T12:00:00Z"}]`
+	questJSON := `[{"id":1,"slug":"morning-light","journey":"whispering-woods","course":"the-awakening","title":"Morning Light","quest_type":"SOLO","challenge_defs":[{"slug":"find-the-dew","description":"Find something glistening.","type":"OBSERVATION"},{"slug":"morning-fact","description":"Look up a fact.","type":"RESEARCH"}],"reward_xp":80,"reward_chest":"wooden-chest","is_mandatory":true,"published":true,"version":1,"created_at":"2026-08-03T12:00:00Z","updated_at":"2026-08-03T12:00:00Z"}]`
 	store := NewQuestDefinitionStore(&mockSupabaseClient{data: []byte(questJSON)})
 
 	def, err := store.GetQuest(context.Background(), "morning-light")
@@ -199,23 +199,23 @@ func TestQuestStore_GetQuest_WithChallengeDefs(t *testing.T) {
 
 func TestQuestStore_ListQuests_WithChallengeDefs(t *testing.T) {
 	questListJSON := `[
-		{"id":1,"slug":"morning-light","realm":"whispering-woods","chapter":"the-awakening","title":"Morning Light","quest_type":"SOLO","challenge_defs":[{"slug":"find-the-dew","description":"Find something.","type":"OBSERVATION"}],"reward_xp":80,"published":true,"version":1,"created_at":"2026-08-03T12:00:00Z","updated_at":"2026-08-03T12:00:00Z"},
-		{"id":2,"slug":"gather-herbs","realm":"whispering-woods","chapter":"the-awakening","title":"Gather Herbs","quest_type":"SOLO","challenge_defs":[{"slug":"spot-the-green","description":"Point out greens.","type":"OBSERVATION"},{"slug":"herb-lore","description":"Name a use.","type":"RESEARCH"}],"reward_xp":80,"published":true,"version":1,"created_at":"2026-08-03T12:00:00Z","updated_at":"2026-08-03T12:00:00Z"}
+		{"id":1,"slug":"morning-light","journey":"whispering-woods","course":"the-awakening","title":"Morning Light","quest_type":"SOLO","challenge_defs":[{"slug":"find-the-dew","description":"Find something.","type":"OBSERVATION"}],"reward_xp":80,"published":true,"version":1,"created_at":"2026-08-03T12:00:00Z","updated_at":"2026-08-03T12:00:00Z"},
+		{"id":2,"slug":"gather-herbs","journey":"whispering-woods","course":"the-awakening","title":"Gather Herbs","quest_type":"SOLO","challenge_defs":[{"slug":"spot-the-green","description":"Point out greens.","type":"OBSERVATION"},{"slug":"herb-concept","description":"Name a use.","type":"RESEARCH"}],"reward_xp":80,"published":true,"version":1,"created_at":"2026-08-03T12:00:00Z","updated_at":"2026-08-03T12:00:00Z"}
 	]`
 	store := NewQuestDefinitionStore(&mockSupabaseClient{data: []byte(questListJSON)})
 
-	quests, err := store.ListQuests(context.Background())
+	missions, err := store.ListQuests(context.Background())
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
-	if len(quests) != 2 {
-		t.Fatalf("expected 2 quests, got %d", len(quests))
+	if len(missions) != 2 {
+		t.Fatalf("expected 2 missions, got %d", len(missions))
 	}
-	if len(quests[0].ChallengeDefs) != 1 {
-		t.Errorf("expected 1 challenge def for quest 0, got %d", len(quests[0].ChallengeDefs))
+	if len(missions[0].ChallengeDefs) != 1 {
+		t.Errorf("expected 1 challenge def for quest 0, got %d", len(missions[0].ChallengeDefs))
 	}
-	if len(quests[1].ChallengeDefs) != 2 {
-		t.Errorf("expected 2 challenge defs for quest 1, got %d", len(quests[1].ChallengeDefs))
+	if len(missions[1].ChallengeDefs) != 2 {
+		t.Errorf("expected 2 challenge defs for quest 1, got %d", len(missions[1].ChallengeDefs))
 	}
 }
 
@@ -243,7 +243,7 @@ func TestQuestStore_ListQuests_MalformedJSONReturnsError(t *testing.T) {
 }
 
 func TestQuestStore_GetQuest_PostgRESTNativeJSONB(t *testing.T) {
-	questJSON := `[{"id":1,"slug":"morning-light","realm":"whispering-woods","chapter":"the-awakening","title":"Morning Light","quest_type":"SOLO","challenge_defs":[{"slug":"find-the-dew","description":"Find something glistening outside your door.","type":"OBSERVATION"},{"slug":"morning-fact","description":"Look up one fact about morning sunlight.","type":"RESEARCH"}],"reward_xp":80,"reward_chest":"wooden-chest","is_mandatory":true,"required_quest_slug":"","required_quest_slugs":[],"required_chapter":"","required_realm":"","required_level":0,"season_slug":"","published":true,"version":1,"updated_by":"system","created_at":"2026-08-03T12:00:00Z","updated_at":"2026-08-03T12:00:00Z"}]`
+	questJSON := `[{"id":1,"slug":"morning-light","journey":"whispering-woods","course":"the-awakening","title":"Morning Light","quest_type":"SOLO","challenge_defs":[{"slug":"find-the-dew","description":"Find something glistening outside your door.","type":"OBSERVATION"},{"slug":"morning-fact","description":"Look up one fact about morning sunlight.","type":"RESEARCH"}],"reward_xp":80,"reward_chest":"wooden-chest","is_mandatory":true,"required_mission_slug":"","required_quest_slugs":[],"required_course":"","required_journey":"","required_level":0,"season_slug":"","published":true,"version":1,"updated_by":"system","created_at":"2026-08-03T12:00:00Z","updated_at":"2026-08-03T12:00:00Z"}]`
 	store := NewQuestDefinitionStore(&mockSupabaseClient{data: []byte(questJSON)})
 
 	def, err := store.GetQuest(context.Background(), "morning-light")

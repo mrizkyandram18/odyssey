@@ -10,22 +10,22 @@ import (
 	apiAchievements "odyssey/internal/api/achievements"
 	"odyssey/internal/api/admin"
 	apiBoard "odyssey/internal/api/board"
-	apiChapters "odyssey/internal/api/chapters"
-	"odyssey/internal/api/chests"
+	apiChapters "odyssey/internal/api/courses"
+	"odyssey/internal/api/gifts"
 	apiCosmetics "odyssey/internal/api/cosmetics"
 	"odyssey/internal/api/creative"
-	"odyssey/internal/api/crews"
+	"odyssey/internal/api/families"
 	"odyssey/internal/api/daily_activities"
-	"odyssey/internal/api/daily_turns"
+	"odyssey/internal/api/daily_missions"
 	apiHome "odyssey/internal/api/home"
 	"odyssey/internal/api/login"
-	apiLore "odyssey/internal/api/lore"
+	apiLore "odyssey/internal/api/concepts"
 	"odyssey/internal/api/me"
 	apiPush "odyssey/internal/api/push"
-	apiQuests "odyssey/internal/api/quests"
+	apiQuests "odyssey/internal/api/missions"
 	apiReactions "odyssey/internal/api/reactions"
-	"odyssey/internal/api/realm_progress"
-	"odyssey/internal/api/relics"
+	"odyssey/internal/api/journey_progress"
+	"odyssey/internal/api/collections"
 	"odyssey/internal/api/rewards"
 	apiSeasons "odyssey/internal/api/seasons"
 	"odyssey/internal/api/status"
@@ -39,19 +39,19 @@ import (
 	"odyssey/pkg/game/audit"
 	"odyssey/pkg/game/balance"
 	"odyssey/pkg/game/board"
-	"odyssey/pkg/game/chapter"
-	"odyssey/pkg/game/chest"
+	"odyssey/pkg/game/course"
+	"odyssey/pkg/game/gift"
 	"odyssey/pkg/game/cosmetic"
 	gamecreative "odyssey/pkg/game/creative"
-	"odyssey/pkg/game/crewstreak"
-	"odyssey/pkg/game/dailyturn"
+	"odyssey/pkg/game/familystreak"
+	"odyssey/pkg/game/dailymission"
 	"odyssey/pkg/game/events"
 	"odyssey/pkg/game/fragment"
 	gamehome "odyssey/pkg/game/home"
-	"odyssey/pkg/game/lore"
+	"odyssey/pkg/game/concepts"
 	"odyssey/pkg/game/progression"
-	"odyssey/pkg/game/quest"
-	"odyssey/pkg/game/relic"
+	"odyssey/pkg/game/mission"
+	"odyssey/pkg/game/collection"
 	"odyssey/pkg/game/reward"
 	"odyssey/pkg/game/rewardsignal"
 	"odyssey/pkg/game/season"
@@ -84,7 +84,7 @@ func BuildHandler() (*Server, error) {
 
 	realmCfg := world.DefaultRealmCatalog
 	if err := realmCfg.ApplyOverrides(ctx, repo.Config); err != nil {
-		log.Printf("Warning: realm config overrides failed: %v", err)
+		log.Printf("Warning: journey config overrides failed: %v", err)
 	}
 	progCfg := progression.DefaultProgressionConfig()
 	realmStore := db.NewRealmProgressStore(supabaseClient)
@@ -96,13 +96,13 @@ func BuildHandler() (*Server, error) {
 	}
 
 	contentSvc := content.NewContentService(
-		contentRepo.Realms,
-		contentRepo.Chapters,
-		contentRepo.Quests,
+		contentRepo.Journeys,
+		contentRepo.Courses,
+		contentRepo.Missions,
 		contentRepo.Prompts,
 		contentRepo.Achievements,
 		contentRepo.Seasons,
-		contentRepo.Lore,
+		contentRepo.Concept,
 		repo.ChestDefinitions,
 		repo.RelicDefinitions,
 		content.ContentServiceConfig{CacheTTL: 5 * time.Minute},
@@ -146,25 +146,25 @@ func BuildHandler() (*Server, error) {
 	seasonSvc := season.NewSeasonService(contentRepo.Seasons, nil)
 
 	questSvc := quest.NewQuestServiceWithGate(
-		repo.Quests,
-		quest.NewQuestGate(chapterStore, realmStore, repo.Users, repo.Quests, seasonSvc.IsActive),
+		repo.Missions,
+		quest.NewQuestGate(chapterStore, realmStore, repo.Users, repo.Missions, seasonSvc.IsActive),
 		contentSvc,
 	)
 	questSvc.SetUserStore(repo.Users)
 
-	chapterSvc := chapter.NewChapterService(chapterStore, repo.Quests, contentSvc, dispatcher)
+	chapterSvc := course.NewChapterService(chapterStore, repo.Missions, contentSvc, dispatcher)
 	chapterSvc.SetMetrics(metrics)
-	loreSvc := lore.NewLoreServiceWithPublisher(repo.LoreUnlocks, contentSvc, dispatcher)
+	loreSvc := concept.NewLoreServiceWithPublisher(repo.LoreUnlocks, contentSvc, dispatcher)
 	achieveRdr := achievement.NewProgressReader(
-		repo.Quests, realmStore, repo.Users,
+		repo.Missions, realmStore, repo.Users,
 		repo.PlayerRelics, repo.DailyTurns, repo.CreativeSubmissions, chapterStore,
 	)
 	achieveSvc := achievement.NewAchievementService(contentRepo.Achievements, repo.Achievements, achieveRdr, dispatcher, repo.CosmeticUnlocks)
 	rewardSignalService := rewardsignal.NewService(repo)
 
-	dispatcher.Subscribe(events.EventTypeQuestCompleted, chapter.NewQuestCompletedHandler(chapterSvc))
+	dispatcher.Subscribe(events.EventTypeQuestCompleted, course.NewQuestCompletedHandler(chapterSvc))
 	dispatcher.Subscribe(events.EventTypeQuestCompleted, achievement.NewQuestCompletedHandler(achieveSvc))
-	dispatcher.Subscribe(events.EventTypeChapterCompleted, lore.NewChapterCompletedHandler(loreSvc))
+	dispatcher.Subscribe(events.EventTypeChapterCompleted, concept.NewChapterCompletedHandler(loreSvc))
 	dispatcher.Subscribe(events.EventTypeChapterCompleted, achievement.NewChapterCompletedHandler(achieveSvc))
 	dispatcher.Subscribe(events.EventTypeRelicCollected, achievement.NewRelicCollectedHandler(achieveSvc))
 	dispatcher.Subscribe(events.EventTypeDailyTurnCompleted, achievement.NewDailyTurnCompletedHandler(achieveSvc))
@@ -172,15 +172,15 @@ func BuildHandler() (*Server, error) {
 	dispatcher.Subscribe(events.EventTypeCreativeSubmission, achievement.NewCreativeSubmissionHandler(achieveSvc))
 	dispatcher.Subscribe(events.EventTypeAchievementEarned, rewardsignal.NewAchievementEarnedHandler(rewardSignalService))
 
-	creativeSvc := gamecreative.NewCreativeServiceWithPublisher(repo.CreativeSubmissions, repo.Quests, dispatcher)
+	creativeSvc := gamecreative.NewCreativeServiceWithPublisher(repo.CreativeSubmissions, repo.Missions, dispatcher)
 	creativeHandler := gamecreative.NewCreativeAPIHandler(creativeSvc)
 
-	dailyTurnCfg := dailyturn.DailyTurnConfig{
+	dailyTurnCfg := dailymission.DailyTurnConfig{
 		XP:             config.DailyTurnXP,
 		MaxTurnsPerDay: config.MaxDailyTurnsPerDay,
 		Timezone:       config.Timezone,
 	}
-	dailyTurnSvc := dailyturn.NewDailyTurnService(repo.DailyTurns, &dailyTurnCfg)
+	dailyTurnSvc := dailymission.NewDailyTurnService(repo.DailyTurns, &dailyTurnCfg)
 	dailyTurnSvc.SetMetrics(metrics)
 
 	balanceSvc := balance.NewService(db.NewBalanceStore(supabaseClient))
@@ -201,30 +201,30 @@ func BuildHandler() (*Server, error) {
 	questAPIHandler.SetLogger(logger)
 	questAPIHandler.SetRewardService(rewardSvc)
 
-	dailyTurnAPIHandler := dailyturn.NewDailyTurnAPIHandlerWithPublisher(dailyTurnSvc, progSvc, dispatcher, balanceSvc)
+	dailyTurnAPIHandler := dailymission.NewDailyTurnAPIHandlerWithPublisher(dailyTurnSvc, progSvc, dispatcher, balanceSvc)
 	dailyTurnAPIHandler.SetMetrics(metrics)
 	dailyTurnAPIHandler.SetLogger(logger)
 	dailyTurnAPIHandler.SetActivityStore(repo.Activity)
 	dailyTurnAPIHandler.SetRewardService(rewardSvc)
 
 	chestEngine := chest.NewRewardEngine(repo.ChestDefinitions, repo.RelicDefinitions)
-	chestSvc := chest.NewChestServiceWithPublisher(repo.Chests, repo.PlayerRelics, repo.Relics, repo.Users, chestEngine, dispatcher)
+	chestSvc := chest.NewChestServiceWithPublisher(repo.Gifts, repo.PlayerRelics, repo.Collections, repo.Users, chestEngine, dispatcher)
 	chestSvc.SetContentGateway(contentSvc)
 	chestSvc.SetBalance(balanceSvc)
 	chestSvc.SetMetrics(metrics)
-	chests.Setup(chestSvc)
+	gifts.Setup(chestSvc)
 	dispatcher.Subscribe(events.EventTypeQuestCompleted, chest.NewQuestCompletedHandler(chestSvc, contentSvc))
 
-	relicSvc := relic.NewRelicService(repo.Relics, repo.PlayerRelics, repo.RelicDefinitions)
+	relicSvc := relic.NewRelicService(repo.Collections, repo.PlayerRelics, repo.RelicDefinitions)
 	relicSvc.SetUserStore(repo.Users)
 	relicSvc.SetLedgerStore(repo.RewardLedgers)
-	relics.Setup(relicSvc)
+	collections.Setup(relicSvc)
 
-	homeSvc := gamehome.NewHomeService(questSvc, dailyTurnSvc, repo.Progression, realmStore, repo.Users, repo.CreativeSubmissions, repo.Chests, relicSvc)
+	homeSvc := gamehome.NewHomeService(questSvc, dailyTurnSvc, repo.Progression, realmStore, repo.Users, repo.CreativeSubmissions, repo.Gifts, relicSvc)
 	homeSvc.SetChapterService(chapterSvc)
 	homeSvc.SetLoreService(loreSvc)
 	homeSvc.SetAchievementService(achieveSvc)
-	homeSvc.SetCrewStreakService(crewstreak.NewService(repo.Users, repo.Activity, config.Timezone))
+	homeSvc.SetCrewStreakService(familystreak.NewService(repo.Users, repo.Activity, config.Timezone))
 
 	adminStore := db.NewDefinitionStore(supabaseClient)
 	auditStore := db.NewAuditStore(supabaseClient)
@@ -252,8 +252,8 @@ func BuildHandler() (*Server, error) {
 	login.Setup(authenticator, issuer, profileStore)
 	me.Setup(profileStore)
 	apiQuests.Setup(questAPIHandler)
-	crews.Setup(repo.Crews, repo.Users)
-	daily_turns.Setup(dailyTurnAPIHandler)
+	families.Setup(repo.Families, repo.Users)
+	daily_missions.Setup(dailyTurnAPIHandler)
 
 	daStore := db.NewDailyActivityEngineStore(supabaseClient)
 	daSvc := dailyactivity.NewService(daStore, repo.Activity, progSvc, "Asia/Jakarta")
@@ -269,17 +269,17 @@ func BuildHandler() (*Server, error) {
 	apiLore.Setup(loreSvc)
 	apiAchievements.Setup(achieveSvc)
 
-	fragSvc := fragment.NewFragmentService(nil, repo.RealmProgress, progSvc)
+	fragSvc := fragment.NewFragmentService(nil, repo.JourneyProgress, progSvc)
 	apiStoryFragments.Setup(fragSvc)
 
-	reactionSvc := social.NewReactionServiceWithItems(repo.Reactions, repo.CreativeSubmissions, repo.Creatives, repo.Quests)
+	reactionSvc := social.NewReactionServiceWithItems(repo.Reactions, repo.CreativeSubmissions, repo.Creatives, repo.Missions)
 	apiReactions.Setup(reactionSvc)
 
 	boardSvc := board.NewService(repo.Creatives)
 	apiBoard.Setup(boardSvc)
 
-	crews.Setup(repo.Crews, repo.Users)
-	realm_progress.Setup(repo.RealmProgress)
+	families.Setup(repo.Families, repo.Users)
+	journey_progress.Setup(repo.JourneyProgress)
 	apiPush.Setup(repo.PushSubscriptions)
 	apiSeasons.Setup(seasonSvc)
 
@@ -347,7 +347,7 @@ func BuildHandler() (*Server, error) {
 			return err
 		}},
 		observability.HealthCheck{Name: "audit_store", Fn: observability.DBHealthCheck(supabaseClient, "odyssey_audit_logs")},
-		observability.HealthCheck{Name: "admin_store", Fn: observability.DBHealthCheck(supabaseClient, "odyssey_realm_definitions")},
+		observability.HealthCheck{Name: "admin_store", Fn: observability.DBHealthCheck(supabaseClient, "odyssey_journey_definitions")},
 	)
 
 	status.Setup(status.FuncStatusProvider(func(ctx context.Context) map[string]any {
@@ -418,28 +418,28 @@ func BuildHandler() (*Server, error) {
 	mux.HandleFunc("/api/me/", secure(mw.RequireAuth(me.Handler)))
 	mux.HandleFunc("/api/status", secure(status.Handler))
 	mux.HandleFunc("/api/status/", secure(status.Handler))
-	mux.HandleFunc("/api/quests", secure(mw.RequireAuth(apiQuests.Handler)))
-	mux.HandleFunc("/api/quests/", secure(mw.RequireAuth(apiQuests.Handler)))
-	mux.HandleFunc("/api/crews", secure(mw.RequireAuth(crews.Handler)))
-	mux.HandleFunc("/api/crews/", secure(mw.RequireAuth(crews.Handler)))
-	mux.HandleFunc("/api/realm_progress", secure(mw.RequireAuth(realm_progress.Handler)))
-	mux.HandleFunc("/api/realm_progress/", secure(mw.RequireAuth(realm_progress.Handler)))
-	mux.HandleFunc("/api/daily_turns", secure(mw.RequireAuth(daily_turns.Handler)))
-	mux.HandleFunc("/api/daily_turns/", secure(mw.RequireAuth(daily_turns.Handler)))
+	mux.HandleFunc("/api/missions", secure(mw.RequireAuth(apiQuests.Handler)))
+	mux.HandleFunc("/api/missions/", secure(mw.RequireAuth(apiQuests.Handler)))
+	mux.HandleFunc("/api/families", secure(mw.RequireAuth(families.Handler)))
+	mux.HandleFunc("/api/families/", secure(mw.RequireAuth(families.Handler)))
+	mux.HandleFunc("/api/journey_progress", secure(mw.RequireAuth(journey_progress.Handler)))
+	mux.HandleFunc("/api/journey_progress/", secure(mw.RequireAuth(journey_progress.Handler)))
+	mux.HandleFunc("/api/daily_missions", secure(mw.RequireAuth(daily_missions.Handler)))
+	mux.HandleFunc("/api/daily_missions/", secure(mw.RequireAuth(daily_missions.Handler)))
 	mux.HandleFunc("/api/daily-activities/", secure(mw.RequireAuth(daAPI.Handler)))
 	mux.HandleFunc("/api/creative", secure(mw.RequireAuth(csrf(creative.Handler))))
 	mux.HandleFunc("/api/creative/", secure(mw.RequireAuth(csrf(creative.Handler))))
 	mux.HandleFunc("/api/home", secure(mw.RequireAuth(apiHome.Handler)))
 	mux.HandleFunc("/api/home/", secure(mw.RequireAuth(apiHome.Handler)))
-	mux.HandleFunc("/api/chests", secure(mw.RequireAuth(chests.Handler)))
-	mux.HandleFunc("/api/chests/", secure(mw.RequireAuth(chests.Handler)))
-	mux.HandleFunc("/api/relics/gift", secure(mw.RequireAuth(csrf(relics.Handler))))
-	mux.HandleFunc("/api/relics", secure(mw.RequireAuth(relics.Handler)))
-	mux.HandleFunc("/api/relics/", secure(mw.RequireAuth(relics.Handler)))
-	mux.HandleFunc("/api/chapters", secure(mw.RequireAuth(apiChapters.Handler)))
-	mux.HandleFunc("/api/chapters/", secure(mw.RequireAuth(apiChapters.Handler)))
-	mux.HandleFunc("/api/lore", secure(mw.RequireAuth(apiLore.Handler)))
-	mux.HandleFunc("/api/lore/", secure(mw.RequireAuth(apiLore.Handler)))
+	mux.HandleFunc("/api/gifts", secure(mw.RequireAuth(gifts.Handler)))
+	mux.HandleFunc("/api/gifts/", secure(mw.RequireAuth(gifts.Handler)))
+	mux.HandleFunc("/api/collections/gift", secure(mw.RequireAuth(csrf(collections.Handler))))
+	mux.HandleFunc("/api/collections", secure(mw.RequireAuth(collections.Handler)))
+	mux.HandleFunc("/api/collections/", secure(mw.RequireAuth(collections.Handler)))
+	mux.HandleFunc("/api/courses", secure(mw.RequireAuth(apiChapters.Handler)))
+	mux.HandleFunc("/api/courses/", secure(mw.RequireAuth(apiChapters.Handler)))
+	mux.HandleFunc("/api/concepts", secure(mw.RequireAuth(apiLore.Handler)))
+	mux.HandleFunc("/api/concepts/", secure(mw.RequireAuth(apiLore.Handler)))
 	mux.HandleFunc("/api/story_fragments", secure(mw.RequireAuth(apiStoryFragments.Handler)))
 	mux.HandleFunc("/api/story_fragments/", secure(mw.RequireAuth(apiStoryFragments.Handler)))
 	mux.HandleFunc("/api/achievements", secure(mw.RequireAuth(apiAchievements.Handler)))

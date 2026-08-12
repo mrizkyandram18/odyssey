@@ -10,7 +10,7 @@ CREATE TABLE IF NOT EXISTS odyssey_reward_ledgers (
     source        TEXT NOT NULL,    -- e.g. 'QUEST_COMPLETED', 'DAILY_STREAK'
     amount        BIGINT NOT NULL DEFAULT 0,
     reward_type   TEXT NOT NULL,    -- 'COINS', 'XP', 'RELIC_ITEM'
-    metadata      JSONB,            -- e.g. {"quest_id": 123}
+    metadata      JSONB,            -- e.g. {"mission_id": 123}
     created_at    TIMESTAMPTZ DEFAULT timezone('utc'::text, now()) NOT NULL
 );
 

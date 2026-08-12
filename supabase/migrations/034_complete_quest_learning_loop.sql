@@ -1,6 +1,6 @@
--- Migration 034: Complete Quest Learning Loop (Slice 4.6 — Beta Readiness)
+-- Migration 034: Complete Mission Learning Loop (Slice 4.6 — Beta Readiness)
 -- Adds learn_text, result_text, and properly-classified challenge_defs
--- to the 24 quests not covered by migration 031.
+-- to the 24 missions not covered by migration 031.
 --
 -- Classification rules applied (source: Slice 4.6 PRD):
 --   MCQ / TRUE_FALSE  → factual knowledge with one objectively correct answer
@@ -9,16 +9,16 @@
 --   DRAW              → creative drawing — auto-marked complete on submit
 --   MOVEMENT          → physical action — auto-marked complete on submit
 --
--- Backend grading invariant (pkg/game/quest/service.go L491-494):
+-- Backend grading invariant (pkg/game/mission/service.go L491-494):
 --   MCQ/TRUE_FALSE: wrong answer → ErrIncorrectAnswer (not complete, no XP)
 --   All other types: submitted → complete (no answer check, +XP awarded)
 --
 -- This migration uses only UPDATE statements.
 -- No schema changes — learn_text / result_text added in migration 030.
--- Does not touch the 12 quests already updated in migration 031.
+-- Does not touch the 12 missions already updated in migration 031.
 
 -- ============================================================
--- WHISPERING WOODS — 8 quests remaining
+-- WHISPERING WOODS — 8 missions remaining
 -- ============================================================
 
 -- ww-creative-story: CREATIVE quest → WRITE (creative writing, no single correct answer)
@@ -78,7 +78,7 @@ UPDATE odyssey_quest_definitions SET
 WHERE slug = 'ww-announcement';
 
 -- ============================================================
--- CLOCKWORK CITY — 8 quests remaining
+-- CLOCKWORK CITY — 8 missions remaining
 -- ============================================================
 
 -- cc-change: PUZZLE → MCQ (math, one correct answer: Rp 50.000 - Rp 34.500 = Rp 15.500)
@@ -138,7 +138,7 @@ UPDATE odyssey_quest_definitions SET
 WHERE slug = 'cc-deadline';
 
 -- ============================================================
--- STARLIT LIBRARY — 8 quests remaining
+-- STARLIT LIBRARY — 8 missions remaining
 -- ============================================================
 
 -- sl-cv: SOLO → WRITE (personal CV knowledge, reflective output — no single correct answer)

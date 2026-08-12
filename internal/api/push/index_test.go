@@ -68,7 +68,7 @@ func (m *mockStore) DeleteSubscription(ctx context.Context, uid string, endpoint
 func withAuth(req *http.Request, uid string) *http.Request {
 	ctx := auth.ContextWithClaims(req.Context(), &auth.SessionClaims{
 		UID:    uid,
-		CrewID: "crew-1",
+		FamilyID: "crew-1",
 		Role:   "SEEKER",
 	})
 	return req.WithContext(ctx)

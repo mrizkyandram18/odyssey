@@ -32,7 +32,7 @@ These remain **open backlog**, not finished work:
 1. Fix Playwright integration job (Postgres role, backend process, migrations, seed).
 2. Re-attach race detector to default PR path once green.
 3. Re-attach Docker build if container deploy becomes required.
-4. Formal release tag gate (`v0.1.0`) after 6 playable quests verified.
+4. Formal release tag gate (`v0.1.0`) after 6 playable missions verified.
 5. Production E2E / deploy verification (manual for now).
 
 ## What was not deleted

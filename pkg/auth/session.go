@@ -33,7 +33,7 @@ func NewSessionIssuer(secret string) *HMACSessionIssuer {
 }
 
 // IssueSession creates an HMAC-signed session token with the given kind,
-// UID, and optional claims (role, crew_id). The TTL is determined by
+// UID, and optional claims (role, family_id). The TTL is determined by
 // the session kind (8h for user, 30m for setup).
 func (s *HMACSessionIssuer) IssueSession(kind SessionKind, uid string, cfg *SessionConfig) (string, *SessionClaims, error) {
 	uid = strings.TrimSpace(uid)
@@ -61,7 +61,7 @@ func (s *HMACSessionIssuer) IssueSession(kind SessionKind, uid string, cfg *Sess
 	}
 	if cfg != nil {
 		claims.Role = string(cfg.Role)
-		claims.CrewID = cfg.CrewID
+		claims.FamilyID = cfg.FamilyID
 	}
 
 	token, err := signSession(claims, s.secret)

@@ -24,8 +24,8 @@ test.describe('Home Retry Behaviour', () => {
     await page.reload();
     await expect(page.locator('.text-accent-danger')).toBeVisible({ timeout: 30_000 });
 
-    // Retry succeeds and Home renders quests.
+    // Retry succeeds and Home renders missions.
     await page.click('button:has-text("Coba Lagi")');
-    await expect(page.locator('text="Buku Misi Aktif"').or(page.locator('text="Quests"'))).toBeVisible({ timeout: 45_000 });
+    await expect(page.locator('text="Buku Misi Aktif"').or(page.locator('text="Missions"'))).toBeVisible({ timeout: 45_000 });
   });
 });

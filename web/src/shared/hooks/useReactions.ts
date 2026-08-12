@@ -66,7 +66,7 @@ export function useReactions({ targetType, targetId, enabled = true }: UseReacti
       ...rows.filter(r => r.actor_uid !== myUID),
       {
         id: -1, // temp sentinel
-        crew_id: '',
+        family_id: '',
         target_type: targetType,
         target_id: targetId,
         actor_uid: myUID,

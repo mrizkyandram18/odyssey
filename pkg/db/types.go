@@ -7,7 +7,7 @@ import (
 
 type UserProfile struct {
 	UID                    string    `json:"uid"`
-	CrewID                 string    `json:"crew_id"`
+	FamilyID                 string    `json:"family_id"`
 	ExplorerName           string    `json:"explorer_name"`
 	Role                   string    `json:"role"`
 	Level                  int       `json:"level"`
@@ -36,7 +36,7 @@ type RewardLedger struct {
 	CreatedAt  time.Time       `json:"created_at" db:"created_at"`
 }
 
-type Crew struct {
+type Family struct {
 	ID        string    `json:"id"`
 	Name      string    `json:"name"`
 	BannerURL string    `json:"banner_url,omitempty"`
@@ -47,7 +47,7 @@ type Crew struct {
 
 type QuestInstance struct {
 	ID           int64      `json:"id"`
-	CrewID       string     `json:"crew_id"`
+	FamilyID       string     `json:"family_id"`
 	TemplateSlug string     `json:"template_slug"`
 	Title        string     `json:"title"`
 	Status       string     `json:"status"`
@@ -57,9 +57,9 @@ type QuestInstance struct {
 	CreatedAt    time.Time  `json:"created_at"`
 }
 
-type Challenge struct {
+type Exercise struct {
 	ID          int64      `json:"id"`
-	QuestID     int64      `json:"quest_id"`
+	MissionID     int64      `json:"mission_id"`
 	Slug        string     `json:"slug"`
 	Description string     `json:"description"`
 	Status      string     `json:"status"`
@@ -69,9 +69,9 @@ type Challenge struct {
 	CreatedAt   time.Time  `json:"created_at"`
 }
 
-type RealmProgress struct {
-	CrewID         string    `json:"crew_id"`
-	Realm          string    `json:"realm"`
+type JourneyProgress struct {
+	FamilyID         string    `json:"family_id"`
+	Journey          string    `json:"journey"`
 	Status         string    `json:"status"`
 	StoryBranch    string    `json:"story_branch"`
 	Progress       int       `json:"progress"`
@@ -81,8 +81,8 @@ type RealmProgress struct {
 
 type CreativeItem struct {
 	ID        int64     `json:"id"`
-	CrewID    string    `json:"crew_id"`
-	Realm     string    `json:"realm"`
+	FamilyID    string    `json:"family_id"`
+	Journey     string    `json:"journey"`
 	AuthorUID string    `json:"author_uid"`
 	Kind      string    `json:"kind"`
 	Payload   string    `json:"payload"`
@@ -91,9 +91,9 @@ type CreativeItem struct {
 
 type CreativeSubmission struct {
 	ID              int64      `json:"id"`
-	QuestID         int64      `json:"quest_id"`
-	ChallengeID     int64      `json:"challenge_id"`
-	CrewID          string     `json:"crew_id"`
+	MissionID         int64      `json:"mission_id"`
+	ExerciseID     int64      `json:"exercise_id"`
+	FamilyID          string     `json:"family_id"`
 	AuthorUID       string     `json:"author_uid"`
 	Kind            string     `json:"kind"`
 	Content         string     `json:"content"`
@@ -105,11 +105,11 @@ type CreativeSubmission struct {
 	UpdatedAt       time.Time  `json:"updated_at"`
 }
 
-type DailyTurn struct {
+type DailyMission struct {
 	ID        int64     `json:"id"`
 	UID       string    `json:"uid"`
 	Date      string    `json:"date"`
-	QuestSlug string    `json:"quest_slug"`
+	MissionSlug string    `json:"mission_slug"`
 	Completed bool      `json:"completed"`
 	CreatedAt time.Time `json:"created_at"`
 }
@@ -117,7 +117,7 @@ type DailyTurn struct {
 type Achievement struct {
 	ID              int64     `json:"id"`
 	UID             string    `json:"uid"`
-	CrewID          string    `json:"crew_id"`
+	FamilyID          string    `json:"family_id"`
 	Code            string    `json:"code"`
 	Kind            string    `json:"kind"`
 	Trigger         string    `json:"trigger"`
@@ -126,25 +126,25 @@ type Achievement struct {
 	CreatedAt       time.Time `json:"created_at"`
 }
 
-type Relic struct {
+type Collection struct {
 	ID          int64     `json:"id"`
 	UID         string    `json:"uid"`
 	Code        string    `json:"code"`
 	Name        string    `json:"name"`
 	Description string    `json:"description"`
-	Realm       string    `json:"realm"`
+	Journey       string    `json:"journey"`
 	Rarity      string    `json:"rarity"`
 	Image       string    `json:"image"`
-	Lore        string    `json:"lore"`
+	Concept        string    `json:"concept"`
 	AwardedAt   time.Time `json:"awarded_at"`
 	CreatedAt   time.Time `json:"created_at"`
 }
 
-type Chest struct {
+type Gift struct {
 	ID          int64      `json:"id"`
 	UID         string     `json:"uid"`
 	Source      string     `json:"source"`
-	ChestSlug   string     `json:"chest_slug"`
+	GiftSlug   string     `json:"gift_slug"`
 	Rarity      string     `json:"rarity"`
 	Icon        string     `json:"icon"`
 	Description string     `json:"description"`
@@ -158,8 +158,8 @@ type Chest struct {
 type PlayerRelic struct {
 	ID           int64     `json:"id"`
 	UID          string    `json:"uid"`
-	RelicSlug    string    `json:"relic_slug"`
-	RelicID      int64     `json:"relic_id"`
+	CollectionSlug    string    `json:"collection_slug"`
+	CollectionID      int64     `json:"collection_id"`
 	OwnedCount   int       `json:"owned_count"`
 	IsNew        bool      `json:"is_new"`
 	DiscoveredAt time.Time `json:"discovered_at"`
@@ -187,8 +187,8 @@ type ChestDefinition struct {
 
 type DropTableEntry struct {
 	ID        int64     `json:"id"`
-	ChestSlug string    `json:"chest_slug"`
-	RelicID   int64     `json:"relic_id,omitempty"`
+	GiftSlug string    `json:"gift_slug"`
+	CollectionID   int64     `json:"collection_id,omitempty"`
 	Rarity    string    `json:"rarity,omitempty"`
 	Weight    float64   `json:"weight"`
 	CreatedAt time.Time `json:"created_at"`
@@ -199,10 +199,10 @@ type RelicDefinition struct {
 	Slug        string          `json:"slug"`
 	Name        string          `json:"name"`
 	Description string          `json:"description"`
-	Realm       string          `json:"realm"`
+	Journey       string          `json:"journey"`
 	Rarity      string          `json:"rarity"`
 	Image       string          `json:"image"`
-	Lore        string          `json:"lore"`
+	Concept        string          `json:"concept"`
 	Published   bool            `json:"published"`
 	Draft       json.RawMessage `json:"draft"`
 	Version     int             `json:"version"`
@@ -213,10 +213,10 @@ type RelicDefinition struct {
 	UpdatedAt   time.Time       `json:"updated_at"`
 }
 
-type ChapterProgress struct {
-	CrewID      string     `json:"crew_id"`
-	Chapter     string     `json:"chapter"`
-	Realm       string     `json:"realm"`
+type CourseProgress struct {
+	FamilyID      string     `json:"family_id"`
+	Course     string     `json:"course"`
+	Journey       string     `json:"journey"`
 	Status      string     `json:"status"`
 	CompletedAt *time.Time `json:"completed_at,omitempty"`
 	CreatedAt   time.Time  `json:"created_at"`
@@ -224,10 +224,10 @@ type ChapterProgress struct {
 }
 
 type LoreUnlock struct {
-	CrewID     string    `json:"crew_id"`
-	LoreSlug   string    `json:"lore_slug"`
-	Realm      string    `json:"realm"`
-	Chapter    string    `json:"chapter"`
+	FamilyID     string    `json:"family_id"`
+	ConceptSlug   string    `json:"concept_slug"`
+	Journey      string    `json:"journey"`
+	Course    string    `json:"course"`
 	UnlockedAt time.Time `json:"unlocked_at"`
 	CreatedAt  time.Time `json:"created_at"`
 }

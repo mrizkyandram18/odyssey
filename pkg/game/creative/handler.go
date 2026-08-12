@@ -47,7 +47,7 @@ func (h *CreativeAPIHandler) ListByQuest(ctx context.Context, questID int64) ([]
 	return ToViews(subs), nil
 }
 
-// ListByCrew lists all submissions for a crew by iterating their active quests.
+// ListByCrew lists all submissions for a crew by iterating their active missions.
 func (h *CreativeAPIHandler) ListByCrew(ctx context.Context, crewID string) ([]SubmissionView, error) {
 	allSubs, err := h.svc.submissions.ListByCrew(ctx, crewID)
 	if err != nil {
@@ -108,9 +108,9 @@ func ToView(sub *game.Submission) *SubmissionView {
 	}
 	return &SubmissionView{
 		ID:              sub.ID,
-		QuestID:         sub.QuestID,
-		ChallengeID:     sub.ChallengeID,
-		CrewID:          sub.CrewID,
+		MissionID:         sub.MissionID,
+		ExerciseID:     sub.ExerciseID,
+		FamilyID:          sub.FamilyID,
 		AuthorUID:       sub.AuthorUID,
 		Kind:            sub.Kind,
 		Content:         sub.Content,

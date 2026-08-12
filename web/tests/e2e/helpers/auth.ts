@@ -21,6 +21,6 @@ export async function login(page: Page, username: string = 'demo1') {
 
 export async function logout(page: Page) {
   await page.goto('/#/profile');
-  await page.click('button:has-text("Leave Realm (Sign Out)")');
+  await page.click('button:has-text("Leave Journey (Sign Out)")');
   await expect(page).toHaveURL(/.*#\/login$/);
 }

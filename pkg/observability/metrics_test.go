@@ -8,13 +8,13 @@ import (
 
 func TestMetrics_RecordRequest(t *testing.T) {
 	m := NewMetrics()
-	m.RecordRequest("GET", "/api/quests", 200, 10*time.Millisecond)
+	m.RecordRequest("GET", "/api/missions", 200, 10*time.Millisecond)
 	m.RecordRequest("POST", "/api/login", 401, 5*time.Millisecond)
-	m.RecordRequest("GET", "/api/quests", 200, 15*time.Millisecond)
+	m.RecordRequest("GET", "/api/missions", 200, 15*time.Millisecond)
 
 	snap := m.Snapshot()
-	if snap.RequestCount["GET /api/quests"] != 2 {
-		t.Errorf("expected 2 requests for GET /api/quests, got %d", snap.RequestCount["GET /api/quests"])
+	if snap.RequestCount["GET /api/missions"] != 2 {
+		t.Errorf("expected 2 requests for GET /api/missions, got %d", snap.RequestCount["GET /api/missions"])
 	}
 	if snap.RequestCount["POST /api/login"] != 1 {
 		t.Errorf("expected 1 request for POST /api/login, got %d", snap.RequestCount["POST /api/login"])

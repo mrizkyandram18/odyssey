@@ -31,16 +31,16 @@ type ContentService interface {
 	Invalidate(key string)
 	ListRealms(ctx context.Context) ([]gamecontent.RealmDefinition, error)
 	ListChapters(ctx context.Context) ([]gamecontent.ChapterDefinition, error)
-	ListChaptersByRealm(ctx context.Context, realm string) ([]gamecontent.ChapterDefinition, error)
+	ListChaptersByRealm(ctx context.Context, journey string) ([]gamecontent.ChapterDefinition, error)
 	ListQuests(ctx context.Context) ([]gamecontent.QuestDefinition, error)
-	ListQuestsByRealm(ctx context.Context, realm string) ([]gamecontent.QuestDefinition, error)
+	ListQuestsByRealm(ctx context.Context, journey string) ([]gamecontent.QuestDefinition, error)
 	ListPrompts(ctx context.Context) ([]gamecontent.CreativePromptDefinition, error)
-	ListPromptsByRealm(ctx context.Context, realm string) ([]gamecontent.CreativePromptDefinition, error)
+	ListPromptsByRealm(ctx context.Context, journey string) ([]gamecontent.CreativePromptDefinition, error)
 	ListAchievements(ctx context.Context) ([]gamecontent.AchievementDefinition, error)
 	ListSeasons(ctx context.Context) ([]gamecontent.SeasonDefinition, error)
 	ListLore(ctx context.Context) ([]gamecontent.LoreDefinition, error)
-	ListLoreByRealm(ctx context.Context, realm string) ([]gamecontent.LoreDefinition, error)
-	ListLoreByChapter(ctx context.Context, chapter string) ([]gamecontent.LoreDefinition, error)
+	ListLoreByRealm(ctx context.Context, journey string) ([]gamecontent.LoreDefinition, error)
+	ListLoreByChapter(ctx context.Context, course string) ([]gamecontent.LoreDefinition, error)
 	ListChests(ctx context.Context) ([]gamecontent.ChestDefinition, error)
 	ListRelics(ctx context.Context) ([]gamecontent.RelicDefinition, error)
 	GetDraft(ctx context.Context, table, slug string) (map[string]any, error)
@@ -71,13 +71,13 @@ type ResourceMapping struct {
 var resourceMap = map[string]ResourceMapping{
 	"realms":       {gamecontent.TableRealms},
 	"chapters":     {gamecontent.TableChapters},
-	"quests":       {gamecontent.TableQuests},
+	"missions":       {gamecontent.TableQuests},
 	"prompts":      {gamecontent.TablePrompts},
-	"chests":       {gamecontent.TableChests},
-	"relics":       {gamecontent.TableRelics},
+	"gifts":       {gamecontent.TableChests},
+	"collections":       {gamecontent.TableRelics},
 	"achievements": {gamecontent.TableAchievements},
 	"seasons":      {gamecontent.TableSeasons},
-	"lore":         {gamecontent.TableLore},
+	"concept":         {gamecontent.TableLore},
 }
 
 func getTable(resourceType string) (string, bool) {
@@ -394,7 +394,7 @@ func Handler(w http.ResponseWriter, r *http.Request) {
 		}
 		return
 	}
-	if first == "quests" && len(parts) == 1 && r.Method == http.MethodGet {
+	if first == "missions" && len(parts) == 1 && r.Method == http.MethodGet {
 		if svc.gameAdmin != nil {
 			stats, err := svc.gameAdmin.GetQuests(r.Context())
 			if err != nil {
@@ -416,7 +416,7 @@ func Handler(w http.ResponseWriter, r *http.Request) {
 		}
 		return
 	}
-	if first == "quests" && len(parts) == 3 && parts[2] == "toggle" && r.Method == http.MethodPost {
+	if first == "missions" && len(parts) == 3 && parts[2] == "toggle" && r.Method == http.MethodPost {
 		if svc.gameAdmin != nil {
 			err := svc.gameAdmin.ToggleQuestPublished(r.Context(), parts[1])
 			if err != nil {
@@ -612,15 +612,15 @@ func handleValidate(w http.ResponseWriter, r *http.Request) {
 func buildContentSet(ctx context.Context, cs ContentService) (validation.ContentSet, error) {
 	out := validation.ContentSet{}
 	var err error
-	out.Realms, err = cs.ListRealms(ctx)
+	out.Journeys, err = cs.ListRealms(ctx)
 	if err != nil {
 		return out, err
 	}
-	out.Chapters, err = cs.ListChapters(ctx)
+	out.Courses, err = cs.ListChapters(ctx)
 	if err != nil {
 		return out, err
 	}
-	out.Quests, err = cs.ListQuests(ctx)
+	out.Missions, err = cs.ListQuests(ctx)
 	if err != nil {
 		return out, err
 	}
@@ -636,15 +636,15 @@ func buildContentSet(ctx context.Context, cs ContentService) (validation.Content
 	if err != nil {
 		return out, err
 	}
-	out.Lore, err = cs.ListLore(ctx)
+	out.Concept, err = cs.ListLore(ctx)
 	if err != nil {
 		return out, err
 	}
-	out.Chests, err = cs.ListChests(ctx)
+	out.Gifts, err = cs.ListChests(ctx)
 	if err != nil {
 		return out, err
 	}
-	out.Relics, err = cs.ListRelics(ctx)
+	out.Collections, err = cs.ListRelics(ctx)
 	if err != nil {
 		return out, err
 	}

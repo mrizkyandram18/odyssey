@@ -56,12 +56,12 @@ odyssey/
 │   ├── auth/                     # Authenticator port + Firestore adapter
 │   ├── content/                  # ContentService (DB-backed definitions & caching)
 │   ├── db/                       # Supabase REST client & store implementations
-│   ├── game/                     # Game logic (quests, progression, economy, chapters, lore, achievements)
-│   │   ├── quest/                # Quest & challenge domain
-│   │   ├── progression/          # XP, levels, milestones, relics
+│   ├── game/                     # Game logic (missions, progression, economy, chapters, concept, achievements)
+│   │   ├── quest/                # Mission & challenge domain
+│   │   ├── progression/          # XP, levels, milestones, collections
 │   │   ├── creative/             # Creative-space, story submissions
 │   │   ├── fragment/             # Story fragment discovery, replay & gallery domain
-│   │   └── world/                # Realm progress, world state
+│   │   └── world/                # Journey progress, world state
 │   ├── observability/            # Structured logging, metrics, health, profiler
 │   └── shared/                   # Config, security middleware, CORS, rate limiting
 ├── web/                          # React 19 PWA frontend
@@ -104,7 +104,7 @@ knowledge of Firestore, Gatekeeper, or Firebase.
 - Device binding and validation logic.
 
 **Does not own:** password hashing beyond a standard lib (bcrypt/argon2). Does
-not know about quests or progression.
+not know about missions or progression.
 
 ### `pkg/db`
 
@@ -120,9 +120,9 @@ Owns:
 
 Owns:
 
-- Quest, challenge, world-state, and progression logic.
-- Story fragment discovery, catalog listing, and realm replay logic (`pkg/game/fragment`).
-- Reward computation (XP, Relic, Chest grants).
+- Mission, challenge, world-state, and progression logic.
+- Story fragment discovery, catalog listing, and journey replay logic (`pkg/game/fragment`).
+- Reward computation (XP, Collection, Gift grants).
 - All game-domain types and rules.
 
 **Does not reach into** `auth` or `db` directly. It receives a `Store`
@@ -131,10 +131,10 @@ testable without Supabase or Gatekeeper.
 
 **Does not own:** HTTP, networking, or persistence mechanics.
 
-#### Quest Pacing & Reward Idempotency (Phase 3)
-- **Quest Start Pacing:** The system enforces a daily limit on starting new quests (`max_new_quests_per_day = 1`). This is validated using the `started_at` and `started_by` tracking fields on `QuestInstance`.
-- **Idempotent Completion:** Quest completion uses a Compare-And-Swap (CAS) mechanism (`UpdateUserIfMatch` for XP and Coin mutations). This ensures that concurrent or retry requests do not duplicate rewards.
-- **Explicit Reward Mapping:** Chests are deterministic. They map explicitly from a `quest_slug` → `ChestDefinition.reward_relic` → `Relic`. No RNG or loot-box mechanics are used.
+#### Mission Pacing & Reward Idempotency (Phase 3)
+- **Mission Start Pacing:** The system enforces a daily limit on starting new missions (`max_new_missions_per_day = 1`). This is validated using the `started_at` and `started_by` tracking fields on `QuestInstance`.
+- **Idempotent Completion:** Mission completion uses a Compare-And-Swap (CAS) mechanism (`UpdateUserIfMatch` for XP and Coin mutations). This ensures that concurrent or retry requests do not duplicate rewards.
+- **Explicit Reward Mapping:** Gifts are deterministic. They map explicitly from a `mission_slug` → `ChestDefinition.reward_relic` → `Collection`. No RNG or loot-box mechanics are used.
 
 ### `pkg/content` — Content Engine
 
@@ -142,12 +142,12 @@ Owns:
 
 - **ContentService** — the central service for all game content definitions.
   Loads definitions from the database, caches them in memory, and provides
-  lookup methods by slug, realm, chapter, and season.
+  lookup methods by slug, journey, course, and season.
 - **In-memory cache** — a lightweight RWMutex-based cache with configurable
   TTL. Supports manual refresh via the admin API.
 - **Fallback chain** — when the database is empty, the ContentService falls
   back to hardcoded defaults embedded in the existing catalog packages
-  (`pkg/game/chest`, `pkg/game/quest`, `pkg/game/relic`, `pkg/game/world`, `pkg/game/fragment`).
+  (`pkg/game/gift`, `pkg/game/mission`, `pkg/game/collection`, `pkg/game/world`, `pkg/game/fragment`).
 
 The ContentService is consumed by gameplay services (QuestService,
 RewardEngine, RelicService, CreativeService, FragmentService) instead of hardcoded catalogs
@@ -175,19 +175,19 @@ Handlers are thin: parse request → call `pkg/game` or `pkg/content` or
 
 ### `internal/api/story_fragments/index.go` — Story Fragments API
 
-Provides endpoints for collectible story fragments and realm replays:
+Provides endpoints for collectible story fragments and journey replays:
 
 - `GET /api/story_fragments` — List all story fragments with caller's discovery status
 - `POST /api/story_fragments/discover` — Discover/collect a fragment by slug (+20 XP)
-- `POST /api/story_fragments/replay` — Replay a completed realm for bonus dialogue & secret fragments
+- `POST /api/story_fragments/replay` — Replay a completed journey for bonus dialogue & secret fragments
 
 #### Story Fragments Flow (`list` → `discover` → `replay`)
 1. **List (`GET /api/story_fragments`):** Fetches the full story fragment catalog merged with the player's discovery history (`discovered_at`).
 2. **Discover (`POST /api/story_fragments/discover`):** Player collects a fragment slug. Grants +20 XP if newly discovered.
-3. **Replay (`POST /api/story_fragments/replay`):** Verifies that the crew has completed the specified realm (`status = COMPLETE` or `progress >= 100`). Reveals secret hidden fragments (`is_hidden = true`) and returns narrative bonus dialogue.
+3. **Replay (`POST /api/story_fragments/replay`):** Verifies that the crew has completed the specified journey (`status = COMPLETE` or `progress >= 100`). Reveals secret hidden fragments (`is_hidden = true`) and returns narrative bonus dialogue.
 
 #### Authentication & Idempotency
-- **Auth & Authorization:** All endpoints require a valid session HMAC token validated via `auth.ClaimsFromRequest`. Queries and mutations are strictly scoped by `claims.UID` and `claims.CrewID`.
+- **Auth & Authorization:** All endpoints require a valid session HMAC token validated via `auth.ClaimsFromRequest`. Queries and mutations are strictly scoped by `claims.UID` and `claims.FamilyID`.
 - **Idempotency:** Fragment discovery awards +20 XP only on the initial discovery (`newlyDiscovered == true`). Subsequent calls for an already-discovered fragment return `newlyDiscovered = false` and `XPGranted = 0`, ensuring exactly-once XP grants.
 
 ### `api/admin/` — Admin CMS API
@@ -196,10 +196,10 @@ Authenticated admin-only read API for content management. Provides:
 
 - `GET /api/admin/content/status` — content load status (counts per type)
 - `POST /api/admin/content/reload` — manual cache refresh
-- `GET /api/admin/content/realms` — list all realm definitions
-- `GET /api/admin/content/quests` — list all quest definitions
-- `GET /api/admin/content/relics` — list all relic definitions
-- `GET /api/admin/content/chests` — list all chest definitions
+- `GET /api/admin/content/journeys` — list all journey definitions
+- `GET /api/admin/content/missions` — list all quest definitions
+- `GET /api/admin/content/collections` — list all relic definitions
+- `GET /api/admin/content/gifts` — list all chest definitions
 - `GET /api/admin/content/prompts` — list all creative prompt definitions
 
 Only READ operations in the MVP. No editing UI yet.
@@ -211,8 +211,8 @@ src/
 ├── app/                  # Shell: routing, session provider, PWA bootstrap
 ├── features/             # Feature modules (each self-contained)
 │   ├── login/            # Login flow (Gatekeeper BOTH integration)
-│   ├── home/             # Crew dashboard
-│   ├── quest/            # Quest view, challenge submission
+│   ├── home/             # Family dashboard
+│   ├── quest/            # Mission view, challenge submission
 │   ├── creative/         # Creative-space canvas
 │   ├── journal/          # Achievements, story log
 │   └── profile/          # Explorer, level, role

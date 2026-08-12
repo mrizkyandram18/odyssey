@@ -14,9 +14,9 @@ describe('WorldMap', () => {
     render(
       <WorldMap
         realms={[
-          { crew_id: 'c1', realm: 'whispering-woods', status: 'ACTIVE', progress: 50, updated_at: '' },
-          { crew_id: 'c1', realm: 'clockwork-city', status: 'LOCKED', progress: 0, updated_at: '' },
-          { crew_id: 'c1', realm: 'starlit-library', status: 'LOCKED', progress: 0, updated_at: '' },
+          { family_id: 'c1', journey: 'whispering-woods', status: 'ACTIVE', progress: 50, updated_at: '' },
+          { family_id: 'c1', journey: 'clockwork-city', status: 'LOCKED', progress: 0, updated_at: '' },
+          { family_id: 'c1', journey: 'starlit-library', status: 'LOCKED', progress: 0, updated_at: '' },
         ]}
       />
     )
@@ -29,13 +29,13 @@ describe('WorldMap', () => {
     expect(screen.getAllByText('🔒 Terkunci')).toHaveLength(2)
   })
 
-  it('triggers onRealmSelect when clicking an unlocked realm', () => {
+  it('triggers onRealmSelect when clicking an unlocked journey', () => {
     const handleSelect = vi.fn()
     render(
       <WorldMap
         realms={[
-          { crew_id: 'c1', realm: 'whispering-woods', status: 'COMPLETE', progress: 100, updated_at: '' },
-          { crew_id: 'c1', realm: 'clockwork-city', status: 'ACTIVE', progress: 20, updated_at: '' },
+          { family_id: 'c1', journey: 'whispering-woods', status: 'COMPLETE', progress: 100, updated_at: '' },
+          { family_id: 'c1', journey: 'clockwork-city', status: 'ACTIVE', progress: 20, updated_at: '' },
         ]}
         onRealmSelect={handleSelect}
       />
@@ -48,13 +48,13 @@ describe('WorldMap', () => {
     expect(handleSelect).toHaveBeenCalledWith('whispering-woods')
   })
 
-  it('does not trigger onRealmSelect when clicking a locked realm', () => {
+  it('does not trigger onRealmSelect when clicking a locked journey', () => {
     const handleSelect = vi.fn()
     render(
       <WorldMap
         realms={[
-          { crew_id: 'c1', realm: 'whispering-woods', status: 'ACTIVE', progress: 50, updated_at: '' },
-          { crew_id: 'c1', realm: 'clockwork-city', status: 'LOCKED', progress: 0, updated_at: '' },
+          { family_id: 'c1', journey: 'whispering-woods', status: 'ACTIVE', progress: 50, updated_at: '' },
+          { family_id: 'c1', journey: 'clockwork-city', status: 'LOCKED', progress: 0, updated_at: '' },
         ]}
         onRealmSelect={handleSelect}
       />

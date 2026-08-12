@@ -10,35 +10,35 @@ import (
 func TestValidator_ValidContent(t *testing.T) {
 	v := NewValidator()
 	cs := ContentSet{
-		Realms: []content.RealmDefinition{
+		Journeys: []content.RealmDefinition{
 			{ID: 1, Slug: "forest", Name: "Enchanted Forest"},
 		},
-		Chapters: []content.ChapterDefinition{
-			{ID: 1, Slug: "ch1", Realm: "forest", Title: "Chapter 1", Order: 1},
-			{ID: 2, Slug: "ch2", Realm: "forest", Title: "Chapter 2", Order: 2},
+		Courses: []content.ChapterDefinition{
+			{ID: 1, Slug: "ch1", Journey: "forest", Title: "Course 1", Order: 1},
+			{ID: 2, Slug: "ch2", Journey: "forest", Title: "Course 2", Order: 2},
 		},
-		Quests: []content.QuestDefinition{
-			{ID: 1, Slug: "quest1", Realm: "forest", Chapter: "ch1", Title: "Quest 1"},
+		Missions: []content.QuestDefinition{
+			{ID: 1, Slug: "quest1", Journey: "forest", Course: "ch1", Title: "Mission 1"},
 		},
 		Seasons: []content.SeasonDefinition{
-			{ID: 1, Slug: "s1", Realm: "forest", Name: "Season 1",
+			{ID: 1, Slug: "s1", Journey: "forest", Name: "Season 1",
 				StartAt: time.Now().Add(-24 * time.Hour),
 				EndAt:   time.Now().Add(24 * time.Hour)},
 		},
-		Chests: []content.ChestDefinition{
-			{ID: 1, Slug: "chest1", Name: "Chest 1", Rarity: "common"},
+		Gifts: []content.ChestDefinition{
+			{ID: 1, Slug: "chest1", Name: "Gift 1", Rarity: "common"},
 		},
-		Relics: []content.RelicDefinition{
-			{ID: 1, Slug: "relic1", Name: "Relic 1", Realm: "forest", Rarity: "rare"},
+		Collections: []content.RelicDefinition{
+			{ID: 1, Slug: "relic1", Name: "Collection 1", Journey: "forest", Rarity: "rare"},
 		},
 		Achievements: []content.AchievementDefinition{
 			{ID: 1, Code: "ACH001", Title: "Test Achievement", Threshold: 10},
 		},
-		Lore: []content.LoreDefinition{
-			{ID: 1, Slug: "lore1", Title: "Lore 1", Realm: "forest", Chapter: "ch1"},
+		Concept: []content.LoreDefinition{
+			{ID: 1, Slug: "lore1", Title: "Concept 1", Journey: "forest", Course: "ch1"},
 		},
 		Prompts: []content.CreativePromptDefinition{
-			{ID: 1, Slug: "prompt1", Prompt: "Write a story", Realm: "forest"},
+			{ID: 1, Slug: "prompt1", Prompt: "Write a story", Journey: "forest"},
 		},
 	}
 
@@ -51,7 +51,7 @@ func TestValidator_ValidContent(t *testing.T) {
 func TestValidator_DuplicateSlug(t *testing.T) {
 	v := NewValidator()
 	cs := ContentSet{
-		Realms: []content.RealmDefinition{
+		Journeys: []content.RealmDefinition{
 			{ID: 1, Slug: "forest", Name: "Forest"},
 			{ID: 2, Slug: "forest", Name: "Duplicate"},
 		},
@@ -74,14 +74,14 @@ func TestValidator_DuplicateSlug(t *testing.T) {
 func TestValidator_BrokenPrerequisite(t *testing.T) {
 	v := NewValidator()
 	cs := ContentSet{
-		Realms: []content.RealmDefinition{
+		Journeys: []content.RealmDefinition{
 			{ID: 1, Slug: "forest", Name: "Forest"},
 		},
-		Chapters: []content.ChapterDefinition{
-			{ID: 1, Slug: "ch1", Realm: "forest", Title: "Chapter 1", Order: 1},
+		Courses: []content.ChapterDefinition{
+			{ID: 1, Slug: "ch1", Journey: "forest", Title: "Course 1", Order: 1},
 		},
-		Quests: []content.QuestDefinition{
-			{ID: 1, Slug: "quest1", Realm: "forest", Chapter: "ch1",
+		Missions: []content.QuestDefinition{
+			{ID: 1, Slug: "quest1", Journey: "forest", Course: "ch1",
 				RequiredQuestSlug: "nonexistent", RequiredChapter: "ch1"},
 		},
 	}
@@ -103,14 +103,14 @@ func TestValidator_BrokenPrerequisite(t *testing.T) {
 func TestValidator_BrokenPrerequisite_MultiSlug(t *testing.T) {
 	v := NewValidator()
 	cs := ContentSet{
-		Realms: []content.RealmDefinition{
+		Journeys: []content.RealmDefinition{
 			{ID: 1, Slug: "forest", Name: "Forest"},
 		},
-		Chapters: []content.ChapterDefinition{
-			{ID: 1, Slug: "ch1", Realm: "forest", Title: "Chapter 1", Order: 1},
+		Courses: []content.ChapterDefinition{
+			{ID: 1, Slug: "ch1", Journey: "forest", Title: "Course 1", Order: 1},
 		},
-		Quests: []content.QuestDefinition{
-			{ID: 1, Slug: "quest1", Realm: "forest", Chapter: "ch1",
+		Missions: []content.QuestDefinition{
+			{ID: 1, Slug: "quest1", Journey: "forest", Course: "ch1",
 				RequiredQuestSlugs: []string{"qA", "nonexistent"}},
 		},
 	}
@@ -132,13 +132,13 @@ func TestValidator_BrokenPrerequisite_MultiSlug(t *testing.T) {
 func TestValidator_MissingRealm(t *testing.T) {
 	v := NewValidator()
 	cs := ContentSet{
-		Quests: []content.QuestDefinition{
-			{ID: 1, Slug: "quest1", Realm: "unknown", Title: "Quest"},
+		Missions: []content.QuestDefinition{
+			{ID: 1, Slug: "quest1", Journey: "unknown", Title: "Mission"},
 		},
 	}
 	result := v.Validate(cs)
 	if result.Valid {
-		t.Error("expected invalid result for missing realm")
+		t.Error("expected invalid result for missing journey")
 	}
 	found := false
 	for _, e := range result.Errors {
@@ -154,12 +154,12 @@ func TestValidator_MissingRealm(t *testing.T) {
 func TestValidator_QuestPrereqCycle(t *testing.T) {
 	v := NewValidator()
 	cs := ContentSet{
-		Realms: []content.RealmDefinition{
+		Journeys: []content.RealmDefinition{
 			{ID: 1, Slug: "forest", Name: "Forest"},
 		},
-		Quests: []content.QuestDefinition{
-			{ID: 1, Slug: "qA", Realm: "forest", RequiredQuestSlug: "qB"},
-			{ID: 2, Slug: "qB", Realm: "forest", RequiredQuestSlug: "qA"},
+		Missions: []content.QuestDefinition{
+			{ID: 1, Slug: "qA", Journey: "forest", RequiredQuestSlug: "qB"},
+			{ID: 2, Slug: "qB", Journey: "forest", RequiredQuestSlug: "qA"},
 		},
 	}
 	result := v.Validate(cs)
@@ -180,13 +180,13 @@ func TestValidator_QuestPrereqCycle(t *testing.T) {
 func TestValidator_QuestPrereqCycle_MultiSlug(t *testing.T) {
 	v := NewValidator()
 	cs := ContentSet{
-		Realms: []content.RealmDefinition{
+		Journeys: []content.RealmDefinition{
 			{ID: 1, Slug: "forest", Name: "Forest"},
 		},
-		Quests: []content.QuestDefinition{
-			{ID: 1, Slug: "qA", Realm: "forest", RequiredQuestSlugs: []string{"qB", "qC"}},
-			{ID: 2, Slug: "qB", Realm: "forest", RequiredQuestSlugs: []string{"qC"}},
-			{ID: 3, Slug: "qC", Realm: "forest", RequiredQuestSlugs: []string{"qA"}},
+		Missions: []content.QuestDefinition{
+			{ID: 1, Slug: "qA", Journey: "forest", RequiredQuestSlugs: []string{"qB", "qC"}},
+			{ID: 2, Slug: "qB", Journey: "forest", RequiredQuestSlugs: []string{"qC"}},
+			{ID: 3, Slug: "qC", Journey: "forest", RequiredQuestSlugs: []string{"qA"}},
 		},
 	}
 	result := v.Validate(cs)
@@ -208,13 +208,13 @@ func TestValidator_SeasonOverlap(t *testing.T) {
 	v := NewValidator()
 	now := time.Now().UTC()
 	cs := ContentSet{
-		Realms: []content.RealmDefinition{
+		Journeys: []content.RealmDefinition{
 			{ID: 1, Slug: "forest", Name: "Forest"},
 		},
 		Seasons: []content.SeasonDefinition{
-			{ID: 1, Slug: "s1", Realm: "forest", Name: "S1",
+			{ID: 1, Slug: "s1", Journey: "forest", Name: "S1",
 				StartAt: now.Add(-24 * time.Hour), EndAt: now.Add(24 * time.Hour)},
-			{ID: 2, Slug: "s2", Realm: "forest", Name: "S2",
+			{ID: 2, Slug: "s2", Journey: "forest", Name: "S2",
 				StartAt: now.Add(-12 * time.Hour), EndAt: now.Add(12 * time.Hour)},
 		},
 	}
@@ -234,8 +234,8 @@ func TestValidator_InvalidDropWeight(t *testing.T) {
 	v := NewValidator()
 	cs := ContentSet{
 		DropTables: []content.DropTableEntry{
-			{ChestSlug: "chest1", Rarity: "common", Weight: 0},
-			{ChestSlug: "chest1", Rarity: "rare", Weight: -1},
+			{GiftSlug: "chest1", Rarity: "common", Weight: 0},
+			{GiftSlug: "chest1", Rarity: "rare", Weight: -1},
 		},
 	}
 	result := v.Validate(cs)
@@ -276,7 +276,7 @@ func TestValidator_InvalidAchievementThreshold(t *testing.T) {
 func TestValidator_InvalidChestDefinition(t *testing.T) {
 	v := NewValidator()
 	cs := ContentSet{
-		Chests: []content.ChestDefinition{
+		Gifts: []content.ChestDefinition{
 			{ID: 1, Slug: "", Name: "", Rarity: "invalid"},
 		},
 	}
@@ -295,11 +295,11 @@ func TestValidator_InvalidChestDefinition(t *testing.T) {
 func TestValidator_MissingRelicReference(t *testing.T) {
 	v := NewValidator()
 	cs := ContentSet{
-		Relics: []content.RelicDefinition{
-			{ID: 1, Slug: "relic1", Name: "Relic 1", Realm: "forest", Rarity: "rare"},
+		Collections: []content.RelicDefinition{
+			{ID: 1, Slug: "relic1", Name: "Collection 1", Journey: "forest", Rarity: "rare"},
 		},
 		DropTables: []content.DropTableEntry{
-			{ChestSlug: "chest1", RelicID: 999, Weight: 1.0},
+			{GiftSlug: "chest1", CollectionID: 999, Weight: 1.0},
 		},
 	}
 	result := v.Validate(cs)
@@ -318,7 +318,7 @@ func TestValidator_ZeroTotalWeight(t *testing.T) {
 	v := NewValidator()
 	cs := ContentSet{
 		DropTables: []content.DropTableEntry{
-			{ChestSlug: "chest1", Rarity: "common", Weight: 0},
+			{GiftSlug: "chest1", Rarity: "common", Weight: 0},
 		},
 	}
 	result := v.Validate(cs)
@@ -337,8 +337,8 @@ func TestValidator_DuplicateDropTableEntry(t *testing.T) {
 	v := NewValidator()
 	cs := ContentSet{
 		DropTables: []content.DropTableEntry{
-			{ChestSlug: "chest1", RelicID: 1, Weight: 0.5},
-			{ChestSlug: "chest1", RelicID: 1, Weight: 0.5},
+			{GiftSlug: "chest1", CollectionID: 1, Weight: 0.5},
+			{GiftSlug: "chest1", CollectionID: 1, Weight: 0.5},
 		},
 	}
 	result := v.Validate(cs)
@@ -357,7 +357,7 @@ func TestValidator_InvalidRarity(t *testing.T) {
 	v := NewValidator()
 	cs := ContentSet{
 		DropTables: []content.DropTableEntry{
-			{ChestSlug: "chest1", Rarity: "invalid-rarity", Weight: 1.0},
+			{GiftSlug: "chest1", Rarity: "invalid-rarity", Weight: 1.0},
 		},
 	}
 	result := v.Validate(cs)
@@ -375,11 +375,11 @@ func TestValidator_InvalidRarity(t *testing.T) {
 func TestValidator_OrphanDropTable(t *testing.T) {
 	v := NewValidator()
 	cs := ContentSet{
-		Chests: []content.ChestDefinition{
-			{ID: 1, Slug: "chest1", Name: "Chest 1", Rarity: "common"},
+		Gifts: []content.ChestDefinition{
+			{ID: 1, Slug: "chest1", Name: "Gift 1", Rarity: "common"},
 		},
 		DropTables: []content.DropTableEntry{
-			{ChestSlug: "unknown-chest", Rarity: "common", Weight: 1.0},
+			{GiftSlug: "unknown-chest", Rarity: "common", Weight: 1.0},
 		},
 	}
 	result := v.Validate(cs)

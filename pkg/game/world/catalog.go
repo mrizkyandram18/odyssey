@@ -6,7 +6,7 @@ import (
 	"fmt"
 )
 
-// RealmDefinition holds the configurable metadata for a single realm.
+// RealmDefinition holds the configurable metadata for a single journey.
 type RealmDefinition struct {
 	Slug        string
 	Name        string
@@ -14,9 +14,9 @@ type RealmDefinition struct {
 	MaxProgress int
 }
 
-// RealmCatalog is the source of truth for realm progression metadata.
+// RealmCatalog is the source of truth for journey progression metadata.
 // Values are loaded from code-embedded defaults at startup and may be
-// overridden by odyssey_system_config rows (key = "realm:<slug>:<field>").
+// overridden by odyssey_system_config rows (key = "journey:<slug>:<field>").
 type RealmCatalog struct {
 	realms map[string]RealmDefinition
 	order  []string
@@ -58,21 +58,21 @@ func NewRealmCatalog(defaults []RealmDefinition) *RealmCatalog {
 	return &RealmCatalog{realms: realms, order: order}
 }
 
-// Get returns the definition for a realm slug.
+// Get returns the definition for a journey slug.
 func (c *RealmCatalog) Get(slug string) (RealmDefinition, bool) {
 	r, ok := c.realms[slug]
 	return r, ok
 }
 
-// Order returns the realm unlock sequence (defensive copy).
+// Order returns the journey unlock sequence (defensive copy).
 func (c *RealmCatalog) Order() []string {
 	out := make([]string, len(c.order))
 	copy(out, c.order)
 	return out
 }
 
-// NextRealm returns the realm that follows the given realm in the unlock
-// sequence. Returns an empty string if the given realm is the last one or
+// NextRealm returns the journey that follows the given journey in the unlock
+// sequence. Returns an empty string if the given journey is the last one or
 // is unknown.
 func (c *RealmCatalog) NextRealm(current string) string {
 	for i, slug := range c.order {
@@ -83,7 +83,7 @@ func (c *RealmCatalog) NextRealm(current string) string {
 	return ""
 }
 
-// Override updates a single field on a realm definition. Supported fields:
+// Override updates a single field on a journey definition. Supported fields:
 // "name" (string), "max_progress" (positive integer). Returns false if the
 // slug is unknown or the field/value is invalid.
 func (c *RealmCatalog) Override(slug, field, value string) bool {
@@ -108,9 +108,9 @@ func (c *RealmCatalog) Override(slug, field, value string) bool {
 	return false
 }
 
-// ApplyOverrides reads realm-specific configuration from the provided ConfigLoader
-// and applies them to matching realm definitions. The config key format is
-// "realm:<slug>:<field>" where field is "name" or "max_progress".
+// ApplyOverrides reads journey-specific configuration from the provided ConfigLoader
+// and applies them to matching journey definitions. The config key format is
+// "journey:<slug>:<field>" where field is "name" or "max_progress".
 // Rows that don't exist or have empty values are silently skipped.
 func (c *RealmCatalog) ApplyOverrides(ctx context.Context, loader ConfigLoader) error {
 	if loader == nil {
@@ -119,7 +119,7 @@ func (c *RealmCatalog) ApplyOverrides(ctx context.Context, loader ConfigLoader) 
 	const fieldsPerRealm = 2
 	for _, slug := range c.order {
 		for _, field := range []string{"name", "max_progress"} {
-			key := fmt.Sprintf("realm:%s:%s", slug, field)
+			key := fmt.Sprintf("journey:%s:%s", slug, field)
 			raw, err := loader.GetSystemConfig(ctx, key)
 			if err != nil {
 				return fmt.Errorf("get system config %s: %w", key, err)
@@ -144,8 +144,8 @@ func (c *RealmCatalog) ApplyOverrides(ctx context.Context, loader ConfigLoader) 
 	return nil
 }
 
-// DefaultRealmDefinitions is the code-embedded realm metadata for the MVP.
-// Each realm carries its slug, display name, unlock order, and maximum progress.
+// DefaultRealmDefinitions is the code-embedded journey metadata for the MVP.
+// Each journey carries its slug, display name, unlock order, and maximum progress.
 var DefaultRealmDefinitions = []RealmDefinition{
 	{Slug: "whispering-woods", Name: "Whispering Woods", Order: 1, MaxProgress: 100},
 	{Slug: "clockwork-city", Name: "Clockwork City", Order: 2, MaxProgress: 100},

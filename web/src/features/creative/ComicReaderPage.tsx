@@ -92,7 +92,7 @@ export function ComicReaderPage() {
 
       <div className="flex items-center gap-2">
         <span className="text-xs font-medium text-muted-foreground">
-          Misi #{submission.quest_id} · Komik
+          Misi #{submission.mission_id} · Komik
         </span>
         <span className="text-xs text-muted-foreground">oleh {submission.author_uid}</span>
       </div>

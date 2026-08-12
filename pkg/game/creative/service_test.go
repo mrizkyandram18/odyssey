@@ -34,8 +34,8 @@ func (m *mockCreativeSubmissionStore) CreateSubmission(ctx context.Context, s *g
 	s.CreatedAt = time.Now().UTC()
 	s.UpdatedAt = s.CreatedAt
 	m.subs[s.ID] = s
-	m.byQuest[s.QuestID] = append(m.byQuest[s.QuestID], *s)
-	m.byCrew[s.CrewID] = append(m.byCrew[s.CrewID], *s)
+	m.byQuest[s.MissionID] = append(m.byQuest[s.MissionID], *s)
+	m.byCrew[s.FamilyID] = append(m.byCrew[s.FamilyID], *s)
 	return s, nil
 }
 
@@ -104,46 +104,46 @@ func (m *mockCreativeSubmissionStore) UpdateSubmission(ctx context.Context, subm
 }
 
 type mockQuestStore struct {
-	quests     map[int64]*game.Quest
-	challenges map[int64][]game.Challenge
+	missions     map[int64]*game.Mission
+	exercises map[int64][]game.Exercise
 	err        error
 }
 
 func newMockQuestStore() *mockQuestStore {
 	return &mockQuestStore{
-		quests:     make(map[int64]*game.Quest),
-		challenges: make(map[int64][]game.Challenge),
+		missions:     make(map[int64]*game.Mission),
+		exercises: make(map[int64][]game.Exercise),
 	}
 }
 
-func (m *mockQuestStore) GetQuest(ctx context.Context, questID int64) (*game.Quest, error) {
+func (m *mockQuestStore) GetQuest(ctx context.Context, questID int64) (*game.Mission, error) {
 	if m.err != nil {
 		return nil, m.err
 	}
-	q, ok := m.quests[questID]
+	q, ok := m.missions[questID]
 	if !ok {
 		return nil, game.ErrNotFound
 	}
 	return q, nil
 }
 
-func (m *mockQuestStore) CreateQuest(ctx context.Context, q *game.Quest) (*game.Quest, error) {
+func (m *mockQuestStore) CreateQuest(ctx context.Context, q *game.Mission) (*game.Mission, error) {
 	if m.err != nil {
 		return nil, m.err
 	}
-	q.ID = int64(len(m.quests) + 1)
+	q.ID = int64(len(m.missions) + 1)
 	q.CreatedAt = time.Now().UTC()
-	m.quests[q.ID] = q
+	m.missions[q.ID] = q
 	return q, nil
 }
 
-func (m *mockQuestStore) ListQuestByCrew(ctx context.Context, crewID string) ([]game.Quest, error) {
+func (m *mockQuestStore) ListQuestByCrew(ctx context.Context, crewID string) ([]game.Mission, error) {
 	if m.err != nil {
 		return nil, m.err
 	}
-	var result []game.Quest
-	for _, q := range m.quests {
-		if q.CrewID == crewID {
+	var result []game.Mission
+	for _, q := range m.missions {
+		if q.FamilyID == crewID {
 			result = append(result, *q)
 		}
 	}
@@ -154,7 +154,7 @@ func (m *mockQuestStore) UpdateQuest(ctx context.Context, questID int64, patch m
 	if m.err != nil {
 		return m.err
 	}
-	q, ok := m.quests[questID]
+	q, ok := m.missions[questID]
 	if !ok {
 		return game.ErrNotFound
 	}
@@ -167,7 +167,7 @@ func (m *mockQuestStore) UpdateQuestIfMatch(ctx context.Context, questID int64, 
 	if m.err != nil {
 		return false, m.err
 	}
-	q, ok := m.quests[questID]
+	q, ok := m.missions[questID]
 	if !ok {
 		return false, game.ErrNotFound
 	}
@@ -180,19 +180,19 @@ func (m *mockQuestStore) UpdateQuestIfMatch(ctx context.Context, questID int64, 
 	return true, nil
 }
 
-func (m *mockQuestStore) GetChallenges(ctx context.Context, questID int64) ([]game.Challenge, error) {
+func (m *mockQuestStore) GetChallenges(ctx context.Context, questID int64) ([]game.Exercise, error) {
 	if m.err != nil {
 		return nil, m.err
 	}
-	return m.challenges[questID], nil
+	return m.exercises[questID], nil
 }
 
-func (m *mockQuestStore) CreateChallenge(ctx context.Context, c *game.Challenge) (*game.Challenge, error) {
+func (m *mockQuestStore) CreateChallenge(ctx context.Context, c *game.Exercise) (*game.Exercise, error) {
 	if m.err != nil {
 		return nil, m.err
 	}
-	c.ID = int64(len(m.challenges[c.QuestID]) + 1)
-	m.challenges[c.QuestID] = append(m.challenges[c.QuestID], *c)
+	c.ID = int64(len(m.exercises[c.MissionID]) + 1)
+	m.exercises[c.MissionID] = append(m.exercises[c.MissionID], *c)
 	return c, nil
 }
 
@@ -200,7 +200,7 @@ func (m *mockQuestStore) UpdateChallenge(ctx context.Context, challengeID int64,
 	if m.err != nil {
 		return m.err
 	}
-	for _, chs := range m.challenges {
+	for _, chs := range m.exercises {
 		for i := range chs {
 			if chs[i].ID == challengeID {
 				if status, ok := patch["status"]; ok {
@@ -217,7 +217,7 @@ func (m *mockQuestStore) UpdateChallengeIfMatch(ctx context.Context, challengeID
 	if m.err != nil {
 		return false, m.err
 	}
-	for _, chs := range m.challenges {
+	for _, chs := range m.exercises {
 		for i := range chs {
 			if chs[i].ID == challengeID {
 				if chs[i].Status != oldStatus {
@@ -233,20 +233,20 @@ func (m *mockQuestStore) UpdateChallengeIfMatch(ctx context.Context, challengeID
 	return false, game.ErrNotFound
 }
 
-func makeQuest(id int64, status string, crewID string) *game.Quest {
-	return &game.Quest{
+func makeQuest(id int64, status string, crewID string) *game.Mission {
+	return &game.Mission{
 		ID:        id,
-		CrewID:    crewID,
-		Title:     "Test Quest",
+		FamilyID:    crewID,
+		Title:     "Test Mission",
 		Status:    status,
 		CreatedAt: time.Date(2026, 8, 3, 12, 0, 0, 0, time.UTC),
 	}
 }
 
-func makeChallenge(id int64, questID int64, status string) game.Challenge {
-	return game.Challenge{
+func makeChallenge(id int64, questID int64, status string) game.Exercise {
+	return game.Exercise{
 		ID:        id,
-		QuestID:   questID,
+		MissionID:   questID,
 		Slug:      "challenge-1",
 		Status:    status,
 		CreatedAt: time.Date(2026, 8, 3, 12, 0, 0, 0, time.UTC),
@@ -255,7 +255,7 @@ func makeChallenge(id int64, questID int64, status string) game.Challenge {
 
 func TestSubmit_QuestNotFound(t *testing.T) {
 	svc := NewCreativeService(newMockSubmissionStore(), newMockQuestStore())
-	_, err := svc.Submit(context.Background(), &game.Submission{QuestID: 999})
+	_, err := svc.Submit(context.Background(), &game.Submission{MissionID: 999})
 	if !errors.Is(err, ErrQuestNotFound) {
 		t.Fatalf("expected ErrQuestNotFound, got %v", err)
 	}
@@ -265,7 +265,7 @@ func TestSubmit_QuestNotActive(t *testing.T) {
 	qs := newMockQuestStore()
 	qs.CreateQuest(context.Background(), makeQuest(1, "PENDING", "c1"))
 	svc := NewCreativeService(newMockSubmissionStore(), qs)
-	_, err := svc.Submit(context.Background(), &game.Submission{QuestID: 1, ChallengeID: 1, Kind: game.SubmissionStory, Content: "hello"})
+	_, err := svc.Submit(context.Background(), &game.Submission{MissionID: 1, ExerciseID: 1, Kind: game.SubmissionStory, Content: "hello"})
 	if !errors.Is(err, ErrQuestNotActive) {
 		t.Fatalf("expected ErrQuestNotActive, got %v", err)
 	}
@@ -274,9 +274,9 @@ func TestSubmit_QuestNotActive(t *testing.T) {
 func TestSubmit_ChallengeDone(t *testing.T) {
 	qs := newMockQuestStore()
 	qs.CreateQuest(context.Background(), makeQuest(1, "ACTIVE", "c1"))
-	qs.challenges[1] = []game.Challenge{makeChallenge(1, 1, "DONE")}
+	qs.exercises[1] = []game.Exercise{makeChallenge(1, 1, "DONE")}
 	svc := NewCreativeService(newMockSubmissionStore(), qs)
-	_, err := svc.Submit(context.Background(), &game.Submission{QuestID: 1, ChallengeID: 1, Kind: game.SubmissionStory, Content: "hello"})
+	_, err := svc.Submit(context.Background(), &game.Submission{MissionID: 1, ExerciseID: 1, Kind: game.SubmissionStory, Content: "hello"})
 	if !errors.Is(err, ErrChallengeDone) {
 		t.Fatalf("expected ErrChallengeDone, got %v", err)
 	}
@@ -285,9 +285,9 @@ func TestSubmit_ChallengeDone(t *testing.T) {
 func TestSubmit_ChallengeNotFound(t *testing.T) {
 	qs := newMockQuestStore()
 	qs.CreateQuest(context.Background(), makeQuest(1, "ACTIVE", "c1"))
-	qs.challenges[1] = []game.Challenge{makeChallenge(1, 1, "PENDING")}
+	qs.exercises[1] = []game.Exercise{makeChallenge(1, 1, "PENDING")}
 	svc := NewCreativeService(newMockSubmissionStore(), qs)
-	_, err := svc.Submit(context.Background(), &game.Submission{QuestID: 1, ChallengeID: 999, Kind: game.SubmissionStory, Content: "hello"})
+	_, err := svc.Submit(context.Background(), &game.Submission{MissionID: 1, ExerciseID: 999, Kind: game.SubmissionStory, Content: "hello"})
 	if !errors.Is(err, ErrChallengeNotFound) {
 		t.Fatalf("expected ErrChallengeNotFound, got %v", err)
 	}
@@ -296,9 +296,9 @@ func TestSubmit_ChallengeNotFound(t *testing.T) {
 func TestSubmit_InvalidKind(t *testing.T) {
 	qs := newMockQuestStore()
 	qs.CreateQuest(context.Background(), makeQuest(1, "ACTIVE", "c1"))
-	qs.challenges[1] = []game.Challenge{makeChallenge(1, 1, "PENDING")}
+	qs.exercises[1] = []game.Exercise{makeChallenge(1, 1, "PENDING")}
 	svc := NewCreativeService(newMockSubmissionStore(), qs)
-	_, err := svc.Submit(context.Background(), &game.Submission{QuestID: 1, ChallengeID: 1, Kind: "INVALID", Content: "hello"})
+	_, err := svc.Submit(context.Background(), &game.Submission{MissionID: 1, ExerciseID: 1, Kind: "INVALID", Content: "hello"})
 	if !errors.Is(err, ErrInvalidKind) {
 		t.Fatalf("expected ErrInvalidKind, got %v", err)
 	}
@@ -307,9 +307,9 @@ func TestSubmit_InvalidKind(t *testing.T) {
 func TestSubmit_ContentTooShort(t *testing.T) {
 	qs := newMockQuestStore()
 	qs.CreateQuest(context.Background(), makeQuest(1, "ACTIVE", "c1"))
-	qs.challenges[1] = []game.Challenge{makeChallenge(1, 1, "PENDING")}
+	qs.exercises[1] = []game.Exercise{makeChallenge(1, 1, "PENDING")}
 	svc := NewCreativeService(newMockSubmissionStore(), qs)
-	_, err := svc.Submit(context.Background(), &game.Submission{QuestID: 1, ChallengeID: 1, Kind: game.SubmissionStory, Content: ""})
+	_, err := svc.Submit(context.Background(), &game.Submission{MissionID: 1, ExerciseID: 1, Kind: game.SubmissionStory, Content: ""})
 	if !errors.Is(err, ErrContentTooShort) {
 		t.Fatalf("expected ErrContentTooShort, got %v", err)
 	}
@@ -318,10 +318,10 @@ func TestSubmit_ContentTooShort(t *testing.T) {
 func TestSubmit_Success(t *testing.T) {
 	qs := newMockQuestStore()
 	qs.CreateQuest(context.Background(), makeQuest(1, "ACTIVE", "c1"))
-	qs.challenges[1] = []game.Challenge{makeChallenge(1, 1, "PENDING")}
+	qs.exercises[1] = []game.Exercise{makeChallenge(1, 1, "PENDING")}
 	store := newMockSubmissionStore()
 	svc := NewCreativeService(store, qs)
-	sub, err := svc.Submit(context.Background(), &game.Submission{QuestID: 1, ChallengeID: 1, Kind: game.SubmissionStory, Content: "hello world"})
+	sub, err := svc.Submit(context.Background(), &game.Submission{MissionID: 1, ExerciseID: 1, Kind: game.SubmissionStory, Content: "hello world"})
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -340,11 +340,11 @@ func TestListByQuest(t *testing.T) {
 	store := newMockSubmissionStore()
 	qs := newMockQuestStore()
 	qs.CreateQuest(context.Background(), makeQuest(1, "ACTIVE", "c1"))
-	qs.challenges[1] = []game.Challenge{makeChallenge(1, 1, "PENDING")}
+	qs.exercises[1] = []game.Exercise{makeChallenge(1, 1, "PENDING")}
 	svc := NewCreativeService(store, qs)
-	svc.Submit(context.Background(), &game.Submission{QuestID: 1, ChallengeID: 1, Kind: game.SubmissionStory, Content: "story 1"})
+	svc.Submit(context.Background(), &game.Submission{MissionID: 1, ExerciseID: 1, Kind: game.SubmissionStory, Content: "story 1"})
 	svc.Submit(context.Background(), &game.Submission{
-		QuestID: 1, ChallengeID: 1, Kind: game.SubmissionComic,
+		MissionID: 1, ExerciseID: 1, Kind: game.SubmissionComic,
 		Content: `{"v":1,"panels":[{"caption":"panel 1"},{"caption":"panel 2"}]}`,
 	})
 
@@ -361,9 +361,9 @@ func TestGetSubmission(t *testing.T) {
 	store := newMockSubmissionStore()
 	qs := newMockQuestStore()
 	qs.CreateQuest(context.Background(), makeQuest(1, "ACTIVE", "c1"))
-	qs.challenges[1] = []game.Challenge{makeChallenge(1, 1, "PENDING")}
+	qs.exercises[1] = []game.Exercise{makeChallenge(1, 1, "PENDING")}
 	svc := NewCreativeService(store, qs)
-	created, _ := svc.Submit(context.Background(), &game.Submission{QuestID: 1, ChallengeID: 1, Kind: game.SubmissionStory, Content: "story 1"})
+	created, _ := svc.Submit(context.Background(), &game.Submission{MissionID: 1, ExerciseID: 1, Kind: game.SubmissionStory, Content: "story 1"})
 
 	sub, err := svc.GetSubmission(context.Background(), created.ID)
 	if err != nil {
@@ -386,9 +386,9 @@ func TestApprove(t *testing.T) {
 	store := newMockSubmissionStore()
 	qs := newMockQuestStore()
 	qs.CreateQuest(context.Background(), makeQuest(1, "ACTIVE", "c1"))
-	qs.challenges[1] = []game.Challenge{makeChallenge(1, 1, "PENDING")}
+	qs.exercises[1] = []game.Exercise{makeChallenge(1, 1, "PENDING")}
 	svc := NewCreativeService(store, qs)
-	created, _ := svc.Submit(context.Background(), &game.Submission{QuestID: 1, ChallengeID: 1, Kind: game.SubmissionStory, Content: "story 1"})
+	created, _ := svc.Submit(context.Background(), &game.Submission{MissionID: 1, ExerciseID: 1, Kind: game.SubmissionStory, Content: "story 1"})
 
 	sub, err := svc.Approve(context.Background(), created.ID, "reviewer-1")
 	if err != nil {
@@ -409,9 +409,9 @@ func TestReject(t *testing.T) {
 	store := newMockSubmissionStore()
 	qs := newMockQuestStore()
 	qs.CreateQuest(context.Background(), makeQuest(1, "ACTIVE", "c1"))
-	qs.challenges[1] = []game.Challenge{makeChallenge(1, 1, "PENDING")}
+	qs.exercises[1] = []game.Exercise{makeChallenge(1, 1, "PENDING")}
 	svc := NewCreativeService(store, qs)
-	created, _ := svc.Submit(context.Background(), &game.Submission{QuestID: 1, ChallengeID: 1, Kind: game.SubmissionStory, Content: "story 1"})
+	created, _ := svc.Submit(context.Background(), &game.Submission{MissionID: 1, ExerciseID: 1, Kind: game.SubmissionStory, Content: "story 1"})
 
 	sub, err := svc.Reject(context.Background(), created.ID, "reviewer-1", "not creative enough")
 	if err != nil {
@@ -436,12 +436,12 @@ func (p *capturePublisher) Publish(ctx context.Context, event events.Event) {
 func TestSubmit_PublishesCreativeSubmissionEvent(t *testing.T) {
 	qs := newMockQuestStore()
 	qs.CreateQuest(context.Background(), makeQuest(1, "ACTIVE", "c1"))
-	qs.challenges[1] = []game.Challenge{makeChallenge(1, 1, "PENDING")}
+	qs.exercises[1] = []game.Exercise{makeChallenge(1, 1, "PENDING")}
 	store := newMockSubmissionStore()
 	pub := &capturePublisher{}
 	svc := NewCreativeServiceWithPublisher(store, qs, pub)
 
-	sub, err := svc.Submit(context.Background(), &game.Submission{QuestID: 1, ChallengeID: 1, Kind: game.SubmissionStory, Content: "hello world", AuthorUID: "user-1", CrewID: "crew-1"})
+	sub, err := svc.Submit(context.Background(), &game.Submission{MissionID: 1, ExerciseID: 1, Kind: game.SubmissionStory, Content: "hello world", AuthorUID: "user-1", FamilyID: "crew-1"})
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -458,15 +458,15 @@ func TestSubmit_PublishesCreativeSubmissionEvent(t *testing.T) {
 	if ev.UID != "user-1" {
 		t.Errorf("expected UID user-1, got %s", ev.UID)
 	}
-	// CrewID is taken from the quest row (c1), not the request payload.
-	if ev.CrewID != "c1" {
-		t.Errorf("expected CrewID c1, got %s", ev.CrewID)
+	// FamilyID is taken from the quest row (c1), not the request payload.
+	if ev.FamilyID != "c1" {
+		t.Errorf("expected FamilyID c1, got %s", ev.FamilyID)
 	}
-	if ev.QuestID != 1 {
-		t.Errorf("expected QuestID 1, got %d", ev.QuestID)
+	if ev.MissionID != 1 {
+		t.Errorf("expected MissionID 1, got %d", ev.MissionID)
 	}
-	if ev.ChallengeID != 1 {
-		t.Errorf("expected ChallengeID 1, got %d", ev.ChallengeID)
+	if ev.ExerciseID != 1 {
+		t.Errorf("expected ExerciseID 1, got %d", ev.ExerciseID)
 	}
 	if ev.Kind != string(game.SubmissionStory) {
 		t.Errorf("expected kind STORY, got %s", ev.Kind)
@@ -476,11 +476,11 @@ func TestSubmit_PublishesCreativeSubmissionEvent(t *testing.T) {
 func TestSubmit_NoPublisher_NoEvent(t *testing.T) {
 	qs := newMockQuestStore()
 	qs.CreateQuest(context.Background(), makeQuest(1, "ACTIVE", "c1"))
-	qs.challenges[1] = []game.Challenge{makeChallenge(1, 1, "PENDING")}
+	qs.exercises[1] = []game.Exercise{makeChallenge(1, 1, "PENDING")}
 	store := newMockSubmissionStore()
 	svc := NewCreativeService(store, qs)
 
-	_, err := svc.Submit(context.Background(), &game.Submission{QuestID: 1, ChallengeID: 1, Kind: game.SubmissionStory, Content: "hello world", AuthorUID: "user-1", CrewID: "crew-1"})
+	_, err := svc.Submit(context.Background(), &game.Submission{MissionID: 1, ExerciseID: 1, Kind: game.SubmissionStory, Content: "hello world", AuthorUID: "user-1", FamilyID: "crew-1"})
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -489,12 +489,12 @@ func TestSubmit_NoPublisher_NoEvent(t *testing.T) {
 func TestSubmit_Comic_Success(t *testing.T) {
 	qs := newMockQuestStore()
 	qs.CreateQuest(context.Background(), makeQuest(1, "ACTIVE", "c1"))
-	qs.challenges[1] = []game.Challenge{makeChallenge(1, 1, "PENDING")}
+	qs.exercises[1] = []game.Exercise{makeChallenge(1, 1, "PENDING")}
 	svc := NewCreativeService(newMockSubmissionStore(), qs)
 
 	content := `{"v":1,"panels":[{"caption":"Panel one"},{"caption":"Panel two"}]}`
 	sub, err := svc.Submit(context.Background(), &game.Submission{
-		QuestID: 1, ChallengeID: 1, Kind: game.SubmissionComic, Content: content,
+		MissionID: 1, ExerciseID: 1, Kind: game.SubmissionComic, Content: content,
 	})
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
@@ -510,11 +510,11 @@ func TestSubmit_Comic_Success(t *testing.T) {
 func TestSubmit_Comic_Invalid(t *testing.T) {
 	qs := newMockQuestStore()
 	qs.CreateQuest(context.Background(), makeQuest(1, "ACTIVE", "c1"))
-	qs.challenges[1] = []game.Challenge{makeChallenge(1, 1, "PENDING")}
+	qs.exercises[1] = []game.Exercise{makeChallenge(1, 1, "PENDING")}
 	svc := NewCreativeService(newMockSubmissionStore(), qs)
 
 	_, err := svc.Submit(context.Background(), &game.Submission{
-		QuestID: 1, ChallengeID: 1, Kind: game.SubmissionComic, Content: `{"panels":[{"caption":"only one"}]}`,
+		MissionID: 1, ExerciseID: 1, Kind: game.SubmissionComic, Content: `{"panels":[{"caption":"only one"}]}`,
 	})
 	if !errors.Is(err, ErrComicPanelCount) {
 		t.Fatalf("expected ErrComicPanelCount, got %v", err)
@@ -531,12 +531,12 @@ func photoContent(t *testing.T, caption string) string {
 func TestSubmit_Photo_Success(t *testing.T) {
 	qs := newMockQuestStore()
 	qs.CreateQuest(context.Background(), makeQuest(1, "ACTIVE", "c1"))
-	qs.challenges[1] = []game.Challenge{makeChallenge(1, 1, "PENDING")}
+	qs.exercises[1] = []game.Exercise{makeChallenge(1, 1, "PENDING")}
 	svc := NewCreativeService(newMockSubmissionStore(), qs)
 
 	content := photoContent(t, "a sunny day")
 	sub, err := svc.Submit(context.Background(), &game.Submission{
-		QuestID: 1, ChallengeID: 1, Kind: game.SubmissionPhoto, Content: content,
+		MissionID: 1, ExerciseID: 1, Kind: game.SubmissionPhoto, Content: content,
 	})
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
@@ -552,11 +552,11 @@ func TestSubmit_Photo_Success(t *testing.T) {
 func TestSubmit_Photo_Invalid(t *testing.T) {
 	qs := newMockQuestStore()
 	qs.CreateQuest(context.Background(), makeQuest(1, "ACTIVE", "c1"))
-	qs.challenges[1] = []game.Challenge{makeChallenge(1, 1, "PENDING")}
+	qs.exercises[1] = []game.Exercise{makeChallenge(1, 1, "PENDING")}
 	svc := NewCreativeService(newMockSubmissionStore(), qs)
 
 	_, err := svc.Submit(context.Background(), &game.Submission{
-		QuestID: 1, ChallengeID: 1, Kind: game.SubmissionPhoto, Content: `{"photo":"not-a-data-uri"}`,
+		MissionID: 1, ExerciseID: 1, Kind: game.SubmissionPhoto, Content: `{"photo":"not-a-data-uri"}`,
 	})
 	if !errors.Is(err, ErrPhotoBadURI) {
 		t.Fatalf("expected ErrPhotoBadURI, got %v", err)
@@ -572,12 +572,12 @@ func videoContent(t *testing.T, caption string) string {
 func TestSubmit_Video_Success(t *testing.T) {
 	qs := newMockQuestStore()
 	qs.CreateQuest(context.Background(), makeQuest(1, "ACTIVE", "c1"))
-	qs.challenges[1] = []game.Challenge{makeChallenge(1, 1, "PENDING")}
+	qs.exercises[1] = []game.Exercise{makeChallenge(1, 1, "PENDING")}
 	svc := NewCreativeService(newMockSubmissionStore(), qs)
 
 	content := videoContent(t, "a sunny clip")
 	sub, err := svc.Submit(context.Background(), &game.Submission{
-		QuestID: 1, ChallengeID: 1, Kind: game.SubmissionVideo, Content: content,
+		MissionID: 1, ExerciseID: 1, Kind: game.SubmissionVideo, Content: content,
 	})
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
@@ -593,12 +593,12 @@ func TestSubmit_Video_Success(t *testing.T) {
 func TestSubmit_Video_Invalid(t *testing.T) {
 	qs := newMockQuestStore()
 	qs.CreateQuest(context.Background(), makeQuest(1, "ACTIVE", "c1"))
-	qs.challenges[1] = []game.Challenge{makeChallenge(1, 1, "PENDING")}
+	qs.exercises[1] = []game.Exercise{makeChallenge(1, 1, "PENDING")}
 	svc := NewCreativeService(newMockSubmissionStore(), qs)
 
 	enc := base64.StdEncoding.EncodeToString([]byte("not a video"))
 	_, err := svc.Submit(context.Background(), &game.Submission{
-		QuestID: 1, ChallengeID: 1, Kind: game.SubmissionVideo,
+		MissionID: 1, ExerciseID: 1, Kind: game.SubmissionVideo,
 		Content: `{"v":1,"video":"data:video/mp4;base64,` + enc + `"}`,
 	})
 	if !errors.Is(err, ErrVideoBadMagic) {

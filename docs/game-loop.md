@@ -13,17 +13,17 @@
 3. **Contribute.** The member completes a small challenge or makes a choice.
    The contribution is written to the server immediately; the UI reflects it
    optimistically.
-4. **See Result.** The world updates — a story scene advances, a Chest is
+4. **See Result.** The world updates — a story scene advances, a Gift is
    granted, the family's progress ticks forward. Everyone's screen reflects
    this on the next reload.
 5. **Next Invitation.** The loop naturally surfaces the next thing: a new
-   daily turn, a handoff to another member, or the next chapter of a quest.
+   daily turn, a handoff to another member, or the next course of a quest.
 
 ## The Daily Loop
 
 ```
-Morning → Daily Turn → Micro-Quest / Creative Prompt
-Evening → Family Check-in → Quest Progress / Story Reveal
+Morning → Daily Turn → Micro-Mission / Creative Prompt
+Evening → Family Check-in → Mission Progress / Story Reveal
 ```
 
 - One **daily turn** unlocks each calendar day. It is intentionally light: a
@@ -34,34 +34,34 @@ Evening → Family Check-in → Quest Progress / Story Reveal
   encourages consistency. Missing a day breaks the streak but causes no
   penalty to long-term progress.
 
-## The Quest Loop
+## The Mission Loop
 
 ```
-[Quest Offered] → [Family Reads Story] → [Challenges in Parallel/Sequence]
-    → [All Challenges Done] → [Quest Resolved] → [Reward + Story Branch]
-    → [New Quests / Realms Unlocked]
+[Mission Offered] → [Family Reads Story] → [Exercises in Parallel/Sequence]
+    → [All Exercises Done] → [Mission Resolved] → [Reward + Story Branch]
+    → [New Missions / Journeys Unlocked]
 ```
 
-- Quests are offered by the shared world (story-driven, not random).
-- Challenges within a quest can be tackled in parallel by different family
+- Missions are offered by the shared world (story-driven, not random).
+- Exercises within a quest can be tackled in parallel by different family
   members or in a relay sequence.
-- The family sees a shared quest board listing active quests, who's working on
+- The family sees a shared quest board listing active missions, who's working on
   what, and what's needed next.
-- Quest resolution triggers a story reveal and may unlock a new realm, creative
-  space, or Realm Progress milestone.
+- Mission resolution triggers a story reveal and may unlock a new journey, creative
+  space, or Journey Progress milestone.
 
 ## The Progression Loop
 
 ```
-[Play] → [Experience & Relics] → [Level Up / Unlock] → [New Content] → [Play]
+[Play] → [Experience & Collections] → [Level Up / Unlock] → [New Content] → [Play]
 ```
 
-- Playing (completing turns and quests) generates XP, Relics, and Chests.
+- Playing (completing turns and missions) generates XP, Collections, and Gifts.
 - XP advances individual Explorer Levels and crew level.
-- Chests contain known Relics and cosmetics that feed the crew gallery and
+- Gifts contain known Collections and cosmetics that feed the crew gallery and
   Inspirational tool unlocks.
 - New content (realms, quest lines, creative tools) is gated behind story
-  progress and Realm Progress thresholds to ensure a satisfying cadence.
+  progress and Journey Progress thresholds to ensure a satisfying cadence.
 
 ## The Feedback Loop (Retention)
 
@@ -70,24 +70,24 @@ Evening → Family Check-in → Quest Progress / Story Reveal
 ```
 
 - Every session ends with a visible marker of progress: a filled XP bar, a
-  new Relic in the gallery, a story line revealed.
+  new Collection in the gallery, a story line revealed.
 - The home screen always shows a clear "next thing" so there is no ambiguity
   about what to do.
 - Gentle, opt-in notifications surface only when the family is likely to
   actually play (evening hours, weekends).
 
-## The Realm Progress Loop
+## The Journey Progress Loop
 
 ```
-[Complete Quests in Realm] → [Realm Progress Fills]
-    → [Realm Milestones + Realm Chest]
-    → [Next Realm Unlocked]
-    → [New Quests] → [Play]
+[Complete Missions in Journey] → [Journey Progress Fills]
+    → [Journey Milestones + Journey Gift]
+    → [Next Journey Unlocked]
+    → [New Missions] → [Play]
 ```
 
-- Quests within a realm advance the shared Realm Progress bar.
-- Realm Progress milestones unlock new quests, a Realm Chest, and lore.
-- When the bar is full, the next realm (and its quests) becomes available.
+- Missions within a journey advance the shared Journey Progress bar.
+- Journey Progress milestones unlock new missions, a Journey Gift, and concept.
+- When the bar is full, the next journey (and its missions) becomes available.
 
 ## Online Sync
 

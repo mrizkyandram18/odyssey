@@ -28,8 +28,8 @@ func TestApplyOverrides_MaxProgress(t *testing.T) {
 	catalog := NewRealmCatalog(DefaultRealmDefinitions)
 	loader := &mockConfigLoader{
 		configs: map[string]string{
-			"realm:whispering-woods:max_progress": "200",
-			"realm:clockwork-city:max_progress":   "150",
+			"journey:whispering-woods:max_progress": "200",
+			"journey:clockwork-city:max_progress":   "150",
 		},
 	}
 
@@ -66,7 +66,7 @@ func TestApplyOverrides_Name(t *testing.T) {
 	catalog := NewRealmCatalog(DefaultRealmDefinitions)
 	loader := &mockConfigLoader{
 		configs: map[string]string{
-			"realm:whispering-woods:name": "Whispering Woods (Hard Mode)",
+			"journey:whispering-woods:name": "Whispering Woods (Hard Mode)",
 		},
 	}
 
@@ -76,7 +76,7 @@ func TestApplyOverrides_Name(t *testing.T) {
 
 	def, ok := catalog.Get("whispering-woods")
 	if !ok {
-		t.Fatal("realm not found")
+		t.Fatal("journey not found")
 	}
 	if def.Name != "Whispering Woods (Hard Mode)" {
 		t.Errorf("Name = %q, want %q", def.Name, "Whispering Woods (Hard Mode)")
@@ -110,7 +110,7 @@ func TestApplyOverrides_InvalidMaxProgress(t *testing.T) {
 	catalog := NewRealmCatalog(DefaultRealmDefinitions)
 	loader := &mockConfigLoader{
 		configs: map[string]string{
-			"realm:whispering-woods:max_progress": "abc",
+			"journey:whispering-woods:max_progress": "abc",
 		},
 	}
 

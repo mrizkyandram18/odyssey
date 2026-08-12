@@ -66,7 +66,7 @@ func (m *mockUserStore) UpdateUserIfMatch(ctx context.Context, uid string, versi
 func makePlayer(level int, xp int64) *game.Player {
 	return &game.Player{
 		UID:          "user-1",
-		CrewID:       "crew-1",
+		FamilyID:       "crew-1",
 		ExplorerName: "Alice",
 		Level:        level,
 		XP:           xp,

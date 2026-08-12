@@ -21,28 +21,28 @@ composing). No mechanical stat bonus or advantage.
 
 ## C
 
-**Challenge** — A short, objective within a quest (e.g., "find three red
-flowers," "solve this riddle"). Challenges may require collaboration.
+**Exercise** — A short, objective within a quest (e.g., "find three red
+flowers," "solve this riddle"). Exercises may require collaboration.
 
-**Chest** — A reward container earned through quest completion or Explorer
-Level-ups. MVP Chests have known, fixed contents (no randomization / no
-gambling). Contains Relics, cosmetics, or creative-tool unlocks.
+**Gift** — A reward container earned through quest completion or Explorer
+Level-ups. MVP Gifts have known, fixed contents (no randomization / no
+gambling). Contains Collections, cosmetics, or creative-tool unlocks.
 
-**Comic** — A multi-panel illustrated story submission within a Creative Quest.
+**Comic** — A multi-panel illustrated story submission within a Creative Mission.
 
-**Creative Quest** — A quest type where the family builds, draws, or tells
+**Creative Mission** — A quest type where the family builds, draws, or tells
 stories together. Accepts Story, Comic, Photo, and Video submissions.
 
 **Creative Space** — A sandbox area in Odyssey where family members can build,
 decorate, or compose collaboratively (e.g., a shared garden, a story canvas).
 
-**Crew** — The family group as a single party. All progress is tracked at both
+**Family** — The family group as a single party. All progress is tracked at both
 the individual (Explorer) and crew level.
 
 ## E
 
 **Explorer** — A family member's representation in the shared world. An
-Explorer has a name, a role, an Explorer Level, and a collection of Relics.
+Explorer has a name, a role, an Explorer Level, and a collection of Collections.
 (Not called "Avatar" to avoid implying purely cosmetic progression.)
 
 **Explorer Level** — The individual progression level, advancing through XP.
@@ -56,13 +56,13 @@ and peer reactions. Spent on advanced creative tools and cosmetics.
 smallest complete cooperative loop that delivers a real "aha" moment.
 
 **Milestone** — A significant individual or group accomplishment that awards
-XP, a Relic, or unlocks new content.
+XP, a Collection, or unlocks new content.
 
 ## P
 
-**Party** — See **Crew**.
+**Party** — See **Family**.
 
-**Photo** — A real-world photograph submission within a Creative Quest.
+**Photo** — A real-world photograph submission within a Creative Mission.
 
 **Progress Sync** — *(Future.)* The process of reconciling local browser state
 with the server when connectivity is restored. Not in the MVP.
@@ -71,23 +71,23 @@ with the server when connectivity is restored. Not in the MVP.
 
 ## Q
 
-**Quest** — The primary unit of cooperative play. A quest is a sequence of
-challenges threaded into a story. Quests can be Solo, Relay, Group, or
+**Mission** — The primary unit of cooperative play. A quest is a sequence of
+exercises threaded into a story. Missions can be Solo, Relay, Group, or
 Creative (see Gameplay).
 
-**Quest Completion** — When all challenges in a Quest are resolved, the family
-receives XP, a Chest, and a story unlock.
+**Mission Completion** — When all exercises in a Mission are resolved, the family
+receives XP, a Gift, and a story unlock.
 
 ## R
 
-**Realm** — A themed area of the shared world (e.g., "The Whispering Woods,"
-"The Clockwork City"). Realms contain quests and creative spaces.
+**Journey** — A themed area of the shared world (e.g., "The Whispering Woods,"
+"The Clockwork City"). Journeys contain missions and creative spaces.
 
-**Realm Progress** — A shared progress bar within a realm, filled by
-completing quests and challenges. Milestones unlock new quests, Realm Chests,
-and the next realm.
+**Journey Progress** — A shared progress bar within a journey, filled by
+completing missions and exercises. Milestones unlock new missions, Journey Gifts,
+and the next journey.
 
-**Relic** — A collectible item earned through quest completion, milestones, or
+**Collection** — A collectible item earned through quest completion, milestones, or
 story fragments. Displayed in the crew gallery. Not currency — collected, not
 spent. Tradable within the family (Phase 2).
 
@@ -109,13 +109,13 @@ mechanical stat bonus or advantage.
 backend after successful Gatekeeper BOTH login. Stored in browser local
 storage and sent via the `Authorization: Bearer` header.
 
-**Story** — A written narrative snippet submitted as part of a Creative Quest.
+**Story** — A written narrative snippet submitted as part of a Creative Mission.
 
-**Story Fragment** — A collectible found during quests. Reassembling a set
-unlocks lore and narrative content.
+**Story Fragment** — A collectible found during missions. Reassembling a set
+unlocks concept and narrative content.
 
 **Submission** — A player's response to a challenge or creative prompt.
-Submission kinds in Creative Quests: Story, Comic, Photo, Video.
+Submission kinds in Creative Missions: Story, Comic, Photo, Video.
 
 ## U
 
@@ -124,12 +124,12 @@ Family Reward, and Odyssey to identify a single family member.
 
 ## V
 
-**Video** — A short (≤ 30 s) video submission within a Creative Quest.
+**Video** — A short (≤ 30 s) video submission within a Creative Mission.
 
 **Vision Document** — See [vision.md](vision.md).
 
 ## W
 
 **World State** — The persisted, shared game state of the family's adventure:
-completed quests, crew milestones, realm unlocks, and shared narrative
+completed missions, crew milestones, journey unlocks, and shared narrative
 progress.

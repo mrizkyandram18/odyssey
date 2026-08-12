@@ -36,7 +36,7 @@ export function CreativeCard({ submission }: CreativeCardProps) {
 
       <div className="mt-2 flex items-center justify-between border-t border-border/50 pt-3">
         <div className="flex items-center gap-3">
-          <span className="text-xs font-medium text-muted-foreground">Misi #{submission.quest_id}</span>
+          <span className="text-xs font-medium text-muted-foreground">Misi #{submission.mission_id}</span>
           {submission.kind === 'DRAWING' && (
             <Link to={`/stories/${submission.id}`} className="text-xs text-primary underline">
               Lihat Detail

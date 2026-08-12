@@ -31,7 +31,7 @@ export class HttpAuthClient {
                 ok: true,
                 session: {
                     uid: response.uid,
-                    crew_id: response.crew_id || '',
+                    family_id: response.family_id || '',
                     kind: response.kind || 'user',
                     role: response.role,
                     expires: response.expires || 0,

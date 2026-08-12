@@ -55,20 +55,20 @@ func (m *mockCreativeStore) UpdateSubmission(ctx context.Context, submissionID i
 }
 
 type mockQuestStore struct {
-	quest *game.Quest
+	quest *game.Mission
 	err   error
 }
 
-func (m *mockQuestStore) GetQuest(ctx context.Context, questID int64) (*game.Quest, error) {
+func (m *mockQuestStore) GetQuest(ctx context.Context, questID int64) (*game.Mission, error) {
 	if m.err != nil {
 		return nil, m.err
 	}
 	return m.quest, nil
 }
-func (m *mockQuestStore) CreateQuest(ctx context.Context, q *game.Quest) (*game.Quest, error) {
+func (m *mockQuestStore) CreateQuest(ctx context.Context, q *game.Mission) (*game.Mission, error) {
 	return nil, nil
 }
-func (m *mockQuestStore) ListQuestByCrew(ctx context.Context, crewID string) ([]game.Quest, error) {
+func (m *mockQuestStore) ListQuestByCrew(ctx context.Context, crewID string) ([]game.Mission, error) {
 	return nil, nil
 }
 func (m *mockQuestStore) UpdateQuest(ctx context.Context, questID int64, patch map[string]any) error {
@@ -77,10 +77,10 @@ func (m *mockQuestStore) UpdateQuest(ctx context.Context, questID int64, patch m
 func (m *mockQuestStore) UpdateQuestIfMatch(ctx context.Context, questID int64, oldStatus string, patch map[string]any) (bool, error) {
 	return false, nil
 }
-func (m *mockQuestStore) GetChallenges(ctx context.Context, questID int64) ([]game.Challenge, error) {
+func (m *mockQuestStore) GetChallenges(ctx context.Context, questID int64) ([]game.Exercise, error) {
 	return nil, nil
 }
-func (m *mockQuestStore) CreateChallenge(ctx context.Context, c *game.Challenge) (*game.Challenge, error) {
+func (m *mockQuestStore) CreateChallenge(ctx context.Context, c *game.Exercise) (*game.Exercise, error) {
 	return nil, nil
 }
 func (m *mockQuestStore) UpdateChallenge(ctx context.Context, challengeID int64, patch map[string]any) error {
@@ -110,7 +110,7 @@ func (m *mockItemsStore) ListCreativeItemsByCrew(ctx context.Context, crewID, ki
 
 func TestReactionService_AddReaction_Valid(t *testing.T) {
 	rs := &mockReactionStore{}
-	cs := &mockCreativeStore{sub: &game.Submission{ID: 10, CrewID: "crew-A"}}
+	cs := &mockCreativeStore{sub: &game.Submission{ID: 10, FamilyID: "crew-A"}}
 	qs := &mockQuestStore{}
 
 	svc := NewReactionService(rs, cs, qs)
@@ -127,7 +127,7 @@ func TestReactionService_AddReaction_Valid(t *testing.T) {
 func TestReactionService_AddReaction_TextBoard(t *testing.T) {
 	rs := &mockReactionStore{}
 	cs := &mockCreativeStore{}
-	items := &mockItemsStore{item: &game.CreativeItem{ID: 7, CrewID: "crew-A", Kind: game.KindSharedText}}
+	items := &mockItemsStore{item: &game.CreativeItem{ID: 7, FamilyID: "crew-A", Kind: game.KindSharedText}}
 	qs := &mockQuestStore{}
 	svc := NewReactionServiceWithItems(rs, cs, items, qs)
 
@@ -142,7 +142,7 @@ func TestReactionService_AddReaction_TextBoard(t *testing.T) {
 
 func TestReactionService_AddReaction_TextBoardCrossCrew(t *testing.T) {
 	rs := &mockReactionStore{}
-	items := &mockItemsStore{item: &game.CreativeItem{ID: 7, CrewID: "crew-B", Kind: game.KindSharedText}}
+	items := &mockItemsStore{item: &game.CreativeItem{ID: 7, FamilyID: "crew-B", Kind: game.KindSharedText}}
 	svc := NewReactionServiceWithItems(rs, &mockCreativeStore{}, items, &mockQuestStore{})
 	_, err := svc.AddReaction(context.Background(), "crew-A", "user-1", game.ReactionTargetTextBoard, 7, "HEART")
 	if err == nil || err.Error() != "cross-crew reaction not allowed" {
@@ -153,7 +153,7 @@ func TestReactionService_AddReaction_TextBoardCrossCrew(t *testing.T) {
 func TestReactionService_AddReaction_CrossCrewSpoof(t *testing.T) {
 	rs := &mockReactionStore{}
 	// Target item belongs to crew-B
-	cs := &mockCreativeStore{sub: &game.Submission{ID: 10, CrewID: "crew-B"}}
+	cs := &mockCreativeStore{sub: &game.Submission{ID: 10, FamilyID: "crew-B"}}
 	qs := &mockQuestStore{}
 
 	svc := NewReactionService(rs, cs, qs)
@@ -183,7 +183,7 @@ func TestReactionService_AddReaction_InvalidTargetType(t *testing.T) {
 
 func TestReactionService_AddReaction_InvalidReactionType(t *testing.T) {
 	rs := &mockReactionStore{}
-	cs := &mockCreativeStore{sub: &game.Submission{ID: 10, CrewID: "crew-A"}}
+	cs := &mockCreativeStore{sub: &game.Submission{ID: 10, FamilyID: "crew-A"}}
 	qs := &mockQuestStore{}
 
 	svc := NewReactionService(rs, cs, qs)

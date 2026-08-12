@@ -1,7 +1,7 @@
 # Release Report — Phase 2B: Drawing Canvas
 
 **Date:** 2026-08-09
-**Milestone:** Phase 2B — Creative Quest Drawing Canvas
+**Milestone:** Phase 2B — Creative Mission Drawing Canvas
 **Basis Commit (main):** `997a10c` (Merge `feature/phase-2b-creative-canvas`)
 **Process Standard:** Release Engineering Pipeline (Evidence First Principle)
 
@@ -10,7 +10,7 @@
 ## 📊 Executive Summary
 
 Phase 2B menambahkan **mode menggambar (drawing canvas)** pada Creative
-Quests: Explorer dapat memilih antara menulis Story atau menggambar langsung di
+Missions: Explorer dapat memilih antara menulis Story atau menggambar langsung di
 canvas, lalu mengirimnya sebagai submission `DRAWING` yang divalidasi aman di
 backend sebelum disimpan dan dirender ulang sebagai gambar.
 

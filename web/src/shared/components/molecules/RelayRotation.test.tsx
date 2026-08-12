@@ -4,11 +4,11 @@ import React from 'react'
 import { describe, it, expect, afterEach } from 'vitest'
 import { render, screen, cleanup } from '@testing-library/react'
 import { RelayRotation } from './RelayRotation'
-import type { Challenge, CrewMember, Quest } from '../../types'
+import type { Exercise, CrewMember, Mission } from '../../types'
 
-const doneLeg = (id: number, by: string): Challenge => ({
+const doneLeg = (id: number, by: string): Exercise => ({
   id,
-  quest_id: 1,
+  mission_id: 1,
   slug: `leg-${id}`,
   description: `Leg ${id} description`,
   status: 'DONE',
@@ -16,9 +16,9 @@ const doneLeg = (id: number, by: string): Challenge => ({
   created_at: '2026-01-01T00:00:00Z',
 })
 
-const pendingLeg = (id: number, assignedTo?: string): Challenge => ({
+const pendingLeg = (id: number, assignedTo?: string): Exercise => ({
   id,
-  quest_id: 1,
+  mission_id: 1,
   slug: `leg-${id}`,
   description: `Leg ${id} description`,
   status: 'PENDING',
@@ -26,13 +26,13 @@ const pendingLeg = (id: number, assignedTo?: string): Challenge => ({
   created_at: '2026-01-01T00:00:00Z',
 })
 
-const relayQuest = (overrides: Partial<Quest> = {}): Quest => ({
+const relayMission = (overrides: Partial<Mission> = {}): Mission => ({
   id: 104,
-  crew_id: 'crew-1',
+  family_id: 'crew-1',
   template_slug: 'shadow-trail',
   title: 'Shadow Trail',
   status: 'ACTIVE',
-  quest_type: 'RELAY',
+  Mission_type: 'RELAY',
   active_challenge_assigned_to: 'u2',
   created_at: '2026-01-01T00:00:00Z',
   ...overrides,
@@ -47,9 +47,9 @@ const members: CrewMember[] = [
 describe('RelayRotation', () => {
   afterEach(() => cleanup())
 
-  it('renders nothing for non-relay quests', () => {
+  it('renders nothing for non-relay missions', () => {
     const { container } = render(
-      <RelayRotation quest={relayQuest({ quest_type: 'SOLO' })} challenges={[]} members={members} />,
+      <RelayRotation Mission={relayMission({ Mission_type: 'SOLO' })} exercises={[]} members={members} />,
     )
     expect(container).toBeEmptyDOMElement()
   })
@@ -57,8 +57,8 @@ describe('RelayRotation', () => {
   it('shows done legs with resolved names and the active assignee as the current turn', () => {
     render(
       <RelayRotation
-        quest={relayQuest({ active_challenge_assigned_to: 'u2' })}
-        challenges={[doneLeg(1, 'u1'), pendingLeg(2, 'u2')]}
+        Mission={relayMission({ active_challenge_assigned_to: 'u2' })}
+        exercises={[doneLeg(1, 'u1'), pendingLeg(2, 'u2')]}
         members={members}
       />,
     )
@@ -71,8 +71,8 @@ describe('RelayRotation', () => {
   it('flags the active leg as "Your turn" for the assigned explorer', () => {
     render(
       <RelayRotation
-        quest={relayQuest({ active_challenge_assigned_to: 'u2' })}
-        challenges={[doneLeg(1, 'u1'), pendingLeg(2, 'u2')]}
+        Mission={relayMission({ active_challenge_assigned_to: 'u2' })}
+        exercises={[doneLeg(1, 'u1'), pendingLeg(2, 'u2')]}
         members={members}
         myUID="u2"
       />,
@@ -83,8 +83,8 @@ describe('RelayRotation', () => {
   it('shows an unassigned active leg as Open (no premature handoff)', () => {
     render(
       <RelayRotation
-        quest={relayQuest({ active_challenge_assigned_to: undefined })}
-        challenges={[pendingLeg(1), pendingLeg(2)]}
+        Mission={relayMission({ active_challenge_assigned_to: undefined })}
+        exercises={[pendingLeg(1), pendingLeg(2)]}
         members={members}
         myUID="u1"
       />,
@@ -96,8 +96,8 @@ describe('RelayRotation', () => {
   it('marks the leg after the active one as "Up next"', () => {
     render(
       <RelayRotation
-        quest={relayQuest({ active_challenge_assigned_to: 'u2' })}
-        challenges={[doneLeg(1, 'u1'), pendingLeg(2, 'u2'), pendingLeg(3)]}
+        Mission={relayMission({ active_challenge_assigned_to: 'u2' })}
+        exercises={[doneLeg(1, 'u1'), pendingLeg(2, 'u2'), pendingLeg(3)]}
         members={members}
       />,
     )
@@ -107,8 +107,8 @@ describe('RelayRotation', () => {
   it('renders summary counts of done and current legs', () => {
     render(
       <RelayRotation
-        quest={relayQuest({ active_challenge_assigned_to: 'u2' })}
-        challenges={[doneLeg(1, 'u1'), pendingLeg(2, 'u2'), pendingLeg(3)]}
+        Mission={relayMission({ active_challenge_assigned_to: 'u2' })}
+        exercises={[doneLeg(1, 'u1'), pendingLeg(2, 'u2'), pendingLeg(3)]}
         members={members}
       />,
     )

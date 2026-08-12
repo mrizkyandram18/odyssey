@@ -8,24 +8,24 @@ import (
 
 	"odyssey/pkg/game"
 	gamecontent "odyssey/pkg/game/content"
-	"odyssey/pkg/game/crewstreak"
-	"odyssey/pkg/game/dailyturn"
-	"odyssey/pkg/game/quest"
+	"odyssey/pkg/game/familystreak"
+	"odyssey/pkg/game/dailymission"
+	"odyssey/pkg/game/mission"
 	"odyssey/pkg/game/season"
 )
 
 type mockDailyTurnStore struct {
-	turns []game.DailyTurn
+	turns []game.DailyMission
 	err   error
 }
 
-func (m *mockDailyTurnStore) CreateDailyTurn(ctx context.Context, dt *game.DailyTurn) (*game.DailyTurn, error) {
+func (m *mockDailyTurnStore) CreateDailyTurn(ctx context.Context, dt *game.DailyMission) (*game.DailyMission, error) {
 	return dt, m.err
 }
 func (m *mockDailyTurnStore) UpdateDailyTurn(ctx context.Context, turnID int64, patch map[string]any) error {
 	return m.err
 }
-func (m *mockDailyTurnStore) ListDailyTurns(ctx context.Context, uid string) ([]game.DailyTurn, error) {
+func (m *mockDailyTurnStore) ListDailyTurns(ctx context.Context, uid string) ([]game.DailyMission, error) {
 	if m.err != nil {
 		return nil, m.err
 	}
@@ -55,30 +55,30 @@ func (m *mockUserStore) UpdateUserIfMatch(ctx context.Context, uid string, versi
 }
 
 type mockQuestStore struct {
-	quests     []game.Quest
-	challenges map[int64][]game.Challenge
+	missions     []game.Mission
+	exercises map[int64][]game.Exercise
 	err        error
 }
 
-func (m *mockQuestStore) GetQuest(ctx context.Context, questID int64) (*game.Quest, error) {
+func (m *mockQuestStore) GetQuest(ctx context.Context, questID int64) (*game.Mission, error) {
 	if m.err != nil {
 		return nil, m.err
 	}
-	for _, q := range m.quests {
+	for _, q := range m.missions {
 		if q.ID == questID {
 			return &q, nil
 		}
 	}
 	return nil, game.ErrNotFound
 }
-func (m *mockQuestStore) CreateQuest(ctx context.Context, q *game.Quest) (*game.Quest, error) {
+func (m *mockQuestStore) CreateQuest(ctx context.Context, q *game.Mission) (*game.Mission, error) {
 	return q, m.err
 }
-func (m *mockQuestStore) ListQuestByCrew(ctx context.Context, crewID string) ([]game.Quest, error) {
+func (m *mockQuestStore) ListQuestByCrew(ctx context.Context, crewID string) ([]game.Mission, error) {
 	if m.err != nil {
 		return nil, m.err
 	}
-	return m.quests, nil
+	return m.missions, nil
 }
 func (m *mockQuestStore) UpdateQuest(ctx context.Context, questID int64, patch map[string]any) error {
 	return m.err
@@ -86,13 +86,13 @@ func (m *mockQuestStore) UpdateQuest(ctx context.Context, questID int64, patch m
 func (m *mockQuestStore) UpdateQuestIfMatch(ctx context.Context, questID int64, oldStatus string, patch map[string]any) (bool, error) {
 	return false, m.err
 }
-func (m *mockQuestStore) GetChallenges(ctx context.Context, questID int64) ([]game.Challenge, error) {
+func (m *mockQuestStore) GetChallenges(ctx context.Context, questID int64) ([]game.Exercise, error) {
 	if m.err != nil {
 		return nil, m.err
 	}
-	return m.challenges[questID], nil
+	return m.exercises[questID], nil
 }
-func (m *mockQuestStore) CreateChallenge(ctx context.Context, c *game.Challenge) (*game.Challenge, error) {
+func (m *mockQuestStore) CreateChallenge(ctx context.Context, c *game.Exercise) (*game.Exercise, error) {
 	return c, m.err
 }
 func (m *mockQuestStore) UpdateChallenge(ctx context.Context, challengeID int64, patch map[string]any) error {
@@ -107,10 +107,10 @@ type mockProgressionStore struct {
 	err        error
 }
 
-func (m *mockProgressionStore) CreateRelic(ctx context.Context, r *game.Relic) (*game.Relic, error) {
+func (m *mockProgressionStore) CreateRelic(ctx context.Context, r *game.Collection) (*game.Collection, error) {
 	return r, m.err
 }
-func (m *mockProgressionStore) CreateChest(ctx context.Context, ch *game.Chest) (*game.Chest, error) {
+func (m *mockProgressionStore) CreateChest(ctx context.Context, ch *game.Gift) (*game.Gift, error) {
 	return ch, m.err
 }
 func (m *mockProgressionStore) UpdateChest(ctx context.Context, chestID int64, patch map[string]any) error {
@@ -127,26 +127,26 @@ func (m *mockProgressionStore) CountRelics(ctx context.Context, uid string) (int
 }
 
 type mockRealmProgressStore struct {
-	progress []game.RealmProgress
+	progress []game.JourneyProgress
 	err      error
 }
 
-func (m *mockRealmProgressStore) GetRealmProgress(ctx context.Context, crewID, realm string) (*game.RealmProgress, error) {
+func (m *mockRealmProgressStore) GetRealmProgress(ctx context.Context, crewID, journey string) (*game.JourneyProgress, error) {
 	return nil, m.err
 }
-func (m *mockRealmProgressStore) CreateRealmProgress(ctx context.Context, rp *game.RealmProgress) (*game.RealmProgress, error) {
+func (m *mockRealmProgressStore) CreateRealmProgress(ctx context.Context, rp *game.JourneyProgress) (*game.JourneyProgress, error) {
 	if m.err != nil {
 		return nil, m.err
 	}
 	return rp, nil
 }
-func (m *mockRealmProgressStore) UpdateRealmProgress(ctx context.Context, crewID, realm string, patch map[string]any) error {
+func (m *mockRealmProgressStore) UpdateRealmProgress(ctx context.Context, crewID, journey string, patch map[string]any) error {
 	return m.err
 }
-func (m *mockRealmProgressStore) UpdateRealmProgressIfMatch(ctx context.Context, crewID, realm string, oldProgress int, patch map[string]any) (bool, error) {
+func (m *mockRealmProgressStore) UpdateRealmProgressIfMatch(ctx context.Context, crewID, journey string, oldProgress int, patch map[string]any) (bool, error) {
 	return false, m.err
 }
-func (m *mockRealmProgressStore) ListRealmProgressByCrew(ctx context.Context, crewID string) ([]game.RealmProgress, error) {
+func (m *mockRealmProgressStore) ListRealmProgressByCrew(ctx context.Context, crewID string) ([]game.JourneyProgress, error) {
 	if m.err != nil {
 		return nil, m.err
 	}
@@ -192,13 +192,13 @@ func (m *mockCreativeSubmissionStore) UpdateSubmission(ctx context.Context, subm
 func TestGetHome_Success(t *testing.T) {
 	now := time.Now().UTC()
 	completedAt := now
-	player := &game.Player{UID: "u1", CrewID: "c1", ExplorerName: "Alice", Level: 3, XP: 100}
+	player := &game.Player{UID: "u1", FamilyID: "c1", ExplorerName: "Alice", Level: 3, XP: 100}
 	qStore := &mockQuestStore{
-		quests: []game.Quest{
-			{ID: 1, CrewID: "c1", Title: "Quest A", Status: "PENDING", CreatedAt: now},
-			{ID: 2, CrewID: "c1", Title: "Quest B", Status: "DONE", CompletedAt: &completedAt, CreatedAt: now},
+		missions: []game.Mission{
+			{ID: 1, FamilyID: "c1", Title: "Mission A", Status: "PENDING", CreatedAt: now},
+			{ID: 2, FamilyID: "c1", Title: "Mission B", Status: "DONE", CompletedAt: &completedAt, CreatedAt: now},
 		},
-		challenges: map[int64][]game.Challenge{
+		exercises: map[int64][]game.Exercise{
 			1: {
 				{ID: 10, Status: "DONE"},
 				{ID: 11, Status: "PENDING"},
@@ -207,13 +207,13 @@ func TestGetHome_Success(t *testing.T) {
 	}
 	progStore := &mockProgressionStore{relicCount: 5}
 	realmStore := &mockRealmProgressStore{
-		progress: []game.RealmProgress{
-			{CrewID: "c1", Realm: "forest", Status: "ACTIVE", Progress: 2},
+		progress: []game.JourneyProgress{
+			{FamilyID: "c1", Journey: "forest", Status: "ACTIVE", Progress: 2},
 		},
 	}
 
 	qs := quest.NewQuestService(qStore)
-	dts := dailyturn.NewDailyTurnService(&mockDailyTurnStore{}, &dailyturn.DailyTurnConfig{})
+	dts := dailymission.NewDailyTurnService(&mockDailyTurnStore{}, &dailymission.DailyTurnConfig{})
 	svc := NewHomeService(qs, dts, progStore, realmStore, &mockUserStore{player: player}, &mockCreativeSubmissionStore{}, &mockChestStore{}, nil)
 
 	resp, err := svc.GetHome(context.Background(), "u1", "c1")
@@ -223,32 +223,32 @@ func TestGetHome_Success(t *testing.T) {
 	if resp.Player.UID != "u1" {
 		t.Errorf("expected player UID u1, got %s", resp.Player.UID)
 	}
-	if len(resp.Quests) != 2 {
-		t.Fatalf("expected 2 quests, got %d", len(resp.Quests))
+	if len(resp.Missions) != 2 {
+		t.Fatalf("expected 2 missions, got %d", len(resp.Missions))
 	}
-	if resp.Quests[0].ChallengeCount != 2 {
-		t.Errorf("expected 2 challenges, got %d", resp.Quests[0].ChallengeCount)
+	if resp.Missions[0].ChallengeCount != 2 {
+		t.Errorf("expected 2 exercises, got %d", resp.Missions[0].ChallengeCount)
 	}
-	if resp.Quests[0].CompletedCount != 1 {
-		t.Errorf("expected 1 completed, got %d", resp.Quests[0].CompletedCount)
+	if resp.Missions[0].CompletedCount != 1 {
+		t.Errorf("expected 1 completed, got %d", resp.Missions[0].CompletedCount)
 	}
-	if resp.DailyTurn.Today != dailyturn.TodayDate() {
-		t.Errorf("expected today date, got %s", resp.DailyTurn.Today)
+	if resp.DailyMission.Today != dailymission.TodayDate() {
+		t.Errorf("expected today date, got %s", resp.DailyMission.Today)
 	}
 	if resp.RelicCount != 5 {
-		t.Errorf("expected 5 relics, got %d", resp.RelicCount)
+		t.Errorf("expected 5 collections, got %d", resp.RelicCount)
 	}
-	if len(resp.RealmProgress) != 1 {
-		t.Errorf("expected 1 realm progress, got %d", len(resp.RealmProgress))
+	if len(resp.JourneyProgress) != 1 {
+		t.Errorf("expected 1 journey progress, got %d", len(resp.JourneyProgress))
 	}
-	if resp.DailyTurn.RemainingTurns != 1 {
-		t.Errorf("expected remaining turns 1, got %d", resp.DailyTurn.RemainingTurns)
+	if resp.DailyMission.RemainingTurns != 1 {
+		t.Errorf("expected remaining turns 1, got %d", resp.DailyMission.RemainingTurns)
 	}
 	if len(resp.ActiveQuests) != 1 {
 		t.Errorf("expected 1 active quest, got %d", len(resp.ActiveQuests))
 	}
-	if resp.ActiveQuests[0].Title != "Quest A" {
-		t.Errorf("expected active quest Quest A, got %s", resp.ActiveQuests[0].Title)
+	if resp.ActiveQuests[0].Title != "Mission A" {
+		t.Errorf("expected active quest Mission A, got %s", resp.ActiveQuests[0].Title)
 	}
 	if len(resp.CompletedQuestsToday) != 1 {
 		t.Errorf("expected 1 completed today, got %d", len(resp.CompletedQuestsToday))
@@ -260,38 +260,38 @@ func TestGetHome_Success(t *testing.T) {
 	if resp.Sections.Player.XPToNext != 1400 {
 		t.Errorf("expected xp_to_next 1400, got %d", resp.Sections.Player.XPToNext)
 	}
-	if len(resp.Sections.Quests.All) != 2 {
-		t.Errorf("expected 2 quests in sections.all, got %d", len(resp.Sections.Quests.All))
+	if len(resp.Sections.Missions.All) != 2 {
+		t.Errorf("expected 2 missions in sections.all, got %d", len(resp.Sections.Missions.All))
 	}
-	if len(resp.Sections.Quests.Active) != 1 {
-		t.Errorf("expected 1 active quest in sections.active, got %d", len(resp.Sections.Quests.Active))
+	if len(resp.Sections.Missions.Active) != 1 {
+		t.Errorf("expected 1 active quest in sections.active, got %d", len(resp.Sections.Missions.Active))
 	}
-	if len(resp.Sections.Quests.Done) != 1 {
-		t.Errorf("expected 1 done quest in sections.done, got %d", len(resp.Sections.Quests.Done))
+	if len(resp.Sections.Missions.Done) != 1 {
+		t.Errorf("expected 1 done quest in sections.done, got %d", len(resp.Sections.Missions.Done))
 	}
-	if len(resp.Sections.Quests.DoneToday) != 1 {
-		t.Errorf("expected 1 done-today in sections.done_today, got %d", len(resp.Sections.Quests.DoneToday))
+	if len(resp.Sections.Missions.DoneToday) != 1 {
+		t.Errorf("expected 1 done-today in sections.done_today, got %d", len(resp.Sections.Missions.DoneToday))
 	}
-	if resp.Sections.DailyTurn.Today != resp.DailyTurn.Today {
-		t.Errorf("sections daily_turn.today mismatch")
+	if resp.Sections.DailyMission.Today != resp.DailyMission.Today {
+		t.Errorf("sections daily_mission.today mismatch")
 	}
-	if resp.Sections.DailyTurn.StreakDays != resp.DailyTurn.StreakDays {
-		t.Errorf("sections daily_turn.streak_days mismatch")
+	if resp.Sections.DailyMission.StreakDays != resp.DailyMission.StreakDays {
+		t.Errorf("sections daily_mission.streak_days mismatch")
 	}
-	if len(resp.Sections.Realm.Progress) != 1 {
-		t.Errorf("expected 1 realm progress in sections.realm.progress, got %d", len(resp.Sections.Realm.Progress))
+	if len(resp.Sections.Journey.Progress) != 1 {
+		t.Errorf("expected 1 journey progress in sections.journey.progress, got %d", len(resp.Sections.Journey.Progress))
 	}
 	if len(resp.AvailableChests) != 0 {
-		t.Errorf("expected 0 available chests, got %d", len(resp.AvailableChests))
+		t.Errorf("expected 0 available gifts, got %d", len(resp.AvailableChests))
 	}
 }
 
 type mockChestStore struct{}
 
-func (m *mockChestStore) CreateChest(ctx context.Context, ch *game.Chest) (*game.Chest, error) {
+func (m *mockChestStore) CreateChest(ctx context.Context, ch *game.Gift) (*game.Gift, error) {
 	return ch, nil
 }
-func (m *mockChestStore) GetChest(ctx context.Context, chestID int64) (*game.Chest, error) {
+func (m *mockChestStore) GetChest(ctx context.Context, chestID int64) (*game.Gift, error) {
 	return nil, game.ErrNotFound
 }
 func (m *mockChestStore) UpdateChest(ctx context.Context, chestID int64, patch map[string]any) error {
@@ -300,14 +300,14 @@ func (m *mockChestStore) UpdateChest(ctx context.Context, chestID int64, patch m
 func (m *mockChestStore) UpdateChestIfMatch(ctx context.Context, chestID int64, oldOpened bool, patch map[string]any) (bool, error) {
 	return true, nil
 }
-func (m *mockChestStore) ListChestsByUser(ctx context.Context, uid string) ([]game.Chest, error) {
+func (m *mockChestStore) ListChestsByUser(ctx context.Context, uid string) ([]game.Gift, error) {
 	return nil, nil
 }
 
 func TestGetHome_SectionsBackwardCompat(t *testing.T) {
-	player := &game.Player{UID: "u1", CrewID: "c1", ExplorerName: "Alice", Level: 1, XP: 0}
+	player := &game.Player{UID: "u1", FamilyID: "c1", ExplorerName: "Alice", Level: 1, XP: 0}
 	qs := quest.NewQuestService(&mockQuestStore{})
-	dts := dailyturn.NewDailyTurnService(&mockDailyTurnStore{}, &dailyturn.DailyTurnConfig{})
+	dts := dailymission.NewDailyTurnService(&mockDailyTurnStore{}, &dailymission.DailyTurnConfig{})
 	svc := NewHomeService(qs, dts, &mockProgressionStore{}, &mockRealmProgressStore{}, &mockUserStore{player: player}, &mockCreativeSubmissionStore{}, &mockChestStore{}, nil)
 
 	resp, err := svc.GetHome(context.Background(), "u1", "c1")
@@ -324,7 +324,7 @@ func TestGetHome_SectionsBackwardCompat(t *testing.T) {
 
 func TestGetHome_UserError(t *testing.T) {
 	qs := quest.NewQuestService(&mockQuestStore{})
-	dts := dailyturn.NewDailyTurnService(&mockDailyTurnStore{}, &dailyturn.DailyTurnConfig{})
+	dts := dailymission.NewDailyTurnService(&mockDailyTurnStore{}, &dailymission.DailyTurnConfig{})
 	svc := NewHomeService(qs, dts, &mockProgressionStore{}, &mockRealmProgressStore{}, &mockUserStore{
 		err: errors.New("db error"),
 	}, &mockCreativeSubmissionStore{}, &mockChestStore{}, nil)
@@ -335,9 +335,9 @@ func TestGetHome_UserError(t *testing.T) {
 }
 
 func TestGetHome_QuestError(t *testing.T) {
-	player := &game.Player{UID: "u1", CrewID: "c1"}
+	player := &game.Player{UID: "u1", FamilyID: "c1"}
 	qs := quest.NewQuestService(&mockQuestStore{err: errors.New("quest error")})
-	dts := dailyturn.NewDailyTurnService(&mockDailyTurnStore{}, &dailyturn.DailyTurnConfig{})
+	dts := dailymission.NewDailyTurnService(&mockDailyTurnStore{}, &dailymission.DailyTurnConfig{})
 	svc := NewHomeService(qs, dts, &mockProgressionStore{}, &mockRealmProgressStore{}, &mockUserStore{player: player}, &mockCreativeSubmissionStore{}, &mockChestStore{}, nil)
 	_, err := svc.GetHome(context.Background(), "u1", "c1")
 	if err == nil {
@@ -346,29 +346,29 @@ func TestGetHome_QuestError(t *testing.T) {
 }
 
 func TestGetHome_NilChapterLoreAchievementServices(t *testing.T) {
-	player := &game.Player{UID: "u1", CrewID: "c1", ExplorerName: "Alice", Level: 1, XP: 0}
+	player := &game.Player{UID: "u1", FamilyID: "c1", ExplorerName: "Alice", Level: 1, XP: 0}
 	qs := quest.NewQuestService(&mockQuestStore{})
-	dts := dailyturn.NewDailyTurnService(&mockDailyTurnStore{}, &dailyturn.DailyTurnConfig{})
+	dts := dailymission.NewDailyTurnService(&mockDailyTurnStore{}, &dailymission.DailyTurnConfig{})
 	svc := NewHomeService(qs, dts, &mockProgressionStore{}, &mockRealmProgressStore{}, &mockUserStore{player: player}, &mockCreativeSubmissionStore{}, &mockChestStore{}, nil)
 
 	resp, err := svc.GetHome(context.Background(), "u1", "c1")
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
-	if resp.ChapterProgress != nil {
-		t.Error("expected nil chapter progress when service not set")
+	if resp.CourseProgress != nil {
+		t.Error("expected nil course progress when service not set")
 	}
 	if resp.LoreSummary != nil {
-		t.Error("expected nil lore summary when service not set")
+		t.Error("expected nil concept summary when service not set")
 	}
 	if resp.Achievements != nil {
 		t.Error("expected nil achievements when service not set")
 	}
 	if resp.Sections.World.CurrentChapter != nil {
-		t.Error("expected nil current chapter when service not set")
+		t.Error("expected nil current course when service not set")
 	}
-	if resp.Sections.Lore.Summary != nil {
-		t.Error("expected nil lore summary in section when service not set")
+	if resp.Sections.Concept.Summary != nil {
+		t.Error("expected nil concept summary in section when service not set")
 	}
 }
 func (m *mockUserStore) ListUsersByCrew(ctx context.Context, crewID string) ([]game.Player, error) {
@@ -399,44 +399,44 @@ func (m *mockActivityStore) ListActivityDatesByUsers(ctx context.Context, uids [
 }
 
 func TestGetHome_CrewStreak(t *testing.T) {
-	player := &game.Player{UID: "u1", CrewID: "c1", ExplorerName: "Alice", Level: 1, XP: 0}
+	player := &game.Player{UID: "u1", FamilyID: "c1", ExplorerName: "Alice", Level: 1, XP: 0}
 	qs := quest.NewQuestService(&mockQuestStore{})
-	dts := dailyturn.NewDailyTurnService(&mockDailyTurnStore{}, &dailyturn.DailyTurnConfig{})
+	dts := dailymission.NewDailyTurnService(&mockDailyTurnStore{}, &dailymission.DailyTurnConfig{})
 	svc := NewHomeService(qs, dts, &mockProgressionStore{}, &mockRealmProgressStore{}, &mockUserStore{player: player}, &mockCreativeSubmissionStore{}, &mockChestStore{}, nil)
 	activity := &mockActivityStore{
 		acts: []game.DailyActivity{
-			{UserID: "u1", ActivityDate: dailyturn.TodayDate()},
-			{UserID: "u2", ActivityDate: dailyturn.TodayDate()},
+			{UserID: "u1", ActivityDate: dailymission.TodayDate()},
+			{UserID: "u2", ActivityDate: dailymission.TodayDate()},
 		},
 	}
-	userStore := &mockUserStore{player: player, crewMembers: []game.Player{{UID: "u1", CrewID: "c1"}, {UID: "u2", CrewID: "c1"}}}
-	cs := crewstreak.NewService(userStore, activity, "UTC")
+	userStore := &mockUserStore{player: player, crewMembers: []game.Player{{UID: "u1", FamilyID: "c1"}, {UID: "u2", FamilyID: "c1"}}}
+	cs := familystreak.NewService(userStore, activity, "UTC")
 	svc.SetCrewStreakService(cs)
 
 	resp, err := svc.GetHome(context.Background(), "u1", "c1")
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
-	if resp.DailyTurn.CrewStreak != 1 {
-		t.Errorf("expected crew streak 1, got %d", resp.DailyTurn.CrewStreak)
+	if resp.DailyMission.CrewStreak != 1 {
+		t.Errorf("expected crew streak 1, got %d", resp.DailyMission.CrewStreak)
 	}
-	if resp.Sections.DailyTurn.CrewStreak != resp.DailyTurn.CrewStreak {
-		t.Errorf("sections daily_turn.crew_streak mismatch")
+	if resp.Sections.DailyMission.CrewStreak != resp.DailyMission.CrewStreak {
+		t.Errorf("sections daily_mission.crew_streak mismatch")
 	}
 }
 
 func TestGetHome_CrewStreakNilService(t *testing.T) {
-	player := &game.Player{UID: "u1", CrewID: "c1", ExplorerName: "Alice", Level: 1, XP: 0}
+	player := &game.Player{UID: "u1", FamilyID: "c1", ExplorerName: "Alice", Level: 1, XP: 0}
 	qs := quest.NewQuestService(&mockQuestStore{})
-	dts := dailyturn.NewDailyTurnService(&mockDailyTurnStore{}, &dailyturn.DailyTurnConfig{})
+	dts := dailymission.NewDailyTurnService(&mockDailyTurnStore{}, &dailymission.DailyTurnConfig{})
 	svc := NewHomeService(qs, dts, &mockProgressionStore{}, &mockRealmProgressStore{}, &mockUserStore{player: player}, &mockCreativeSubmissionStore{}, &mockChestStore{}, nil)
 
 	resp, err := svc.GetHome(context.Background(), "u1", "c1")
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
-	if resp.DailyTurn.CrewStreak != 0 {
-		t.Errorf("expected crew streak 0 when service not set, got %d", resp.DailyTurn.CrewStreak)
+	if resp.DailyMission.CrewStreak != 0 {
+		t.Errorf("expected crew streak 0 when service not set, got %d", resp.DailyMission.CrewStreak)
 	}
 }
 
@@ -484,14 +484,14 @@ func (m *mockSeasonGateway) GetSeason(ctx context.Context, slug string) (*gameco
 
 func TestGetHome_CurrentSeason(t *testing.T) {
 	now := time.Now().UTC()
-	player := &game.Player{UID: "u1", CrewID: "c1", ExplorerName: "Alice", Level: 1, XP: 0}
+	player := &game.Player{UID: "u1", FamilyID: "c1", ExplorerName: "Alice", Level: 1, XP: 0}
 	qs := quest.NewQuestService(&mockQuestStore{})
-	dts := dailyturn.NewDailyTurnService(&mockDailyTurnStore{}, &dailyturn.DailyTurnConfig{})
+	dts := dailymission.NewDailyTurnService(&mockDailyTurnStore{}, &dailymission.DailyTurnConfig{})
 	svc := NewHomeService(qs, dts, &mockProgressionStore{}, &mockRealmProgressStore{}, &mockUserStore{player: player}, &mockCreativeSubmissionStore{}, &mockChestStore{}, nil)
 
 	seasonSvc := season.NewSeasonService(&mockSeasonGateway{
 		seasons: []gamecontent.SeasonDefinition{
-			{Slug: "season-spring-2026", Name: "Spring 2026", Realm: "whispering-woods", StartAt: now.Add(-24 * time.Hour), EndAt: now.Add(24 * time.Hour), Published: true},
+			{Slug: "season-spring-2026", Name: "Spring 2026", Journey: "whispering-woods", StartAt: now.Add(-24 * time.Hour), EndAt: now.Add(24 * time.Hour), Published: true},
 		},
 	}, nil)
 	svc.SetSeasonService(seasonSvc)
@@ -513,28 +513,28 @@ func TestGetHome_CurrentSeason(t *testing.T) {
 
 func TestGetHome_SeasonProgressQuestsCompleted(t *testing.T) {
 	now := time.Now().UTC()
-	player := &game.Player{UID: "u1", CrewID: "c1", ExplorerName: "Alice", Level: 1, XP: 0}
+	player := &game.Player{UID: "u1", FamilyID: "c1", ExplorerName: "Alice", Level: 1, XP: 0}
 
 	qStore := &mockQuestStore{
-		quests: []game.Quest{
-			{ID: 1, CrewID: "c1", TemplateSlug: "seasonal-q1", Title: "SQ1", Status: string(quest.QuestStatusDone), CompletedAt: &now, CreatedAt: now},
-			{ID: 2, CrewID: "c1", TemplateSlug: "plain-q", Title: "Plain", Status: string(quest.QuestStatusDone), CompletedAt: &now, CreatedAt: now},
+		missions: []game.Mission{
+			{ID: 1, FamilyID: "c1", TemplateSlug: "seasonal-q1", Title: "SQ1", Status: string(quest.QuestStatusDone), CompletedAt: &now, CreatedAt: now},
+			{ID: 2, FamilyID: "c1", TemplateSlug: "plain-q", Title: "Plain", Status: string(quest.QuestStatusDone), CompletedAt: &now, CreatedAt: now},
 		},
-		challenges: map[int64][]game.Challenge{},
+		exercises: map[int64][]game.Exercise{},
 	}
 	content := &mockContentGatewayForHome{
-		quests: []gamecontent.QuestDefinition{
+		missions: []gamecontent.QuestDefinition{
 			{Slug: "seasonal-q1", SeasonSlug: "season-spring-2026"},
 			{Slug: "plain-q", SeasonSlug: ""},
 		},
 	}
 	qs := quest.NewQuestServiceWithGate(qStore, nil, content)
-	dts := dailyturn.NewDailyTurnService(&mockDailyTurnStore{}, &dailyturn.DailyTurnConfig{})
+	dts := dailymission.NewDailyTurnService(&mockDailyTurnStore{}, &dailymission.DailyTurnConfig{})
 	svc := NewHomeService(qs, dts, &mockProgressionStore{}, &mockRealmProgressStore{}, &mockUserStore{player: player}, &mockCreativeSubmissionStore{}, &mockChestStore{}, nil)
 
 	seasonSvc := season.NewSeasonService(&mockSeasonGateway{
 		seasons: []gamecontent.SeasonDefinition{
-			{Slug: "season-spring-2026", Name: "Spring 2026", Realm: "whispering-woods", StartAt: now.Add(-24 * time.Hour), EndAt: now.Add(24 * time.Hour), Published: true},
+			{Slug: "season-spring-2026", Name: "Spring 2026", Journey: "whispering-woods", StartAt: now.Add(-24 * time.Hour), EndAt: now.Add(24 * time.Hour), Published: true},
 		},
 	}, nil)
 	svc.SetSeasonService(seasonSvc)
@@ -544,25 +544,25 @@ func TestGetHome_SeasonProgressQuestsCompleted(t *testing.T) {
 		t.Fatalf("unexpected error: %v", err)
 	}
 	if resp.SeasonProgress.QuestsCompleted != 1 {
-		t.Errorf("expected 1 quests_completed for season, got %d", resp.SeasonProgress.QuestsCompleted)
+		t.Errorf("expected 1 missions_completed for season, got %d", resp.SeasonProgress.QuestsCompleted)
 	}
 }
 
 type mockContentGatewayForHome struct {
-	quests []gamecontent.QuestDefinition
+	missions []gamecontent.QuestDefinition
 }
 
 func (m *mockContentGatewayForHome) ListQuests(ctx context.Context) ([]gamecontent.QuestDefinition, error) {
-	return m.quests, nil
+	return m.missions, nil
 }
 func (m *mockContentGatewayForHome) GetQuest(ctx context.Context, slug string) (*gamecontent.QuestDefinition, error) {
-	for _, q := range m.quests {
+	for _, q := range m.missions {
 		if q.Slug == slug {
 			return &q, nil
 		}
 	}
 	return nil, nil
 }
-func (m *mockContentGatewayForHome) ListQuestsByRealm(ctx context.Context, realm string) ([]gamecontent.QuestDefinition, error) {
+func (m *mockContentGatewayForHome) ListQuestsByRealm(ctx context.Context, journey string) ([]gamecontent.QuestDefinition, error) {
 	return nil, nil
 }

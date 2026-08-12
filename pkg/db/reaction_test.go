@@ -15,7 +15,7 @@ func TestReactionStore_UpsertOmitsIdentityAndTimestamp(t *testing.T) {
 	resp, _ := json.Marshal([]game.Reaction{
 		{
 			ID:           42,
-			CrewID:       "crew-A",
+			FamilyID:       "crew-A",
 			TargetType:   "JOURNAL",
 			TargetID:     1001,
 			ActorUID:     "user-1",
@@ -29,7 +29,7 @@ func TestReactionStore_UpsertOmitsIdentityAndTimestamp(t *testing.T) {
 	in := &game.Reaction{
 		// Explicit zero id / zero time — must not appear in outbound payload.
 		ID:           0,
-		CrewID:       "crew-A",
+		FamilyID:       "crew-A",
 		TargetType:   "JOURNAL",
 		TargetID:     1001,
 		ActorUID:     "user-1",
@@ -52,7 +52,7 @@ func TestReactionStore_UpsertOmitsIdentityAndTimestamp(t *testing.T) {
 	if client.lastMutateMethod != "POST" {
 		t.Fatalf("expected POST, got %s", client.lastMutateMethod)
 	}
-	if client.lastMutateParams != "on_conflict=crew_id,target_type,target_id,actor_uid" {
+	if client.lastMutateParams != "on_conflict=family_id,target_type,target_id,actor_uid" {
 		t.Fatalf("unexpected on_conflict params: %s", client.lastMutateParams)
 	}
 	if client.lastMutatePrefer != "return=representation,resolution=merge-duplicates" {
@@ -69,7 +69,7 @@ func TestReactionStore_UpsertOmitsIdentityAndTimestamp(t *testing.T) {
 	if _, hasCreated := payload["created_at"]; hasCreated {
 		t.Error("payload must omit created_at so DB default applies")
 	}
-	if payload["crew_id"] != "crew-A" || payload["target_type"] != "JOURNAL" {
+	if payload["family_id"] != "crew-A" || payload["target_type"] != "JOURNAL" {
 		t.Errorf("unexpected payload keys: %+v", payload)
 	}
 	if payload["target_id"] != int64(1001) {
@@ -89,8 +89,8 @@ func TestReactionStore_UpsertOmitsIdentityAndTimestamp(t *testing.T) {
 func TestReactionStore_ListForTarget(t *testing.T) {
 	now := time.Date(2026, 8, 10, 12, 0, 0, 0, time.UTC)
 	resp, _ := json.Marshal([]game.Reaction{
-		{ID: 1, CrewID: "crew-A", TargetType: "JOURNAL", TargetID: 1001, ActorUID: "u2", ReactionType: "CLAP", CreatedAt: now},
-		{ID: 2, CrewID: "crew-A", TargetType: "JOURNAL", TargetID: 1001, ActorUID: "u3", ReactionType: "STAR", CreatedAt: now},
+		{ID: 1, FamilyID: "crew-A", TargetType: "JOURNAL", TargetID: 1001, ActorUID: "u2", ReactionType: "CLAP", CreatedAt: now},
+		{ID: 2, FamilyID: "crew-A", TargetType: "JOURNAL", TargetID: 1001, ActorUID: "u3", ReactionType: "STAR", CreatedAt: now},
 	})
 	client := &mockSupabaseClient{data: resp}
 	store := NewReactionStore(client)

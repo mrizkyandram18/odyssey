@@ -39,17 +39,17 @@ Use this checklist to perform pre-release validation before tagging any Phase 1 
 ## 🎮 Golden Path (Live E2E Verification)
 Perform manual validation or run automated E2E against a running server (`go run api/dev/main.go`):
 - [ ] **Step 1: Login** — Enter Gatekeeper credentials, verify session token issued.
-- [ ] **Step 2: Home Mount** — Verify Explorer level, streak badge, and realm progress load.
+- [ ] **Step 2: Home Mount** — Verify Explorer level, streak badge, and journey progress load.
 - [ ] **Step 3: Daily Turn** — Consume daily turn, verify XP increase and streak increment.
-- [ ] **Step 4: Start Quest** — Select pending quest, click "Start Quest", verify status changes to ACTIVE.
-- [ ] **Step 5: Challenge List** — Inspect active challenges inside Quest Detail view.
-- [ ] **Step 6: Complete Challenge** — Click "Complete Challenge", verify XP award modal/banner and quest completion status.
+- [ ] **Step 4: Start Mission** — Select pending quest, click "Start Mission", verify status changes to ACTIVE.
+- [ ] **Step 5: Exercise List** — Inspect active exercises inside Mission Detail view.
+- [ ] **Step 6: Complete Exercise** — Click "Complete Exercise", verify XP award modal/banner and quest completion status.
 - [ ] **Step 7: Progression** — Verify Explorer level up trigger when XP threshold is crossed.
-- [ ] **Step 8: Realm Progress** — Verify crew realm progress bar advances after quest completion.
-- [ ] **Step 9: Journal** — Open Family Journal, verify new Milestone & Lore entries are unlocked.
-- [ ] **Step 10: Chest & Relic** — Open earned chest from Home, verify relic awarded to inventory.
+- [ ] **Step 8: Journey Progress** — Verify crew journey progress bar advances after quest completion.
+- [ ] **Step 9: Journal** — Open Family Journal, verify new Milestone & Concept entries are unlocked.
+- [ ] **Step 10: Gift & Collection** — Open earned chest from Home, verify relic awarded to inventory.
 - [ ] **Step 11: Logout** — Click "Sign Out" in Profile, verify redirect to login and cookie cleanup.
-- [ ] **Step 12: Persistence** — Sign in again, verify explorer XP, level, and realm progress persist intact.
+- [ ] **Step 12: Persistence** — Sign in again, verify explorer XP, level, and journey progress persist intact.
 
 ---
 

@@ -13,7 +13,7 @@ func TestLogger_LogServiceCall(t *testing.T) {
 	l := NewLogger(&buf)
 	l.LogServiceCall(ServiceCallFields{
 		RequestID:       "req-1",
-		Operation:       "dailyturn.consume",
+		Operation:       "dailymission.consume",
 		EntityID:        "user-1",
 		Duration:        12 * time.Millisecond,
 		Outcome:         "duplicate",
@@ -31,7 +31,7 @@ func TestLogger_LogServiceCall(t *testing.T) {
 	checks := map[string]any{
 		"msg":              "service_call",
 		"request_id":       "req-1",
-		"op":               "dailyturn.consume",
+		"op":               "dailymission.consume",
 		"entity_id":        "user-1",
 		"outcome":          "duplicate",
 		"idempotency_skip": true,

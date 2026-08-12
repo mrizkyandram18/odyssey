@@ -1,13 +1,13 @@
 import type { ReactNode } from 'react'
 import { Button } from '../atoms/Button'
 
-export interface DailyTurnBannerProps {
+export interface dailyMissionBannerProps {
   remaining: number
   onTakeTurn: () => void
   loading?: boolean
 }
 
-export function DailyTurnBanner({ remaining, onTakeTurn, loading }: DailyTurnBannerProps) {
+export function dailyMissionBanner({ remaining, onTakeTurn, loading }: dailyMissionBannerProps) {
   const canTake = remaining > 0 && !loading
 
   let label: ReactNode

@@ -17,7 +17,7 @@
 | Production alias | `https://odyssey-beta-nine.vercel.app` |
 | Deploy created | **2026-08-10 20:16:14 +0700** |
 | boot_time after redeploy | **2026-08-10T13:16:51Z** (changed vs pre-redeploy `13:14:58Z` / older `12:29:24Z`) |
-| schema_version | `022_mvp_six_quests` |
+| schema_version | `022_mvp_six_missions` |
 
 ### Why production lagged
 
@@ -30,10 +30,10 @@
 | Check | Result | Evidence |
 | --- | --- | --- |
 | Login demo1 | **PASS** | `uid=demo-uid-1` crew `demo-crew-1` |
-| Quest load (6 WW) | **PASS** | count=6; types SOLO×4, RELAY, CREATIVE |
-| SOLO complete | **PASS** | Quest 102 DONE type=SOLO |
-| RELAY + assignment | **PASS** | Quest 104 DONE; leg2 `assigned_to=demo-uid-3` completed by demo3 |
-| CREATIVE + Story | **PASS** | Quest 105 DONE type=CREATIVE; `next=CREATE_MEMORY`; POST `/api/creative` **201** |
+| Mission load (6 WW) | **PASS** | count=6; types SOLO×4, RELAY, CREATIVE |
+| SOLO complete | **PASS** | Mission 102 DONE type=SOLO |
+| RELAY + assignment | **PASS** | Mission 104 DONE; leg2 `assigned_to=demo-uid-3` completed by demo3 |
+| CREATIVE + Story | **PASS** | Mission 105 DONE type=CREATIVE; `next=CREATE_MEMORY`; POST `/api/creative` **201** |
 | Daily turn | **PASS** | POST consume **200**, xp=10, date=2026-08-10 |
 | Progression | **PASS** | L39/3890 → L43/4200 (**+310 XP**) |
 
@@ -41,10 +41,10 @@
 
 | Item | Result | Evidence |
 | --- | --- | --- |
-| Apply `022` MVP seed (6 WW quests) | **PASS** | Scoped REST on `demo-crew-1`; schema `022_mvp_six_quests` |
+| Apply `022` MVP seed (6 WW missions) | **PASS** | Scoped REST on `demo-crew-1`; schema `022_mvp_six_missions` |
 | Local binary smoke of #15/#16 | **PASS** | `go run ./internal/api/dev` against live Supabase |
 
-## Quest matrix (demo-crew-1)
+## Mission matrix (demo-crew-1)
 
 | ID | Title | Type |
 | ---: | --- | --- |
@@ -62,15 +62,15 @@
 | Daily turn create POST `id:0` → 500 | `CreateDailyTurn` map without id | #15 |
 | Creative CSRF 403 from UI client | `apiClient` fetches `/api/csrf` + `X-CSRF-Token` | #15 |
 | CREATE_MEMORY rejected on DONE quest | Allow DONE quest for memory submit | #15 |
-| `SubmitRequest` missing JSON tags | Add `quest_id` / `challenge_id` / … tags | #16 |
-| Missing `crew_id` on submit | Set from quest before insert | #16 |
+| `SubmitRequest` missing JSON tags | Add `mission_id` / `exercise_id` / … tags | #16 |
+| Missing `family_id` on submit | Set from quest before insert | #16 |
 | Creative insert `id:0` payload | Map without identity id | #16 |
 
 ## Residual backlog (not release blockers)
 
 - Enable Vercel **Git integration** / auto-deploy on `main` so future merges promote without manual CLI.
 - Phase 2 leftovers remain untracked (not committed): `release_report_phase2b.md`, `021_seed_phase2a.sql`, extra e2e specs.
-- Gatekeeper BOTH, heavy E2E CI, multi-realm: deferred.
+- Gatekeeper BOTH, heavy E2E CI, multi-journey: deferred.
 
 ## Release tag
 

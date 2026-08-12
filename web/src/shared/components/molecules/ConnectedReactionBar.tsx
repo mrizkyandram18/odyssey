@@ -10,7 +10,7 @@ interface ConnectedReactionBarProps {
 
 /**
  * ConnectedReactionBar — self-contained component that fetches, displays and
- * writes reactions for any target (JOURNAL | QUEST). Uses the canonical
+ * writes reactions for any target (JOURNAL | Mission). Uses the canonical
  * useReactions hook for optimistic UI with rollback + race prevention.
  */
 export function ConnectedReactionBar({ targetType, targetId }: ConnectedReactionBarProps) {

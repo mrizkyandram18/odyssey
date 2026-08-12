@@ -44,7 +44,7 @@ func TestAdminStore_GetBySlug(t *testing.T) {
 	}
 	store := NewDefinitionStore(mockClient)
 
-	result, err := store.GetBySlug(context.Background(), "odyssey_realm_definitions", "forest")
+	result, err := store.GetBySlug(context.Background(), "odyssey_journey_definitions", "forest")
 	if err != nil {
 		t.Fatalf("GetBySlug failed: %v", err)
 	}
@@ -60,7 +60,7 @@ func TestAdminStore_GetBySlug_NotFound(t *testing.T) {
 	}
 	store := NewDefinitionStore(mockClient)
 
-	result, err := store.GetBySlug(context.Background(), "odyssey_realm_definitions", "unknown")
+	result, err := store.GetBySlug(context.Background(), "odyssey_journey_definitions", "unknown")
 	if err != nil {
 		t.Fatalf("GetBySlug should not error for not found: %v", err)
 	}
@@ -71,7 +71,7 @@ func TestAdminStore_GetBySlug_NotFound(t *testing.T) {
 
 func TestAdminStore_Create(t *testing.T) {
 	returnedRow := []map[string]any{
-		{"id": float64(1), "slug": "new-realm", "name": "New Realm", "published": false, "version": 1},
+		{"id": float64(1), "slug": "new-journey", "name": "New Journey", "published": false, "version": 1},
 	}
 	data, _ := json.Marshal(returnedRow)
 	mockClient := &mockAdminClient{
@@ -79,15 +79,15 @@ func TestAdminStore_Create(t *testing.T) {
 	}
 	store := NewDefinitionStore(mockClient)
 
-	result, err := store.Create(context.Background(), "odyssey_realm_definitions", map[string]any{
-		"slug": "new-realm",
-		"name": "New Realm",
+	result, err := store.Create(context.Background(), "odyssey_journey_definitions", map[string]any{
+		"slug": "new-journey",
+		"name": "New Journey",
 	})
 	if err != nil {
 		t.Fatalf("Create failed: %v", err)
 	}
-	if result["slug"] != "new-realm" {
-		t.Errorf("expected slug=new-realm, got %v", result["slug"])
+	if result["slug"] != "new-journey" {
+		t.Errorf("expected slug=new-journey, got %v", result["slug"])
 	}
 	if mockClient.mutateMethod != "POST" {
 		t.Errorf("expected POST, got %s", mockClient.mutateMethod)
@@ -106,7 +106,7 @@ func TestAdminStore_UpdateDraft(t *testing.T) {
 	}
 	store := NewDefinitionStore(mockClient)
 
-	err := store.UpdateDraft(context.Background(), "odyssey_realm_definitions", "forest",
+	err := store.UpdateDraft(context.Background(), "odyssey_journey_definitions", "forest",
 		map[string]any{"name": "Updated Forest"}, "admin1")
 	if err != nil {
 		t.Fatalf("UpdateDraft failed: %v", err)
@@ -128,7 +128,7 @@ func TestAdminStore_Publish(t *testing.T) {
 	}
 	store := NewDefinitionStore(mockClient)
 
-	err := store.Publish(context.Background(), "odyssey_realm_definitions", "forest", "admin1")
+	err := store.Publish(context.Background(), "odyssey_journey_definitions", "forest", "admin1")
 	if err != nil {
 		t.Fatalf("Publish failed: %v", err)
 	}
@@ -139,7 +139,7 @@ func TestAdminStore_Publish(t *testing.T) {
 
 func TestAdminStore_SoftDelete(t *testing.T) {
 	rows := []map[string]any{
-		{"id": float64(1), "slug": "quest1", "title": "Quest 1", "published": true, "version": float64(1)},
+		{"id": float64(1), "slug": "quest1", "title": "Mission 1", "published": true, "version": float64(1)},
 	}
 	getData, _ := json.Marshal(rows)
 
@@ -160,7 +160,7 @@ func TestAdminStore_SoftDelete(t *testing.T) {
 
 func TestAdminStore_Restore(t *testing.T) {
 	rows := []map[string]any{
-		{"id": float64(1), "slug": "quest1", "title": "Quest 1", "published": true, "version": float64(1), "deleted_at": "2025-01-01T00:00:00Z"},
+		{"id": float64(1), "slug": "quest1", "title": "Mission 1", "published": true, "version": float64(1), "deleted_at": "2025-01-01T00:00:00Z"},
 	}
 	getData, _ := json.Marshal(rows)
 
@@ -190,7 +190,7 @@ func TestAdminStore_ListAll(t *testing.T) {
 	}
 	store := NewDefinitionStore(mockClient)
 
-	result, err := store.ListAll(context.Background(), "odyssey_realm_definitions", false)
+	result, err := store.ListAll(context.Background(), "odyssey_journey_definitions", false)
 	if err != nil {
 		t.Fatalf("ListAll failed: %v", err)
 	}

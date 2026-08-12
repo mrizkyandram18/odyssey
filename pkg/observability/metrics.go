@@ -128,7 +128,7 @@ func (m *Metrics) RecordXP(amount int64) {
 	m.mu.Unlock()
 }
 
-// RecordRealmCompleted counts a realm reaching its completion threshold.
+// RecordRealmCompleted counts a journey reaching its completion threshold.
 func (m *Metrics) RecordRealmCompleted() {
 	m.mu.Lock()
 	m.realmCompleted++
@@ -248,8 +248,8 @@ type MetricsSnapshot struct {
 	CreativeSubmitted   int64                    `json:"creative_submitted"`
 	AdminOps            int64                    `json:"admin_operations"`
 	XPAwarded           int64                    `json:"xp_awarded"`
-	RealmCompleted      int64                    `json:"realm_completed"`
-	ChestsCreated       int64                    `json:"chests_created"`
+	RealmCompleted      int64                    `json:"journey_completed"`
+	ChestsCreated       int64                    `json:"gifts_created"`
 	RewardsGenerated    int64                    `json:"rewards_generated"`
 	DuplicatesPrevented int64                    `json:"duplicates_prevented"`
 	LockConflicts       int64                    `json:"lock_conflicts"`

@@ -6,8 +6,8 @@ import (
 
 // Table names for content definition tables.
 const (
-	TableRealms       = "odyssey_realm_definitions"
-	TableChapters     = "odyssey_chapter_definitions"
+	TableRealms       = "odyssey_journey_definitions"
+	TableChapters     = "odyssey_course_definitions"
 	TableQuests       = "odyssey_quest_definitions"
 	TablePrompts      = "odyssey_creative_prompt_definitions"
 	TableChests       = "odyssey_chest_definitions"
@@ -15,7 +15,7 @@ const (
 	TableRelics       = "odyssey_relic_definitions"
 	TableAchievements = "odyssey_achievement_definitions"
 	TableSeasons      = "odyssey_season_definitions"
-	TableLore         = "odyssey_lore_definitions"
+	TableLore         = "odyssey_concept_definitions"
 )
 
 // ResourceInfo describes a content definition resource for admin operations.

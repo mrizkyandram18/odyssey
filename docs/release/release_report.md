@@ -38,7 +38,7 @@ However, because live runtime execution (full E2E Golden Path & PWA Service Work
    - Replaced plain loading text with inline skeleton loaders.
    - Added interactive "Retry" error banners and unauthenticated login redirect UX.
 3. **Batch 4 (RCA-06 - P2)**: `web/src/shared/hooks/useQuest.ts`
-   - Updated `completeChallenge` to consume `result.quest` directly, eliminating redundant GET `/api/quests/:id` HTTP roundtrips.
+   - Updated `completeChallenge` to consume `result.quest` directly, eliminating redundant GET `/api/missions/:id` HTTP roundtrips.
 
 ---
 

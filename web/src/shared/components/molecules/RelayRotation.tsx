@@ -1,9 +1,9 @@
-import type { Challenge, CrewMember, Quest, QuestWithChallenges } from '../../types'
+import type { Exercise, CrewMember, Mission, MissionWithChallenges } from '../../types'
 import { deriveRelayLegs, memberName } from '../../utils/relayRotation'
 
 export interface RelayRotationProps {
-  quest: Quest | QuestWithChallenges
-  challenges: Challenge[]
+  Mission: Mission | MissionWithChallenges
+  exercises: Exercise[]
   members?: CrewMember[]
   myUID?: string | null
 }
@@ -31,10 +31,10 @@ const legStyles = {
   },
 } as const
 
-export function RelayRotation({ quest, challenges, members, myUID }: RelayRotationProps) {
-  if (quest.quest_type !== 'RELAY') return null
+export function RelayRotation({ Mission, exercises, members, myUID }: RelayRotationProps) {
+  if (Mission.Mission_type !== 'RELAY') return null
 
-  const legs = deriveRelayLegs(challenges, quest.active_challenge_assigned_to, myUID)
+  const legs = deriveRelayLegs(exercises, Mission.active_challenge_assigned_to, myUID)
   const active = legs.find((l) => l.state === 'active')
   const next = legs.find((l) => l.state === 'next')
   const doneCount = legs.filter((l) => l.state === 'done').length

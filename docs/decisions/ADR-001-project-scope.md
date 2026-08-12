@@ -38,7 +38,7 @@ Specifically, we decide:
 4. **Scope is a hard constraint.** The product vision is cooperative play, not
    monetization, not scale, not gamified productivity. See
    [Non-Goals](../non-goals.md) and [Vision](../vision.md).
-5. **MVP is intentionally small.** The first phase ships one realm, 6 quests,
+5. **MVP is intentionally small.** The first phase ships one journey, 6 missions,
    daily turns, and basic progression. Everything beyond that is explicitly
    future work.
 

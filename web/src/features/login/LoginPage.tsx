@@ -35,7 +35,7 @@ export function LoginPage() {
       <div className="absolute inset-0 z-0">
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(6,182,222,0.15)_0%,rgba(10,12,21,1)_100%)]"></div>
         <div className="absolute top-0 left-0 right-0 h-96 bg-gradient-to-b from-accent-nature/10 to-transparent"></div>
-        <div className="absolute bottom-0 left-0 right-0 h-64 bg-gradient-to-t from-bg-realm to-transparent"></div>
+        <div className="absolute bottom-0 left-0 right-0 h-64 bg-gradient-to-t from-bg-journey to-transparent"></div>
         {/* Subtle decorative stars/particles could go here */}
       </div>
 

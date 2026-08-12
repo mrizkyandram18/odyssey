@@ -9,7 +9,7 @@ import (
 // StoryFragmentView is the client-facing view of a story fragment in the Journal.
 type StoryFragmentView struct {
 	Slug         string     `json:"slug"`
-	Realm        string     `json:"realm"`
+	Journey        string     `json:"journey"`
 	Title        string     `json:"title"`
 	Content      string     `json:"content"`
 	SetName      string     `json:"set_name"`
@@ -25,19 +25,19 @@ type DiscoverResult struct {
 	XPGranted  int64             `json:"xp_granted"`
 }
 
-// ReplayResult is returned when a player replays a completed realm.
+// ReplayResult is returned when a player replays a completed journey.
 type ReplayResult struct {
-	Realm             string              `json:"realm"`
+	Journey             string              `json:"journey"`
 	IsReplay          bool                `json:"is_replay"`
 	BonusDialogue     string              `json:"bonus_dialogue"`
 	UnlockedFragments []StoryFragmentView `json:"unlocked_fragments"`
 }
 
 // DefaultFragments is the embedded seed catalog used when no external store is loaded.
-var DefaultFragments = []game.StoryFragment{
+var DefaultFragments = []game.LearningConcept{
 	{
 		Slug:     "ancient-bark-whisper",
-		Realm:    "whispering-woods",
+		Journey:    "whispering-woods",
 		Title:    "Bisikan Pepohonan Tua",
 		Content:  "Pohon-pohon raksasa di Hutan Berbisik menyimpan gema langkah penjelajah pertama.",
 		SetName:  "whispering-set",
@@ -45,7 +45,7 @@ var DefaultFragments = []game.StoryFragment{
 	},
 	{
 		Slug:     "echo-of-the-first-explorer",
-		Realm:    "whispering-woods",
+		Journey:    "whispering-woods",
 		Title:    "Gema Penjelajah Perdana",
 		Content:  "Rahasia Replay: Di balik lumut tua, terukir ukiran kompas kuno yang ditinggalkan ribuan purnama lalu.",
 		SetName:  "whispering-set",
@@ -53,7 +53,7 @@ var DefaultFragments = []game.StoryFragment{
 	},
 	{
 		Slug:     "copper-cog-diagram",
-		Realm:    "clockwork-city",
+		Journey:    "clockwork-city",
 		Title:    "Bagan Roda Gigi Tembaga",
 		Content:  "Diagram kuno yang menunjukkan susunan roda gigi raksasa di pusat Kota Jam.",
 		SetName:  "clockwork-set",
@@ -61,7 +61,7 @@ var DefaultFragments = []game.StoryFragment{
 	},
 	{
 		Slug:     "secret-steam-valve",
-		Realm:    "clockwork-city",
+		Journey:    "clockwork-city",
 		Title:    "Katup Uap Rahasia",
 		Content:  "Rahasia Replay: Katup kuningan yang menyembunyikan lorong ruang uap tak tersentuh.",
 		SetName:  "clockwork-set",

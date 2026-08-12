@@ -58,13 +58,13 @@ describe('HomePage', () => {
   it('renders correctly with Aktivitas Hari Ini and Misi Berikutnya sections', async () => {
     vi.mocked(apiClient.request).mockResolvedValueOnce({
       player: { explorer_name: 'Tester', coins: 10 },
-      realm_progress: [{ realm: 'Whispering Woods', progress: 50, status: 'ACTIVE' }],
-      daily_turn: { available: true, streak_days: 1 },
-      active_quests: [
-        { id: 201, title: 'Shadow Trail', challenge_count: 2, completed_count: 1, status: 'ACTIVE', quest_type: 'SOLO' },
+      journey_progress: [{ journey: 'Whispering Woods', progress: 50, status: 'ACTIVE' }],
+      daily_mission: { available: true, streak_days: 1 },
+      active_missions: [
+        { id: 201, title: 'Shadow Trail', challenge_count: 2, completed_count: 1, status: 'ACTIVE', Mission_type: 'SOLO' },
       ],
-      completed_quests_today: [],
-      available_chests: [],
+      completed_missions_today: [],
+      available_gifts: [],
     })
 
     render(

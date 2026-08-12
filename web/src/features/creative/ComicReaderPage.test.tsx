@@ -27,7 +27,7 @@ describe('ComicReaderPage', () => {
   beforeEach(() => {
     vi.resetAllMocks()
     vi.mocked(useSession).mockReturnValue({
-      session: { uid: 'u1', crew_id: 'crew-1' } as any,
+      session: { uid: 'u1', family_id: 'crew-1' } as any,
       loading: false,
       error: null,
       login: vi.fn(),
@@ -66,13 +66,13 @@ describe('ComicReaderPage', () => {
 
     mockedCreativeApiGet.mockResolvedValueOnce({
       id: 1,
-      quest_id: 1,
+      mission_id: 1,
       kind: 'COMIC',
       content: comicContent,
       created_at: '2024-01-01T00:00:00Z',
       author_uid: 'u1',
-      crew_id: 'crew-1',
-      challenge_id: 1,
+      family_id: 'crew-1',
+      exercise_id: 1,
       status: 'APPROVED',
     })
 
@@ -108,13 +108,13 @@ describe('ComicReaderPage', () => {
 
     mockedCreativeApiGet.mockResolvedValueOnce({
       id: 1,
-      quest_id: 1,
+      mission_id: 1,
       kind: 'COMIC',
       content: comicContent,
       created_at: '2024-01-01T00:00:00Z',
       author_uid: 'u1',
-      crew_id: 'crew-1',
-      challenge_id: 1,
+      family_id: 'crew-1',
+      exercise_id: 1,
       status: 'APPROVED',
     })
 
@@ -154,13 +154,13 @@ describe('ComicReaderPage', () => {
   it('renders not-comic error when submission kind is not COMIC', async () => {
     mockedCreativeApiGet.mockResolvedValueOnce({
       id: 1,
-      quest_id: 1,
+      mission_id: 1,
       kind: 'STORY',
       content: 'A story',
       created_at: '2024-01-01T00:00:00Z',
       author_uid: 'u1',
-      crew_id: 'crew-1',
-      challenge_id: 1,
+      family_id: 'crew-1',
+      exercise_id: 1,
       status: 'APPROVED',
     })
 
@@ -180,13 +180,13 @@ describe('ComicReaderPage', () => {
   it('renders invalid comic payload error', async () => {
     mockedCreativeApiGet.mockResolvedValueOnce({
       id: 1,
-      quest_id: 1,
+      mission_id: 1,
       kind: 'COMIC',
       content: 'not a json',
       created_at: '2024-01-01T00:00:00Z',
       author_uid: 'u1',
-      crew_id: 'crew-1',
-      challenge_id: 1,
+      family_id: 'crew-1',
+      exercise_id: 1,
       status: 'APPROVED',
     })
 
@@ -216,13 +216,13 @@ describe('ComicReaderPage', () => {
 
     mockedCreativeApiGet.mockResolvedValueOnce({
       id: 1,
-      quest_id: 1,
+      mission_id: 1,
       kind: 'COMIC',
       content: comicContent,
       created_at: '2024-01-01T00:00:00Z',
       author_uid: 'u1',
-      crew_id: 'crew-1',
-      challenge_id: 1,
+      family_id: 'crew-1',
+      exercise_id: 1,
       status: 'APPROVED',
     })
 

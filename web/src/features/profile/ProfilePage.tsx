@@ -28,7 +28,7 @@ export function ProfilePage() {
   const [shopError, setShopError] = useState<string | null>(null)
   const [shopMsg, setShopMsg] = useState<string | null>(null)
 
-  // Relic inventory + gift state
+  // Collection inventory + gift state
   const [inventory, setInventory] = useState<InventoryItem[]>([])
   const [crewMembers, setCrewMembers] = useState<CrewMember[]>([])
   const [giftRelic, setGiftRelic] = useState<InventoryItem | null>(null)
@@ -49,7 +49,7 @@ export function ProfilePage() {
 
   const loadInventory = useCallback(async () => {
     try {
-      const data = await apiClient.get<InventoryItem[]>('/api/relics/inventory')
+      const data = await apiClient.get<InventoryItem[]>('/api/collections/inventory')
       setInventory(data ?? [])
     } catch (e) {
       console.error('failed to load inventory', e)
@@ -134,9 +134,9 @@ export function ProfilePage() {
     setGifting(true)
     setGiftError(null)
     try {
-      await apiClient.post<GiftRelicResult>('/api/relics/gift', {
+      await apiClient.post<GiftRelicResult>('/api/collections/gift', {
         recipient_uid: giftRecipient,
-        relic_slug: giftRelic.relic_slug,
+        collection_slug: giftRelic.collection_slug,
       })
       setGiftRelic(null)
       setGiftRecipient('')
@@ -251,7 +251,7 @@ export function ProfilePage() {
               <p className="text-xs text-text-secondary">Karya Kreatif</p>
             </Link>
             
-            <Link to="/chests" className="flex flex-col items-center justify-center p-6 gap-3 text-center bg-surface-elevated border border-border-subtle rounded-xl hover:border-accent-magic transition-colors">
+            <Link to="/gifts" className="flex flex-col items-center justify-center p-6 gap-3 text-center bg-surface-elevated border border-border-subtle rounded-xl hover:border-accent-magic transition-colors">
               <span className="text-4xl">🎁</span>
               <h3 className="font-bold text-text-primary">Peti Hadiah</h3>
               <p className="text-xs text-text-secondary">Buka Hadiah</p>
@@ -365,9 +365,9 @@ export function ProfilePage() {
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 {inventory.map((item) => (
                   <div
-                    key={item.relic_slug}
+                    key={item.collection_slug}
                     className="flex items-center justify-between gap-3 rounded-lg border border-border-subtle bg-surface p-3"
-                    data-testid={`relic-item-${item.relic_slug}`}
+                    data-testid={`relic-item-${item.collection_slug}`}
                   >
                     <div className="flex items-center gap-3 min-w-0">
                       <span className="text-2xl shrink-0">{item.image}</span>
@@ -388,7 +388,7 @@ export function ProfilePage() {
                           setGiftRecipient('')
                           setGiftError(null)
                         }}
-                        data-testid={`gift-btn-${item.relic_slug}`}
+                        data-testid={`gift-btn-${item.collection_slug}`}
                       >
                         Beri
                       </Button>

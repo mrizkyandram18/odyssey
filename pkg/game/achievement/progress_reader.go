@@ -7,7 +7,7 @@ import (
 )
 
 type progressReader struct {
-	quests   game.QuestStore
+	missions   game.QuestStore
 	realms   game.RealmProgressStore
 	chapters game.ChapterProgressStore
 	users    game.UserStore
@@ -17,7 +17,7 @@ type progressReader struct {
 }
 
 func NewProgressReader(
-	quests game.QuestStore,
+	missions game.QuestStore,
 	realms game.RealmProgressStore,
 	users game.UserStore,
 	relocs game.PlayerRelicStore,
@@ -26,7 +26,7 @@ func NewProgressReader(
 	chapters game.ChapterProgressStore,
 ) ProgressReader {
 	return &progressReader{
-		quests:   quests,
+		missions:   missions,
 		realms:   realms,
 		chapters: chapters,
 		users:    users,
@@ -37,12 +37,12 @@ func NewProgressReader(
 }
 
 func (r *progressReader) CountCompletedQuests(ctx context.Context, crewID string) (int, error) {
-	quests, err := r.quests.ListQuestByCrew(ctx, crewID)
+	missions, err := r.missions.ListQuestByCrew(ctx, crewID)
 	if err != nil {
 		return 0, err
 	}
 	count := 0
-	for _, q := range quests {
+	for _, q := range missions {
 		if q.Status == "DONE" {
 			count++
 		}

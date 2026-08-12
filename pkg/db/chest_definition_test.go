@@ -13,7 +13,7 @@ import (
 func TestChestDefinitionStore_ListChestDefinitions(t *testing.T) {
 	now := time.Date(2026, 8, 3, 12, 0, 0, 0, time.UTC)
 	data, _ := json.Marshal([]ChestDefinition{
-		{ID: 1, Slug: "wooden-chest", Name: "Wooden Chest", Rarity: "COMMON", Icon: "📦", Description: "A chest", CreatedAt: now, UpdatedAt: now},
+		{ID: 1, Slug: "wooden-chest", Name: "Wooden Gift", Rarity: "COMMON", Icon: "📦", Description: "A chest", CreatedAt: now, UpdatedAt: now},
 	})
 	store := NewChestDefinitionStore(&mockSupabaseClient{data: data})
 	defs, err := store.ListChestDefinitions(context.Background())
@@ -28,7 +28,7 @@ func TestChestDefinitionStore_ListChestDefinitions(t *testing.T) {
 func TestChestDefinitionStore_GetChestDefinition(t *testing.T) {
 	now := time.Date(2026, 8, 3, 12, 0, 0, 0, time.UTC)
 	data, _ := json.Marshal([]ChestDefinition{
-		{ID: 1, Slug: "wooden-chest", Name: "Wooden Chest", Rarity: "COMMON", Icon: "📦", Description: "A chest", CreatedAt: now, UpdatedAt: now},
+		{ID: 1, Slug: "wooden-chest", Name: "Wooden Gift", Rarity: "COMMON", Icon: "📦", Description: "A chest", CreatedAt: now, UpdatedAt: now},
 	})
 	store := NewChestDefinitionStore(&mockSupabaseClient{data: data})
 	def, err := store.GetChestDefinition(context.Background(), "wooden-chest")
@@ -51,8 +51,8 @@ func TestChestDefinitionStore_GetChestDefinition_NotFound(t *testing.T) {
 func TestChestDefinitionStore_ListDropTableEntries(t *testing.T) {
 	now := time.Date(2026, 8, 3, 12, 0, 0, 0, time.UTC)
 	data, _ := json.Marshal([]DropTableEntry{
-		{ID: 1, ChestSlug: "wooden-chest", Rarity: "COMMON", Weight: 0.7, CreatedAt: now},
-		{ID: 2, ChestSlug: "wooden-chest", Rarity: "UNCOMMON", Weight: 0.3, CreatedAt: now},
+		{ID: 1, GiftSlug: "wooden-chest", Rarity: "COMMON", Weight: 0.7, CreatedAt: now},
+		{ID: 2, GiftSlug: "wooden-chest", Rarity: "UNCOMMON", Weight: 0.3, CreatedAt: now},
 	})
 	store := NewChestDefinitionStore(&mockSupabaseClient{data: data})
 	entries, err := store.ListDropTableEntries(context.Background(), "wooden-chest")

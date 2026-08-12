@@ -155,7 +155,7 @@ func TestListByPlayer_ShowsProgressAndUnlocked(t *testing.T) {
 	store := newMockAchievementStore()
 	now := time.Now().UTC()
 	store.earned["u1|ACH_QUESTS_10"] = &game.Achievement{
-		UID: "u1", CrewID: "c1", Code: "ACH_QUESTS_10", Kind: "PERSONAL",
+		UID: "u1", FamilyID: "c1", Code: "ACH_QUESTS_10", Kind: "PERSONAL",
 		Trigger: "QUEST_COMPLETED", AwardedAt: now,
 	}
 	rdr := &mockProgressReader{
@@ -478,7 +478,7 @@ func TestQuestCompletedHandler_TriggersEvaluation(t *testing.T) {
 	handler := NewQuestCompletedHandler(svc)
 
 	err := handler.Handle(context.Background(), events.QuestCompletedEvent{
-		CrewID:    "c1",
+		FamilyID:    "c1",
 		PlayerUID: "u1",
 	})
 	if err != nil {
@@ -501,7 +501,7 @@ func TestChapterCompletedHandler_TriggersEvaluation(t *testing.T) {
 	handler := NewChapterCompletedHandler(svc)
 
 	err := handler.Handle(context.Background(), events.ChapterCompletedEvent{
-		CrewID:    "c1",
+		FamilyID:    "c1",
 		PlayerUID: "u1",
 	})
 	if err != nil {
@@ -525,7 +525,7 @@ func TestRelicCollectedHandler_TriggersEvaluation(t *testing.T) {
 
 	err := handler.Handle(context.Background(), events.RelicCollectedEvent{
 		UID:    "u1",
-		CrewID: "c1",
+		FamilyID: "c1",
 	})
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
@@ -548,7 +548,7 @@ func TestLevelReachedHandler_TriggersEvaluation(t *testing.T) {
 
 	err := handler.Handle(context.Background(), events.LevelReachedEvent{
 		UID:      "u1",
-		CrewID:   "c1",
+		FamilyID:   "c1",
 		OldLevel: 2,
 		NewLevel: 3,
 	})
@@ -594,7 +594,7 @@ func TestCreativeSubmissionHandler_TriggersEvaluation(t *testing.T) {
 	handler := NewCreativeSubmissionHandler(svc)
 
 	err := handler.Handle(context.Background(), events.CreativeSubmissionEvent{
-		UID: "u1", CrewID: "c1",
+		UID: "u1", FamilyID: "c1",
 	})
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
@@ -640,7 +640,7 @@ func TestEvaluate_GrantsRewardCosmetic(t *testing.T) {
 		defs: []gamecontent.AchievementDefinition{
 			{
 				Code:             "FIRST_QUEST",
-				Title:            "First Quest",
+				Title:            "First Mission",
 				Description:      "desc",
 				Kind:             "PERSONAL",
 				Trigger:          "QUEST_COMPLETED",

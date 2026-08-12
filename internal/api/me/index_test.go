@@ -57,7 +57,7 @@ func (m *mockProfileStore) UpdateAvatar(ctx context.Context, uid string, style, 
 func makeProfile() *db.UserProfile {
 	return &db.UserProfile{
 		UID:          "user-1",
-		CrewID:       "crew-1",
+		FamilyID:       "crew-1",
 		ExplorerName: "Alice",
 		Role:         "SEEKER",
 		Level:        1,
@@ -69,7 +69,7 @@ func makeUserToken(t *testing.T, issuer *auth.HMACSessionIssuer) string {
 	t.Helper()
 	token, _, err := issuer.IssueSession(auth.SessionKindUser, "user-1", &auth.SessionConfig{
 		Role:   auth.RoleSeeker,
-		CrewID: "crew-1",
+		FamilyID: "crew-1",
 	})
 	if err != nil {
 		t.Fatalf("IssueSession: %v", err)
@@ -120,8 +120,8 @@ func TestMeHandler_Success(t *testing.T) {
 	if profile.UID != "user-1" {
 		t.Errorf("expected UID user-1, got %s", profile.UID)
 	}
-	if profile.CrewID != "crew-1" {
-		t.Errorf("expected CrewID crew-1, got %s", profile.CrewID)
+	if profile.FamilyID != "crew-1" {
+		t.Errorf("expected FamilyID crew-1, got %s", profile.FamilyID)
 	}
 	if profile.ExplorerName != "Alice" {
 		t.Errorf("expected ExplorerName Alice, got %s", profile.ExplorerName)

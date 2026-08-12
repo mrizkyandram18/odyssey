@@ -14,9 +14,9 @@ func TestAdminEndpointsAuth(t *testing.T) {
 
 	newP2Endpoints := []string{
 		"/api/admin/stats",
-		"/api/admin/quests",
+		"/api/admin/missions",
 		"/api/admin/daily-activities",
-		"/api/admin/quests/test/toggle",
+		"/api/admin/missions/test/toggle",
 		"/api/admin/daily-activities/1/toggle",
 	}
 

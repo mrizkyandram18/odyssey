@@ -16,8 +16,8 @@ for it.
 | Area | Concept | Description |
 |---|---|---|
 | **AI Story** | AI Dungeon Master | A generative narrative engine that adapts the story based on the family's choices and submissions. The AI does not decide for the family — it narrates consequences. |
-| **AI Quest** | Quest Generation | Procedurally generate daily turns or short quests tailored to the family's interests and past submissions. Family members review and approve before playing. |
-| **AI Quiz** | Educational Challenges | Generate custom quiz questions (history, science, pop culture) as puzzle challenges. Questions are explainable and verifiable. |
+| **AI Mission** | Mission Generation | Procedurally generate daily turns or short missions tailored to the family's interests and past submissions. Family members review and approve before playing. |
+| **AI Quiz** | Educational Exercises | Generate custom quiz questions (history, science, pop culture) as puzzle exercises. Questions are explainable and verifiable. |
 | **AI Comic** | Illustration Engine | Convert a family's written story submission into a multi-panel comic illustration. The family retains the original text and can edit the AI output. |
 | **AI Judge** | Submission Evaluation | An AI that provides gentle, constructive feedback on creative submissions (e.g., "this story has a strong beginning; consider adding a twist"). Feedback is advisory, never a grade. |
 
@@ -29,8 +29,8 @@ for it.
   the family. The family's human input is the authoritative source.
 - **No AI authentication.** Gatekeeper remains the sole auth path; AI is
   never an identity mechanism.
-- **No AI for progression gating.** AI may suggest quests or generate
-  content, but it never decides whether a player levels up or earns a Relic.
+- **No AI for progression gating.** AI may suggest missions or generate
+  content, but it never decides whether a player levels up or earns a Collection.
   Game rules stay deterministic.
 
 ## MVP Relevance

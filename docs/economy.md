@@ -4,7 +4,7 @@
 
 > **There is no money in Odyssey.**
 
-The Odyssey economy is entirely fictional. Experience (XP), Relics, and Chests
+The Odyssey economy is entirely fictional. Experience (XP), Collections, and Gifts
 are earned through play and spent on game progression. They can never be
 exchanged for real currency, real goods, or any external value. This is a hard
 constraint, not a design choice that can be revisited.
@@ -13,10 +13,10 @@ constraint, not a design choice that can be revisited.
 
 | Resource | Type | Source | Spend On |
 |---|---|---|---|
-| **Experience (XP)** | Soft currency | Completing quests, daily turns, creative contributions | Explorer Level, Crew Level |
-| **Relic** | Collectible | Quest completion, milestones, story fragments | Crew gallery, trading (Phase 2) |
-| **Chest** | Container | Quest completion, Explorer Level-ups | Reveals known Relics / cosmetics |
-| **Story Fragment** | Collectible | Found during quests | Reassembling full stories, unlocking lore |
+| **Experience (XP)** | Soft currency | Completing missions, daily turns, creative contributions | Explorer Level, Family Level |
+| **Collection** | Collectible | Mission completion, milestones, story fragments | Family gallery, trading (Phase 2) |
+| **Gift** | Container | Mission completion, Explorer Level-ups | Reveals known Collections / cosmetics |
+| **Story Fragment** | Collectible | Found during missions | Reassembling full stories, unlocking concept |
 | **Inspiration** | Soft currency | Creative-space contributions, peer reactions | Creative tools, cosmetics |
 
 A **Coin** soft currency is introduced in Phase 2 for family trading and
@@ -32,7 +32,7 @@ There is **no** exchange rate between any resource and real money. There is
 
 | Event | Amount | Ledger source | Notes |
 |---|---:|---|---|
-| Quest completed | **+5** | `QUEST_COMPLETED` | Once per quest instance (`quest_id` in metadata) |
+| Mission completed | **+5** | `QUEST_COMPLETED` | Once per quest instance (`mission_id` in metadata) |
 | Daily turn completed | **+1** | `DAILY_STREAK` | Once per successful daily consume |
 
 ### Spend (Slice 2.2 — one cosmetic)
@@ -55,13 +55,13 @@ Resources are earned through the core loop:
 - **Daily turn completion:** A small, fixed XP reward. Enough to feel
   meaningful but not enough to skip other activities. Also grants **+1 Coin**
   (Slice 2.1).
-- **Quest completion:** XP + a **Chest** (with known contents) scaled by quest
-  difficulty and number of participants. Group quests reward slightly more
+- **Mission completion:** XP + a **Gift** (with known contents) scaled by quest
+  difficulty and number of participants. Group missions reward slightly more
   per person to incentivize cooperation. Also grants **+5 Coins** (Slice 2.1).
 - **Creative contributions:** Inspiration is awarded when a family member
   contributes to a creative space and receives peer reactions.
 - **First Discovery:** The first family member to complete a challenge type or
-  find a hidden element gets a bonus Relic.
+  find a hidden element gets a bonus Collection.
 - **Streak bonus:** Consecutive daily participation yields a modest multiplier
   (capped) on daily-turn XP.
 
@@ -69,7 +69,7 @@ Resources are earned through the core loop:
 
 - **Slice 2.2 Gold Avatar Frame:** costs **3 Coins** once; unlocks a gold
   portrait ring. Idempotent (cannot double-charge).
-- **Chests:** Contain known, fixed contents (Relics, cosmetics, creative
+- **Gifts:** Contain known, fixed contents (Collections, cosmetics, creative
   tool unlocks). Contents are revealed before opening; there is no
   randomization that simulates gambling.
 - **Creative tools:** Basic creative tools are free. Advanced tools (new brush
@@ -93,7 +93,7 @@ Resources are earned through the core loop:
 ## Group vs. Individual Balance
 
 - Individual resources feed Explorer Level and personal cosmetic unlocks.
-- Shared (crew) resources feed realm unlocks and collective story branches.
+- Shared (crew) resources feed journey unlocks and collective story branches.
 - Some creative-space tools are **shared**: once one family member unlocks a
   tool, it is available to all. This reinforces cooperation over competition.
 
@@ -109,7 +109,7 @@ Because the family is a trusted, closed circle:
 
 ## Reward Integration
 
-XP, Relics, and achievements may, at the Odyssey team's discretion, be
+XP, Collections, and achievements may, at the Odyssey team's discretion, be
 surfaced to the **Family Reward** system as signals. Family Reward decides
 independently whether to issue a real reward. See
 [Integrations](integrations.md) and [ADR-004](decisions/ADR-004-reward-integration.md).

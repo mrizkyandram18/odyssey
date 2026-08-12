@@ -9,21 +9,21 @@ import (
 )
 
 type mockPRQuestStore struct {
-	quests []game.Quest
+	missions []game.Mission
 	err    error
 }
 
-func (m *mockPRQuestStore) GetQuest(ctx context.Context, questID int64) (*game.Quest, error) {
+func (m *mockPRQuestStore) GetQuest(ctx context.Context, questID int64) (*game.Mission, error) {
 	return nil, game.ErrNotFound
 }
-func (m *mockPRQuestStore) CreateQuest(ctx context.Context, q *game.Quest) (*game.Quest, error) {
+func (m *mockPRQuestStore) CreateQuest(ctx context.Context, q *game.Mission) (*game.Mission, error) {
 	return q, nil
 }
-func (m *mockPRQuestStore) ListQuestByCrew(ctx context.Context, crewID string) ([]game.Quest, error) {
+func (m *mockPRQuestStore) ListQuestByCrew(ctx context.Context, crewID string) ([]game.Mission, error) {
 	if m.err != nil {
 		return nil, m.err
 	}
-	return m.quests, nil
+	return m.missions, nil
 }
 func (m *mockPRQuestStore) UpdateQuest(ctx context.Context, questID int64, patch map[string]any) error {
 	return nil
@@ -31,10 +31,10 @@ func (m *mockPRQuestStore) UpdateQuest(ctx context.Context, questID int64, patch
 func (m *mockPRQuestStore) UpdateQuestIfMatch(ctx context.Context, questID int64, oldStatus string, patch map[string]any) (bool, error) {
 	return true, nil
 }
-func (m *mockPRQuestStore) GetChallenges(ctx context.Context, questID int64) ([]game.Challenge, error) {
+func (m *mockPRQuestStore) GetChallenges(ctx context.Context, questID int64) ([]game.Exercise, error) {
 	return nil, nil
 }
-func (m *mockPRQuestStore) CreateChallenge(ctx context.Context, c *game.Challenge) (*game.Challenge, error) {
+func (m *mockPRQuestStore) CreateChallenge(ctx context.Context, c *game.Exercise) (*game.Exercise, error) {
 	return c, nil
 }
 func (m *mockPRQuestStore) UpdateChallenge(ctx context.Context, challengeID int64, patch map[string]any) error {
@@ -45,23 +45,23 @@ func (m *mockPRQuestStore) UpdateChallengeIfMatch(ctx context.Context, challenge
 }
 
 type mockPRRealmStore struct {
-	progress []game.RealmProgress
+	progress []game.JourneyProgress
 	err      error
 }
 
-func (m *mockPRRealmStore) GetRealmProgress(ctx context.Context, crewID, realm string) (*game.RealmProgress, error) {
+func (m *mockPRRealmStore) GetRealmProgress(ctx context.Context, crewID, journey string) (*game.JourneyProgress, error) {
 	return nil, game.ErrNotFound
 }
-func (m *mockPRRealmStore) CreateRealmProgress(ctx context.Context, rp *game.RealmProgress) (*game.RealmProgress, error) {
+func (m *mockPRRealmStore) CreateRealmProgress(ctx context.Context, rp *game.JourneyProgress) (*game.JourneyProgress, error) {
 	return rp, nil
 }
-func (m *mockPRRealmStore) UpdateRealmProgress(ctx context.Context, crewID, realm string, patch map[string]any) error {
+func (m *mockPRRealmStore) UpdateRealmProgress(ctx context.Context, crewID, journey string, patch map[string]any) error {
 	return nil
 }
-func (m *mockPRRealmStore) UpdateRealmProgressIfMatch(ctx context.Context, crewID, realm string, oldProgress int, patch map[string]any) (bool, error) {
+func (m *mockPRRealmStore) UpdateRealmProgressIfMatch(ctx context.Context, crewID, journey string, oldProgress int, patch map[string]any) (bool, error) {
 	return true, nil
 }
-func (m *mockPRRealmStore) ListRealmProgressByCrew(ctx context.Context, crewID string) ([]game.RealmProgress, error) {
+func (m *mockPRRealmStore) ListRealmProgressByCrew(ctx context.Context, crewID string) ([]game.JourneyProgress, error) {
 	if m.err != nil {
 		return nil, m.err
 	}
@@ -109,17 +109,17 @@ func (m *mockPRRelicStore) CountUniqueRelics(ctx context.Context, uid string) (i
 }
 
 type mockPRDailyStore struct {
-	turns []game.DailyTurn
+	turns []game.DailyMission
 	err   error
 }
 
-func (m *mockPRDailyStore) CreateDailyTurn(ctx context.Context, dt *game.DailyTurn) (*game.DailyTurn, error) {
+func (m *mockPRDailyStore) CreateDailyTurn(ctx context.Context, dt *game.DailyMission) (*game.DailyMission, error) {
 	return dt, nil
 }
 func (m *mockPRDailyStore) UpdateDailyTurn(ctx context.Context, turnID int64, patch map[string]any) error {
 	return nil
 }
-func (m *mockPRDailyStore) ListDailyTurns(ctx context.Context, uid string) ([]game.DailyTurn, error) {
+func (m *mockPRDailyStore) ListDailyTurns(ctx context.Context, uid string) ([]game.DailyMission, error) {
 	if m.err != nil {
 		return nil, m.err
 	}
@@ -158,10 +158,10 @@ func (m *mockPRCreativeStore) UpdateSubmission(ctx context.Context, submissionID
 
 func TestProgressReader_CountCompletedQuests(t *testing.T) {
 	qs := &mockPRQuestStore{
-		quests: []game.Quest{
-			{CrewID: "c1", Status: "DONE"},
-			{CrewID: "c1", Status: "ACTIVE"},
-			{CrewID: "c1", Status: "DONE"},
+		missions: []game.Mission{
+			{FamilyID: "c1", Status: "DONE"},
+			{FamilyID: "c1", Status: "ACTIVE"},
+			{FamilyID: "c1", Status: "DONE"},
 		},
 	}
 	r := NewProgressReader(qs, nil, nil, nil, nil, nil, nil)
@@ -170,7 +170,7 @@ func TestProgressReader_CountCompletedQuests(t *testing.T) {
 		t.Fatalf("unexpected error: %v", err)
 	}
 	if count != 2 {
-		t.Errorf("expected 2 completed quests, got %d", count)
+		t.Errorf("expected 2 completed missions, got %d", count)
 	}
 }
 
@@ -185,10 +185,10 @@ func TestProgressReader_CountCompletedQuests_Error(t *testing.T) {
 
 func TestProgressReader_CountCompletedRealms(t *testing.T) {
 	rs := &mockPRRealmStore{
-		progress: []game.RealmProgress{
-			{CrewID: "c1", Realm: "r1", Status: "COMPLETE"},
-			{CrewID: "c1", Realm: "r2", Status: "ACTIVE"},
-			{CrewID: "c1", Realm: "r3", Status: "COMPLETE"},
+		progress: []game.JourneyProgress{
+			{FamilyID: "c1", Journey: "r1", Status: "COMPLETE"},
+			{FamilyID: "c1", Journey: "r2", Status: "ACTIVE"},
+			{FamilyID: "c1", Journey: "r3", Status: "COMPLETE"},
 		},
 	}
 	r := NewProgressReader(nil, rs, nil, nil, nil, nil, nil)
@@ -209,13 +209,13 @@ func TestProgressReader_CountCollectedRelics(t *testing.T) {
 		t.Fatalf("unexpected error: %v", err)
 	}
 	if count != 7 {
-		t.Errorf("expected 7 relics, got %d", count)
+		t.Errorf("expected 7 collections, got %d", count)
 	}
 }
 
 func TestProgressReader_CountDailyStreak(t *testing.T) {
 	ds := &mockPRDailyStore{
-		turns: []game.DailyTurn{
+		turns: []game.DailyMission{
 			{Date: "2026-08-03", Completed: true},
 			{Date: "2026-08-02", Completed: true},
 			{Date: "2026-08-01", Completed: false},

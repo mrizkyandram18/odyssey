@@ -8,19 +8,19 @@ Entities are grouped by layer: **Identity**, **Progression**, **Content**,
 ## Entity Map
 
 ```
-Player ──► Crew ──► WorldState ──► Realm ──► Chapter ──► Quest ──► QuestInstance
+Player ──► Family ──► WorldState ──► Journey ──► Course ──► Mission ──► QuestInstance
   │                    │               │         │         │         │
   │                    │               │         │         │         │
-  │              RealmProgress         │         │         │         │
+  │              JourneyProgress         │         │         │         │
   │                    │               │         │         │         │
   └─► ExplorerLevel     │               │         │         │         │
-  └─► Relic ◄───Chest──┘               │         │         │         │
+  └─► Collection ◄───Gift──┘               │         │         │         │
   └─► Achievement                     │         │         │         │
   └─► Story ──► Prompt ──► Submission  │         │         │         │
                                        │         │         │
-                        Challenge ──────► QuestInstance
+                        Exercise ──────► QuestInstance
                              │
-                      Submission (per Challenge)
+                      Submission (per Exercise)
 ```
 
 ---
@@ -35,14 +35,14 @@ Gatekeeper and Family Reward).
 | Field | Type | Notes |
 |---|---|---|
 | `uid` | TEXT (PK) | Shared identity across all three systems |
-| `crew_id` | TEXT | FK → Crew |
+| `family_id` | TEXT | FK → Family |
 | `explorer_name` | TEXT | Chosen display name |
 | `explorer_level` | INTEGER | Starts at 1; derived from `xp` |
 | `xp` | BIGINT | Accumulated experience |
 | `role` | TEXT | `SEEKER` / `BUILDER` / `GUIDE` — narrative framing, **no stat bonuses** |
 | `created_at` / `updated_at` | TIMESTAMPTZ | |
 
-### Crew
+### Family
 
 The family group (~8 players). Progression and unlocks are tracked at the crew
 level.
@@ -62,28 +62,28 @@ level.
 Each player has an **Explorer Level** (not "Avatar Level" — see
 [ADR-001](decisions/ADR-001-project-scope.md)). Leveling is smooth: the XP
 curve is gentle so casual play steadily advances. Each level grants a small
-pool of rewards (Relics, Chests, or Creative-tool unlocks).
+pool of rewards (Collections, Gifts, or Creative-tool unlocks).
 
-There is also a **Crew Level** (see Realm Progress) derived from the sum of
+There is also a **Family Level** (see Journey Progress) derived from the sum of
 quest completions.
 
-### Relic
+### Collection
 
-A collectible item tied to achievement or story completion. Relics are personal
+A collectible item tied to achievement or story completion. Collections are personal
 but displayed on a shared crew gallery. They are **not currency** — they are
 collected, admired, and (Phase 2) traded within the family.
 
-### Chest
+### Gift
 
 A reward container earned through quest completion or Explorer Level-ups.
-MVP Chests have **known, fixed contents** (not randomized in a way that
+MVP Gifts have **known, fixed contents** (not randomized in a way that
 simulates gambling — see Principles P3 in [principles](principles.md)).
 
 | Field | Type | Notes |
 |---|---|---|
 | `id` | TEXT (PK, UUID) | |
 | `uid` | TEXT | FK → Player |
-| `chest_slug` | TEXT | FK → ChestDefinition |
+| `gift_slug` | TEXT | FK → ChestDefinition |
 | `reward_relic` | TEXT | (Phase 3) Explicit mapped relic slug inside the chest |
 
 ### Balance Configuration
@@ -93,11 +93,11 @@ System-wide economy configuration (injected at runtime).
 | Field | Type | Notes |
 |---|---|---|
 | `xp_per_level` | INTEGER | Default 500 (Phase 3 progression pacing) |
-| `max_new_quests_per_day` | INTEGER | Default 1 (Phase 3 quest pacing) |
+| `max_new_missions_per_day` | INTEGER | Default 1 (Phase 3 quest pacing) |
 
 ### Achievement
 
-A milestone (personal or group). Achievements award XP, a Relic, or unlock
+A milestone (personal or group). Achievements award XP, a Collection, or unlock
 content.
 
 | Field | Type | Notes |
@@ -112,31 +112,31 @@ content.
 
 ## Content Layer
 
-### Realm
+### Journey
 
-A themed area of the world. Realms are unlocked sequentially through crew
+A themed area of the world. Journeys are unlocked sequentially through crew
 progress.
 
-### RealmProgress (Community Progress)
+### JourneyProgress (Community Progress)
 
-Shared progress state for a crew within a Realm. Tracks story branch
-selection, unlocked chapters, and realm-specific group milestones.
+Shared progress state for a crew within a Journey. Tracks story branch
+selection, unlocked chapters, and journey-specific group milestones.
 
 | Field | Type | Notes |
 |---|---|---|
-| `crew_id` | TEXT | FK → Crew |
-| `realm` | TEXT | |
+| `family_id` | TEXT | FK → Family |
+| `journey` | TEXT | |
 | `status` | TEXT | `LOCKED` / `ACTIVE` / `COMPLETE` |
 | `story_branch` | TEXT | Which narrative branch was chosen |
 | `unlocked_at` | TIMESTAMPTZ | |
 
-### Chapter
+### Course
 
-A story chapter within a Realm. Chapters contain Quests.
+A story course within a Journey. Courses contain Missions.
 
-### Quest (Template)
+### Mission (Template)
 
-A reusable quest definition: challenges, story beats, and rewards.
+A reusable quest definition: exercises, story beats, and rewards.
 
 | Field | Type | Notes |
 |---|---|---|
@@ -145,20 +145,20 @@ A reusable quest definition: challenges, story beats, and rewards.
 
 ### QuestInstance
 
-A quest taken on by a specific Crew. Tracks status (`PENDING` / `ACTIVE` /
-`DONE`) and completion timestamps. Multiple crews can run the same Quest
+A quest taken on by a specific Family. Tracks status (`PENDING` / `ACTIVE` /
+`DONE`) and completion timestamps. Multiple families can run the same Mission
 template independently.
 
 | Field | Type | Notes |
 |---|---|---|
 | `id` | TEXT (PK, UUID) | |
-| `crew_id` | TEXT | FK → Crew |
-| `quest_slug` | TEXT | FK → QuestDefinition |
+| `family_id` | TEXT | FK → Family |
+| `mission_slug` | TEXT | FK → QuestDefinition |
 | `status` | TEXT | `PENDING` / `ACTIVE` / `DONE` |
 | `started_at` | TIMESTAMPTZ | Time when the quest transitioned to ACTIVE |
 | `started_by` | TEXT | UID of the explorer who started the quest |
 
-### Challenge
+### Exercise
 
 A single task within a QuestInstance. Each challenge has a type
 (`OBSERVATION`, `RESEARCH`, `PUZZLE`, `MOVEMENT`, `DRAW`, `WRITE`) and a
@@ -166,30 +166,30 @@ target state.
 
 ### Submission
 
-A player's response to a Challenge. Content may be text, image, or voice note.
-### StoryFragment
+A player's response to a Exercise. Content may be text, image, or voice note.
+### LearningConcept
 
-A collectible narrative fragment tied to a specific realm. Secret/hidden fragments (`is_hidden = true`) are revealed when returning to complete a **Realm Replay**.
+A collectible narrative fragment tied to a specific journey. Secret/hidden fragments (`is_hidden = true`) are revealed when returning to complete a **Journey Replay**.
 
 | Field | Type | Notes |
 |---|---|---|
 | `slug` | TEXT (PK) | Unique fragment identifier |
-| `realm` | TEXT | FK → Realm |
+| `journey` | TEXT | FK → Journey |
 | `title` | TEXT | Display title |
 | `content` | TEXT | Story text snippet |
 | `set_name` | TEXT | Grouping set name |
-| `is_hidden` | BOOLEAN | `true` if unlocked only via realm replay |
+| `is_hidden` | BOOLEAN | `true` if unlocked only via journey replay |
 
 ### PlayerStoryFragment
 
-Tracks a player's discovery of a specific `StoryFragment`.
+Tracks a player's discovery of a specific `LearningConcept`.
 
 | Field | Type | Notes |
 |---|---|---|
 | `id` | BIGINT (PK) | Auto-increment primary key |
 | `uid` | TEXT | FK → Player |
-| `crew_id` | TEXT | FK → Crew |
-| `fragment_slug` | TEXT | FK → StoryFragment |
+| `family_id` | TEXT | FK → Family |
+| `fragment_slug` | TEXT | FK → LearningConcept |
 | `discovered_at` | TIMESTAMPTZ | Timestamp of discovery |
 
 ---
@@ -198,7 +198,7 @@ Tracks a player's discovery of a specific `StoryFragment`.
 
 ### Story
 
-A player-authored narrative piece produced in response to a **Creative Quest**.
+A player-authored narrative piece produced in response to a **Creative Mission**.
 Story is the umbrella entity; the actual output is a Submission of a specific
 kind (see below).
 
@@ -208,7 +208,7 @@ A creative writing prompt or theme that spawns Story Submissions.
 
 ### Submission Kinds (First-Class Creative Outputs)
 
-Creative Quests accept these submission types as first-class content:
+Creative Missions accept these submission types as first-class content:
 
 | Kind | Description |
 |---|---|
@@ -271,17 +271,17 @@ runtime behavior. Each definition is independent and maps to a database table.
 
 | Definition | DB Table | Description |
 |---|---|---|
-| `RealmDefinition` | `odyssey_realm_definitions` | Themed area of the world |
-| `ChapterDefinition` | `odyssey_chapter_definitions` | Story chapter within a Realm |
+| `RealmDefinition` | `odyssey_journey_definitions` | Themed area of the world |
+| `ChapterDefinition` | `odyssey_course_definitions` | Story course within a Journey |
 | `QuestDefinition` | `odyssey_quest_definitions` | Reusable quest template |
-| `CreativePromptDefinition` | `odyssey_creative_prompt_definitions` | Creative prompt for quests |
-| `ChestDefinition` | `odyssey_chest_definitions` | Chest template (admin-managed) |
-| `DropTableEntry` | `odyssey_drop_tables` | Rarity-weight pairs for chests |
-| `RelicDefinition` | `odyssey_relic_definitions` | Relic template (admin-managed) |
+| `CreativePromptDefinition` | `odyssey_creative_prompt_definitions` | Creative prompt for missions |
+| `ChestDefinition` | `odyssey_chest_definitions` | Gift template (admin-managed) |
+| `DropTableEntry` | `odyssey_drop_tables` | Rarity-weight pairs for gifts |
+| `RelicDefinition` | `odyssey_relic_definitions` | Collection template (admin-managed) |
 | `AchievementDefinition` | `odyssey_achievement_definitions` | Milestone definition |
 | `SeasonDefinition` | `odyssey_season_definitions` | Time-bounded progression arc |
-| `LoreDefinition` | `odyssey_lore_definitions` | Narrative lore entry |
-| `StoryFragment` | `odyssey_story_fragments` | Collectible story fragment definition |
+| `LoreDefinition` | `odyssey_concept_definitions` | Narrative concept entry |
+| `LearningConcept` | `odyssey_story_fragments` | Collectible story fragment definition |
 
 ### Runtime Layer (`pkg/game`, `pkg/content`)
 
@@ -291,10 +291,10 @@ from definitions but carry player-specific state.
 | Runtime Entity | Source | Description |
 |---|---|---|
 | `QuestInstance` | QuestDefinition + crew | A quest taken on by a crew |
-| `QuestCompletion` | QuestInstance + challenges | Result of completing a quest |
+| `QuestCompletion` | QuestInstance + exercises | Result of completing a quest |
 | `PlayerRelic` | RelicDefinition + player | Player's owned relic instance |
 | `PlayerAchievement` | AchievementDefinition + player | Player's earned achievement |
-| `Chest` | ChestDefinition + player | Player's owned chest instance |
+| `Gift` | ChestDefinition + player | Player's owned chest instance |
 
 ### Player Layer (`pkg/game` domain entities)
 
@@ -304,10 +304,10 @@ content definitions.
 | Entity | Table | Description |
 |---|---|---|
 | `Player` | `odyssey_user_profiles` | Individual family member |
-| `Crew` | `odyssey_crews` | Family group |
-| `RealmProgress` | `odyssey_realm_progress` | Crew's progress in a realm |
-| `Relic` | `odyssey_relics` | Awarded relic instance |
-| `Chest` | `odyssey_chests` | Awarded chest instance |
+| `Family` | `odyssey_families` | Family group |
+| `JourneyProgress` | `odyssey_journey_progress` | Family's progress in a journey |
+| `Collection` | `odyssey_collections` | Awarded relic instance |
+| `Gift` | `odyssey_gifts` | Awarded chest instance |
 | `Achievement` | `odyssey_achievements` | Earned achievement |
 | `PlayerStoryFragment` | `odyssey_player_story_fragments` | Player's discovered story fragment |
 
@@ -317,8 +317,8 @@ content definitions.
 
 | Entity | DB Table | Layer |
 |---|---|---|
-| RealmDefinition | `odyssey_realm_definitions` | Definition |
-| ChapterDefinition | `odyssey_chapter_definitions` | Definition |
+| RealmDefinition | `odyssey_journey_definitions` | Definition |
+| ChapterDefinition | `odyssey_course_definitions` | Definition |
 | QuestDefinition | `odyssey_quest_definitions` | Definition |
 | CreativePromptDefinition | `odyssey_creative_prompt_definitions` | Definition |
 | ChestDefinition | `odyssey_chest_definitions` | Definition |
@@ -326,10 +326,10 @@ content definitions.
 | RelicDefinition | `odyssey_relic_definitions` | Definition |
 | AchievementDefinition | `odyssey_achievement_definitions` | Definition |
 | SeasonDefinition | `odyssey_season_definitions` | Definition |
-| LoreDefinition | `odyssey_lore_definitions` | Definition |
-| StoryFragment | `odyssey_story_fragments` | Definition |
-| QuestInstance | `odyssey_quests` | Runtime |
-| PlayerRelic | `odyssey_player_relics` | Player |
+| LoreDefinition | `odyssey_concept_definitions` | Definition |
+| LearningConcept | `odyssey_story_fragments` | Definition |
+| QuestInstance | `odyssey_missions` | Runtime |
+| PlayerRelic | `odyssey_player_collections` | Player |
 | Achievement | `odyssey_achievements` | Player |
-| Chest | `odyssey_chests` | Player |
+| Gift | `odyssey_gifts` | Player |
 | PlayerStoryFragment | `odyssey_player_story_fragments` | Player |

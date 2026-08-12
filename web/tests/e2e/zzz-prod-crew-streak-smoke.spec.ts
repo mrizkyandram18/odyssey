@@ -26,14 +26,14 @@ test.describe('PROD smoke: crew-level streak (Slice 2.8)', () => {
 
     expect(home.status).toBe(200);
 
-    const dt = home.body?.daily_turn as Record<string, unknown> | undefined;
-    expect(dt, 'home daily_turn section must exist').toBeTruthy();
+    const dt = home.body?.daily_mission as Record<string, unknown> | undefined;
+    expect(dt, 'home daily_mission section must exist').toBeTruthy();
     expect(typeof dt?.streak_days).toBe('number');
     expect(typeof dt?.crew_streak, 'crew_streak must be present and numeric').toBe('number');
     expect((dt?.crew_streak as number) >= 0).toBe(true);
 
-    // Sections parity (same value surfaced in sections.daily_turn).
-    const sec = home.body?.sections?.daily_turn as Record<string, unknown> | undefined;
+    // Sections parity (same value surfaced in sections.daily_mission).
+    const sec = home.body?.sections?.daily_mission as Record<string, unknown> | undefined;
     expect(sec?.crew_streak).toBe(dt?.crew_streak);
 
     // UI renders the shared crew streak line on Home.

@@ -21,8 +21,8 @@ export function CreativePage() {
   const [submissions, setSubmissions] = useState<CreativeSubmission[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
-  const [questId, setQuestId] = useState('')
-  const [challengeId, setChallengeId] = useState('')
+  const [missionId, setmissionId] = useState('')
+  const [exerciseId, setexerciseId] = useState('')
   const [kind, setKind] = useState<SubmissionKind>('STORY')
   const [content, setContent] = useState('')
   const [submitting, setSubmitting] = useState(false)
@@ -31,8 +31,8 @@ export function CreativePage() {
     setLoading(true)
     setError(null)
     try {
-      const qid = questId || '1'
-      const data = await apiClient.get<CreativeSubmission[]>(`/api/creative?quest_id=${qid}`)
+      const qid = missionId || '1'
+      const data = await apiClient.get<CreativeSubmission[]>(`/api/creative?mission_id=${qid}`)
       setSubmissions(data)
     } catch (e) {
       setError(e instanceof Error ? e.message : 'gagal memuat kiriman')
@@ -47,8 +47,8 @@ export function CreativePage() {
     setError(null)
     try {
       await apiClient.post('/api/creative', {
-        quest_id: Number(questId) || 1,
-        challenge_id: Number(challengeId) || 1,
+        mission_id: Number(missionId) || 1,
+        exercise_id: Number(exerciseId) || 1,
         kind,
         content,
       })
@@ -78,8 +78,8 @@ export function CreativePage() {
           <label className="text-xs text-muted-foreground">ID Misi</label>
           <input
             type="number"
-            value={questId}
-            onChange={(e) => setQuestId(e.target.value)}
+            value={missionId}
+            onChange={(e) => setmissionId(e.target.value)}
             className="rounded-md border border-border bg-background p-2 text-sm"
             placeholder="1"
             min={1}
@@ -89,8 +89,8 @@ export function CreativePage() {
           <label className="text-xs text-muted-foreground">ID Tantangan</label>
           <input
             type="number"
-            value={challengeId}
-            onChange={(e) => setChallengeId(e.target.value)}
+            value={exerciseId}
+            onChange={(e) => setexerciseId(e.target.value)}
             className="rounded-md border border-border bg-background p-2 text-sm"
             placeholder="1"
             min={1}
@@ -160,7 +160,7 @@ export function CreativePage() {
                 {sub.content}
               </p>
               <p className="mt-1 text-xs text-muted-foreground">
-                Misi #{sub.quest_id} · Tantangan #{sub.challenge_id}
+                Misi #{sub.mission_id} · Tantangan #{sub.exercise_id}
               </p>
             </div>
           ))

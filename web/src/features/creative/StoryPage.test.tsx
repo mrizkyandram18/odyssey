@@ -27,7 +27,7 @@ describe('StoryPage', () => {
   beforeEach(() => {
     vi.resetAllMocks()
     vi.mocked(useSession).mockReturnValue({
-      session: { uid: 'u1', crew_id: 'crew-1' } as any,
+      session: { uid: 'u1', family_id: 'crew-1' } as any,
       loading: false,
       error: null,
       login: vi.fn(),
@@ -57,13 +57,13 @@ describe('StoryPage', () => {
   it('loads and displays a drawing submission', async () => {
     mockedCreativeApiGet.mockResolvedValueOnce({
       id: 1,
-      quest_id: 1,
+      mission_id: 1,
       kind: 'DRAWING',
       content: '<svg xmlns="http://www.w3.org/2000/svg"></svg>',
       created_at: '2024-01-01T00:00:00Z',
       author_uid: 'u1',
-      crew_id: 'crew-1',
-      challenge_id: 1,
+      family_id: 'crew-1',
+      exercise_id: 1,
       status: 'APPROVED',
     })
 
@@ -101,13 +101,13 @@ describe('StoryPage', () => {
   it('renders not-drawing error when submission kind is not DRAWING', async () => {
     mockedCreativeApiGet.mockResolvedValueOnce({
       id: 1,
-      quest_id: 1,
+      mission_id: 1,
       kind: 'COMIC',
       content: '{}',
       created_at: '2024-01-01T00:00:00Z',
       author_uid: 'u1',
-      crew_id: 'crew-1',
-      challenge_id: 1,
+      family_id: 'crew-1',
+      exercise_id: 1,
       status: 'APPROVED',
     })
 

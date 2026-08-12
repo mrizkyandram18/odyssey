@@ -82,7 +82,7 @@ func (o *Observability) Wrap(next http.Handler) http.Handler {
 			o.Logger.LogRequest(LogFields{
 				RequestID: requestID,
 				UserID:    uid,
-				CrewID:    crewID,
+				FamilyID:    crewID,
 				AdminUID:  adminUID,
 				Endpoint:  r.URL.Path,
 				Method:    r.Method,
@@ -108,11 +108,11 @@ func recordBusinessEvents(m *Metrics, r *http.Request, status int) {
 		if is2xx {
 			m.RecordAdminOp()
 		}
-	case strings.HasPrefix(path, "/api/quests"):
+	case strings.HasPrefix(path, "/api/missions"):
 		if method == http.MethodPost && strings.Contains(path, "/complete") && is2xx {
 			m.RecordBusinessEvent("quest_completed")
 		}
-	case strings.HasPrefix(path, "/api/chests"):
+	case strings.HasPrefix(path, "/api/gifts"):
 		if method == http.MethodPost && strings.Contains(path, "/open") && is2xx {
 			m.RecordBusinessEvent("chest_opened")
 		}

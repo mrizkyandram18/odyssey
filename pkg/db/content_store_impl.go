@@ -46,13 +46,13 @@ func NewRealmDefinitionStore(client SupabaseClient) content.RealmDefinitionStore
 }
 
 func (s *supabaseRealmDefinitionStore) ListRealms(ctx context.Context) ([]content.RealmDefinition, error) {
-	raw, err := s.client.Get(ctx, "odyssey_realm_definitions", publishedParams())
+	raw, err := s.client.Get(ctx, "odyssey_journey_definitions", publishedParams())
 	if err != nil {
 		return nil, fmt.Errorf("list realms: %w", err)
 	}
 	var dbDefs []RealmDefinition
 	if err := json.Unmarshal(raw, &dbDefs); err != nil {
-		return nil, fmt.Errorf("parse realm definitions: %w", err)
+		return nil, fmt.Errorf("parse journey definitions: %w", err)
 	}
 	result := make([]content.RealmDefinition, 0, len(dbDefs))
 	for i := range dbDefs {
@@ -66,13 +66,13 @@ func (s *supabaseRealmDefinitionStore) GetRealm(ctx context.Context, slug string
 	v.Set("slug", "eq."+slug)
 	v.Set("published", "eq.true")
 	v.Set("deleted_at", "is.null")
-	raw, err := s.client.Get(ctx, "odyssey_realm_definitions", v.Encode())
+	raw, err := s.client.Get(ctx, "odyssey_journey_definitions", v.Encode())
 	if err != nil {
-		return nil, fmt.Errorf("get realm: %w", err)
+		return nil, fmt.Errorf("get journey: %w", err)
 	}
 	var defs []RealmDefinition
 	if err := json.Unmarshal(raw, &defs); err != nil {
-		return nil, fmt.Errorf("parse realm definition: %w", err)
+		return nil, fmt.Errorf("parse journey definition: %w", err)
 	}
 	if len(defs) == 0 {
 		return nil, nil
@@ -106,21 +106,21 @@ func NewChapterDefinitionStore(client SupabaseClient) content.ChapterDefinitionS
 	return &supabaseChapterDefinitionStore{client: client}
 }
 
-func (s *supabaseChapterDefinitionStore) ListChapters(ctx context.Context, realm string) ([]content.ChapterDefinition, error) {
+func (s *supabaseChapterDefinitionStore) ListChapters(ctx context.Context, journey string) ([]content.ChapterDefinition, error) {
 	v := url.Values{}
-	if realm != "" {
-		v.Set("realm", "eq."+realm)
+	if journey != "" {
+		v.Set("journey", "eq."+journey)
 	}
 	v.Set("order", "order")
 	v.Set("published", "eq.true")
 	v.Set("deleted_at", "is.null")
-	raw, err := s.client.Get(ctx, "odyssey_chapter_definitions", v.Encode())
+	raw, err := s.client.Get(ctx, "odyssey_course_definitions", v.Encode())
 	if err != nil {
 		return nil, fmt.Errorf("list chapters: %w", err)
 	}
 	var dbDefs []ChapterDefinition
 	if err := json.Unmarshal(raw, &dbDefs); err != nil {
-		return nil, fmt.Errorf("parse chapter definitions: %w", err)
+		return nil, fmt.Errorf("parse course definitions: %w", err)
 	}
 	result := make([]content.ChapterDefinition, 0, len(dbDefs))
 	for i := range dbDefs {
@@ -134,13 +134,13 @@ func (s *supabaseChapterDefinitionStore) GetChapter(ctx context.Context, slug st
 	v.Set("slug", "eq."+slug)
 	v.Set("published", "eq.true")
 	v.Set("deleted_at", "is.null")
-	raw, err := s.client.Get(ctx, "odyssey_chapter_definitions", v.Encode())
+	raw, err := s.client.Get(ctx, "odyssey_course_definitions", v.Encode())
 	if err != nil {
-		return nil, fmt.Errorf("get chapter: %w", err)
+		return nil, fmt.Errorf("get course: %w", err)
 	}
 	var defs []ChapterDefinition
 	if err := json.Unmarshal(raw, &defs); err != nil {
-		return nil, fmt.Errorf("parse chapter definition: %w", err)
+		return nil, fmt.Errorf("parse course definition: %w", err)
 	}
 	if len(defs) == 0 {
 		return nil, nil
@@ -156,7 +156,7 @@ func mapChapterDefinition(d ChapterDefinition) *content.ChapterDefinition {
 	return &content.ChapterDefinition{
 		ID:          d.ID,
 		Slug:        d.Slug,
-		Realm:       d.Realm,
+		Journey:       d.Journey,
 		Title:       d.Title,
 		Description: d.Description,
 		Order:       d.Order,
@@ -181,7 +181,7 @@ func NewQuestDefinitionStore(client SupabaseClient) content.QuestDefinitionStore
 func (s *supabaseQuestDefinitionStore) ListQuests(ctx context.Context) ([]content.QuestDefinition, error) {
 	raw, err := s.client.Get(ctx, "odyssey_quest_definitions", publishedParams())
 	if err != nil {
-		return nil, fmt.Errorf("list quests: %w", err)
+		return nil, fmt.Errorf("list missions: %w", err)
 	}
 	var dbDefs []QuestDefinition
 	if err := json.Unmarshal(raw, &dbDefs); err != nil {
@@ -217,15 +217,15 @@ func (s *supabaseQuestDefinitionStore) GetQuest(ctx context.Context, slug string
 	return mapQuestDefinition(defs[0])
 }
 
-func (s *supabaseQuestDefinitionStore) ListQuestsByRealm(ctx context.Context, realm string) ([]content.QuestDefinition, error) {
+func (s *supabaseQuestDefinitionStore) ListQuestsByRealm(ctx context.Context, journey string) ([]content.QuestDefinition, error) {
 	v := url.Values{}
-	v.Set("realm", "eq."+realm)
+	v.Set("journey", "eq."+journey)
 	v.Set("order", "order")
 	v.Set("published", "eq.true")
 	v.Set("deleted_at", "is.null")
 	raw, err := s.client.Get(ctx, "odyssey_quest_definitions", v.Encode())
 	if err != nil {
-		return nil, fmt.Errorf("list quests by realm: %w", err)
+		return nil, fmt.Errorf("list missions by journey: %w", err)
 	}
 	var dbDefs []QuestDefinition
 	if err := json.Unmarshal(raw, &dbDefs); err != nil {
@@ -262,8 +262,8 @@ func mapQuestDefinition(d QuestDefinition) (*content.QuestDefinition, error) {
 	return &content.QuestDefinition{
 		ID:                 d.ID,
 		Slug:               d.Slug,
-		Realm:              d.Realm,
-		Chapter:            d.Chapter,
+		Journey:              d.Journey,
+		Course:            d.Course,
 		Title:              d.Title,
 		Description:        d.Description,
 		QuestType:          d.QuestType,
@@ -331,14 +331,14 @@ func (s *supabaseCreativePromptStore) GetPrompt(ctx context.Context, slug string
 	return mapCreativePromptDefinition(defs[0]), nil
 }
 
-func (s *supabaseCreativePromptStore) ListPromptsByRealm(ctx context.Context, realm string) ([]content.CreativePromptDefinition, error) {
+func (s *supabaseCreativePromptStore) ListPromptsByRealm(ctx context.Context, journey string) ([]content.CreativePromptDefinition, error) {
 	v := url.Values{}
-	v.Set("realm", "eq."+realm)
+	v.Set("journey", "eq."+journey)
 	v.Set("published", "eq.true")
 	v.Set("deleted_at", "is.null")
 	raw, err := s.client.Get(ctx, "odyssey_creative_prompt_definitions", v.Encode())
 	if err != nil {
-		return nil, fmt.Errorf("list prompts by realm: %w", err)
+		return nil, fmt.Errorf("list prompts by journey: %w", err)
 	}
 	var dbDefs []CreativePromptDefinition
 	if err := json.Unmarshal(raw, &dbDefs); err != nil {
@@ -355,7 +355,7 @@ func mapCreativePromptDefinition(d CreativePromptDefinition) *content.CreativePr
 	return &content.CreativePromptDefinition{
 		ID:          d.ID,
 		Slug:        d.Slug,
-		Realm:       d.Realm,
+		Journey:       d.Journey,
 		Title:       d.Title,
 		Description: d.Description,
 		Prompt:      d.Prompt,
@@ -486,7 +486,7 @@ func mapSeasonDefinition(d SeasonDefinition) *content.SeasonDefinition {
 		Description: d.Description,
 		StartAt:     d.StartAt,
 		EndAt:       d.EndAt,
-		Realm:       d.Realm,
+		Journey:       d.Journey,
 		Published:   d.Published,
 		Version:     d.Version,
 		UpdatedBy:   d.UpdatedBy,
@@ -505,13 +505,13 @@ func NewLoreDefinitionStore(client SupabaseClient) content.LoreDefinitionStore {
 }
 
 func (s *supabaseLoreDefinitionStore) ListLore(ctx context.Context) ([]content.LoreDefinition, error) {
-	raw, err := s.client.Get(ctx, "odyssey_lore_definitions", publishedParams())
+	raw, err := s.client.Get(ctx, "odyssey_concept_definitions", publishedParams())
 	if err != nil {
-		return nil, fmt.Errorf("list lore: %w", err)
+		return nil, fmt.Errorf("list concept: %w", err)
 	}
 	var dbDefs []LoreDefinition
 	if err := json.Unmarshal(raw, &dbDefs); err != nil {
-		return nil, fmt.Errorf("parse lore definitions: %w", err)
+		return nil, fmt.Errorf("parse concept definitions: %w", err)
 	}
 	result := make([]content.LoreDefinition, 0, len(dbDefs))
 	for i := range dbDefs {
@@ -525,13 +525,13 @@ func (s *supabaseLoreDefinitionStore) GetLore(ctx context.Context, slug string) 
 	v.Set("slug", "eq."+slug)
 	v.Set("published", "eq.true")
 	v.Set("deleted_at", "is.null")
-	raw, err := s.client.Get(ctx, "odyssey_lore_definitions", v.Encode())
+	raw, err := s.client.Get(ctx, "odyssey_concept_definitions", v.Encode())
 	if err != nil {
-		return nil, fmt.Errorf("get lore: %w", err)
+		return nil, fmt.Errorf("get concept: %w", err)
 	}
 	var defs []LoreDefinition
 	if err := json.Unmarshal(raw, &defs); err != nil {
-		return nil, fmt.Errorf("parse lore definition: %w", err)
+		return nil, fmt.Errorf("parse concept definition: %w", err)
 	}
 	if len(defs) == 0 {
 		return nil, nil
@@ -539,19 +539,19 @@ func (s *supabaseLoreDefinitionStore) GetLore(ctx context.Context, slug string) 
 	return mapLoreDefinition(defs[0]), nil
 }
 
-func (s *supabaseLoreDefinitionStore) ListLoreByRealm(ctx context.Context, realm string) ([]content.LoreDefinition, error) {
+func (s *supabaseLoreDefinitionStore) ListLoreByRealm(ctx context.Context, journey string) ([]content.LoreDefinition, error) {
 	v := url.Values{}
-	v.Set("realm", "eq."+realm)
+	v.Set("journey", "eq."+journey)
 	v.Set("order", "order")
 	v.Set("published", "eq.true")
 	v.Set("deleted_at", "is.null")
-	raw, err := s.client.Get(ctx, "odyssey_lore_definitions", v.Encode())
+	raw, err := s.client.Get(ctx, "odyssey_concept_definitions", v.Encode())
 	if err != nil {
-		return nil, fmt.Errorf("list lore by realm: %w", err)
+		return nil, fmt.Errorf("list concept by journey: %w", err)
 	}
 	var dbDefs []LoreDefinition
 	if err := json.Unmarshal(raw, &dbDefs); err != nil {
-		return nil, fmt.Errorf("parse lore definitions: %w", err)
+		return nil, fmt.Errorf("parse concept definitions: %w", err)
 	}
 	result := make([]content.LoreDefinition, 0, len(dbDefs))
 	for i := range dbDefs {
@@ -564,8 +564,8 @@ func mapLoreDefinition(d LoreDefinition) *content.LoreDefinition {
 	return &content.LoreDefinition{
 		ID:         d.ID,
 		Slug:       d.Slug,
-		Realm:      d.Realm,
-		Chapter:    d.Chapter,
+		Journey:      d.Journey,
+		Course:    d.Course,
 		Title:      d.Title,
 		Content:    d.Content,
 		Order:      d.Order,

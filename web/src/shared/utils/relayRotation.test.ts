@@ -1,10 +1,10 @@
 import { describe, expect, it } from 'vitest'
 import { deriveRelayLegs, memberName } from './relayRotation'
-import type { Challenge, CrewMember } from '../types'
+import type { Exercise, CrewMember } from '../types'
 
-const doneLeg = (id: number, by: string): Challenge => ({
+const doneLeg = (id: number, by: string): Exercise => ({
   id,
-  quest_id: 1,
+  mission_id: 1,
   slug: `leg-${id}`,
   description: `Leg ${id}`,
   status: 'DONE',
@@ -12,9 +12,9 @@ const doneLeg = (id: number, by: string): Challenge => ({
   created_at: '2026-01-01T00:00:00Z',
 })
 
-const pendingLeg = (id: number, assignedTo?: string): Challenge => ({
+const pendingLeg = (id: number, assignedTo?: string): Exercise => ({
   id,
-  quest_id: 1,
+  mission_id: 1,
   slug: `leg-${id}`,
   description: `Leg ${id}`,
   status: 'PENDING',

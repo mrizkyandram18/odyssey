@@ -23,21 +23,21 @@ var (
 // CreativeService handles creative quest submissions.
 type CreativeService struct {
 	submissions game.CreativeSubmissionStore
-	quests      game.QuestStore
+	missions      game.QuestStore
 	publisher   events.Publisher
 }
 
 // NewCreativeService constructs a CreativeService.
-func NewCreativeService(submissions game.CreativeSubmissionStore, quests game.QuestStore) *CreativeService {
-	return &CreativeService{submissions: submissions, quests: quests, publisher: events.NopPublisher{}}
+func NewCreativeService(submissions game.CreativeSubmissionStore, missions game.QuestStore) *CreativeService {
+	return &CreativeService{submissions: submissions, missions: missions, publisher: events.NopPublisher{}}
 }
 
 // NewCreativeServiceWithPublisher constructs a CreativeService with an event publisher.
-func NewCreativeServiceWithPublisher(submissions game.CreativeSubmissionStore, quests game.QuestStore, publisher events.Publisher) *CreativeService {
+func NewCreativeServiceWithPublisher(submissions game.CreativeSubmissionStore, missions game.QuestStore, publisher events.Publisher) *CreativeService {
 	if publisher == nil {
 		publisher = events.NopPublisher{}
 	}
-	return &CreativeService{submissions: submissions, quests: quests, publisher: publisher}
+	return &CreativeService{submissions: submissions, missions: missions, publisher: publisher}
 }
 
 // Submit creates a new creative submission.
@@ -48,7 +48,7 @@ func NewCreativeServiceWithPublisher(submissions game.CreativeSubmissionStore, q
 //   - submission kind must be valid
 //   - content must be non-empty (minimal content)
 func (s *CreativeService) Submit(ctx context.Context, sub *game.Submission) (*game.Submission, error) {
-	q, err := s.quests.GetQuest(ctx, sub.QuestID)
+	q, err := s.missions.GetQuest(ctx, sub.MissionID)
 	if err != nil {
 		if errors.Is(err, game.ErrNotFound) {
 			return nil, ErrQuestNotFound
@@ -60,15 +60,15 @@ func (s *CreativeService) Submit(ctx context.Context, sub *game.Submission) (*ga
 		return nil, ErrQuestNotActive
 	}
 
-	challenges, err := s.quests.GetChallenges(ctx, sub.QuestID)
+	exercises, err := s.missions.GetChallenges(ctx, sub.MissionID)
 	if err != nil {
-		return nil, fmt.Errorf("get challenges: %w", err)
+		return nil, fmt.Errorf("get exercises: %w", err)
 	}
 	found := false
-	for _, c := range challenges {
-		if c.ID == sub.ChallengeID {
+	for _, c := range exercises {
+		if c.ID == sub.ExerciseID {
 			found = true
-			// Only block already-done challenges while the quest is still ACTIVE.
+			// Only block already-done exercises while the quest is still ACTIVE.
 			// After quest completion the UI opens CREATE_MEMORY against the last
 			// challenge, which is already DONE.
 			if q.Status == "ACTIVE" && c.Status == "DONE" {
@@ -107,8 +107,8 @@ func (s *CreativeService) Submit(ctx context.Context, sub *game.Submission) (*ga
 		}
 	}
 
-	// crew_id is NOT NULL on odyssey_creative_submissions; always bind to quest crew.
-	sub.CrewID = q.CrewID
+	// family_id is NOT NULL on odyssey_creative_submissions; always bind to quest crew.
+	sub.FamilyID = q.FamilyID
 	sub.Status = game.SubmissionStatusPending
 	sub.CreatedAt = time.Now().UTC()
 	sub.UpdatedAt = sub.CreatedAt
@@ -120,9 +120,9 @@ func (s *CreativeService) Submit(ctx context.Context, sub *game.Submission) (*ga
 
 	s.publisher.Publish(ctx, events.CreativeSubmissionEvent{
 		UID:         sub.AuthorUID,
-		CrewID:      sub.CrewID,
-		QuestID:     sub.QuestID,
-		ChallengeID: sub.ChallengeID,
+		FamilyID:      sub.FamilyID,
+		MissionID:     sub.MissionID,
+		ExerciseID: sub.ExerciseID,
 		Kind:        string(sub.Kind),
 	})
 

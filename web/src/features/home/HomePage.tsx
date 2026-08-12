@@ -4,7 +4,7 @@ import { motion } from 'framer-motion'
 import { Card } from '../../shared/components/atoms/Card'
 import { Button } from '../../shared/components/atoms/Button'
 import { apiClient, crewsApi } from '../../shared/lib/api'
-import type { HomeResponse, Crew } from '../../shared/types'
+import type { HomeResponse, Family } from '../../shared/types'
 import { OnboardingModal } from './OnboardingModal'
 import { DailyActivitySection } from './DailyActivitySection'
 
@@ -26,7 +26,7 @@ export function HomePage() {
   const [home, setHome] = useState<HomeResponse | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
-  const [crew, setCrew] = useState<Crew | null>(null)
+  const [crew, setCrew] = useState<Family | null>(null)
 
   const loadCrew = useCallback(async () => {
     try {
@@ -95,8 +95,8 @@ export function HomePage() {
       )
     }
 
-    const activeQuests = home.active_quests || []
-    const completedToday = home.completed_quests_today || []
+    const activeMissions = home.active_missions || []
+    const completedToday = home.completed_missions_today || []
 
     return (
       <motion.div
@@ -132,23 +132,23 @@ export function HomePage() {
             <h2 className="font-heading text-lg font-bold text-text-primary uppercase tracking-wide">
               Misi Berikutnya
             </h2>
-            <Button variant="ghost" size="sm" onClick={() => navigate('/quests')}>Lihat Semua</Button>
+            <Button variant="ghost" size="sm" onClick={() => navigate('/missions')}>Lihat Semua</Button>
           </div>
           
-          {activeQuests.length > 0 ? (
+          {activeMissions.length > 0 ? (
             <div className="flex flex-col gap-3">
-              {activeQuests.slice(0, 1).map(quest => (
+              {activeMissions.slice(0, 1).map(Mission => (
                 <Card 
-                  key={quest.id} 
+                  key={Mission.id} 
                   hoverable
                   className="p-0 overflow-hidden flex flex-col"
-                  onClick={() => navigate(`/quests/${quest.id}`)}
+                  onClick={() => navigate(`/missions/${Mission.id}`)}
                 >
                   <div className="p-5 flex justify-between items-center bg-surface-elevated">
                     <div>
-                      <h3 className="font-bold text-text-primary text-xl mb-1">{quest.title}</h3>
+                      <h3 className="font-bold text-text-primary text-xl mb-1">{Mission.title}</h3>
                       <p className="text-sm text-text-secondary">
-                        Misi {quest.id}: Eksplorasi Pengetahuan
+                        Misi {Mission.id}: Eksplorasi Pengetahuan
                       </p>
                     </div>
                   </div>
@@ -161,7 +161,7 @@ export function HomePage() {
           ) : (
             <Card className="p-6 text-center border-dashed bg-surface-elevated">
               <p className="text-text-secondary text-sm">Tidak ada Misi aktif. Pilih materi baru untuk dipelajari!</p>
-              <Button onClick={() => navigate('/quests')} className="mt-4">Pilih Misi</Button>
+              <Button onClick={() => navigate('/missions')} className="mt-4">Pilih Misi</Button>
             </Card>
           )}
         </motion.section>
@@ -199,7 +199,7 @@ export function HomePage() {
             <Card className="p-5 bg-surface-elevated flex flex-col gap-4">
               <div>
                 <h3 className="font-bold text-text-primary">Kelompok Jelajah</h3>
-                <p className="text-xs text-text-secondary">Runtutan: {home.daily_turn?.crew_streak ?? 0} hari belajar bersama</p>
+                <p className="text-xs text-text-secondary">Runtutan: {home.daily_mission?.crew_streak ?? 0} hari belajar bersama</p>
               </div>
               <div className="flex gap-3 overflow-x-auto pb-2">
                  {[1,2,3,4].map((i) => (

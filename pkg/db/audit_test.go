@@ -91,7 +91,7 @@ func TestAuditStore_Write_NilValues(t *testing.T) {
 	store := NewAuditStore(mockClient)
 
 	entry := audit.AuditEntry{
-		Resource:  "quests",
+		Resource:  "missions",
 		Operation: "delete",
 		AdminUID:  "admin1",
 	}
@@ -130,9 +130,9 @@ func TestAuditLogger_LogError(t *testing.T) {
 	store := NewAuditStore(mockClient)
 	logger := audit.NewLogger(store)
 
-	logger.LogError(context.Background(), "quests", "quest1", "update", "admin1", fmt.Errorf("something went wrong"))
+	logger.LogError(context.Background(), "missions", "quest1", "update", "admin1", fmt.Errorf("something went wrong"))
 
-	if mockClient.mutatePayload["resource"] != "quests" {
-		t.Errorf("expected resource=quests, got %v", mockClient.mutatePayload["resource"])
+	if mockClient.mutatePayload["resource"] != "missions" {
+		t.Errorf("expected resource=missions, got %v", mockClient.mutatePayload["resource"])
 	}
 }

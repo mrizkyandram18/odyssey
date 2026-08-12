@@ -25,9 +25,9 @@ func (s *supabaseCreativeSubmissionStore) CreateSubmission(ctx context.Context, 
 	// Omit id so PostgREST assigns the identity column (explicit id=0 creates
 	// invalid zero-id rows and can break subsequent serial inserts).
 	payload := map[string]any{
-		"quest_id":     sub.QuestID,
-		"challenge_id": sub.ChallengeID,
-		"crew_id":      sub.CrewID,
+		"mission_id":     sub.MissionID,
+		"exercise_id": sub.ExerciseID,
+		"family_id":      sub.FamilyID,
 		"author_uid":   sub.AuthorUID,
 		"kind":         string(sub.Kind),
 		"content":      sub.Content,
@@ -50,7 +50,7 @@ func (s *supabaseCreativeSubmissionStore) CreateSubmission(ctx context.Context, 
 
 func (s *supabaseCreativeSubmissionStore) ListByQuest(ctx context.Context, questID int64) ([]game.Submission, error) {
 	v := url.Values{}
-	v.Set("quest_id", "eq."+strconv.FormatInt(questID, 10))
+	v.Set("mission_id", "eq."+strconv.FormatInt(questID, 10))
 	params := v.Encode()
 
 	raw, err := s.client.Get(ctx, "odyssey_creative_submissions", params)
@@ -72,7 +72,7 @@ func (s *supabaseCreativeSubmissionStore) ListByQuest(ctx context.Context, quest
 
 func (s *supabaseCreativeSubmissionStore) ListByCrew(ctx context.Context, crewID string) ([]game.Submission, error) {
 	v := url.Values{}
-	v.Set("crew_id", "eq."+crewID)
+	v.Set("family_id", "eq."+crewID)
 	params := v.Encode()
 
 	raw, err := s.client.Get(ctx, "odyssey_creative_submissions", params)
@@ -94,7 +94,7 @@ func (s *supabaseCreativeSubmissionStore) ListByCrew(ctx context.Context, crewID
 
 func (s *supabaseCreativeSubmissionStore) ListByCrewAndKind(ctx context.Context, crewID, kind string) ([]game.Submission, error) {
 	v := url.Values{}
-	v.Set("crew_id", "eq."+crewID)
+	v.Set("family_id", "eq."+crewID)
 	v.Set("kind", "eq."+kind)
 	params := v.Encode()
 
@@ -156,9 +156,9 @@ func mapCreativeSubmission(sub CreativeSubmission) *game.Submission {
 	}
 	return &game.Submission{
 		ID:              sub.ID,
-		QuestID:         sub.QuestID,
-		ChallengeID:     sub.ChallengeID,
-		CrewID:          sub.CrewID,
+		MissionID:         sub.MissionID,
+		ExerciseID:     sub.ExerciseID,
+		FamilyID:          sub.FamilyID,
 		AuthorUID:       sub.AuthorUID,
 		Kind:            game.SubmissionKind(sub.Kind),
 		Content:         sub.Content,
