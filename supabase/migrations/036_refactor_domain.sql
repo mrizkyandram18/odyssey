@@ -41,7 +41,6 @@ ALTER TABLE odyssey_relic_definitions RENAME COLUMN realm TO journey;
 ALTER TABLE odyssey_relics RENAME COLUMN realm TO journey;
 ALTER TABLE odyssey_lore_unlocks RENAME COLUMN realm TO journey;
 ALTER TABLE odyssey_lore_unlocks RENAME COLUMN chapter TO course;
-ALTER TABLE odyssey_journey_definitions RENAME COLUMN realm TO journey;
 ALTER TABLE odyssey_course_definitions RENAME COLUMN realm TO journey;
 ALTER TABLE odyssey_course_definitions RENAME COLUMN chapter TO course;
 ALTER TABLE odyssey_mission_definitions RENAME COLUMN realm TO journey;
