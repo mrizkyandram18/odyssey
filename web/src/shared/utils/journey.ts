@@ -10,24 +10,24 @@ export interface RealmMetadata {
 
 export const KNOWN_REALMS: RealmMetadata[] = [
   {
-    slug: 'whispering-woods',
-    name: 'Whispering Woods',
-    description: 'Hutan kuno yang dipenuhi bisikan angin dan rahasia alam.',
-    icon: '🌲',
+    slug: 'literasi-keluarga',
+    name: 'Literasi Keluarga',
+    description: 'Membangun kebiasaan baik, komunikasi, dan ikatan dalam keluarga.',
+    icon: '🏡',
     order: 1,
   },
   {
-    slug: 'clockwork-city',
-    name: 'Clockwork City',
-    description: 'Kota mekanis serba roda gigi, uap, dan keajaiban tembaga.',
-    icon: '⚙️',
+    slug: 'literasi-finansial',
+    name: 'Literasi Finansial',
+    description: 'Mengenal konsep dasar keuangan, menabung, dan mengelola pengeluaran.',
+    icon: '💰',
     order: 2,
   },
   {
-    slug: 'starlit-library',
-    name: 'Starlit Library',
-    description: 'Perpustakaan megah di bawah naungan bintang berkerlap-kerlip.',
-    icon: '📚',
+    slug: 'persiapan-karier',
+    name: 'Persiapan Karier',
+    description: 'Menggali minat, bakat, dan keterampilan dasar untuk masa depan.',
+    icon: '🚀',
     order: 3,
   },
 ]
@@ -45,28 +45,22 @@ export function formatRealmName(slug: string): string {
     .replace(/\b\w/g, (char) => char.toUpperCase())
 }
 
-const CLOCKWORK_SLUGS = new Set([
-  'clockwork-intro',
-  'gear-hunt',
-  'the-copper-key',
-  'clockwork-story',
-  'gear-drawing',
-])
-
-const STARLIT_SLUGS = new Set(['star-observation', 'library-concept'])
-
 export function getRealmForMission(Mission: { template_slug: string; journey?: string }): string {
   if (Mission.journey && Mission.journey.trim() !== '') {
     return Mission.journey.toLowerCase().trim()
   }
+  
   const slug = (Mission.template_slug || '').toLowerCase().trim()
-  if (CLOCKWORK_SLUGS.has(slug)) {
-    return 'clockwork-city'
+  
+  if (slug.includes('finansial') || slug.includes('uang') || slug.includes('nabung') || slug.includes('diskon')) {
+    return 'literasi-finansial'
   }
-  if (STARLIT_SLUGS.has(slug)) {
-    return 'starlit-library'
+  
+  if (slug.includes('karier') || slug.includes('pekerjaan') || slug.includes('bisnis') || slug.includes('presentasi')) {
+    return 'persiapan-karier'
   }
-  return 'whispering-woods'
+  
+  return 'literasi-keluarga'
 }
 
 export function isRealmUnlocked(status: string): boolean {

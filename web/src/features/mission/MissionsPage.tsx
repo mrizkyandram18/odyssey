@@ -186,7 +186,7 @@ export function MissionsPage() {
       {/* Topics Grid */}
       <section className="mb-8">
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-          {mergedRealms.filter(t => t.slug !== 'whispering-woods' && t.slug !== 'clockwork-city' && t.slug !== 'starlit-library').map((topic) => (
+          {mergedRealms.map((topic) => (
             <Card
               key={topic.slug}
               className={`p-4 flex flex-col gap-2 border transition-colors cursor-pointer ${
