@@ -7,6 +7,7 @@ import {
   Plus,
   CheckCircle2,
   XCircle,
+  X,
   ExternalLink,
   Copy,
   Trash2,
@@ -370,7 +371,7 @@ export const AdminPage: React.FC = () => {
         )
       default:
         return (
-          <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-surface-base text-text-secondary">
+          <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-surface text-text-secondary">
             {tType}
           </span>
         )
@@ -386,13 +387,13 @@ export const AdminPage: React.FC = () => {
             <span>Panel Operasional Admin</span>
             <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-accent-magic/10 text-accent-magic border border-accent-magic/20">GUIDE</span>
           </h1>
-          <p className="text-xs text-text-secondary mt-0.5">
-            Verifikasi tugas, kelola pencairan, jadwal tugas
-          </p>
         </div>
         <button
+          type="button"
           onClick={fetchData}
           disabled={isFetching}
+          aria-label="Segarkan data admin"
+          aria-busy={isFetching}
           className="self-start sm:self-auto px-3 py-2 rounded-xl bg-surface border border-border-subtle text-text-secondary hover:text-text-primary transition-colors flex items-center gap-2 text-xs font-bold shrink-0"
         >
           <RefreshCw className={`w-3.5 h-3.5 ${isFetching ? 'animate-spin' : ''}`} />
@@ -400,9 +401,34 @@ export const AdminPage: React.FC = () => {
         </button>
       </header>
 
+      {/* Needs Attention — operator's 5-second clarity */}
+      {(submissions.length > 0 || claims.length > 0) && (
+        <div className="p-4 rounded-2xl bg-accent-magic/5 border border-accent-magic/20">
+          <h2 className="text-xs font-bold tracking-wide uppercase text-text-secondary">Butuh Perhatian</h2>
+          <div className="mt-2 flex flex-wrap gap-2">
+            {submissions.length > 0 && (
+              <button onClick={() => setActiveTab('submissions')} className="inline-flex items-center gap-2 px-3 py-2 rounded-xl bg-surface border border-accent-magic/30 text-sm font-bold text-text-primary hover:bg-surface-elevated transition-colors">
+                <span className="w-6 h-6 rounded-full bg-accent-magic text-white flex items-center justify-center text-xs font-bold">{submissions.length}</span>
+                <span>Verifikasi Tugas</span>
+              </button>
+            )}
+            {claims.length > 0 && (
+              <button onClick={() => setActiveTab('claims')} className="inline-flex items-center gap-2 px-3 py-2 rounded-xl bg-surface border border-status-success/30 text-sm font-bold text-text-primary hover:bg-surface-elevated transition-colors">
+                <span className="w-6 h-6 rounded-full bg-status-success text-white flex items-center justify-center text-xs font-bold">{claims.length}</span>
+                <span>Pencairan Koin</span>
+              </button>
+            )}
+            {submissions.length === 0 && claims.length === 0 && (
+              <span className="text-xs text-status-success font-bold flex items-center gap-1"><CheckCircle2 className="w-4 h-4" /> Semua antrean bersih</span>
+            )}
+          </div>
+        </div>
+      )}
+
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
         <button
           onClick={() => setActiveTab('submissions')}
+          aria-current={activeTab === 'submissions' ? 'true' : undefined}
           className={`text-left p-3 rounded-2xl border transition-colors ${
             activeTab === 'submissions'
               ? 'bg-accent-magic/10 border-accent-magic/30'
@@ -421,6 +447,7 @@ export const AdminPage: React.FC = () => {
 
         <button
           onClick={() => setActiveTab('claims')}
+          aria-current={activeTab === 'claims' ? 'true' : undefined}
           className={`text-left p-3 rounded-2xl border transition-colors ${
             activeTab === 'claims'
               ? 'bg-status-success/10 border-status-success/30'
@@ -439,6 +466,7 @@ export const AdminPage: React.FC = () => {
 
         <button
           onClick={() => setActiveTab('tasks')}
+          aria-current={activeTab === 'tasks' ? 'true' : undefined}
           className={`text-left p-3 rounded-2xl border transition-colors ${
             activeTab === 'tasks'
               ? 'bg-accent-cyan/10 border-accent-cyan/30'
@@ -457,6 +485,7 @@ export const AdminPage: React.FC = () => {
 
         <button
           onClick={() => setActiveTab('settings')}
+          aria-current={activeTab === 'settings' ? 'true' : undefined}
           className={`text-left p-3 rounded-2xl border transition-colors ${
             activeTab === 'settings'
               ? 'bg-accent-gold/10 border-accent-gold/30'
@@ -529,30 +558,22 @@ export const AdminPage: React.FC = () => {
       {/* --- TAB 1: VERIFIKASI SUBMISSION --- */}
       {activeTab === 'submissions' && (
         <div className="space-y-4">
-          <div className="flex items-center justify-between">
-            <h3 className="font-heading font-bold text-text-primary text-sm">
-              Antrean Verifikasi Bukti Tugas ({submissions.length})
-            </h3>
-            <span className="text-xs text-text-secondary">
-              Approve untuk otomatis memberikan koin & EXP ke anggota keluarga
-            </span>
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1">
+            <h3 className="font-bold text-text-primary text-sm">Antrean Verifikasi Bukti Tugas ({submissions.length})</h3>
+            <span className="text-xs text-text-secondary">Approve memberi koin & EXP otomatis</span>
           </div>
 
           {submissions.length === 0 ? (
-            <div className="py-16 text-center bg-surface-elevated rounded-3xl border border-border-subtle space-y-2 p-6">
-              <p className="text-3xl">✨</p>
-              <p className="font-heading font-bold text-text-primary text-sm">
-                Tidak Ada Antrean Verifikasi
-              </p>
-              <p className="text-xs text-text-secondary max-w-xs mx-auto">
-                Semua tugas dari anggota keluarga sudah selesai diperiksa.
-              </p>
+            <div className="py-12 text-center bg-surface rounded-2xl border border-border-subtle space-y-2 p-6">
+              <div className="w-10 h-10 mx-auto rounded-xl bg-accent-magic/10 text-accent-magic flex items-center justify-center"><CheckCircle2 className="w-5 h-5" /></div>
+              <p className="font-bold text-text-primary text-sm">Tidak Ada Antrean Verifikasi</p>
+              <p className="text-xs text-text-secondary max-w-xs mx-auto">Semua tugas dari anggota keluarga sudah selesai diperiksa.</p>
             </div>
           ) : (
             submissions.map((sub) => (
               <div
                 key={sub.id}
-                className="p-5 rounded-2xl bg-surface-elevated border border-border-subtle shadow-sm space-y-3.5"
+                className="p-4 rounded-2xl bg-surface border border-border-subtle shadow-sm space-y-3"
               >
                 <div className="flex items-start justify-between gap-2">
                   <div>
@@ -579,7 +600,7 @@ export const AdminPage: React.FC = () => {
                 {/* Proof Media Preview based on Task Type */}
                 {/* 1. PHOTO or IMAGE */}
                 {sub.payload?.file_url && (sub.task_type === 'PHOTO_UPLOAD' || sub.task_type === 'PHOTO_PROOF' || sub.payload.file_url.match(/\.(jpg|jpeg|png|webp)$/i)) && (
-                  <div className="p-3 rounded-xl bg-surface-base border border-border-subtle space-y-2">
+                  <div className="p-3 rounded-xl bg-surface border border-border-subtle space-y-2">
                     <div
                       onClick={() => setPreviewImage(sub.payload.file_url!)}
                       className="relative aspect-video max-h-56 rounded-xl overflow-hidden cursor-pointer bg-black group"
@@ -603,7 +624,7 @@ export const AdminPage: React.FC = () => {
 
                 {/* 2. DOCUMENT */}
                 {sub.payload?.file_url && !(sub.task_type === 'PHOTO_UPLOAD' || sub.task_type === 'PHOTO_PROOF' || sub.payload.file_url.match(/\.(jpg|jpeg|png|webp)$/i)) && (
-                  <div className="p-3 rounded-xl bg-surface-base border border-border-subtle flex items-center justify-between">
+                  <div className="p-3 rounded-xl bg-surface border border-border-subtle flex items-center justify-between">
                     <div className="flex items-center gap-2">
                       <FileText className="w-5 h-5 text-accent-magic" />
                       <div>
@@ -631,7 +652,7 @@ export const AdminPage: React.FC = () => {
 
                 {/* 3. TEXT RESPONSE */}
                 {sub.payload?.text && (
-                  <div className="p-3 rounded-xl bg-surface-base border border-border-subtle space-y-1">
+                  <div className="p-3 rounded-xl bg-surface border border-border-subtle space-y-1">
                     <p className="text-[10px] text-text-secondary uppercase font-bold flex items-center gap-1">
                       <PenLine className="w-3 h-3" />
                       <span>Respon Tertulis:</span>
@@ -644,7 +665,7 @@ export const AdminPage: React.FC = () => {
 
                 {/* 4. MINI GAME STATS */}
                 {sub.payload?.score !== undefined && (
-                  <div className="p-3 rounded-xl bg-surface-base border border-border-subtle flex items-center justify-between text-xs">
+                  <div className="p-3 rounded-xl bg-surface border border-border-subtle flex items-center justify-between text-xs">
                     <span className="font-bold text-text-secondary flex items-center gap-1">
                       <Gamepad2 className="w-4 h-4 text-accent-magic" />
                       <span>Skor Game:</span>
@@ -661,35 +682,42 @@ export const AdminPage: React.FC = () => {
                   </p>
                 )}
 
-                {/* Optional Admin Note Input */}
+                {/* Admin note — associated for rejection context */}
+                <label htmlFor={`note-${sub.id}`} className="text-[11px] font-bold text-text-secondary">Catatan untuk anggota (opsional, wajib jika menolak)</label>
                 <input
+                  id={`note-${sub.id}`}
                   type="text"
-                  placeholder="Catatan untuk pengguna (opsional jika ditolak)..."
+                  placeholder="Contoh: Foto kurang jelas, ulangi dari sudut lain"
                   value={actionNotes[sub.id] || ''}
                   onChange={(e) =>
                     setActionNotes((prev) => ({ ...prev, [sub.id]: e.target.value }))
                   }
-                  className="w-full p-2.5 rounded-xl bg-surface-base border border-border-subtle text-xs text-text-primary placeholder:text-text-secondary/50 focus:outline-none focus:border-accent-magic"
+                  className="w-full p-2.5 rounded-xl bg-surface border border-border-subtle text-xs text-text-primary placeholder:text-text-secondary/50 focus:outline-none focus:border-accent-magic focus:ring-1 focus:ring-accent-magic"
                 />
 
-                {/* Action Buttons */}
+                {/* Action Buttons — Approve primary, Reject secondary */}
                 <div className="flex gap-2 pt-1">
                   <button
+                    type="button"
+                    aria-label={`Tolak verifikasi ${sub.task_title}`}
                     disabled={processingId === sub.id}
                     onClick={() => handleVerifySubmission(sub.id, 'REJECTED')}
-                    className="flex-1 py-2.5 rounded-xl bg-status-error/10 hover:bg-status-error/20 text-status-error font-heading font-bold text-xs flex items-center justify-center gap-1.5 transition-all disabled:opacity-50"
+                    className="flex-1 py-2.5 rounded-xl bg-surface border border-status-error/20 text-status-error hover:bg-status-error/10 font-bold text-xs flex items-center justify-center gap-1.5 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     <XCircle className="w-4 h-4" />
-                    <span>Tolak</span>
+                    <span>{processingId === sub.id ? 'Memproses...' : 'Tolak'}</span>
                   </button>
 
                   <button
+                    type="button"
+                    aria-label={`Setujui ${sub.task_title}`}
                     disabled={processingId === sub.id}
+                    aria-busy={processingId === sub.id}
                     onClick={() => handleVerifySubmission(sub.id, 'APPROVED')}
-                    className="flex-1 py-2.5 rounded-xl bg-status-success hover:brightness-110 text-white font-heading font-bold text-xs flex items-center justify-center gap-1.5 shadow-md shadow-status-success/30 transition-all disabled:opacity-50"
+                    className="flex-1 py-2.5 rounded-xl bg-status-success hover:brightness-110 text-white font-bold text-xs flex items-center justify-center gap-1.5 shadow-sm transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     <CheckCircle2 className="w-4 h-4" />
-                    <span>Approve (+{sub.reward_coins}🪙)</span>
+                    <span>Setujui (+{sub.reward_coins}🪙)</span>
                   </button>
                 </div>
               </div>
@@ -701,28 +729,22 @@ export const AdminPage: React.FC = () => {
       {/* --- TAB 2: PENCAIRAN KOIN & KLAIM --- */}
       {activeTab === 'claims' && (
         <div className="space-y-4">
-          <div className="flex items-center justify-between">
-            <h3 className="font-heading font-bold text-text-primary text-sm">
-              Permintaan Pencairan Koin ({claims.length})
-            </h3>
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1">
+            <h3 className="font-bold text-text-primary text-sm">Permintaan Pencairan Koin ({claims.length})</h3>
             <span className="text-xs text-text-secondary">Transfer / Top-up saldo anggota</span>
           </div>
 
           {claims.length === 0 ? (
-            <div className="py-16 text-center bg-surface-elevated rounded-3xl border border-border-subtle space-y-2 p-6">
-              <p className="text-3xl">☕</p>
-              <p className="font-heading font-bold text-text-primary text-sm">
-                Tidak Ada Klaim Pending
-              </p>
-              <p className="text-xs text-text-secondary max-w-xs mx-auto">
-                Semua pengajuan penukaran koin dari anggota keluarga sudah selesai diproses.
-              </p>
+            <div className="py-12 text-center bg-surface rounded-2xl border border-border-subtle space-y-2 p-6">
+              <div className="w-10 h-10 mx-auto rounded-xl bg-status-success/10 text-status-success flex items-center justify-center"><CheckCircle2 className="w-5 h-5" /></div>
+              <p className="font-bold text-text-primary text-sm">Tidak Ada Klaim Pending</p>
+              <p className="text-xs text-text-secondary max-w-xs mx-auto">Semua pengajuan penukaran koin sudah selesai diproses.</p>
             </div>
           ) : (
             claims.map((claim) => (
               <div
                 key={claim.id}
-                className="p-5 rounded-2xl bg-surface-elevated border border-border-subtle shadow-sm space-y-3.5"
+                className="p-4 rounded-2xl bg-surface border border-border-subtle shadow-sm space-y-3"
               >
                 <div className="flex items-start justify-between">
                   <div>
@@ -755,7 +777,7 @@ export const AdminPage: React.FC = () => {
                 </div>
 
                 {/* Destination info with Copy Button */}
-                <div className="p-3 rounded-xl bg-surface-base border border-border-subtle flex items-center justify-between">
+                <div className="p-3 rounded-xl bg-surface border border-border-subtle flex items-center justify-between">
                   <div>
                     <p className="text-[10px] text-text-secondary uppercase font-bold">
                       Tujuan Penukaran / No. Rekening / No. HP
@@ -776,35 +798,40 @@ export const AdminPage: React.FC = () => {
                   </button>
                 </div>
 
-                {/* Action Notes Input */}
+                <label htmlFor={`claim-note-${claim.id}`} className="text-[11px] font-bold text-text-secondary">Catatan / No. Ref (opsional)</label>
                 <input
+                  id={`claim-note-${claim.id}`}
                   type="text"
-                  placeholder="Catatan / No. Ref Transfer (opsional)..."
+                  placeholder="Contoh: TRF BCA 123456 — 28 Agu 2026"
                   value={actionNotes[claim.id] || ''}
                   onChange={(e) =>
                     setActionNotes((prev) => ({ ...prev, [claim.id]: e.target.value }))
                   }
-                  className="w-full p-2.5 rounded-xl bg-surface-base border border-border-subtle text-xs text-text-primary placeholder:text-text-secondary/50 focus:outline-none focus:border-accent-magic"
+                  className="w-full p-2.5 rounded-xl bg-surface border border-border-subtle text-xs text-text-primary placeholder:text-text-secondary/50 focus:outline-none focus:border-accent-magic focus:ring-1 focus:ring-accent-magic"
                 />
 
-                {/* Action Buttons */}
                 <div className="flex gap-2 pt-1">
                   <button
+                    type="button"
+                    aria-label={`Tolak pencairan ${claim.target_value}`}
                     disabled={processingId === claim.id}
                     onClick={() => handleProcessClaim(claim.id, 'REJECTED')}
-                    className="flex-1 py-2.5 rounded-xl bg-status-error/10 hover:bg-status-error/20 text-status-error font-heading font-bold text-xs flex items-center justify-center gap-1.5 transition-all disabled:opacity-50"
+                    className="flex-1 py-2.5 rounded-xl bg-surface border border-status-error/20 text-status-error hover:bg-status-error/10 font-bold text-xs flex items-center justify-center gap-1.5 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     <XCircle className="w-4 h-4" />
-                    <span>Tolak & Refund Koin</span>
+                    <span>{processingId === claim.id ? 'Memproses...' : 'Tolak & Refund'}</span>
                   </button>
 
                   <button
+                    type="button"
+                    aria-label={`Selesaikan pencairan ${claim.target_value}`}
                     disabled={processingId === claim.id}
+                    aria-busy={processingId === claim.id}
                     onClick={() => handleProcessClaim(claim.id, 'APPROVED')}
-                    className="flex-1 py-2.5 rounded-xl bg-status-success hover:brightness-110 text-white font-heading font-bold text-xs flex items-center justify-center gap-1.5 shadow-md shadow-status-success/30 transition-all disabled:opacity-50"
+                    className="flex-1 py-2.5 rounded-xl bg-status-success hover:brightness-110 text-white font-bold text-xs flex items-center justify-center gap-1.5 shadow-sm transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     <CheckCircle2 className="w-4 h-4" />
-                    <span>Tandai Selesai (Sudah Ditransfer)</span>
+                    <span>Sudah Ditransfer</span>
                   </button>
                 </div>
               </div>
@@ -823,7 +850,8 @@ export const AdminPage: React.FC = () => {
                 type="date"
                 value={selectedDate}
                 onChange={(e) => setSelectedDate(e.target.value)}
-                className="p-2 rounded-xl bg-surface-elevated border border-border-subtle text-xs font-bold text-text-primary focus:outline-none focus:border-accent-magic"
+                aria-label="Pilih tanggal tugas"
+                className="p-2 rounded-xl bg-surface border border-border-subtle text-xs font-bold text-text-primary focus:outline-none focus:border-accent-magic"
               />
             </div>
             <button
@@ -839,20 +867,16 @@ export const AdminPage: React.FC = () => {
           </div>
 
           {tasks.length === 0 ? (
-            <div className="py-16 text-center bg-surface-elevated rounded-3xl border border-border-subtle space-y-2 p-6">
-              <p className="text-3xl">📝</p>
-              <p className="font-heading font-bold text-text-primary text-sm">
-                Belum Ada Tugas pada Tanggal Ini
-              </p>
-              <p className="text-xs text-text-secondary max-w-xs mx-auto">
-                Klik tombol &quot;Tambah Tugas&quot; di atas untuk membuat urutan tugas (Video, Kuis, Foto, Dokumen, Teks, Game) untuk keluarga.
-              </p>
+            <div className="py-12 text-center bg-surface rounded-2xl border border-border-subtle space-y-2 p-6">
+              <div className="w-10 h-10 mx-auto rounded-xl bg-accent-cyan/10 text-accent-cyan flex items-center justify-center"><FileText className="w-5 h-5" /></div>
+              <p className="font-bold text-text-primary text-sm">Belum Ada Tugas pada Tanggal Ini</p>
+              <p className="text-xs text-text-secondary max-w-xs mx-auto">Klik &quot;Tambah Tugas&quot; untuk membuat urutan tugas keluarga.</p>
             </div>
           ) : (
             tasks.map((task) => (
               <div
                 key={task.id}
-                className="p-4 rounded-2xl bg-surface-elevated border border-border-subtle shadow-sm flex items-center justify-between gap-3"
+                className="p-3 rounded-2xl bg-surface border border-border-subtle shadow-sm flex items-center justify-between gap-3"
               >
                 <div className="flex items-center gap-3">
                   <div className="w-10 h-10 rounded-full bg-accent-magic/15 text-accent-magic flex items-center justify-center font-bold text-sm shrink-0">
@@ -878,9 +902,11 @@ export const AdminPage: React.FC = () => {
                 </div>
 
                 <button
+                  type="button"
                   onClick={() => handleDeleteTask(task.id)}
-                  className="p-2 rounded-xl bg-surface-base text-status-error/70 hover:text-status-error hover:bg-status-error/10 active:scale-95 transition-all"
-                  title="Hapus Tugas"
+                  aria-label={`Hapus tugas ${task.title}`}
+                  title="Hapus Tugas — tindakan tidak dapat dibatalkan"
+                  className="p-2 rounded-xl bg-surface border border-border-subtle text-status-error/70 hover:text-status-error hover:bg-status-error/10 hover:border-status-error/20 active:scale-95 transition-all"
                 >
                   <Trash2 className="w-4 h-4" />
                 </button>
@@ -892,8 +918,8 @@ export const AdminPage: React.FC = () => {
 
       {/* --- TAB 4: PENGATURAN PERIODE PENUKARAN --- */}
       {activeTab === 'settings' && (
-        <div className="space-y-5">
-          <div className="p-6 rounded-3xl bg-surface-elevated border border-border-subtle shadow-sm space-y-5">
+        <div className="space-y-4">
+          <div className="p-5 rounded-2xl bg-surface border border-border-subtle shadow-sm space-y-4">
             <div className="flex items-start justify-between gap-3">
               <div>
                 <h3 className="font-heading font-bold text-text-primary text-base flex items-center gap-2">
@@ -910,7 +936,7 @@ export const AdminPage: React.FC = () => {
                   className={`text-xs font-bold px-3 py-1 rounded-full shrink-0 ${
                     config.is_open
                       ? 'bg-status-success/20 text-status-success'
-                      : 'bg-surface-base text-text-secondary border border-border-subtle'
+                      : 'bg-surface text-text-secondary border border-border-subtle'
                   }`}
                 >
                   {config.is_open ? '● Sedang Dibuka' : '○ Sedang Ditutup'}
@@ -931,7 +957,7 @@ export const AdminPage: React.FC = () => {
                     required
                     value={startDayInput}
                     onChange={(e) => setStartDayInput(Number(e.target.value))}
-                    className="w-full p-3 rounded-xl bg-surface-base border border-border-subtle text-sm font-bold text-text-primary focus:outline-none focus:border-accent-magic font-mono"
+                    className="w-full p-3 rounded-xl bg-surface border border-border-subtle text-sm font-bold text-text-primary focus:outline-none focus:border-accent-magic font-mono"
                   />
                   <p className="text-[11px] text-text-secondary">
                     Contoh: <strong>21</strong> (periode dibuka mulai tanggal 21)
@@ -949,7 +975,7 @@ export const AdminPage: React.FC = () => {
                     required
                     value={endDayInput}
                     onChange={(e) => setEndDayInput(Number(e.target.value))}
-                    className="w-full p-3 rounded-xl bg-surface-base border border-border-subtle text-sm font-bold text-text-primary focus:outline-none focus:border-accent-magic font-mono"
+                    className="w-full p-3 rounded-xl bg-surface border border-border-subtle text-sm font-bold text-text-primary focus:outline-none focus:border-accent-magic font-mono"
                   />
                   <p className="text-[11px] text-text-secondary">
                     Contoh: <strong>26</strong> (periode ditutup setelah tanggal 26)
@@ -957,17 +983,9 @@ export const AdminPage: React.FC = () => {
                 </div>
               </div>
 
-              {/* Live Preview Card */}
-              <div className="p-4 rounded-2xl bg-surface-base border border-border-subtle flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs">
-                <div>
-                  <span className="text-text-secondary font-medium">Pratinjau Periode Aktif:</span>
-                  <p className="font-bold text-text-primary mt-0.5">
-                    Tanggal {startDayInput} s/d {endDayInput} setiap bulan
-                  </p>
-                </div>
-                <div className="text-[11px] text-text-secondary">
-                  Zona Waktu: <strong>{config?.timezone || 'Asia/Jakarta'}</strong>
-                </div>
+              <div className="p-3 rounded-xl bg-surface border border-border-subtle text-xs">
+                <span className="text-text-secondary font-medium">Pratinjau:</span>
+                <span className="font-bold text-text-primary ml-1">Tanggal {startDayInput} s/d {endDayInput} tiap bulan</span>
               </div>
 
               {configErrorMsg && (
@@ -1005,107 +1023,127 @@ export const AdminPage: React.FC = () => {
 
       {/* --- MODAL: CONFIGURABLE TASK BUILDER --- */}
       {isCreateTaskModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fadeIn">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
           <motion.div
-            initial={{ scale: 0.95, opacity: 0 }}
+            initial={{ scale: 0.96, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
-            className="w-full max-w-lg bg-surface-elevated border border-border-subtle rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh]"
+            className="w-full max-w-lg bg-surface border border-border-subtle rounded-2xl shadow-xl overflow-hidden flex flex-col max-h-[90vh]"
           >
-            <div className="flex items-center justify-between px-6 py-4 border-b border-border-subtle bg-surface-base">
-              <h3 className="font-heading font-bold text-text-primary text-base">
-                Task Builder: Buat Tugas Baru
-              </h3>
+            <div className="flex items-center justify-between px-5 py-4 border-b border-border-subtle bg-surface">
+              <div>
+                <h3 className="font-bold text-text-primary text-sm">Buat Tugas Baru</h3>
+                <p className="text-xs text-text-secondary">Isi informasi dasar, pilih tipe, lalu atur konfigurasi.</p>
+              </div>
               <button
+                type="button"
                 onClick={() => setIsCreateTaskModalOpen(false)}
-                className="w-8 h-8 rounded-full bg-surface-elevated text-text-secondary hover:text-text-primary flex items-center justify-center"
+                aria-label="Tutup"
+                className="w-8 h-8 rounded-full bg-surface-elevated border border-border-subtle text-text-secondary hover:text-text-primary flex items-center justify-center transition-colors"
               >
-                ✕
+                <X className="w-4 h-4" />
               </button>
             </div>
 
-            <form onSubmit={handleCreateTask} className="p-6 space-y-4 overflow-y-auto">
-              <div className="space-y-1">
-                <label className="text-xs font-bold text-text-secondary">Judul Tugas:</label>
-                <input
-                  type="text"
-                  required
-                  value={newTask.title}
-                  onChange={(e) => setNewTask({ ...newTask, title: e.target.value })}
-                  placeholder="Contoh: Merapikan Meja Belajar & Kamar"
-                  className="w-full p-3 rounded-xl bg-surface-base border border-border-subtle text-sm text-text-primary focus:outline-none focus:border-accent-magic"
-                />
-              </div>
-
-              <div className="space-y-1">
-                <label className="text-xs font-bold text-text-secondary">Deskripsi / Petunjuk Singkat:</label>
-                <textarea
-                  rows={2}
-                  value={newTask.description}
-                  onChange={(e) => setNewTask({ ...newTask, description: e.target.value })}
-                  placeholder="Jelaskan apa yang harus dilakukan oleh anggota keluarga..."
-                  className="w-full p-3 rounded-xl bg-surface-base border border-border-subtle text-sm text-text-primary focus:outline-none focus:border-accent-magic resize-none"
-                />
-              </div>
-
-              <div className="grid grid-cols-2 gap-3">
+            <form onSubmit={handleCreateTask} className="p-5 space-y-5 overflow-y-auto">
+              {/* 1 — Informasi Dasar */}
+              <div className="space-y-3">
+                <h4 className="text-xs font-bold tracking-wide uppercase text-text-secondary">1 — Informasi Dasar</h4>
                 <div className="space-y-1">
-                  <label className="text-xs font-bold text-text-secondary">Tipe Tugas:</label>
-                  <select
-                    value={newTask.task_type}
-                    onChange={(e) => setNewTask({ ...newTask, task_type: e.target.value as TaskType })}
-                    className="w-full p-3 rounded-xl bg-surface-base border border-border-subtle text-sm text-text-primary focus:outline-none focus:border-accent-magic font-bold"
-                  >
-                    <option value="VIDEO">🎥 Video YouTube</option>
-                    <option value="QUIZ">🧠 Kuis Pilihan Ganda</option>
-                    <option value="PHOTO_UPLOAD">📸 Upload Foto Bukti</option>
-                    <option value="DOCUMENT_UPLOAD">📄 Upload Dokumen (Excel/Word/PDF)</option>
-                    <option value="TEXT_RESPONSE">✍️ Respon Teks / Esai</option>
-                    <option value="MINI_GAME">🎮 Mini Game Memori</option>
-                  </select>
+                  <label htmlFor="task-title" className="text-xs font-bold text-text-secondary">Judul Tugas <span className="text-status-error">*</span></label>
+                  <input
+                    id="task-title"
+                    type="text"
+                    required
+                    value={newTask.title}
+                    onChange={(e) => setNewTask({ ...newTask, title: e.target.value })}
+                    placeholder="Contoh: Merapikan Meja Belajar & Kamar"
+                    className="w-full p-3 rounded-xl bg-surface border border-border-subtle text-sm text-text-primary focus:outline-none focus:border-accent-magic focus:ring-1 focus:ring-accent-magic"
+                  />
                 </div>
 
                 <div className="space-y-1">
-                  <label className="text-xs font-bold text-text-secondary">Urutan Step (1, 2..):</label>
-                  <input
-                    type="number"
-                    min={1}
-                    value={newTask.step_order}
-                    onChange={(e) => setNewTask({ ...newTask, step_order: Number(e.target.value) })}
-                    className="w-full p-3 rounded-xl bg-surface-base border border-border-subtle text-sm text-text-primary focus:outline-none focus:border-accent-magic"
+                  <label htmlFor="task-desc" className="text-xs font-bold text-text-secondary">Deskripsi / Petunjuk</label>
+                  <textarea
+                    id="task-desc"
+                    rows={2}
+                    value={newTask.description}
+                    onChange={(e) => setNewTask({ ...newTask, description: e.target.value })}
+                    placeholder="Jelaskan apa yang harus dilakukan oleh anggota keluarga..."
+                    className="w-full p-3 rounded-xl bg-surface border border-border-subtle text-sm text-text-primary focus:outline-none focus:border-accent-magic focus:ring-1 focus:ring-accent-magic resize-none"
                   />
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
-                <div className="space-y-1">
-                  <label className="text-xs font-bold text-text-secondary">Hadiah Koin (🪙):</label>
-                  <input
-                    type="number"
-                    min={1}
-                    value={newTask.reward_coins}
-                    onChange={(e) => setNewTask({ ...newTask, reward_coins: Number(e.target.value) })}
-                    className="w-full p-3 rounded-xl bg-surface-base border border-border-subtle text-sm text-text-primary focus:outline-none focus:border-accent-magic"
-                  />
-                </div>
-                <div className="space-y-1">
-                  <label className="text-xs font-bold text-text-secondary">Hadiah EXP:</label>
-                  <input
-                    type="number"
-                    min={1}
-                    value={newTask.reward_xp}
-                    onChange={(e) => setNewTask({ ...newTask, reward_xp: Number(e.target.value) })}
-                    className="w-full p-3 rounded-xl bg-surface-base border border-border-subtle text-sm text-text-primary focus:outline-none focus:border-accent-magic"
-                  />
+              {/* 2 — Tipe & Urutan */}
+              <div className="space-y-3">
+                <h4 className="text-xs font-bold tracking-wide uppercase text-text-secondary">2 — Tipe & Urutan</h4>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div className="space-y-1">
+                    <label htmlFor="task-type" className="text-xs font-bold text-text-secondary">Tipe Tugas</label>
+                    <select
+                      id="task-type"
+                      value={newTask.task_type}
+                      onChange={(e) => setNewTask({ ...newTask, task_type: e.target.value as TaskType })}
+                      className="w-full p-3 rounded-xl bg-surface border border-border-subtle text-sm text-text-primary focus:outline-none focus:border-accent-magic font-bold"
+                    >
+                      <option value="VIDEO">🎥 Video YouTube</option>
+                      <option value="QUIZ">🧠 Kuis Pilihan Ganda</option>
+                      <option value="PHOTO_UPLOAD">📸 Upload Foto Bukti</option>
+                      <option value="DOCUMENT_UPLOAD">📄 Upload Dokumen (Excel/Word/PDF)</option>
+                      <option value="TEXT_RESPONSE">✍️ Respon Teks / Esai</option>
+                      <option value="MINI_GAME">🎮 Mini Game Memori</option>
+                    </select>
+                  </div>
+
+                  <div className="space-y-1">
+                    <label htmlFor="task-step" className="text-xs font-bold text-text-secondary">Urutan Step (1, 2..)</label>
+                    <input
+                      id="task-step"
+                      type="number"
+                      min={1}
+                      value={newTask.step_order}
+                      onChange={(e) => setNewTask({ ...newTask, step_order: Number(e.target.value) })}
+                      className="w-full p-3 rounded-xl bg-surface border border-border-subtle text-sm text-text-primary focus:outline-none focus:border-accent-magic focus:ring-1 focus:ring-accent-magic"
+                    />
+                  </div>
                 </div>
               </div>
 
-              {/* Dynamic Task-Type Configuration Sections */}
-              {/* 1. VIDEO CONFIG */}
+              {/* 3 — Hadiah */}
+              <div className="space-y-3">
+                <h4 className="text-xs font-bold tracking-wide uppercase text-text-secondary">3 — Hadiah</h4>
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-1">
+                    <label htmlFor="task-coins" className="text-xs font-bold text-text-secondary">Koin (🪙)</label>
+                    <input
+                      id="task-coins"
+                      type="number"
+                      min={1}
+                      value={newTask.reward_coins}
+                      onChange={(e) => setNewTask({ ...newTask, reward_coins: Number(e.target.value) })}
+                      className="w-full p-3 rounded-xl bg-surface border border-border-subtle text-sm text-text-primary focus:outline-none focus:border-accent-magic focus:ring-1 focus:ring-accent-magic"
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <label htmlFor="task-xp" className="text-xs font-bold text-text-secondary">EXP</label>
+                    <input
+                      id="task-xp"
+                      type="number"
+                      min={1}
+                      value={newTask.reward_xp}
+                      onChange={(e) => setNewTask({ ...newTask, reward_xp: Number(e.target.value) })}
+                      className="w-full p-3 rounded-xl bg-surface border border-border-subtle text-sm text-text-primary focus:outline-none focus:border-accent-magic focus:ring-1 focus:ring-accent-magic"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* 4 — Konfigurasi spesifik tipe (progressive disclosure) */}
+              {/* VIDEO */}
               {(newTask.task_type === 'VIDEO' || newTask.task_type === 'YOUTUBE_VIDEO') && (
-                <div className="p-4 rounded-2xl bg-surface-base border border-border-subtle space-y-3">
-                  <h4 className="text-xs font-heading font-bold text-accent-magic flex items-center gap-1.5">
-                    <Play className="w-3.5 h-3.5" />
-                    <span>Pengaturan Video</span>
+                <div className="p-4 rounded-2xl bg-surface border border-border-subtle space-y-3">
+                  <h4 className="text-xs font-bold tracking-wide uppercase text-text-secondary flex items-center gap-1.5">
+                    <Play className="w-3.5 h-3.5 text-accent-magic" /> 4 — Video YouTube
                   </h4>
                   <div className="space-y-1">
                     <label className="text-[11px] text-text-secondary">Link YouTube:</label>
@@ -1121,12 +1159,11 @@ export const AdminPage: React.FC = () => {
                 </div>
               )}
 
-              {/* 2. QUIZ CONFIG */}
+              {/* KUIS */}
               {(newTask.task_type === 'QUIZ' || newTask.task_type === 'VIDEO_QUIZ') && (
-                <div className="p-4 rounded-2xl bg-surface-base border border-border-subtle space-y-3">
-                  <h4 className="text-xs font-heading font-bold text-accent-magic flex items-center gap-1.5">
-                    <HelpCircle className="w-3.5 h-3.5" />
-                    <span>Pengaturan Soal Kuis</span>
+                <div className="p-4 rounded-2xl bg-surface border border-border-subtle space-y-3">
+                  <h4 className="text-xs font-bold tracking-wide uppercase text-text-secondary flex items-center gap-1.5">
+                    <HelpCircle className="w-3.5 h-3.5 text-accent-magic" /> 4 — Soal Kuis
                   </h4>
                   <div className="space-y-1">
                     <label className="text-[11px] text-text-secondary">Link YouTube (Opsional):</label>
@@ -1202,10 +1239,9 @@ export const AdminPage: React.FC = () => {
 
               {/* 3. PHOTO UPLOAD CONFIG */}
               {(newTask.task_type === 'PHOTO_UPLOAD' || newTask.task_type === 'PHOTO_PROOF') && (
-                <div className="p-4 rounded-2xl bg-surface-base border border-border-subtle space-y-3">
-                  <h4 className="text-xs font-heading font-bold text-accent-cyan flex items-center gap-1.5">
-                    <Camera className="w-3.5 h-3.5" />
-                    <span>Pengaturan Foto Bukti</span>
+                <div className="p-4 rounded-2xl bg-surface border border-border-subtle space-y-3">
+                  <h4 className="text-xs font-bold tracking-wide uppercase text-text-secondary flex items-center gap-1.5">
+                    <Camera className="w-3.5 h-3.5 text-accent-cyan" /> 4 — Foto Bukti
                   </h4>
                   <div className="space-y-1">
                     <label className="text-[11px] text-text-secondary">Instruksi Pengambilan Foto:</label>
@@ -1222,10 +1258,9 @@ export const AdminPage: React.FC = () => {
 
               {/* 4. DOCUMENT UPLOAD CONFIG */}
               {newTask.task_type === 'DOCUMENT_UPLOAD' && (
-                <div className="p-4 rounded-2xl bg-surface-base border border-border-subtle space-y-3">
-                  <h4 className="text-xs font-heading font-bold text-accent-gold flex items-center gap-1.5">
-                    <FileText className="w-3.5 h-3.5" />
-                    <span>Pengaturan Dokumen & Template</span>
+                <div className="p-4 rounded-2xl bg-surface border border-border-subtle space-y-3">
+                  <h4 className="text-xs font-bold tracking-wide uppercase text-text-secondary flex items-center gap-1.5">
+                    <FileText className="w-3.5 h-3.5 text-accent-gold" /> 4 — Dokumen & Template
                   </h4>
                   <div className="space-y-1">
                     <label className="text-[11px] text-text-secondary">Link File Template / Attachment (Opsional):</label>
@@ -1262,10 +1297,9 @@ export const AdminPage: React.FC = () => {
 
               {/* 5. TEXT RESPONSE CONFIG */}
               {newTask.task_type === 'TEXT_RESPONSE' && (
-                <div className="p-4 rounded-2xl bg-surface-base border border-border-subtle space-y-3">
-                  <h4 className="text-xs font-heading font-bold text-accent-magic flex items-center gap-1.5">
-                    <PenLine className="w-3.5 h-3.5" />
-                    <span>Pengaturan Respon Teks</span>
+                <div className="p-4 rounded-2xl bg-surface border border-border-subtle space-y-3">
+                  <h4 className="text-xs font-bold tracking-wide uppercase text-text-secondary flex items-center gap-1.5">
+                    <PenLine className="w-3.5 h-3.5 text-accent-magic" /> 4 — Respon Teks
                   </h4>
                   <div className="space-y-1">
                     <label className="text-[11px] text-text-secondary">Pertanyaan / Topik Respon:</label>
@@ -1305,10 +1339,9 @@ export const AdminPage: React.FC = () => {
 
               {/* 6. MINI GAME CONFIG */}
               {newTask.task_type === 'MINI_GAME' && (
-                <div className="p-4 rounded-2xl bg-surface-base border border-border-subtle space-y-3">
-                  <h4 className="text-xs font-heading font-bold text-status-success flex items-center gap-1.5">
-                    <Gamepad2 className="w-3.5 h-3.5" />
-                    <span>Pengaturan Mini Game</span>
+                <div className="p-4 rounded-2xl bg-surface border border-border-subtle space-y-3">
+                  <h4 className="text-xs font-bold tracking-wide uppercase text-text-secondary flex items-center gap-1.5">
+                    <Gamepad2 className="w-3.5 h-3.5 text-status-success" /> 4 — Mini Game
                   </h4>
                   <div className="grid grid-cols-2 gap-2">
                     <div className="space-y-1">
@@ -1338,34 +1371,43 @@ export const AdminPage: React.FC = () => {
                 </div>
               )}
 
-              <button
-                type="submit"
-                className="w-full py-4 rounded-2xl bg-accent-magic text-white font-heading font-bold shadow-lg shadow-accent-magic/30 hover:brightness-110 active:scale-[0.98] transition-all"
-              >
-                Simpan & Terbitkan Tugas
-              </button>
+              <div className="sticky bottom-0 -mx-5 -mb-5 mt-2 px-5 py-4 border-t border-border-subtle bg-surface flex gap-3">
+                <button
+                  type="button"
+                  onClick={() => setIsCreateTaskModalOpen(false)}
+                  className="flex-1 py-3 rounded-xl bg-surface-elevated border border-border-subtle text-text-primary font-bold text-sm hover:bg-surface transition-colors"
+                >
+                  Batalkan
+                </button>
+                <button
+                  type="submit"
+                  className="flex-1 py-3 rounded-xl bg-accent-magic text-white font-bold text-sm shadow-sm hover:brightness-110 transition-all"
+                >
+                  Simpan & Terbitkan
+                </button>
+              </div>
             </form>
           </motion.div>
         </div>
       )}
 
-      {/* --- MODAL: PREVIEW FOTO FULL RESOLUTION --- */}
+      {/* Preview foto — consistent rounded-2xl + X icon */}
       {previewImage && (
         <div
           onClick={() => setPreviewImage(null)}
-          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md cursor-pointer animate-fadeIn"
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm cursor-pointer"
+          role="dialog"
+          aria-label="Pratinjau foto"
         >
-          <div className="relative max-w-xl max-h-[85vh] rounded-3xl overflow-hidden shadow-2xl border border-white/20">
-            <img
-              src={previewImage}
-              alt="Preview Penuh"
-              className="w-full h-full object-contain"
-            />
+          <div className="relative max-w-xl max-h-[85vh] rounded-2xl overflow-hidden shadow-xl border border-white/20 bg-black">
+            <img src={previewImage} alt="Pratinjau foto bukti" className="w-full h-full object-contain max-h-[85vh]" />
             <button
+              type="button"
               onClick={() => setPreviewImage(null)}
-              className="absolute top-4 right-4 w-10 h-10 rounded-full bg-black/60 text-white flex items-center justify-center font-bold"
+              aria-label="Tutup pratinjau"
+              className="absolute top-3 right-3 w-8 h-8 rounded-full bg-black/60 backdrop-blur text-white flex items-center justify-center hover:bg-black/80 transition-colors"
             >
-              ✕
+              <X className="w-4 h-4" />
             </button>
           </div>
         </div>
