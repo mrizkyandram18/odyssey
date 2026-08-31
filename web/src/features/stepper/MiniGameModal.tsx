@@ -19,7 +19,7 @@ interface Card {
   isMatched: boolean
 }
 
-const CARD_ICONS = ['🚀', '🌟', '💎', '🔥', '🛡️', '⚡', '👑', '🎯']
+const CARD_ICONS = ['💼', '💻', '🎨', '🩺', '📊', '🔧', '📚', '🤝']
 
 export const MiniGameModal: React.FC<MiniGameModalProps> = ({ task, onClose, onSuccess, onNextTask }) => {
   const isApproved = task.status === 'APPROVED'
@@ -108,10 +108,10 @@ export const MiniGameModal: React.FC<MiniGameModalProps> = ({ task, onClose, onS
           setMatchedPairs((mp) => {
             const nextMP = mp + 1
             if (nextMP === pairCount) {
-              // Game Won! Calculate bounded score (max 100)
-              const timePenalty = Math.min(30, seconds)
-              const movesPenalty = Math.max(0, (moves + 1 - pairCount) * 3)
-              const finalScore = Math.max(50, Math.min(100, 100 - movesPenalty - Math.floor(timePenalty / 2)))
+              // Game Won! Calculate bounded score (60 - 100)
+              const timePenalty = Math.min(20, Math.floor(seconds / 2))
+              const movesPenalty = Math.max(0, (moves + 1 - pairCount) * 2)
+              const finalScore = Math.max(60, Math.min(100, 100 - movesPenalty - timePenalty))
               setScore(finalScore)
               setGameFinished(true)
             }
