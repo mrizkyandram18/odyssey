@@ -167,8 +167,8 @@ export function ProfilePage() {
             
             <div className="flex items-center justify-between border-b border-border-subtle/50 pb-4">
               <div>
-                <p className="text-sm font-bold text-text-primary">Avatar Karakter</p>
-                <p className="text-xs text-text-secondary">Ubah gaya wajah karakter secara acak</p>
+                <p className="text-sm font-bold text-text-primary">Foto Profil</p>
+                <p className="text-xs text-text-secondary">Ubah gaya avatar secara acak</p>
               </div>
               <Button
                 variant="secondary"

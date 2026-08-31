@@ -77,7 +77,7 @@ describe('HomePage', () => {
     )
 
     await waitFor(() => {
-      expect(screen.getByText('Petualangan Harian')).toBeInTheDocument()
+      expect(screen.getByText('Tugas Harian')).toBeInTheDocument()
       expect(screen.getByText('Belajar Menabung')).toBeInTheDocument()
       expect(screen.getByText('3 Hari')).toBeInTheDocument()
       expect(screen.getByText('150')).toBeInTheDocument()
