@@ -7,6 +7,7 @@ import type {
   RewardCatalogItem,
   ClaimView,
   PendingSubmissionView,
+  RedemptionConfig,
 } from '../types'
 import { getSession, isSessionExpired } from './session'
 
@@ -146,6 +147,7 @@ export const tasksApi = {
 }
 
 export const shopApi = {
+  getConfig: () => apiClient.get<RedemptionConfig>('/api/shop/config'),
   getCatalog: () => apiClient.get<RewardCatalogItem[]>('/api/shop/items'),
   redeem: (data: { reward_id?: number; coins: number; target_type: string; target_value: string }) =>
     apiClient.post<{ success: boolean; claim_id: number; new_balance: number }>('/api/shop/redeem', data),
@@ -153,6 +155,9 @@ export const shopApi = {
 }
 
 export const adminTasksApi = {
+  getConfig: () => apiClient.get<RedemptionConfig>('/api/admin/config'),
+  updateConfig: (data: { start_day: number; end_day: number }) =>
+    apiClient.post<RedemptionConfig>('/api/admin/config', data),
   getTasks: (date?: string) => apiClient.get<TaskView[]>(`/api/admin/tasks${date ? '?date=' + date : ''}`),
   createTask: (data: any) => apiClient.post<TaskView>('/api/admin/tasks', data),
   updateTask: (id: number, patch: any) => apiClient.patch<TaskView>(`/api/admin/tasks/${id}`, patch),

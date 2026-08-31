@@ -253,3 +253,110 @@ func TestAdminCreateTask_ValidationRules(t *testing.T) {
 		})
 	}
 }
+
+func TestAdminConfig_Get(t *testing.T) {
+	configData, _ := json.Marshal([]map[string]any{
+		{"key": "redemption_start_day", "value": "21"},
+		{"key": "redemption_end_day", "value": "26"},
+	})
+	client := &mockSupabaseClient{
+		getResp: configData,
+	}
+	api := NewAPI(client)
+
+	req := httptest.NewRequest(http.MethodGet, "/api/admin/config", nil)
+	guideClaims := &auth.SessionClaims{UID: "admin-1", FamilyID: "fam-1", Role: "GUIDE"}
+	req = req.WithContext(auth.ContextWithClaims(req.Context(), guideClaims))
+
+	rec := httptest.NewRecorder()
+	api.Handler(rec, req)
+
+	if rec.Code != http.StatusOK {
+		t.Fatalf("expected status 200, got %d: %s", rec.Code, rec.Body.String())
+	}
+
+	var res map[string]any
+	if err := json.Unmarshal(rec.Body.Bytes(), &res); err != nil {
+		t.Fatalf("invalid json: %v", err)
+	}
+	if res["redemption_start_day"] != float64(21) || res["redemption_end_day"] != float64(26) {
+		t.Fatalf("expected 21-26, got %v", res)
+	}
+}
+
+func TestAdminConfig_NonGuideForbidden(t *testing.T) {
+	client := &mockSupabaseClient{}
+	api := NewAPI(client)
+
+	// GET as non-guide
+	req := httptest.NewRequest(http.MethodGet, "/api/admin/config", nil)
+	seekerClaims := &auth.SessionClaims{UID: "user-1", Role: "SEEKER"}
+	req = req.WithContext(auth.ContextWithClaims(req.Context(), seekerClaims))
+
+	rec := httptest.NewRecorder()
+	api.Handler(rec, req)
+
+	if rec.Code != http.StatusForbidden {
+		t.Fatalf("expected 403 Forbidden, got %d", rec.Code)
+	}
+
+	// POST as non-guide
+	reqPost := httptest.NewRequest(http.MethodPost, "/api/admin/config", strings.NewReader(`{"start_day":10,"end_day":15}`))
+	reqPost.Header.Set("Content-Type", "application/json")
+	reqPost = reqPost.WithContext(auth.ContextWithClaims(reqPost.Context(), seekerClaims))
+
+	recPost := httptest.NewRecorder()
+	api.Handler(recPost, reqPost)
+
+	if recPost.Code != http.StatusForbidden {
+		t.Fatalf("expected 403 Forbidden on update, got %d", recPost.Code)
+	}
+}
+
+func TestAdminConfig_UpdateSuccessAndValidation(t *testing.T) {
+	client := &mockSupabaseClient{}
+	api := NewAPI(client)
+	guideClaims := &auth.SessionClaims{UID: "admin-1", Role: "GUIDE"}
+
+	cases := []struct {
+		name       string
+		payload    string
+		expectCode int
+	}{
+		{
+			name:       "Valid range update",
+			payload:    `{"start_day":10,"end_day":15}`,
+			expectCode: http.StatusOK,
+		},
+		{
+			name:       "Invalid range: start < 1",
+			payload:    `{"start_day":0,"end_day":15}`,
+			expectCode: http.StatusBadRequest,
+		},
+		{
+			name:       "Invalid range: end > 31",
+			payload:    `{"start_day":10,"end_day":32}`,
+			expectCode: http.StatusBadRequest,
+		},
+		{
+			name:       "Invalid range: start > end",
+			payload:    `{"start_day":20,"end_day":10}`,
+			expectCode: http.StatusBadRequest,
+		},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			req := httptest.NewRequest(http.MethodPost, "/api/admin/config", strings.NewReader(tc.payload))
+			req.Header.Set("Content-Type", "application/json")
+			req = req.WithContext(auth.ContextWithClaims(req.Context(), guideClaims))
+
+			rec := httptest.NewRecorder()
+			api.Handler(rec, req)
+
+			if rec.Code != tc.expectCode {
+				t.Fatalf("expected code %d, got %d: %s", tc.expectCode, rec.Code, rec.Body.String())
+			}
+		})
+	}
+}

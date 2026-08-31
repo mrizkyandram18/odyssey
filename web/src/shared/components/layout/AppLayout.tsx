@@ -9,6 +9,8 @@ interface AppLayoutProps {
 
 export function AppLayout({ children }: AppLayoutProps) {
   const location = useLocation()
+  const isAdmin = location.pathname.startsWith('/admin')
+
   return (
     <div className="flex h-screen overflow-hidden bg-bg-app relative">
       {/* Ambient Animated Background */}
@@ -39,9 +41,15 @@ export function AppLayout({ children }: AppLayoutProps) {
         />
       </div>
 
-      {/* Mobile-First Main Content Area */}
+      {/* Main Content Area */}
       <div className="flex-1 flex flex-col h-full relative overflow-y-auto overflow-x-hidden">
-        <main className="flex-1 w-full max-w-md mx-auto p-4 md:p-6 border-x border-border-subtle/30 bg-surface-elevated/30 shadow-2xl relative min-h-full">
+        <main
+          className={`flex-1 w-full mx-auto p-4 md:p-6 shadow-2xl relative min-h-full transition-all duration-200 ${
+            isAdmin
+              ? 'max-w-5xl bg-surface-elevated/20 md:border-x border-border-subtle/40'
+              : 'max-w-lg border-x border-border-subtle/30 bg-surface-elevated/30'
+          }`}
+        >
           <AnimatePresence mode="wait">
             <motion.div
               key={location.pathname}
@@ -60,7 +68,11 @@ export function AppLayout({ children }: AppLayoutProps) {
 
       {/* Bottom Navigation */}
       <div className="fixed bottom-0 left-0 right-0 z-20 pointer-events-none">
-        <div className="max-w-md mx-auto w-full pointer-events-auto border-t border-border-subtle bg-surface-elevated/95 backdrop-blur-md pb-safe border-x shadow-lg">
+        <div
+          className={`mx-auto w-full pointer-events-auto border-t border-border-subtle bg-surface-elevated/95 backdrop-blur-md pb-safe border-x shadow-lg transition-all duration-200 ${
+            isAdmin ? 'max-w-5xl' : 'max-w-lg'
+          }`}
+        >
           <BottomNav />
         </div>
       </div>

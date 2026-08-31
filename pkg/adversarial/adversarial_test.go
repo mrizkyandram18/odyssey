@@ -121,6 +121,12 @@ func (m *mockAdversarialDB) Get(ctx context.Context, table string, params string
 			{"id": int64(2), "title": "GoPay 20k", "coin_price": 200, "is_active": true},
 		})
 
+	case "odyssey_system_config":
+		return json.Marshal([]map[string]any{
+			{"key": "redemption_start_day", "value": "1"},
+			{"key": "redemption_end_day", "value": "31"},
+		})
+
 	case "odyssey_claims":
 		var list []map[string]any
 		for _, c := range m.claims {
