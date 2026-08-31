@@ -91,10 +91,11 @@ func (l *Logger) marshal(level, msg string, fields map[string]any) ([]byte, erro
 
 func (l *Logger) log(level, msg string, fields map[string]any) {
 	sanitized := sanitizeFields(fields)
+	l.wg.Add(1)
 	select {
 	case l.ch <- logEntry{level: level, msg: msg, fields: sanitized}:
-		l.wg.Add(1)
 	default:
+		l.wg.Done()
 		l.fallbackLog(level, msg, sanitized)
 	}
 }

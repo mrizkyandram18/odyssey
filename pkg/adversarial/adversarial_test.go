@@ -1215,6 +1215,9 @@ func TestAdversarial_LegacyRouteSurfacePurge(t *testing.T) {
 	if err != nil {
 		t.Fatalf("BuildHandler error: %v", err)
 	}
+	if srv.Cleanup != nil {
+		defer srv.Cleanup(context.Background())
+	}
 
 	// Matrix of all legacy RPG routes that MUST return 404
 	legacyRoutes := []struct {
@@ -1458,6 +1461,9 @@ func TestAdversarial_LiveActiveRouteSurfaceVerification(t *testing.T) {
 	srv, err := server.BuildHandler()
 	if err != nil {
 		t.Fatalf("BuildHandler error: %v", err)
+	}
+	if srv.Cleanup != nil {
+		defer srv.Cleanup(context.Background())
 	}
 
 	activeRoutes := []struct {
