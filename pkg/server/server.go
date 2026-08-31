@@ -193,6 +193,8 @@ func BuildHandler() (*Server, error) {
 	mux.HandleFunc("/api/admin/submissions/", secure(rateLimit(adminLimiter, mw.RequireAuth(adminTasksAPI.Handler))))
 	mux.HandleFunc("/api/admin/claims", secure(rateLimit(adminLimiter, mw.RequireAuth(shopAPI.Handler))))
 	mux.HandleFunc("/api/admin/claims/", secure(rateLimit(adminLimiter, mw.RequireAuth(shopAPI.Handler))))
+	mux.HandleFunc("/api/admin/config", secure(rateLimit(adminLimiter, mw.RequireAuth(adminTasksAPI.Handler))))
+	mux.HandleFunc("/api/admin/config/", secure(rateLimit(adminLimiter, mw.RequireAuth(adminTasksAPI.Handler))))
 
 	// Observability & Health
 	mux.HandleFunc("/metrics", secure(observability.InternalTokenMiddleware(config.InternalMetricsToken, observability.MetricsHandler(metrics))))

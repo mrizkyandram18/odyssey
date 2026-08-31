@@ -12,13 +12,17 @@ vi.mock('../../shared/hooks/useSession', () => ({
   useSession: vi.fn(),
 }))
 
-vi.mock('../../shared/lib/api', () => ({
-  apiClient: {
-    get: vi.fn(),
-    post: vi.fn(),
-    patch: vi.fn(),
-  },
-}))
+vi.mock('../../shared/lib/api', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('../../shared/lib/api')>()
+  return {
+    ...actual,
+    apiClient: {
+      get: vi.fn(),
+      post: vi.fn(),
+      patch: vi.fn(),
+    },
+  }
+})
 
 describe('ProfilePage', () => {
   beforeEach(() => {

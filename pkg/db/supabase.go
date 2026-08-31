@@ -21,6 +21,7 @@ var allowedTables = map[string]bool{
 	"odyssey_coin_transactions":  true,
 	"odyssey_push_subscriptions": true,
 	"odyssey_schema_version":     true,
+	"odyssey_system_config":      true,
 }
 
 func validateTable(table string) error {

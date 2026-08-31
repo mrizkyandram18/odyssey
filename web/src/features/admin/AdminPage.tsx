@@ -19,15 +19,21 @@ import {
   Camera,
   Play,
   HelpCircle,
+  Settings,
+  Sliders,
+  Check,
+  Building2,
+  Wallet,
+  Smartphone,
 } from 'lucide-react'
 import { useSession } from '../../shared/hooks/useSession'
 import { adminTasksApi } from '../../shared/lib/api'
-import type { TaskView, PendingSubmissionView, ClaimView, TaskType } from '../../shared/types'
+import type { TaskView, PendingSubmissionView, ClaimView, TaskType, RedemptionConfig } from '../../shared/types'
 
 export const AdminPage: React.FC = () => {
   const { session, profile, loading: sessionLoading } = useSession()
 
-  const [activeTab, setActiveTab] = useState<'tasks' | 'submissions' | 'claims'>('submissions')
+  const [activeTab, setActiveTab] = useState<'submissions' | 'claims' | 'tasks' | 'settings'>('submissions')
   const [selectedDate, setSelectedDate] = useState<string>(
     new Date().toISOString().split('T')[0]
   )
@@ -36,8 +42,16 @@ export const AdminPage: React.FC = () => {
   const [tasks, setTasks] = useState<TaskView[]>([])
   const [submissions, setSubmissions] = useState<PendingSubmissionView[]>([])
   const [claims, setClaims] = useState<ClaimView[]>([])
+  const [config, setConfig] = useState<RedemptionConfig | null>(null)
   const [isFetching, setIsFetching] = useState(true)
   const [error, setError] = useState<string | null>(null)
+
+  // Config settings form states
+  const [startDayInput, setStartDayInput] = useState<number>(21)
+  const [endDayInput, setEndDayInput] = useState<number>(26)
+  const [isSavingConfig, setIsSavingConfig] = useState(false)
+  const [configSuccessMsg, setConfigSuccessMsg] = useState<string | null>(null)
+  const [configErrorMsg, setConfigErrorMsg] = useState<string | null>(null)
 
   // Modals & UI states
   const [isCreateTaskModalOpen, setIsCreateTaskModalOpen] = useState(false)
@@ -86,14 +100,20 @@ export const AdminPage: React.FC = () => {
     try {
       setIsFetching(true)
       setError(null)
-      const [tList, subList, claimList] = await Promise.all([
+      const [tList, subList, claimList, cfg] = await Promise.all([
         adminTasksApi.getTasks(selectedDate),
         adminTasksApi.getPendingSubmissions(),
         adminTasksApi.getClaims('PENDING'),
+        adminTasksApi.getConfig(),
       ])
       setTasks(tList || [])
       setSubmissions(subList || [])
       setClaims(claimList || [])
+      if (cfg) {
+        setConfig(cfg)
+        setStartDayInput(cfg.redemption_start_day)
+        setEndDayInput(cfg.redemption_end_day)
+      }
     } catch (err: any) {
       setError(err.message || 'Gagal memuat data admin dashboard')
     } finally {
@@ -112,7 +132,7 @@ export const AdminPage: React.FC = () => {
       <div className="flex h-64 w-full items-center justify-center">
         <div className="animate-pulse flex flex-col items-center gap-2">
           <ShieldCheck className="w-10 h-10 text-accent-magic" />
-          <p className="text-xs text-text-secondary">Memuat Admin Panel...</p>
+          <p className="text-xs text-text-secondary">Memuat Admin Operations Panel...</p>
         </div>
       </div>
     )
@@ -162,26 +182,55 @@ export const AdminPage: React.FC = () => {
     }
   }
 
+  const handleSaveConfig = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setConfigSuccessMsg(null)
+    setConfigErrorMsg(null)
+
+    if (startDayInput < 1 || startDayInput > 31 || endDayInput < 1 || endDayInput > 31) {
+      setConfigErrorMsg('Tanggal mulai dan berakhir harus antara 1 sampai 31')
+      return
+    }
+    if (startDayInput > endDayInput) {
+      setConfigErrorMsg('Tanggal mulai tidak boleh lebih besar dari tanggal berakhir')
+      return
+    }
+
+    setIsSavingConfig(true)
+    try {
+      const updated = await adminTasksApi.updateConfig({
+        start_day: Number(startDayInput),
+        end_day: Number(endDayInput),
+      })
+      setConfig(updated)
+      setConfigSuccessMsg(`Periode penukaran berhasil diperbarui ke tanggal ${updated.redemption_start_day}–${updated.redemption_end_day} setiap bulan.`)
+    } catch (err: any) {
+      setConfigErrorMsg(err.message || 'Gagal menyimpan pengaturan periode penukaran.')
+    } finally {
+      setIsSavingConfig(false)
+    }
+  }
+
   const handleCreateTask = async (e: React.FormEvent) => {
     e.preventDefault()
     try {
-      const config: Record<string, any> = {}
+      const taskConfig: Record<string, any> = {}
 
       switch (newTask.task_type) {
         case 'VIDEO':
         case 'YOUTUBE_VIDEO':
-          config.youtube_url = newTask.youtube_url
-          config.video_url = newTask.youtube_url
-          config.minimum_duration_seconds = Number(newTask.min_watch_seconds)
+          taskConfig.youtube_url = newTask.youtube_url
+          taskConfig.video_url = newTask.youtube_url
+          taskConfig.minimum_duration_seconds = Number(newTask.min_watch_seconds)
           break
 
         case 'QUIZ':
         case 'VIDEO_QUIZ':
           if (newTask.youtube_url) {
-            config.youtube_url = newTask.youtube_url
+            taskConfig.youtube_url = newTask.youtube_url
           }
           if (newTask.question_text) {
-            config.questions = [
+            taskConfig.questions = [
               {
                 id: 1,
                 question: newTask.question_text,
@@ -199,27 +248,27 @@ export const AdminPage: React.FC = () => {
 
         case 'PHOTO_UPLOAD':
         case 'PHOTO_PROOF':
-          config.instruction = newTask.photo_instruction
-          config.max_files = Number(newTask.max_photos)
+          taskConfig.instruction = newTask.photo_instruction
+          taskConfig.max_files = Number(newTask.max_photos)
           break
 
         case 'DOCUMENT_UPLOAD':
-          config.instruction = newTask.doc_instruction
-          config.attachment_url = newTask.attachment_url
-          config.attachment_name = newTask.attachment_name
-          config.accepted_extensions = newTask.doc_extensions.split(',').map((s) => s.trim())
+          taskConfig.instruction = newTask.doc_instruction
+          taskConfig.attachment_url = newTask.attachment_url
+          taskConfig.attachment_name = newTask.attachment_name
+          taskConfig.accepted_extensions = newTask.doc_extensions.split(',').map((s) => s.trim())
           break
 
         case 'TEXT_RESPONSE':
-          config.prompt = newTask.text_prompt
-          config.minimum_characters = Number(newTask.min_chars)
-          config.maximum_characters = Number(newTask.max_chars)
+          taskConfig.prompt = newTask.text_prompt
+          taskConfig.minimum_characters = Number(newTask.min_chars)
+          taskConfig.maximum_characters = Number(newTask.max_chars)
           break
 
         case 'MINI_GAME':
-          config.game = newTask.game_type
-          config.difficulty = newTask.game_difficulty
-          config.target_score = Number(newTask.target_score)
+          taskConfig.game = newTask.game_type
+          taskConfig.difficulty = newTask.game_difficulty
+          taskConfig.target_score = Number(newTask.target_score)
           break
       }
 
@@ -231,7 +280,7 @@ export const AdminPage: React.FC = () => {
         active_date: newTask.active_date || selectedDate,
         reward_coins: Number(newTask.reward_coins),
         reward_xp: Number(newTask.reward_xp),
-        config,
+        config: taskConfig,
         is_active: true,
       })
 
@@ -329,70 +378,188 @@ export const AdminPage: React.FC = () => {
   }
 
   return (
-    <div className="w-full max-w-2xl mx-auto min-h-[calc(100vh-80px)] pb-24 px-4 pt-4 flex flex-col space-y-4">
-      {/* Header */}
-      <header className="flex items-center justify-between pb-3 border-b border-border-subtle">
+    <div className="w-full max-w-4xl mx-auto min-h-[calc(100vh-80px)] pb-24 px-2 sm:px-4 pt-2 flex flex-col space-y-5">
+      {/* 1. Operations Header */}
+      <header className="flex flex-col sm:flex-row sm:items-center justify-between pb-4 border-b border-border-subtle gap-3">
         <div>
-          <h1 className="font-heading font-extrabold text-text-primary text-xl flex items-center gap-2">
+          <div className="flex items-center gap-2">
             <ShieldCheck className="w-6 h-6 text-accent-magic" />
-            <span>Admin Panel Keluarga</span>
-          </h1>
+            <h1 className="font-heading font-extrabold text-text-primary text-xl">
+              Panel Operasional Admin
+            </h1>
+            <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-accent-magic/15 text-accent-magic uppercase tracking-wider">
+              Control Panel
+            </span>
+          </div>
           <p className="text-xs text-text-secondary mt-0.5">
-            Verifikasi tugas, konfigurasi task harian, & kelola penukaran koin.
+            Verifikasi tugas keluarga, kelola klaim pencairan, jadwalkan tugas, & atur periode penukaran.
           </p>
         </div>
+
         <button
           onClick={fetchData}
           disabled={isFetching}
-          className="p-2.5 rounded-xl bg-surface-elevated border border-border-subtle text-text-secondary hover:text-text-primary active:scale-95 transition-all shadow-sm"
+          className="self-start sm:self-auto px-3.5 py-2 rounded-xl bg-surface-elevated border border-border-subtle text-text-secondary hover:text-text-primary active:scale-95 transition-all shadow-sm flex items-center gap-2 text-xs font-bold"
         >
-          <RefreshCw className={`w-4 h-4 ${isFetching ? 'animate-spin' : ''}`} />
+          <RefreshCw className={`w-3.5 h-3.5 ${isFetching ? 'animate-spin' : ''}`} />
+          <span>Segarkan Data</span>
         </button>
       </header>
 
-      {/* Tabs Bar */}
-      <div className="flex gap-2 p-1 bg-surface-base rounded-2xl border border-border-subtle">
-        <button
+      {/* 2. Top Metric Tiles */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+        {/* Metric 1: Submissions */}
+        <div
           onClick={() => setActiveTab('submissions')}
-          className={`flex-1 py-2.5 rounded-xl font-heading font-bold text-xs flex items-center justify-center gap-1.5 transition-all ${
+          className={`p-3.5 rounded-2xl border cursor-pointer transition-all ${
+            activeTab === 'submissions'
+              ? 'bg-accent-magic/10 border-accent-magic/50 shadow-sm'
+              : 'bg-surface-elevated border-border-subtle hover:border-border-subtle/80'
+          }`}
+        >
+          <span className="text-[11px] font-bold text-text-secondary flex items-center gap-1">
+            <CheckCircle2 className="w-3.5 h-3.5 text-accent-magic" />
+            <span>Verifikasi Bukti</span>
+          </span>
+          <div className="flex items-baseline gap-1.5 mt-1">
+            <span className="text-2xl font-heading font-extrabold text-text-primary">
+              {submissions.length}
+            </span>
+            <span className="text-[10px] text-text-secondary">antrean</span>
+          </div>
+        </div>
+
+        {/* Metric 2: Claims */}
+        <div
+          onClick={() => setActiveTab('claims')}
+          className={`p-3.5 rounded-2xl border cursor-pointer transition-all ${
+            activeTab === 'claims'
+              ? 'bg-status-success/10 border-status-success/50 shadow-sm'
+              : 'bg-surface-elevated border-border-subtle hover:border-border-subtle/80'
+          }`}
+        >
+          <span className="text-[11px] font-bold text-text-secondary flex items-center gap-1">
+            <Coins className="w-3.5 h-3.5 text-status-success" />
+            <span>Pencairan Pending</span>
+          </span>
+          <div className="flex items-baseline gap-1.5 mt-1">
+            <span className="text-2xl font-heading font-extrabold text-text-primary">
+              {claims.length}
+            </span>
+            <span className="text-[10px] text-text-secondary">klaim</span>
+          </div>
+        </div>
+
+        {/* Metric 3: Active Tasks */}
+        <div
+          onClick={() => setActiveTab('tasks')}
+          className={`p-3.5 rounded-2xl border cursor-pointer transition-all ${
+            activeTab === 'tasks'
+              ? 'bg-accent-cyan/10 border-accent-cyan/50 shadow-sm'
+              : 'bg-surface-elevated border-border-subtle hover:border-border-subtle/80'
+          }`}
+        >
+          <span className="text-[11px] font-bold text-text-secondary flex items-center gap-1">
+            <Calendar className="w-3.5 h-3.5 text-accent-cyan" />
+            <span>Tugas Hari Ini</span>
+          </span>
+          <div className="flex items-baseline gap-1.5 mt-1">
+            <span className="text-2xl font-heading font-extrabold text-text-primary">
+              {tasks.length}
+            </span>
+            <span className="text-[10px] text-text-secondary">langkah</span>
+          </div>
+        </div>
+
+        {/* Metric 4: Redemption Window */}
+        <div
+          onClick={() => setActiveTab('settings')}
+          className={`p-3.5 rounded-2xl border cursor-pointer transition-all ${
+            activeTab === 'settings'
+              ? 'bg-accent-gold/10 border-accent-gold/50 shadow-sm'
+              : 'bg-surface-elevated border-border-subtle hover:border-border-subtle/80'
+          }`}
+        >
+          <span className="text-[11px] font-bold text-text-secondary flex items-center gap-1">
+            <Sliders className="w-3.5 h-3.5 text-accent-gold" />
+            <span>Periode Penukaran</span>
+          </span>
+          <div className="flex items-baseline gap-1.5 mt-1">
+            <span className="text-lg font-heading font-extrabold text-text-primary truncate">
+              {config ? `${config.redemption_start_day}–${config.redemption_end_day}` : '21–26'}
+            </span>
+            <span
+              className={`text-[10px] font-bold px-1.5 py-0.2 rounded-md ${
+                config?.is_open
+                  ? 'bg-status-success/20 text-status-success'
+                  : 'bg-surface-base text-text-secondary'
+              }`}
+            >
+              {config?.is_open ? 'Buka' : 'Tutup'}
+            </span>
+          </div>
+        </div>
+      </div>
+
+      {/* 3. Navigation Tabs Bar (Flexible & Collision-Proof) */}
+      <div className="flex flex-wrap gap-1.5 p-1 bg-surface-base rounded-2xl border border-border-subtle">
+        <button
+          data-testid="admin-tab-submissions"
+          onClick={() => setActiveTab('submissions')}
+          className={`flex-1 min-w-[130px] py-2.5 px-3 rounded-xl font-heading font-bold text-xs flex items-center justify-center gap-1.5 transition-all text-center ${
             activeTab === 'submissions'
               ? 'bg-accent-magic text-white shadow-md shadow-accent-magic/30'
               : 'text-text-secondary hover:text-text-primary'
           }`}
         >
-          <span>🔍 Verifikasi Bukti</span>
+          <span>Verifikasi Bukti</span>
           {submissions.length > 0 && (
-            <span className="px-1.5 py-0.2 rounded-full bg-accent-gold text-text-primary font-extrabold text-[10px]">
+            <span className="px-1.5 py-0.2 rounded-full bg-accent-gold text-text-primary font-mono text-[10px]">
               {submissions.length}
             </span>
           )}
         </button>
 
         <button
+          data-testid="admin-tab-claims"
           onClick={() => setActiveTab('claims')}
-          className={`flex-1 py-2.5 rounded-xl font-heading font-bold text-xs flex items-center justify-center gap-1.5 transition-all ${
+          className={`flex-1 min-w-[130px] py-2.5 px-3 rounded-xl font-heading font-bold text-xs flex items-center justify-center gap-1.5 transition-all text-center ${
             activeTab === 'claims'
               ? 'bg-accent-magic text-white shadow-md shadow-accent-magic/30'
               : 'text-text-secondary hover:text-text-primary'
           }`}
         >
-          <span>💰 Pencairan Koin</span>
+          <span>Pencairan Koin</span>
           {claims.length > 0 && (
-            <span className="px-1.5 py-0.2 rounded-full bg-status-success text-white font-extrabold text-[10px]">
+            <span className="px-1.5 py-0.2 rounded-full bg-status-success text-white font-mono text-[10px]">
               {claims.length}
             </span>
           )}
         </button>
 
         <button
+          data-testid="admin-tab-tasks"
           onClick={() => setActiveTab('tasks')}
-          className={`flex-1 py-2.5 rounded-xl font-heading font-bold text-xs flex items-center justify-center gap-1.5 transition-all ${
+          className={`flex-1 min-w-[130px] py-2.5 px-3 rounded-xl font-heading font-bold text-xs flex items-center justify-center gap-1.5 transition-all text-center ${
             activeTab === 'tasks'
               ? 'bg-accent-magic text-white shadow-md shadow-accent-magic/30'
               : 'text-text-secondary hover:text-text-primary'
           }`}
         >
-          <span>📋 Jadwal Tugas</span>
+          <span>Jadwal Tugas</span>
+        </button>
+
+        <button
+          data-testid="admin-tab-settings"
+          onClick={() => setActiveTab('settings')}
+          className={`flex-1 min-w-[130px] py-2.5 px-3 rounded-xl font-heading font-bold text-xs flex items-center justify-center gap-1.5 transition-all text-center ${
+            activeTab === 'settings'
+              ? 'bg-accent-magic text-white shadow-md shadow-accent-magic/30'
+              : 'text-text-secondary hover:text-text-primary'
+          }`}
+        >
+          <Settings className="w-3.5 h-3.5" />
+          <span>Pengaturan Periode</span>
         </button>
       </div>
 
@@ -408,15 +575,15 @@ export const AdminPage: React.FC = () => {
         <div className="space-y-4">
           <div className="flex items-center justify-between">
             <h3 className="font-heading font-bold text-text-primary text-sm">
-              Antrean Verifikasi ({submissions.length})
+              Antrean Verifikasi Bukti Tugas ({submissions.length})
             </h3>
             <span className="text-xs text-text-secondary">
-              Approve untuk otomatis beri koin & EXP
+              Approve untuk otomatis memberikan koin & EXP ke anggota keluarga
             </span>
           </div>
 
           {submissions.length === 0 ? (
-            <div className="py-16 text-center bg-surface-elevated rounded-3xl border border-border-subtle space-y-2">
+            <div className="py-16 text-center bg-surface-elevated rounded-3xl border border-border-subtle space-y-2 p-6">
               <p className="text-3xl">✨</p>
               <p className="font-heading font-bold text-text-primary text-sm">
                 Tidak Ada Antrean Verifikasi
@@ -429,7 +596,7 @@ export const AdminPage: React.FC = () => {
             submissions.map((sub) => (
               <div
                 key={sub.id}
-                className="p-4 rounded-2xl bg-surface-elevated border border-border-subtle shadow-sm space-y-3"
+                className="p-5 rounded-2xl bg-surface-elevated border border-border-subtle shadow-sm space-y-3.5"
               >
                 <div className="flex items-start justify-between gap-2">
                   <div>
@@ -459,7 +626,7 @@ export const AdminPage: React.FC = () => {
                   <div className="p-3 rounded-xl bg-surface-base border border-border-subtle space-y-2">
                     <div
                       onClick={() => setPreviewImage(sub.payload.file_url!)}
-                      className="relative aspect-video max-h-48 rounded-xl overflow-hidden cursor-pointer bg-black group"
+                      className="relative aspect-video max-h-56 rounded-xl overflow-hidden cursor-pointer bg-black group"
                     >
                       <img
                         src={sub.payload.file_url}
@@ -582,32 +749,47 @@ export const AdminPage: React.FC = () => {
             <h3 className="font-heading font-bold text-text-primary text-sm">
               Permintaan Pencairan Koin ({claims.length})
             </h3>
-            <span className="text-xs text-text-secondary">Transfer / Top-up pulsa</span>
+            <span className="text-xs text-text-secondary">Transfer / Top-up saldo anggota</span>
           </div>
 
           {claims.length === 0 ? (
-            <div className="py-16 text-center bg-surface-elevated rounded-3xl border border-border-subtle space-y-2">
+            <div className="py-16 text-center bg-surface-elevated rounded-3xl border border-border-subtle space-y-2 p-6">
               <p className="text-3xl">☕</p>
               <p className="font-heading font-bold text-text-primary text-sm">
                 Tidak Ada Klaim Pending
               </p>
               <p className="text-xs text-text-secondary max-w-xs mx-auto">
-                Semua pengajuan penukaran koin sudah diproses.
+                Semua pengajuan penukaran koin dari anggota keluarga sudah selesai diproses.
               </p>
             </div>
           ) : (
             claims.map((claim) => (
               <div
                 key={claim.id}
-                className="p-4 rounded-2xl bg-surface-elevated border border-border-subtle shadow-sm space-y-3"
+                className="p-5 rounded-2xl bg-surface-elevated border border-border-subtle shadow-sm space-y-3.5"
               >
                 <div className="flex items-start justify-between">
                   <div>
-                    <h4 className="font-heading font-bold text-text-primary text-base">
-                      {claim.reward_title || claim.target_type}
-                    </h4>
+                    <div className="flex items-center gap-1.5">
+                      {claim.target_type === 'EWALLET' ? (
+                        <Wallet className="w-4 h-4 text-accent-magic" />
+                      ) : claim.target_type === 'BANK' ? (
+                        <Building2 className="w-4 h-4 text-status-success" />
+                      ) : (
+                        <Smartphone className="w-4 h-4 text-accent-cyan" />
+                      )}
+                      <h4 className="font-heading font-bold text-text-primary text-base">
+                        Pencairan {claim.target_type}
+                      </h4>
+                    </div>
                     <p className="text-xs text-text-secondary mt-0.5">
-                      Pemohon: <strong className="text-text-primary">{claim.user_name}</strong>
+                      Pemohon: <strong className="text-text-primary">{claim.user_name}</strong> •{' '}
+                      {new Date(claim.created_at).toLocaleDateString('id-ID', {
+                        day: 'numeric',
+                        month: 'short',
+                        hour: '2-digit',
+                        minute: '2-digit',
+                      })}
                     </p>
                   </div>
                   <span className="px-3 py-1 rounded-full bg-accent-gold/15 text-accent-gold font-bold text-xs flex items-center gap-1">
@@ -620,7 +802,7 @@ export const AdminPage: React.FC = () => {
                 <div className="p-3 rounded-xl bg-surface-base border border-border-subtle flex items-center justify-between">
                   <div>
                     <p className="text-[10px] text-text-secondary uppercase font-bold">
-                      Tujuan Penukaran / No. HP
+                      Tujuan Penukaran / No. Rekening / No. HP
                     </p>
                     <p className="text-sm font-mono font-bold text-text-primary mt-0.5">
                       {claim.target_value}
@@ -629,7 +811,7 @@ export const AdminPage: React.FC = () => {
                   <button
                     onClick={() => {
                       navigator.clipboard.writeText(claim.target_value)
-                      alert('Nomor tujuan berhasil disalin ke clipboard!')
+                      alert('Nomor tujuan berhasil disalin!')
                     }}
                     className="p-2 rounded-lg bg-surface-elevated border border-border-subtle text-text-secondary hover:text-text-primary active:scale-95 transition-all"
                     title="Salin Nomor"
@@ -657,7 +839,7 @@ export const AdminPage: React.FC = () => {
                     className="flex-1 py-2.5 rounded-xl bg-status-error/10 hover:bg-status-error/20 text-status-error font-heading font-bold text-xs flex items-center justify-center gap-1.5 transition-all disabled:opacity-50"
                   >
                     <XCircle className="w-4 h-4" />
-                    <span>Tolak & Refund</span>
+                    <span>Tolak & Refund Koin</span>
                   </button>
 
                   <button
@@ -666,7 +848,7 @@ export const AdminPage: React.FC = () => {
                     className="flex-1 py-2.5 rounded-xl bg-status-success hover:brightness-110 text-white font-heading font-bold text-xs flex items-center justify-center gap-1.5 shadow-md shadow-status-success/30 transition-all disabled:opacity-50"
                   >
                     <CheckCircle2 className="w-4 h-4" />
-                    <span>Tandai Selesai (Sudah Transfer)</span>
+                    <span>Tandai Selesai (Sudah Ditransfer)</span>
                   </button>
                 </div>
               </div>
@@ -675,10 +857,9 @@ export const AdminPage: React.FC = () => {
         </div>
       )}
 
-      {/* --- TAB 3: JADWAL TUGAS HARIAN (CONFIGURABLE TASK BUILDER) --- */}
+      {/* --- TAB 3: JADWAL TUGAS HARIAN --- */}
       {activeTab === 'tasks' && (
         <div className="space-y-4">
-          {/* Date Selector & Add Button */}
           <div className="flex items-center justify-between gap-2">
             <div className="flex items-center gap-2">
               <Calendar className="w-4 h-4 text-accent-magic" />
@@ -702,7 +883,7 @@ export const AdminPage: React.FC = () => {
           </div>
 
           {tasks.length === 0 ? (
-            <div className="py-16 text-center bg-surface-elevated rounded-3xl border border-border-subtle space-y-2">
+            <div className="py-16 text-center bg-surface-elevated rounded-3xl border border-border-subtle space-y-2 p-6">
               <p className="text-3xl">📝</p>
               <p className="font-heading font-bold text-text-primary text-sm">
                 Belum Ada Tugas pada Tanggal Ini
@@ -750,6 +931,119 @@ export const AdminPage: React.FC = () => {
               </div>
             ))
           )}
+        </div>
+      )}
+
+      {/* --- TAB 4: PENGATURAN PERIODE PENUKARAN --- */}
+      {activeTab === 'settings' && (
+        <div className="space-y-5">
+          <div className="p-6 rounded-3xl bg-surface-elevated border border-border-subtle shadow-sm space-y-5">
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <h3 className="font-heading font-bold text-text-primary text-base flex items-center gap-2">
+                  <Sliders className="w-5 h-5 text-accent-magic" />
+                  <span>Pengaturan Periode Penukaran Koin</span>
+                </h3>
+                <p className="text-xs text-text-secondary mt-1 leading-relaxed">
+                  Tentukan tanggal kalender setiap bulan di mana anggota keluarga dapat mengajukan pencairan koin menjadi uang tunai.
+                </p>
+              </div>
+
+              {config && (
+                <span
+                  className={`text-xs font-bold px-3 py-1 rounded-full shrink-0 ${
+                    config.is_open
+                      ? 'bg-status-success/20 text-status-success'
+                      : 'bg-surface-base text-text-secondary border border-border-subtle'
+                  }`}
+                >
+                  {config.is_open ? '● Sedang Dibuka' : '○ Sedang Ditutup'}
+                </span>
+              )}
+            </div>
+
+            <form onSubmit={handleSaveConfig} className="space-y-4 pt-2 border-t border-border-subtle">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="space-y-1.5">
+                  <label className="text-xs font-bold text-text-secondary">
+                    Tanggal Mulai Setiap Bulan (1–31):
+                  </label>
+                  <input
+                    type="number"
+                    min={1}
+                    max={31}
+                    required
+                    value={startDayInput}
+                    onChange={(e) => setStartDayInput(Number(e.target.value))}
+                    className="w-full p-3 rounded-xl bg-surface-base border border-border-subtle text-sm font-bold text-text-primary focus:outline-none focus:border-accent-magic font-mono"
+                  />
+                  <p className="text-[11px] text-text-secondary">
+                    Contoh: <strong>21</strong> (periode dibuka mulai tanggal 21)
+                  </p>
+                </div>
+
+                <div className="space-y-1.5">
+                  <label className="text-xs font-bold text-text-secondary">
+                    Tanggal Berakhir Setiap Bulan (1–31):
+                  </label>
+                  <input
+                    type="number"
+                    min={1}
+                    max={31}
+                    required
+                    value={endDayInput}
+                    onChange={(e) => setEndDayInput(Number(e.target.value))}
+                    className="w-full p-3 rounded-xl bg-surface-base border border-border-subtle text-sm font-bold text-text-primary focus:outline-none focus:border-accent-magic font-mono"
+                  />
+                  <p className="text-[11px] text-text-secondary">
+                    Contoh: <strong>26</strong> (periode ditutup setelah tanggal 26)
+                  </p>
+                </div>
+              </div>
+
+              {/* Live Preview Card */}
+              <div className="p-4 rounded-2xl bg-surface-base border border-border-subtle flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs">
+                <div>
+                  <span className="text-text-secondary font-medium">Pratinjau Periode Aktif:</span>
+                  <p className="font-bold text-text-primary mt-0.5">
+                    Tanggal {startDayInput} s/d {endDayInput} setiap bulan
+                  </p>
+                </div>
+                <div className="text-[11px] text-text-secondary">
+                  Zona Waktu: <strong>{config?.timezone || 'Asia/Jakarta'}</strong>
+                </div>
+              </div>
+
+              {configErrorMsg && (
+                <div className="p-3.5 rounded-xl bg-status-error/15 border border-status-error/30 text-status-error text-xs flex items-center gap-2">
+                  <AlertCircle className="w-4 h-4 shrink-0" />
+                  <span>{configErrorMsg}</span>
+                </div>
+              )}
+
+              {configSuccessMsg && (
+                <div className="p-3.5 rounded-xl bg-status-success/15 border border-status-success/30 text-status-success text-xs flex items-center gap-2">
+                  <Check className="w-4 h-4 shrink-0" />
+                  <span>{configSuccessMsg}</span>
+                </div>
+              )}
+
+              <button
+                type="submit"
+                disabled={isSavingConfig}
+                className="w-full py-3.5 rounded-2xl bg-accent-magic hover:brightness-110 active:scale-[0.98] text-white font-heading font-bold text-sm shadow-md shadow-accent-magic/30 transition-all flex items-center justify-center gap-2 disabled:opacity-50"
+              >
+                {isSavingConfig ? (
+                  <span>Menyimpan Pengaturan...</span>
+                ) : (
+                  <>
+                    <Check className="w-4 h-4" />
+                    <span>Simpan Pengaturan Periode</span>
+                  </>
+                )}
+              </button>
+            </form>
+          </div>
         </div>
       )}
 

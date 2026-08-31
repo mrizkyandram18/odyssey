@@ -167,6 +167,15 @@ export interface SubmitTaskResponse {
   error?: string
 }
 
+export interface RedemptionConfig {
+  redemption_start_day: number
+  redemption_end_day: number
+  is_open: boolean
+  current_day: number
+  conversion_rate: number
+  timezone: string
+}
+
 export interface RewardCatalogItem {
   id: number
   title: string

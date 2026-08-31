@@ -126,3 +126,44 @@ func getEnvSlice(key string) []string {
 	}
 	return out
 }
+
+type RedemptionConfig struct {
+	RedemptionStartDay int    `json:"redemption_start_day"`
+	RedemptionEndDay   int    `json:"redemption_end_day"`
+	IsOpen             bool   `json:"is_open"`
+	CurrentDay         int    `json:"current_day"`
+	ConversionRate     int    `json:"conversion_rate"`
+	Timezone           string `json:"timezone"`
+}
+
+const DefaultRedemptionStartDay = 21
+const DefaultRedemptionEndDay = 26
+const DefaultCoinConversionRate = 10
+
+func ResolveRedemptionConfig(startDay, endDay int, tzName string, now time.Time) RedemptionConfig {
+	if startDay <= 0 {
+		startDay = DefaultRedemptionStartDay
+	}
+	if endDay <= 0 {
+		endDay = DefaultRedemptionEndDay
+	}
+	if tzName == "" {
+		tzName = "Asia/Jakarta"
+	}
+	loc, err := time.LoadLocation(tzName)
+	if err != nil {
+		loc = time.FixedZone("WIB", 7*3600)
+	}
+	nowInTz := now.In(loc)
+	curDay := nowInTz.Day()
+	isOpen := curDay >= startDay && curDay <= endDay
+
+	return RedemptionConfig{
+		RedemptionStartDay: startDay,
+		RedemptionEndDay:   endDay,
+		IsOpen:             isOpen,
+		CurrentDay:         curDay,
+		ConversionRate:     DefaultCoinConversionRate,
+		Timezone:           tzName,
+	}
+}

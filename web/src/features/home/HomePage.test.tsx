@@ -9,17 +9,21 @@ import { tasksApi } from '../../shared/lib/api'
 import { useSession } from '../../shared/hooks/useSession'
 
 // Mock dependencies
-vi.mock('../../shared/lib/api', () => ({
-  tasksApi: {
-    getToday: vi.fn(),
-    submit: vi.fn(),
-  },
-  apiClient: {
-    get: vi.fn(),
-    post: vi.fn(),
-    request: vi.fn(),
-  },
-}))
+vi.mock('../../shared/lib/api', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('../../shared/lib/api')>()
+  return {
+    ...actual,
+    tasksApi: {
+      getToday: vi.fn(),
+      submit: vi.fn(),
+    },
+    apiClient: {
+      get: vi.fn(),
+      post: vi.fn(),
+      request: vi.fn(),
+    },
+  }
+})
 
 vi.mock('../../shared/hooks/useSession', () => ({
   useSession: vi.fn(),

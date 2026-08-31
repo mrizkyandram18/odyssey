@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"strconv"
 	"strings"
+	"time"
 
 	"odyssey/pkg/auth"
 	"odyssey/pkg/db"
@@ -423,6 +424,18 @@ func (a *API) Handler(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
+	// Redemption config management
+	if path == "/api/admin/config" {
+		if r.Method == http.MethodGet {
+			a.HandleGetAdminConfig(w, r)
+			return
+		}
+		if r.Method == http.MethodPost || r.Method == http.MethodPatch || r.Method == http.MethodPut {
+			a.HandleUpdateAdminConfig(w, r)
+			return
+		}
+	}
+
 	// Task management
 	if path == "/api/admin/tasks" {
 		if r.Method == http.MethodGet {
@@ -451,4 +464,82 @@ func (a *API) Handler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	http.NotFound(w, r)
+}
+
+func (a *API) HandleGetAdminConfig(w http.ResponseWriter, r *http.Request) {
+	_, ok := a.requireGuide(w, r)
+	if !ok {
+		return
+	}
+	ctx := r.Context()
+	startDay := shared.DefaultRedemptionStartDay
+	endDay := shared.DefaultRedemptionEndDay
+	raw, err := a.client.Get(ctx, "odyssey_system_config", "key=in.(redemption_start_day,redemption_end_day)")
+	if err == nil && len(raw) > 0 {
+		type ConfigRow struct {
+			Key   string `json:"key"`
+			Value string `json:"value"`
+		}
+		var rows []ConfigRow
+		if err := json.Unmarshal(raw, &rows); err == nil {
+			for _, row := range rows {
+				if row.Key == "redemption_start_day" {
+					if v, err := strconv.Atoi(row.Value); err == nil && v >= 1 && v <= 31 {
+						startDay = v
+					}
+				} else if row.Key == "redemption_end_day" {
+					if v, err := strconv.Atoi(row.Value); err == nil && v >= 1 && v <= 31 {
+						endDay = v
+					}
+				}
+			}
+		}
+	}
+	tz := shared.LoadConfig().Timezone
+	cfg := shared.ResolveRedemptionConfig(startDay, endDay, tz, time.Now())
+	shared.WriteJSON(w, http.StatusOK, cfg)
+}
+
+func (a *API) HandleUpdateAdminConfig(w http.ResponseWriter, r *http.Request) {
+	_, ok := a.requireGuide(w, r)
+	if !ok {
+		return
+	}
+	ctx := r.Context()
+
+	var req struct {
+		StartDay int `json:"start_day"`
+		EndDay   int `json:"end_day"`
+	}
+	if err := shared.ReadJSON(r, &req); err != nil {
+		shared.WriteJSONError(w, "invalid request payload: "+err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	if req.StartDay < 1 || req.StartDay > 31 || req.EndDay < 1 || req.EndDay > 31 || req.StartDay > req.EndDay {
+		shared.WriteJSONError(w, "rentang tanggal penukaran tidak valid (1 <= start_day <= end_day <= 31)", http.StatusBadRequest)
+		return
+	}
+
+	startPayload := map[string]any{
+		"key":   "redemption_start_day",
+		"value": strconv.Itoa(req.StartDay),
+	}
+	endPayload := map[string]any{
+		"key":   "redemption_end_day",
+		"value": strconv.Itoa(req.EndDay),
+	}
+
+	_, err := a.client.MutateAtomic(ctx, http.MethodPost, "odyssey_system_config", startPayload, "", "resolution=merge-duplicates")
+	if err != nil {
+		_, _ = a.client.Mutate(ctx, http.MethodPatch, "odyssey_system_config", map[string]any{"value": strconv.Itoa(req.StartDay)}, "key=eq.redemption_start_day")
+	}
+	_, err = a.client.MutateAtomic(ctx, http.MethodPost, "odyssey_system_config", endPayload, "", "resolution=merge-duplicates")
+	if err != nil {
+		_, _ = a.client.Mutate(ctx, http.MethodPatch, "odyssey_system_config", map[string]any{"value": strconv.Itoa(req.EndDay)}, "key=eq.redemption_end_day")
+	}
+
+	tz := shared.LoadConfig().Timezone
+	cfg := shared.ResolveRedemptionConfig(req.StartDay, req.EndDay, tz, time.Now())
+	shared.WriteJSON(w, http.StatusOK, cfg)
 }

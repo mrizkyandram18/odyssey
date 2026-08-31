@@ -54,8 +54,46 @@ func (m *mockSupabaseClient) UploadStorage(ctx context.Context, bucket, path, co
 	return m.uploadResp, nil
 }
 
-func TestShopRedeemSuccess(t *testing.T) {
+func TestShopConfig_Get(t *testing.T) {
+	configData, _ := json.Marshal([]map[string]any{
+		{"key": "redemption_start_day", "value": "10"},
+		{"key": "redemption_end_day", "value": "20"},
+	})
 	client := &mockSupabaseClient{
+		getResp: configData,
+	}
+	api := NewAPI(client)
+
+	req := httptest.NewRequest(http.MethodGet, "/api/shop/config", nil)
+	claims := &auth.SessionClaims{UID: "user-1", Role: "SEEKER"}
+	req = req.WithContext(auth.ContextWithClaims(req.Context(), claims))
+
+	rec := httptest.NewRecorder()
+	api.Handler(rec, req)
+
+	if rec.Code != http.StatusOK {
+		t.Fatalf("expected status 200, got %d", rec.Code)
+	}
+
+	var res map[string]any
+	if err := json.Unmarshal(rec.Body.Bytes(), &res); err != nil {
+		t.Fatalf("invalid json response: %v", err)
+	}
+	if res["redemption_start_day"] != float64(10) || res["redemption_end_day"] != float64(20) {
+		t.Fatalf("expected start 10, end 20, got %v", res)
+	}
+	if res["conversion_rate"] != float64(10) {
+		t.Fatalf("expected conversion_rate 10, got %v", res["conversion_rate"])
+	}
+}
+
+func TestShopRedeem_OpenWindow_Success(t *testing.T) {
+	configData, _ := json.Marshal([]map[string]any{
+		{"key": "redemption_start_day", "value": "1"},
+		{"key": "redemption_end_day", "value": "31"},
+	})
+	client := &mockSupabaseClient{
+		getResp: configData,
 		rpcResp: []byte(`{"success":true,"claim_id":12,"new_balance":500}`),
 	}
 	api := NewAPI(client)
@@ -71,6 +109,36 @@ func TestShopRedeemSuccess(t *testing.T) {
 
 	if rec.Code != http.StatusOK {
 		t.Fatalf("expected status 200, got %d: %s", rec.Code, rec.Body.String())
+	}
+}
+
+func TestShopRedeem_ClosedWindow_Rejected(t *testing.T) {
+	// Configure window to day 1-2 (closed when day != 1 or 2)
+	configData, _ := json.Marshal([]map[string]any{
+		{"key": "redemption_start_day", "value": "1"},
+		{"key": "redemption_end_day", "value": "2"},
+	})
+	client := &mockSupabaseClient{
+		getResp: configData,
+		rpcResp: []byte(`{"success":true,"claim_id":12,"new_balance":500}`),
+	}
+	api := NewAPI(client)
+
+	body := `{"reward_id":1,"coins":1000,"target_type":"EWALLET","target_value":"GoPay - 0812345678"}`
+	req := httptest.NewRequest(http.MethodPost, "/api/shop/redeem", strings.NewReader(body))
+	req.Header.Set("Content-Type", "application/json")
+	claims := &auth.SessionClaims{UID: "user-123", Role: "SEEKER"}
+	req = req.WithContext(auth.ContextWithClaims(req.Context(), claims))
+
+	rec := httptest.NewRecorder()
+	api.Handler(rec, req)
+
+	// August 31 is outside [1, 2], must be rejected with 400 Bad Request
+	if rec.Code != http.StatusBadRequest {
+		t.Fatalf("expected 400 Bad Request for closed window, got %d: %s", rec.Code, rec.Body.String())
+	}
+	if !strings.Contains(rec.Body.String(), "Periode penukaran koin saat ini ditutup") {
+		t.Fatalf("expected closed message, got %s", rec.Body.String())
 	}
 }
 

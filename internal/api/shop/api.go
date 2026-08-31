@@ -1,11 +1,13 @@
 package shop
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"net/http"
 	"strconv"
 	"strings"
+	"time"
 
 	"odyssey/pkg/auth"
 	"odyssey/pkg/db"
@@ -45,6 +47,41 @@ type ClaimView struct {
 	ProcessedAt   *string `json:"processed_at,omitempty"`
 }
 
+type ConfigRow struct {
+	Key   string `json:"key"`
+	Value string `json:"value"`
+}
+
+func fetchRedemptionConfig(ctx context.Context, client db.SupabaseClient) shared.RedemptionConfig {
+	startDay := shared.DefaultRedemptionStartDay
+	endDay := shared.DefaultRedemptionEndDay
+	raw, err := client.Get(ctx, "odyssey_system_config", "key=in.(redemption_start_day,redemption_end_day)")
+	if err == nil && len(raw) > 0 {
+		var rows []ConfigRow
+		if err := json.Unmarshal(raw, &rows); err == nil {
+			for _, r := range rows {
+				if r.Key == "redemption_start_day" {
+					if v, err := strconv.Atoi(r.Value); err == nil && v >= 1 && v <= 31 {
+						startDay = v
+					}
+				} else if r.Key == "redemption_end_day" {
+					if v, err := strconv.Atoi(r.Value); err == nil && v >= 1 && v <= 31 {
+						endDay = v
+					}
+				}
+			}
+		}
+	}
+	tz := shared.LoadConfig().Timezone
+	return shared.ResolveRedemptionConfig(startDay, endDay, tz, time.Now())
+}
+
+func (a *API) HandleGetShopConfig(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+	cfg := fetchRedemptionConfig(ctx, a.client)
+	shared.WriteJSON(w, http.StatusOK, cfg)
+}
+
 func (a *API) HandleGetCatalog(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	raw, err := a.client.Get(ctx, "odyssey_reward_catalog", "is_available=eq.true&order=cost_coins.asc")
@@ -64,6 +101,13 @@ func (a *API) HandleRedeem(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	uid := claims.UID
+
+	// 1. Server-side Redemption Window Enforcement
+	cfg := fetchRedemptionConfig(ctx, a.client)
+	if !cfg.IsOpen {
+		shared.WriteJSONError(w, fmt.Sprintf("Periode penukaran koin saat ini ditutup. Penukaran dibuka tanggal %d–%d setiap bulan.", cfg.RedemptionStartDay, cfg.RedemptionEndDay), http.StatusBadRequest)
+		return
+	}
 
 	var req struct {
 		RewardID    *int64 `json:"reward_id"`
@@ -287,6 +331,10 @@ func (a *API) HandleAdminProcessClaim(w http.ResponseWriter, r *http.Request, cl
 func (a *API) Handler(w http.ResponseWriter, r *http.Request) {
 	path := strings.TrimSuffix(r.URL.Path, "/")
 
+	if path == "/api/shop/config" && r.Method == http.MethodGet {
+		a.HandleGetShopConfig(w, r)
+		return
+	}
 	if path == "/api/shop/items" && r.Method == http.MethodGet {
 		a.HandleGetCatalog(w, r)
 		return
