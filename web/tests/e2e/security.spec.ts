@@ -1,4 +1,4 @@
-﻿import { test, expect } from '@playwright/test';
+import { test, expect } from '@playwright/test';
 import { login } from './helpers/auth';
 
 test.describe('Security & Authorization Boundary Journeys', () => {
@@ -16,7 +16,7 @@ test.describe('Security & Authorization Boundary Journeys', () => {
 
   test('Journey 12b: Member role cannot access Guide / Admin dashboard', async ({ page }) => {
     // Login as member (SEEKER role)
-    await login(page, 'demo1');
+    await login(page, 'user_testing');
     await expect(page).toHaveURL(/.*#\/$/);
     
     // BottomNav should NOT have Admin link

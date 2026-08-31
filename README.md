@@ -41,8 +41,8 @@ storytelling — purely for fun, learning, and engagement.
 
 The current prototype uses Local Authentication for demonstration purposes. Use any of the following accounts:
 
-- **demo1** / `odyssey123` (Leo - Seeker / Anggota Keluarga)
-- **demo2** / `odyssey123` (Maya - Guide / Admin Keluarga)
+- **user_testing** / `odyssey123` (Leo - Anggota Keluarga)
+- **admin** / `admin123` (Maya - Admin Keluarga)
 
 ## CI Status
 

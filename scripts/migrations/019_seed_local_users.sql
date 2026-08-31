@@ -18,6 +18,6 @@ CREATE POLICY "Allow service_role full access on local_users" ON odyssey_local_u
 -- Seed demo users for QA
 INSERT INTO odyssey_local_users (id, username, password_hash, profile_uid)
 VALUES 
-  ('local-demo-1', 'demo1', '$2a$10$pf9YB4KjXyVOePdY.ggTcuVQLriPgWYZfStZPaEv5FE6l2oYv4Cdq', 'demo-uid-1'),
-  ('local-demo-2', 'demo2', '$2a$10$pf9YB4KjXyVOePdY.ggTcuVQLriPgWYZfStZPaEv5FE6l2oYv4Cdq', 'demo-uid-2')
+  ('local-demo-1', 'user_testing', '$2a$10$NmX5Vh66fmfaHOOnp0pnV.NjpCtAkylXUFKlki/dfcxA41Fgy.9Ay', 'demo-uid-1'),
+  ('local-demo-2', 'admin', '$2a$10$36SADVo2qG2FhrpvTXMsaO.wGgERYfygx.Y2vDhaNmnlRANAgDRe6', 'demo-uid-2')
 ON CONFLICT (username) DO NOTHING;
