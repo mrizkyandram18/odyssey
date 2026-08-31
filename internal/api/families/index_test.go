@@ -47,7 +47,7 @@ func (m *mockCrewStore) UpdateFamily(ctx context.Context, crewID string, patch m
 func makeToken(t *testing.T, issuer *auth.HMACSessionIssuer) string {
 	t.Helper()
 	token, _, err := issuer.IssueSession(auth.SessionKindUser, "user-1", &auth.SessionConfig{
-		Role:     auth.RoleSeeker,
+		Role:     auth.RoleMember,
 		FamilyID: "crew-1",
 	})
 	if err != nil {

@@ -40,14 +40,15 @@ type PendingSubmissionView struct {
 	RewardXP       int            `json:"reward_xp"`
 }
 
-func (a *API) requireGuide(w http.ResponseWriter, r *http.Request) (*auth.SessionClaims, bool) {
+func (a *API) requireAdmin(w http.ResponseWriter, r *http.Request) (*auth.SessionClaims, bool) {
 	claims, ok := auth.ClaimsFromContext(r.Context())
 	if !ok || claims == nil {
 		shared.WriteUnauthorized(w)
 		return nil, false
 	}
-	if claims.Role != "GUIDE" && claims.Role != "ADMIN" && claims.Role != "BUILDER" {
-		shared.WriteJSONError(w, "akses ditolak: hanya untuk admin/guide", http.StatusForbidden)
+	role := auth.NormalizeRole(claims.Role)
+	if role != auth.RoleAdmin {
+		shared.WriteJSONError(w, "akses ditolak: hanya untuk admin", http.StatusForbidden)
 		return nil, false
 	}
 	return claims, true
@@ -58,7 +59,7 @@ func (a *API) validateTaskInput(req *TaskInput) error {
 }
 
 func (a *API) HandleListTasks(w http.ResponseWriter, r *http.Request) {
-	claims, ok := a.requireGuide(w, r)
+	claims, ok := a.requireAdmin(w, r)
 	if !ok {
 		return
 	}
@@ -101,7 +102,7 @@ func (a *API) HandleListTasks(w http.ResponseWriter, r *http.Request) {
 }
 
 func (a *API) HandleCreateTask(w http.ResponseWriter, r *http.Request) {
-	claims, ok := a.requireGuide(w, r)
+	claims, ok := a.requireAdmin(w, r)
 	if !ok {
 		return
 	}
@@ -192,7 +193,7 @@ func (a *API) HandleCreateTask(w http.ResponseWriter, r *http.Request) {
 }
 
 func (a *API) HandleUpdateTask(w http.ResponseWriter, r *http.Request, taskID int64) {
-	claims, ok := a.requireGuide(w, r)
+	claims, ok := a.requireAdmin(w, r)
 	if !ok {
 		return
 	}
@@ -273,7 +274,7 @@ func (a *API) HandleUpdateTask(w http.ResponseWriter, r *http.Request, taskID in
 }
 
 func (a *API) HandleDeleteTask(w http.ResponseWriter, r *http.Request, taskID int64) {
-	claims, ok := a.requireGuide(w, r)
+	claims, ok := a.requireAdmin(w, r)
 	if !ok {
 		return
 	}
@@ -304,7 +305,7 @@ func (a *API) HandleDeleteTask(w http.ResponseWriter, r *http.Request, taskID in
 }
 
 func (a *API) HandleDuplicateTask(w http.ResponseWriter, r *http.Request, taskID int64) {
-	claims, ok := a.requireGuide(w, r)
+	claims, ok := a.requireAdmin(w, r)
 	if !ok {
 		return
 	}
@@ -365,7 +366,7 @@ func (a *API) HandleDuplicateTask(w http.ResponseWriter, r *http.Request, taskID
 }
 
 func (a *API) HandleListPendingSubmissions(w http.ResponseWriter, r *http.Request) {
-	claims, ok := a.requireGuide(w, r)
+	claims, ok := a.requireAdmin(w, r)
 	if !ok {
 		return
 	}
@@ -467,7 +468,7 @@ func (a *API) HandleListPendingSubmissions(w http.ResponseWriter, r *http.Reques
 }
 
 func (a *API) HandleVerifySubmission(w http.ResponseWriter, r *http.Request, subID int64) {
-	claims, ok := a.requireGuide(w, r)
+	claims, ok := a.requireAdmin(w, r)
 	if !ok {
 		return
 	}
@@ -572,7 +573,7 @@ func (a *API) Handler(w http.ResponseWriter, r *http.Request) {
 }
 
 func (a *API) HandleGetAdminConfig(w http.ResponseWriter, r *http.Request) {
-	_, ok := a.requireGuide(w, r)
+	_, ok := a.requireAdmin(w, r)
 	if !ok {
 		return
 	}
@@ -659,7 +660,7 @@ func (a *API) HandleGetAdminConfig(w http.ResponseWriter, r *http.Request) {
 }
 
 func (a *API) HandleUpdateAdminConfig(w http.ResponseWriter, r *http.Request) {
-	_, ok := a.requireGuide(w, r)
+	_, ok := a.requireAdmin(w, r)
 	if !ok {
 		return
 	}

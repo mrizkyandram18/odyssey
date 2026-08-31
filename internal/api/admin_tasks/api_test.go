@@ -76,7 +76,7 @@ func TestAdminVerifySubmissionAuth(t *testing.T) {
 
 	// Guide user should proceed to verify
 	client.rpcResp = []byte(`{"success":true,"status":"APPROVED","coins_earned":50,"xp_earned":100}`)
-	guideClaims := &auth.SessionClaims{UID: "admin-1", FamilyID: "fam-1", Role: "GUIDE"}
+	guideClaims := &auth.SessionClaims{UID: "admin-1", FamilyID: "fam-1", Role: "ADMIN"}
 	req2 := httptest.NewRequest(http.MethodPost, "/api/admin/submissions/1/verify", strings.NewReader(`{"status":"APPROVED"}`))
 	req2.Header.Set("Content-Type", "application/json")
 	req2 = req2.WithContext(auth.ContextWithClaims(req2.Context(), guideClaims))
@@ -98,7 +98,7 @@ func TestAdminCreateTask_AssignsFamilyIDAndDefaults(t *testing.T) {
 	payload := `{"title":"Tugas Baru","task_type":"DOCUMENT_UPLOAD","step_order":1}`
 	req := httptest.NewRequest(http.MethodPost, "/api/admin/tasks", strings.NewReader(payload))
 	req.Header.Set("Content-Type", "application/json")
-	guideClaims := &auth.SessionClaims{UID: "admin-1", FamilyID: "fam-alpha", Role: "GUIDE"}
+	guideClaims := &auth.SessionClaims{UID: "admin-1", FamilyID: "fam-alpha", Role: "ADMIN"}
 	req = req.WithContext(auth.ContextWithClaims(req.Context(), guideClaims))
 
 	rec := httptest.NewRecorder()
@@ -132,7 +132,7 @@ func TestAdminCreateTask_MiniGameEvaluationType(t *testing.T) {
 	payload := `{"title":"Memory Game","task_type":"MINI_GAME","step_order":2}`
 	req := httptest.NewRequest(http.MethodPost, "/api/admin/tasks", strings.NewReader(payload))
 	req.Header.Set("Content-Type", "application/json")
-	guideClaims := &auth.SessionClaims{UID: "admin-1", FamilyID: "fam-alpha", Role: "GUIDE"}
+	guideClaims := &auth.SessionClaims{UID: "admin-1", FamilyID: "fam-alpha", Role: "ADMIN"}
 	req = req.WithContext(auth.ContextWithClaims(req.Context(), guideClaims))
 
 	rec := httptest.NewRecorder()
@@ -161,7 +161,7 @@ func TestAdminUpdateTask_FamilyMismatchForbidden(t *testing.T) {
 	req := httptest.NewRequest(http.MethodPatch, "/api/admin/tasks/10", strings.NewReader(`{"title":"Hacked"}`))
 	req.Header.Set("Content-Type", "application/json")
 	// Admin belongs to fam-alpha
-	guideClaims := &auth.SessionClaims{UID: "admin-1", FamilyID: "fam-alpha", Role: "GUIDE"}
+	guideClaims := &auth.SessionClaims{UID: "admin-1", FamilyID: "fam-alpha", Role: "ADMIN"}
 	req = req.WithContext(auth.ContextWithClaims(req.Context(), guideClaims))
 
 	rec := httptest.NewRecorder()
@@ -177,7 +177,7 @@ func TestAdminCreateTask_ValidationRules(t *testing.T) {
 		mutateResp: []byte(`{"id":3,"title":"Task"}`),
 	}
 	api := NewAPI(client)
-	guideClaims := &auth.SessionClaims{UID: "admin-1", FamilyID: "fam-alpha", Role: "GUIDE"}
+	guideClaims := &auth.SessionClaims{UID: "admin-1", FamilyID: "fam-alpha", Role: "ADMIN"}
 
 	testCases := []struct {
 		name        string
@@ -265,7 +265,7 @@ func TestAdminConfig_Get(t *testing.T) {
 	api := NewAPI(client)
 
 	req := httptest.NewRequest(http.MethodGet, "/api/admin/config", nil)
-	guideClaims := &auth.SessionClaims{UID: "admin-1", FamilyID: "fam-1", Role: "GUIDE"}
+	guideClaims := &auth.SessionClaims{UID: "admin-1", FamilyID: "fam-1", Role: "ADMIN"}
 	req = req.WithContext(auth.ContextWithClaims(req.Context(), guideClaims))
 
 	rec := httptest.NewRecorder()
@@ -316,7 +316,7 @@ func TestAdminConfig_NonGuideForbidden(t *testing.T) {
 func TestAdminConfig_UpdateSuccessAndValidation(t *testing.T) {
 	client := &mockSupabaseClient{}
 	api := NewAPI(client)
-	guideClaims := &auth.SessionClaims{UID: "admin-1", Role: "GUIDE"}
+	guideClaims := &auth.SessionClaims{UID: "admin-1", Role: "ADMIN"}
 
 	cases := []struct {
 		name       string
@@ -385,7 +385,7 @@ func TestAdminDuplicateTask_Success(t *testing.T) {
 	api := NewAPI(client)
 
 	req := httptest.NewRequest(http.MethodPost, "/api/admin/tasks/10/duplicate", nil)
-	guideClaims := &auth.SessionClaims{UID: "admin-1", FamilyID: "fam-alpha", Role: "GUIDE"}
+	guideClaims := &auth.SessionClaims{UID: "admin-1", FamilyID: "fam-alpha", Role: "ADMIN"}
 	req = req.WithContext(auth.ContextWithClaims(req.Context(), guideClaims))
 
 	rec := httptest.NewRecorder()
@@ -423,7 +423,7 @@ func TestAdminDuplicateTask_FamilyMismatchForbidden(t *testing.T) {
 	api := NewAPI(client)
 
 	req := httptest.NewRequest(http.MethodPost, "/api/admin/tasks/10/duplicate", nil)
-	guideClaims := &auth.SessionClaims{UID: "admin-1", FamilyID: "fam-alpha", Role: "GUIDE"}
+	guideClaims := &auth.SessionClaims{UID: "admin-1", FamilyID: "fam-alpha", Role: "ADMIN"}
 	req = req.WithContext(auth.ContextWithClaims(req.Context(), guideClaims))
 
 	rec := httptest.NewRecorder()

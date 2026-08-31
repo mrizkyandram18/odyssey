@@ -15,7 +15,7 @@ func newTestIssuer(t *testing.T) *HMACSessionIssuer {
 
 func TestIssueSession_UserCreatesTokenAndClaims(t *testing.T) {
 	issuer := newTestIssuer(t)
-	cfg := &SessionConfig{Role: RoleSeeker, FamilyID: "crew-1"}
+	cfg := &SessionConfig{Role: RoleAdmin, FamilyID: "crew-1"}
 
 	token, claims, err := issuer.IssueSession(SessionKindUser, "alice", cfg)
 	if err != nil {
@@ -34,8 +34,8 @@ func TestIssueSession_UserCreatesTokenAndClaims(t *testing.T) {
 	if claims.Kind != "user" {
 		t.Errorf("expected kind user, got %s", claims.Kind)
 	}
-	if claims.Role != "SEEKER" {
-		t.Errorf("expected role SEEKER, got %s", claims.Role)
+	if claims.Role != "ADMIN" {
+		t.Errorf("expected role ADMIN, got %s", claims.Role)
 	}
 	if claims.FamilyID != "crew-1" {
 		t.Errorf("expected family_id crew-1, got %s", claims.FamilyID)
@@ -86,7 +86,7 @@ func TestIssueSession_EmptyUID(t *testing.T) {
 
 func TestParseSession_ValidToken(t *testing.T) {
 	issuer := newTestIssuer(t)
-	token, _, err := issuer.IssueSession(SessionKindUser, "alice", &SessionConfig{Role: RoleBuilder, FamilyID: "crew-7"})
+	token, _, err := issuer.IssueSession(SessionKindUser, "alice", &SessionConfig{Role: RoleAdmin, FamilyID: "crew-7"})
 	if err != nil {
 		t.Fatalf("issue: %v", err)
 	}
@@ -101,8 +101,8 @@ func TestParseSession_ValidToken(t *testing.T) {
 	if claims.Kind != "user" {
 		t.Errorf("expected kind user, got %s", claims.Kind)
 	}
-	if claims.Role != "BUILDER" {
-		t.Errorf("expected role BUILDER, got %s", claims.Role)
+	if claims.Role != "ADMIN" {
+		t.Errorf("expected role ADMIN, got %s", claims.Role)
 	}
 	if claims.FamilyID != "crew-7" {
 		t.Errorf("expected family_id crew-7, got %s", claims.FamilyID)

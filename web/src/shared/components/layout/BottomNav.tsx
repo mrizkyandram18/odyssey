@@ -5,13 +5,13 @@ import { useSession } from '../../hooks/useSession'
 export function BottomNav() {
   const location = useLocation()
   const { profile } = useSession()
-  const isGuide = profile?.role === 'GUIDE'
+  const isAdmin = profile?.role === 'ADMIN' || profile?.role === 'GUIDE' || profile?.role === 'BUILDER'
 
   const navItems = [
     { label: 'Beranda', to: '/', icon: Home },
     { label: 'Pencairan Koin', to: '/shop', icon: Banknote },
     { label: 'Profil', to: '/profile', icon: User },
-    ...(isGuide ? [{ label: 'Admin', to: '/admin', icon: ShieldCheck }] : []),
+    ...(isAdmin ? [{ label: 'Admin', to: '/admin', icon: ShieldCheck }] : []),
   ]
 
   return (

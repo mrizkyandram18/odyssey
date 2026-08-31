@@ -8,11 +8,24 @@ import (
 type Role string
 
 const (
-	RoleSeeker  Role = "SEEKER"
-	RoleGuide   Role = "GUIDE"
-	RoleBuilder Role = "BUILDER"
-	RoleAdmin   Role = "ADMIN"
+	RoleAdmin  Role = "ADMIN"
+	RoleMember Role = "MEMBER"
+
+	// Legacy backward compatibility constants
+	RoleLegacySeeker  Role = "SEEKER"
+	RoleLegacyGuide   Role = "GUIDE"
+	RoleLegacyBuilder Role = "BUILDER"
 )
+
+// NormalizeRole maps any role string to product roles (ADMIN or MEMBER)
+func NormalizeRole(r string) Role {
+	switch Role(r) {
+	case RoleAdmin, RoleLegacyGuide, RoleLegacyBuilder:
+		return RoleAdmin
+	default:
+		return RoleMember
+	}
+}
 
 type DevicePayload struct {
 	LoginMethod string `json:"login_method"`

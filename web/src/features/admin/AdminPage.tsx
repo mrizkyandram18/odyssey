@@ -78,12 +78,12 @@ export const AdminPage: React.FC = () => {
     username: '',
     password: '',
     explorer_name: '',
-    role: 'SEEKER' as Role,
+    role: 'MEMBER' as Role,
   })
 
   const [editMemberForm, setEditMemberForm] = useState({
     explorer_name: '',
-    role: 'SEEKER' as Role,
+    role: 'MEMBER' as Role,
     is_active: true,
     password: '',
     reset_device: false,
@@ -1911,8 +1911,8 @@ export const AdminPage: React.FC = () => {
                   onChange={(e) => setNewMember({ ...newMember, role: e.target.value as Role })}
                   className="w-full p-3 rounded-xl bg-surface border border-border-subtle text-sm font-bold text-text-primary focus:outline-none focus:border-accent-magic"
                 >
-                  <option value="SEEKER">SEEKER (Anggota biasa)</option>
-                  <option value="GUIDE">GUIDE (Admin keluarga)</option>
+                  <option value="MEMBER">MEMBER (Anggota biasa)</option>
+                  <option value="ADMIN">ADMIN (Admin keluarga)</option>
                 </select>
               </div>
 
@@ -1982,8 +1982,8 @@ export const AdminPage: React.FC = () => {
                   onChange={(e) => setEditMemberForm({ ...editMemberForm, role: e.target.value as Role })}
                   className="w-full p-3 rounded-xl bg-surface border border-border-subtle text-sm font-bold text-text-primary focus:outline-none focus:border-accent-magic"
                 >
-                  <option value="SEEKER">SEEKER (Anggota biasa)</option>
-                  <option value="GUIDE">GUIDE (Admin keluarga)</option>
+                  <option value="MEMBER">MEMBER (Anggota biasa)</option>
+                  <option value="ADMIN">ADMIN (Admin keluarga)</option>
                 </select>
               </div>
 

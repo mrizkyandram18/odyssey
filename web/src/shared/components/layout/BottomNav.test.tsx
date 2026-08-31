@@ -20,10 +20,10 @@ describe('BottomNav Component', () => {
     cleanup()
   })
 
-  it('renders standard navigation links for seeker members', () => {
+  it('renders standard navigation links for MEMBER role', () => {
     vi.mocked(useSession).mockReturnValue({
-      session: { uid: 'u1', role: 'SEEKER' } as any,
-      profile: { uid: 'u1', role: 'SEEKER' } as any,
+      session: { uid: 'u1', role: 'MEMBER' } as any,
+      profile: { uid: 'u1', role: 'MEMBER' } as any,
       loading: false,
       error: null,
       login: vi.fn(),
@@ -43,10 +43,10 @@ describe('BottomNav Component', () => {
     expect(screen.queryByText('Admin')).not.toBeInTheDocument()
   })
 
-  it('renders Admin navigation link for GUIDE role', () => {
+  it('renders Admin navigation link for ADMIN role', () => {
     vi.mocked(useSession).mockReturnValue({
-      session: { uid: 'u1', role: 'GUIDE' } as any,
-      profile: { uid: 'u1', role: 'GUIDE' } as any,
+      session: { uid: 'u1', role: 'ADMIN' } as any,
+      profile: { uid: 'u1', role: 'ADMIN' } as any,
       loading: false,
       error: null,
       login: vi.fn(),

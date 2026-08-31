@@ -2325,36 +2325,36 @@ func TestAdversarial_Phase10_ConcurrentDeviceBinding_100Goroutines(t *testing.T)
 
 func TestAdversarial_Phase11_TenantIsolationAndLegacyRejection(t *testing.T) {
 	dbMock := newMockDB()
-	dbMock.profiles["member-famA"] = &db.UserProfile{UID: "member-famA", FamilyID: "fam-A", ExplorerName: "User A", Role: "SEEKER", IsActive: true}
-	dbMock.profiles["member-famB"] = &db.UserProfile{UID: "member-famB", FamilyID: "fam-B", ExplorerName: "User B", Role: "SEEKER", IsActive: true}
+	dbMock.profiles["member-famA"] = &db.UserProfile{UID: "member-famA", FamilyID: "fam-A", ExplorerName: "User A", Role: "MEMBER", IsActive: true}
+	dbMock.profiles["member-famB"] = &db.UserProfile{UID: "member-famB", FamilyID: "fam-B", ExplorerName: "User B", Role: "MEMBER", IsActive: true}
 
 	adminMembersAPI := apiAdminMembers.NewAPI(dbMock)
 
-	t.Run("1. Guide of Family A cannot reset device or edit member of Family B", func(t *testing.T) {
-		guideAClaims := &auth.SessionClaims{UID: "guide-famA", FamilyID: "fam-A", Role: "GUIDE"}
+	t.Run("1. Admin of Family A cannot reset device or edit member of Family B", func(t *testing.T) {
+		adminAClaims := &auth.SessionClaims{UID: "admin-famA", FamilyID: "fam-A", Role: "ADMIN"}
 		patchBody := `{"reset_device": true}`
 		req := httptest.NewRequest(http.MethodPatch, "/api/admin/members/member-famB", strings.NewReader(patchBody))
-		req = req.WithContext(auth.ContextWithClaims(req.Context(), guideAClaims))
+		req = req.WithContext(auth.ContextWithClaims(req.Context(), adminAClaims))
 		w := httptest.NewRecorder()
 
 		adminMembersAPI.HandleUpdateMember(w, req, "member-famB")
 
 		if w.Code != http.StatusForbidden {
-			t.Fatalf("CROSS-TENANT VIOLATION: Guide of Family A was able to update member of Family B! Got status %d: %s", w.Code, w.Body.String())
+			t.Fatalf("CROSS-TENANT VIOLATION: Admin of Family A was able to update member of Family B! Got status %d: %s", w.Code, w.Body.String())
 		}
 	})
 
-	t.Run("2. SEEKER cannot call Admin Member APIs", func(t *testing.T) {
-		seekerClaims := &auth.SessionClaims{UID: "seeker-1", FamilyID: "fam-A", Role: "SEEKER"}
+	t.Run("2. MEMBER role cannot call Admin Member APIs", func(t *testing.T) {
+		memberClaims := &auth.SessionClaims{UID: "member-1", FamilyID: "fam-A", Role: "MEMBER"}
 		patchBody := `{"reset_device": true}`
 		req := httptest.NewRequest(http.MethodPatch, "/api/admin/members/member-famA", strings.NewReader(patchBody))
-		req = req.WithContext(auth.ContextWithClaims(req.Context(), seekerClaims))
+		req = req.WithContext(auth.ContextWithClaims(req.Context(), memberClaims))
 		w := httptest.NewRecorder()
 
 		adminMembersAPI.HandleUpdateMember(w, req, "member-famA")
 
 		if w.Code != http.StatusForbidden {
-			t.Fatalf("UNAUTHORIZED ROLE BYPASS: SEEKER was able to call admin member API! Got status %d: %s", w.Code, w.Body.String())
+			t.Fatalf("UNAUTHORIZED ROLE BYPASS: MEMBER role was able to call admin member API! Got status %d: %s", w.Code, w.Body.String())
 		}
 	})
 
@@ -2372,17 +2372,29 @@ func TestAdversarial_Phase11_TenantIsolationAndLegacyRejection(t *testing.T) {
 
 	t.Run("4. Non-cash TargetType (PULSA/PHONE/VOUCHER) rejected with 400", func(t *testing.T) {
 		shopAPI := apiShop.NewAPI(dbMock)
-		seekerClaims := &auth.SessionClaims{UID: "member-famA", FamilyID: "fam-A", Role: "SEEKER"}
+		memberClaims := &auth.SessionClaims{UID: "member-famA", FamilyID: "fam-A", Role: "MEMBER"}
 
 		reqBody := `{"coins": 100, "target_type": "PULSA", "target_value": "08123456789"}`
 		req := httptest.NewRequest(http.MethodPost, "/api/shop/redeem", strings.NewReader(reqBody))
-		req = req.WithContext(auth.ContextWithClaims(req.Context(), seekerClaims))
+		req = req.WithContext(auth.ContextWithClaims(req.Context(), memberClaims))
 		w := httptest.NewRecorder()
 
 		shopAPI.HandleRedeem(w, req)
 
 		if w.Code != http.StatusBadRequest || !strings.Contains(w.Body.String(), "hanya mendukung pencairan tunai") {
 			t.Fatalf("LEGACY ECONOMY REJECTION FAILED: PULSA target type accepted or wrong error! Status %d: %s", w.Code, w.Body.String())
+		}
+	})
+
+	t.Run("5. Role Normalization (SEEKER -> MEMBER, GUIDE/BUILDER -> ADMIN)", func(t *testing.T) {
+		if auth.NormalizeRole("SEEKER") != auth.RoleMember {
+			t.Errorf("SEEKER should normalize to MEMBER")
+		}
+		if auth.NormalizeRole("GUIDE") != auth.RoleAdmin {
+			t.Errorf("GUIDE should normalize to ADMIN")
+		}
+		if auth.NormalizeRole("BUILDER") != auth.RoleAdmin {
+			t.Errorf("BUILDER should normalize to ADMIN")
 		}
 	})
 }

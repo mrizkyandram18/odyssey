@@ -26,7 +26,7 @@ func TestRequireAuth_ValidSession(t *testing.T) {
 	mw := newTestMiddleware(t)
 	issuer := NewSessionIssuer("test-secret-key")
 	token := issueTestToken(t, issuer, SessionKindUser, "alice", &SessionConfig{
-		Role: RoleSeeker, FamilyID: "crew-1",
+		Role: RoleMember, FamilyID: "crew-1",
 	})
 
 	called := false
@@ -202,10 +202,10 @@ func TestRequireSessionKind_Mismatched(t *testing.T) {
 func TestRequireRole_Matching(t *testing.T) {
 	mw := newTestMiddleware(t)
 	issuer := NewSessionIssuer("test-secret-key")
-	token := issueTestToken(t, issuer, SessionKindUser, "alice", &SessionConfig{Role: RoleBuilder})
+	token := issueTestToken(t, issuer, SessionKindUser, "alice", &SessionConfig{Role: RoleAdmin})
 
 	innerCalled := false
-	decorated := mw.RequireRole(RoleBuilder)(func(w http.ResponseWriter, r *http.Request) {
+	decorated := mw.RequireRole(RoleAdmin)(func(w http.ResponseWriter, r *http.Request) {
 		innerCalled = true
 	})
 
@@ -225,10 +225,10 @@ func TestRequireRole_Matching(t *testing.T) {
 func TestRequireRole_Mismatched(t *testing.T) {
 	mw := newTestMiddleware(t)
 	issuer := NewSessionIssuer("test-secret-key")
-	token := issueTestToken(t, issuer, SessionKindUser, "alice", &SessionConfig{Role: RoleSeeker})
+	token := issueTestToken(t, issuer, SessionKindUser, "alice", &SessionConfig{Role: RoleMember})
 
 	innerCalled := false
-	decorated := mw.RequireRole(RoleBuilder)(func(w http.ResponseWriter, r *http.Request) {
+	decorated := mw.RequireRole(RoleAdmin)(func(w http.ResponseWriter, r *http.Request) {
 		innerCalled = true
 	})
 
@@ -251,7 +251,7 @@ func TestRequireRole_NoRoleInSession(t *testing.T) {
 	token := issueTestToken(t, issuer, SessionKindSetup, "alice", nil)
 
 	innerCalled := false
-	decorated := mw.RequireRole(RoleBuilder)(func(w http.ResponseWriter, r *http.Request) {
+	decorated := mw.RequireRole(RoleAdmin)(func(w http.ResponseWriter, r *http.Request) {
 		innerCalled = true
 	})
 
@@ -271,7 +271,7 @@ func TestRequireRole_NoRoleInSession(t *testing.T) {
 func TestRequireRole_Unauthenticated(t *testing.T) {
 	mw := newTestMiddleware(t)
 	innerCalled := false
-	decorated := mw.RequireRole(RoleBuilder)(func(w http.ResponseWriter, r *http.Request) {
+	decorated := mw.RequireRole(RoleAdmin)(func(w http.ResponseWriter, r *http.Request) {
 		innerCalled = true
 	})
 

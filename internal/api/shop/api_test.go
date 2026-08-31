@@ -173,7 +173,7 @@ func TestAdminProcessClaim_Success(t *testing.T) {
 
 	req := httptest.NewRequest(http.MethodPost, "/api/admin/claims/5/process", strings.NewReader(`{"status":"APPROVED","notes":"Transfer pulsa sukses"}`))
 	req.Header.Set("Content-Type", "application/json")
-	guideClaims := &auth.SessionClaims{UID: "admin-1", FamilyID: "fam-1", Role: "GUIDE"}
+	guideClaims := &auth.SessionClaims{UID: "admin-1", FamilyID: "fam-1", Role: "ADMIN"}
 	req = req.WithContext(auth.ContextWithClaims(req.Context(), guideClaims))
 
 	rec := httptest.NewRecorder()

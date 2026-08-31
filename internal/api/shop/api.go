@@ -227,7 +227,7 @@ func (a *API) HandleGetUserClaims(w http.ResponseWriter, r *http.Request) {
 
 func (a *API) HandleAdminListClaims(w http.ResponseWriter, r *http.Request) {
 	claims, ok := auth.ClaimsFromContext(r.Context())
-	if !ok || claims == nil || claims.Role != "GUIDE" {
+	if !ok || claims == nil || auth.NormalizeRole(string(claims.Role)) != auth.RoleAdmin {
 		shared.WriteJSONError(w, "akses ditolak: hanya untuk admin", http.StatusForbidden)
 		return
 	}
@@ -332,7 +332,7 @@ func (a *API) HandleAdminListClaims(w http.ResponseWriter, r *http.Request) {
 
 func (a *API) HandleAdminProcessClaim(w http.ResponseWriter, r *http.Request, claimID int64) {
 	claims, ok := auth.ClaimsFromContext(r.Context())
-	if !ok || claims == nil || claims.Role != "GUIDE" {
+	if !ok || claims == nil || auth.NormalizeRole(string(claims.Role)) != auth.RoleAdmin {
 		shared.WriteJSONError(w, "akses ditolak: hanya untuk admin", http.StatusForbidden)
 		return
 	}

@@ -1,4 +1,4 @@
-export type Role = 'SEEKER' | 'BUILDER' | 'GUIDE'
+export type Role = 'ADMIN' | 'MEMBER' | 'SEEKER' | 'BUILDER' | 'GUIDE'
 
 export type LoginMethod = 'BOTH' | 'PASSWORD' | 'GATEKEEPER'
 

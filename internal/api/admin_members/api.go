@@ -55,14 +55,15 @@ type UpdateMemberRequest struct {
 	ResetDevice  *bool   `json:"reset_device,omitempty"`
 }
 
-func (a *API) requireGuide(w http.ResponseWriter, r *http.Request) (*auth.SessionClaims, bool) {
+func (a *API) requireAdmin(w http.ResponseWriter, r *http.Request) (*auth.SessionClaims, bool) {
 	claims, ok := auth.ClaimsFromContext(r.Context())
 	if !ok || claims == nil {
 		shared.WriteUnauthorized(w)
 		return nil, false
 	}
-	if claims.Role != "GUIDE" && claims.Role != "ADMIN" && claims.Role != "BUILDER" {
-		shared.WriteJSONError(w, "akses ditolak: hanya untuk admin/guide", http.StatusForbidden)
+	role := auth.NormalizeRole(claims.Role)
+	if role != auth.RoleAdmin {
+		shared.WriteJSONError(w, "akses ditolak: hanya untuk admin", http.StatusForbidden)
 		return nil, false
 	}
 	return claims, true
@@ -77,7 +78,7 @@ func generateID(prefix string) string {
 }
 
 func (a *API) HandleListMembers(w http.ResponseWriter, r *http.Request) {
-	claims, ok := a.requireGuide(w, r)
+	claims, ok := a.requireAdmin(w, r)
 	if !ok {
 		return
 	}
@@ -152,7 +153,7 @@ func (a *API) HandleListMembers(w http.ResponseWriter, r *http.Request) {
 }
 
 func (a *API) HandleCreateMember(w http.ResponseWriter, r *http.Request) {
-	claims, ok := a.requireGuide(w, r)
+	claims, ok := a.requireAdmin(w, r)
 	if !ok {
 		return
 	}
@@ -185,14 +186,7 @@ func (a *API) HandleCreateMember(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	role := strings.ToUpper(strings.TrimSpace(req.Role))
-	if role == "" {
-		role = "SEEKER"
-	}
-	if role != "SEEKER" && role != "GUIDE" {
-		shared.WriteJSONError(w, "role tidak valid (pilih SEEKER atau GUIDE)", http.StatusBadRequest)
-		return
-	}
+	role := string(auth.NormalizeRole(req.Role))
 
 	// 1. Check username uniqueness
 	existingRaw, err := a.client.Get(ctx, "odyssey_local_users", fmt.Sprintf("username=eq.%s", req.Username))
@@ -272,7 +266,7 @@ func (a *API) HandleCreateMember(w http.ResponseWriter, r *http.Request) {
 }
 
 func (a *API) HandleUpdateMember(w http.ResponseWriter, r *http.Request, targetUID string) {
-	claims, ok := a.requireGuide(w, r)
+	claims, ok := a.requireAdmin(w, r)
 	if !ok {
 		return
 	}

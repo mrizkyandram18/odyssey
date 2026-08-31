@@ -104,16 +104,12 @@ func IsAdmin(r *http.Request) bool {
 	if !ok {
 		return false
 	}
-	return claims.Role == string(RoleAdmin)
+	return NormalizeRole(claims.Role) == RoleAdmin
 }
 
-// IsGuideOrAdmin checks whether the session claims contain an admin or guide role.
+// IsGuideOrAdmin is kept for backward compatibility alias.
 func IsGuideOrAdmin(r *http.Request) bool {
-	claims, ok := ClaimsFromRequest(r)
-	if !ok {
-		return false
-	}
-	return claims.Role == string(RoleAdmin) || claims.Role == string(RoleGuide)
+	return IsAdmin(r)
 }
 
 // AdminUIDFromContext extracts the admin UID set by RequireRole(RoleAdmin).
