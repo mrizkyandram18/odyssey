@@ -9,15 +9,17 @@ interface DocUploadModalProps {
   task: TaskView
   onClose: () => void
   onSuccess: () => void
+  onNextTask?: () => void
 }
 
-export const DocUploadModal: React.FC<DocUploadModalProps> = ({ task, onClose, onSuccess }) => {
+export const DocUploadModal: React.FC<DocUploadModalProps> = ({ task, onClose, onSuccess, onNextTask }) => {
+  const isAlreadyDone = task.status === 'APPROVED' || task.status === 'PENDING'
   const fileInputRef = useRef<HTMLInputElement>(null)
   const [selectedFile, setSelectedFile] = useState<File | null>(null)
   const [note, setNote] = useState('')
   const [uploading, setUploading] = useState(false)
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
-  const [submitted, setSubmitted] = useState(false)
+  const [submitted, setSubmitted] = useState(isAlreadyDone)
 
   const attachmentUrl = task.config?.attachment_url || ''
   const attachmentName = task.config?.attachment_name || 'Dokumen Template'
@@ -225,15 +227,17 @@ export const DocUploadModal: React.FC<DocUploadModalProps> = ({ task, onClose, o
                 animate={{ opacity: 1, scale: 1 }}
                 className="py-6 text-center space-y-5"
               >
-                <div className="w-20 h-20 mx-auto rounded-full bg-accent-gold/20 text-accent-gold flex items-center justify-center">
-                  <Clock className="w-12 h-12" />
+                <div className={`w-20 h-20 mx-auto rounded-full ${task.status === 'APPROVED' ? 'bg-status-success/20 text-status-success' : 'bg-accent-gold/20 text-accent-gold'} flex items-center justify-center`}>
+                  {task.status === 'APPROVED' ? <CheckCircle2 className="w-12 h-12" /> : <Clock className="w-12 h-12" />}
                 </div>
                 <div>
                   <h4 className="font-heading font-bold text-2xl text-text-primary">
-                    Dokumen Berhasil Terkirim! 📄
+                    {task.status === 'APPROVED' ? 'Dokumen Selesai (Disetujui)! 📄' : 'Dokumen Berhasil Terkirim! 📄'}
                   </h4>
                   <p className="text-sm text-text-secondary mt-1">
-                    Dokumenmu sedang dalam antrean verifikasi admin. Koin & EXP akan otomatis masuk setelah disetujui.
+                    {task.status === 'APPROVED'
+                      ? `Tugas telah disetujui dan kamu mendapatkan +${task.coins_earned || task.reward_coins} Koin & +${task.xp_earned || task.reward_xp} EXP.`
+                      : 'Dokumenmu sedang dalam antrean verifikasi admin. Koin & EXP akan otomatis masuk setelah disetujui.'}
                   </p>
                 </div>
 
@@ -246,8 +250,12 @@ export const DocUploadModal: React.FC<DocUploadModalProps> = ({ task, onClose, o
 
                 <button
                   onClick={() => {
-                    onSuccess()
-                    onClose()
+                    if (onNextTask) {
+                      onNextTask()
+                    } else {
+                      onSuccess()
+                      onClose()
+                    }
                   }}
                   className="w-full py-4 rounded-2xl bg-accent-magic text-white font-heading font-bold shadow-lg shadow-accent-magic/30 hover:brightness-110 active:scale-[0.98] transition-all flex items-center justify-center gap-2"
                 >

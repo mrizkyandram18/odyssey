@@ -72,6 +72,19 @@ export const LinearPath: React.FC = () => {
     if (refreshProfile) refreshProfile()
   }
 
+  const handleNextTask = (currentTask?: TaskView) => {
+    loadTasks()
+    if (refreshProfile) refreshProfile()
+    if (currentTask) {
+      const next = tasks.find((t) => t.step_order === currentTask.step_order + 1)
+      if (next) {
+        setActiveModalTask({ ...next, is_locked: false, status: next.status === 'LOCKED' ? 'UNLOCKED' : next.status })
+        return
+      }
+    }
+    setActiveModalTask(null)
+  }
+
   const userCoins = profile?.coins || 0
   const userLevel = profile?.level || 1
   const userXP = profile?.xp || 0
@@ -334,11 +347,11 @@ export const LinearPath: React.FC = () => {
         const isPhoto = activeModalTask.task_type === 'PHOTO_UPLOAD' || activeModalTask.task_type === 'PHOTO_PROOF'
         const isGame = activeModalTask.task_type === 'MINI_GAME' || Boolean(cfg.game)
         const isText = activeModalTask.task_type === 'TEXT_RESPONSE' || (!isDoc && !isPhoto && Boolean(cfg.minimum_characters || cfg.prompt))
-        if (isDoc) return <DocUploadModal task={activeModalTask} onClose={() => setActiveModalTask(null)} onSuccess={handleModalSuccess} />
-        if (isPhoto) return <CameraCaptureModal task={activeModalTask} onClose={() => setActiveModalTask(null)} onSuccess={handleModalSuccess} />
-        if (isText) return <TextResponseModal task={activeModalTask} onClose={() => setActiveModalTask(null)} onSuccess={handleModalSuccess} />
-        if (isGame) return <MiniGameModal task={activeModalTask} onClose={() => setActiveModalTask(null)} onSuccess={handleModalSuccess} />
-        return <VideoQuizModal task={activeModalTask} onClose={() => setActiveModalTask(null)} onSuccess={handleModalSuccess} />
+        if (isDoc) return <DocUploadModal task={activeModalTask} onClose={() => setActiveModalTask(null)} onSuccess={handleModalSuccess} onNextTask={() => handleNextTask(activeModalTask)} />
+        if (isPhoto) return <CameraCaptureModal task={activeModalTask} onClose={() => setActiveModalTask(null)} onSuccess={handleModalSuccess} onNextTask={() => handleNextTask(activeModalTask)} />
+        if (isText) return <TextResponseModal task={activeModalTask} onClose={() => setActiveModalTask(null)} onSuccess={handleModalSuccess} onNextTask={() => handleNextTask(activeModalTask)} />
+        if (isGame) return <MiniGameModal task={activeModalTask} onClose={() => setActiveModalTask(null)} onSuccess={handleModalSuccess} onNextTask={() => handleNextTask(activeModalTask)} />
+        return <VideoQuizModal task={activeModalTask} onClose={() => setActiveModalTask(null)} onSuccess={handleModalSuccess} onNextTask={() => handleNextTask(activeModalTask)} />
       })()}
     </div>
   )

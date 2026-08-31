@@ -115,7 +115,12 @@ export class ApiClient {
       return null as T
     }
 
-    return resp.json()
+    // Guard against empty body (e.g. Supabase PATCH without Prefer: return=representation)
+    const text = await resp.text()
+    if (!text || text.trim() === '' || text.trim() === '[]' || text.trim() === 'null') {
+      return null as T
+    }
+    return JSON.parse(text) as T
   }
 }
 
@@ -175,10 +180,13 @@ export const adminTasksApi = {
     apiClient.post<RedemptionConfig>('/api/admin/config', data),
   getTasks: (date?: string) => apiClient.get<TaskView[]>(`/api/admin/tasks${date ? '?date=' + date : ''}`),
   createTask: (data: any) => apiClient.post<TaskView>('/api/admin/tasks', data),
-  updateTask: (id: number, patch: any) => apiClient.patch<TaskView>(`/api/admin/tasks/${id}`, patch),
+  updateTask: (id: number, patch: any) => apiClient.patch<any>(`/api/admin/tasks/${id}`, patch),
   duplicateTask: (id: number) => apiClient.post<TaskView>(`/api/admin/tasks/${id}/duplicate`, {}),
   deleteTask: (id: number) => apiClient.delete<{ status: string }>(`/api/admin/tasks/${id}`),
-  getPendingSubmissions: () => apiClient.get<PendingSubmissionView[]>('/api/admin/submissions/pending'),
+  getSubmissions: (status?: string) =>
+    apiClient.get<PendingSubmissionView[]>(`/api/admin/submissions${status ? '?status=' + status : ''}`),
+  getPendingSubmissions: (status?: string) =>
+    apiClient.get<PendingSubmissionView[]>(`/api/admin/submissions${status ? '?status=' + status : ''}`),
   verifySubmission: (id: number, status: 'APPROVED' | 'REJECTED', notes?: string) =>
     apiClient.post<{ success: boolean; status: string }>(`/api/admin/submissions/${id}/verify`, { status, notes }),
   getClaims: (status?: string) => apiClient.get<ClaimView[]>(`/api/admin/claims${status ? '?status=' + status : ''}`),

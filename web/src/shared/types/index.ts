@@ -263,4 +263,8 @@ export interface PendingSubmissionView {
   created_at: string
   reward_coins: number
   reward_xp: number
+  coins_earned?: number
+  xp_earned?: number
+  admin_notes?: string
+  reviewed_at?: string
 }

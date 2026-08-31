@@ -29,6 +29,7 @@ import {
   Users,
   UserPlus,
   Edit3,
+  Clock,
 } from 'lucide-react'
 import { useSession } from '../../shared/hooks/useSession'
 import { adminTasksApi, adminMembersApi } from '../../shared/lib/api'
@@ -38,6 +39,7 @@ export const AdminPage: React.FC = () => {
   const { session, profile, loading: sessionLoading } = useSession()
 
   const [activeTab, setActiveTab] = useState<'submissions' | 'claims' | 'tasks' | 'members' | 'settings'>('submissions')
+  const [submissionFilter, setSubmissionFilter] = useState<'ALL' | 'PENDING' | 'APPROVED' | 'REJECTED'>('ALL')
   const [selectedDate, setSelectedDate] = useState<string>(
     new Date().toISOString().split('T')[0]
   )
@@ -137,7 +139,7 @@ export const AdminPage: React.FC = () => {
       setError(null)
       const [tList, subList, claimList, cfg, mList] = await Promise.all([
         adminTasksApi.getTasks(selectedDate),
-        adminTasksApi.getPendingSubmissions(),
+        adminTasksApi.getSubmissions ? adminTasksApi.getSubmissions('ALL') : adminTasksApi.getPendingSubmissions('ALL'),
         adminTasksApi.getClaims('PENDING'),
         adminTasksApi.getConfig(),
         adminMembersApi.getMembers().catch(() => []),
@@ -570,13 +572,13 @@ export const AdminPage: React.FC = () => {
       </header>
 
       {/* Needs Attention — operator's 5-second clarity */}
-      {(submissions.length > 0 || claims.length > 0) && (
+      {(submissions.filter((s) => s.status === 'PENDING').length > 0 || claims.length > 0) && (
         <div className="p-4 rounded-2xl bg-accent-magic/5 border border-accent-magic/20">
           <h2 className="text-xs font-bold tracking-wide uppercase text-text-secondary">Butuh Perhatian</h2>
           <div className="mt-2 flex flex-wrap gap-2">
-            {submissions.length > 0 && (
-              <button onClick={() => setActiveTab('submissions')} className="inline-flex items-center gap-2 px-3 py-2 rounded-xl bg-surface border border-accent-magic/30 text-sm font-bold text-text-primary hover:bg-surface-elevated transition-colors">
-                <span className="w-6 h-6 rounded-full bg-accent-magic text-white flex items-center justify-center text-xs font-bold">{submissions.length}</span>
+            {submissions.filter((s) => s.status === 'PENDING').length > 0 && (
+              <button onClick={() => { setActiveTab('submissions'); setSubmissionFilter('PENDING'); }} className="inline-flex items-center gap-2 px-3 py-2 rounded-xl bg-surface border border-accent-magic/30 text-sm font-bold text-text-primary hover:bg-surface-elevated transition-colors">
+                <span className="w-6 h-6 rounded-full bg-accent-magic text-white flex items-center justify-center text-xs font-bold">{submissions.filter((s) => s.status === 'PENDING').length}</span>
                 <span>Verifikasi Tugas</span>
               </button>
             )}
@@ -586,7 +588,7 @@ export const AdminPage: React.FC = () => {
                 <span>Pencairan Koin</span>
               </button>
             )}
-            {submissions.length === 0 && claims.length === 0 && (
+            {submissions.filter((s) => s.status === 'PENDING').length === 0 && claims.length === 0 && (
               <span className="text-xs text-status-success font-bold flex items-center gap-1"><CheckCircle2 className="w-4 h-4" /> Semua antrean bersih</span>
             )}
           </div>
@@ -608,8 +610,8 @@ export const AdminPage: React.FC = () => {
             Verifikasi
           </span>
           <p className="mt-1 flex items-baseline gap-1">
-            <span className="text-xl font-bold text-text-primary">{submissions.length}</span>
-            <span className="text-[11px] text-text-secondary">antrean</span>
+            <span className="text-xl font-bold text-text-primary">{submissions.filter((s) => s.status === 'PENDING').length}</span>
+            <span className="text-[11px] text-text-secondary">antrean ({submissions.length} total)</span>
           </p>
         </button>
 
@@ -755,175 +757,332 @@ export const AdminPage: React.FC = () => {
       )}
 
       {/* --- TAB 1: VERIFIKASI SUBMISSION --- */}
-      {activeTab === 'submissions' && (
-        <div className="space-y-4">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1">
-            <h3 className="font-bold text-text-primary text-sm">Antrean Verifikasi Bukti Tugas ({submissions.length})</h3>
-            <span className="text-xs text-text-secondary">Approve memberi koin & EXP otomatis</span>
-          </div>
+      {activeTab === 'submissions' && (() => {
+        const displayedSubmissions = submissions.filter(
+          (s) => submissionFilter === 'ALL' || s.status === submissionFilter
+        )
+        const pendingCount = submissions.filter((s) => s.status === 'PENDING').length
+        const approvedCount = submissions.filter((s) => s.status === 'APPROVED').length
+        const rejectedCount = submissions.filter((s) => s.status === 'REJECTED').length
 
-          {submissions.length === 0 ? (
-            <div className="py-12 text-center bg-surface rounded-2xl border border-border-subtle space-y-2 p-6">
-              <div className="w-10 h-10 mx-auto rounded-xl bg-accent-magic/10 text-accent-magic flex items-center justify-center"><CheckCircle2 className="w-5 h-5" /></div>
-              <p className="font-bold text-text-primary text-sm">Tidak Ada Antrean Verifikasi</p>
-              <p className="text-xs text-text-secondary max-w-xs mx-auto">Semua tugas dari anggota sudah selesai diperiksa.</p>
+        return (
+          <div className="space-y-4">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+              <div>
+                <h3 className="font-bold text-text-primary text-sm">
+                  Antrean Verifikasi Bukti Tugas ({pendingCount} Menunggu / {submissions.length} Total)
+                </h3>
+                <span className="text-xs text-text-secondary">Approve memberi koin & EXP otomatis. Submission otomatis kuis langsung tercatat di sini.</span>
+              </div>
+
+              {/* Status filter pills */}
+              <div className="flex items-center gap-1 p-1 bg-surface rounded-xl border border-border-subtle text-xs overflow-x-auto">
+                <button
+                  type="button"
+                  onClick={() => setSubmissionFilter('ALL')}
+                  className={`px-3 py-1 rounded-lg font-bold transition-colors whitespace-nowrap ${
+                    submissionFilter === 'ALL'
+                      ? 'bg-accent-magic text-white shadow-sm'
+                      : 'text-text-secondary hover:text-text-primary'
+                  }`}
+                >
+                  Semua ({submissions.length})
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setSubmissionFilter('PENDING')}
+                  className={`px-3 py-1 rounded-lg font-bold transition-colors whitespace-nowrap ${
+                    submissionFilter === 'PENDING'
+                      ? 'bg-accent-gold text-white shadow-sm'
+                      : 'text-text-secondary hover:text-text-primary'
+                  }`}
+                >
+                  Menunggu ({pendingCount})
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setSubmissionFilter('APPROVED')}
+                  className={`px-3 py-1 rounded-lg font-bold transition-colors whitespace-nowrap ${
+                    submissionFilter === 'APPROVED'
+                      ? 'bg-status-success text-white shadow-sm'
+                      : 'text-text-secondary hover:text-text-primary'
+                  }`}
+                >
+                  Disetujui ({approvedCount})
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setSubmissionFilter('REJECTED')}
+                  className={`px-3 py-1 rounded-lg font-bold transition-colors whitespace-nowrap ${
+                    submissionFilter === 'REJECTED'
+                      ? 'bg-status-error text-white shadow-sm'
+                      : 'text-text-secondary hover:text-text-primary'
+                  }`}
+                >
+                  Ditolak ({rejectedCount})
+                </button>
+              </div>
             </div>
-          ) : (
-            submissions.map((sub) => (
-              <div
-                key={sub.id}
-                className="p-4 rounded-2xl bg-surface border border-border-subtle shadow-sm space-y-3"
-              >
-                <div className="flex items-start justify-between gap-2">
-                  <div>
-                    {getTaskTypeBadge(sub.task_type)}
-                    <h4 className="font-heading font-bold text-text-primary text-base mt-1">
-                      {sub.task_title}
-                    </h4>
-                    <p className="text-xs text-text-secondary mt-0.5">
-                      Oleh: <strong className="text-text-primary">{sub.user_name}</strong> •{' '}
-                      {new Date(sub.created_at).toLocaleTimeString('id-ID', {
-                        hour: '2-digit',
-                        minute: '2-digit',
-                      })}
-                    </p>
-                  </div>
-                  <div className="text-right shrink-0">
-                    <span className="text-xs font-bold text-accent-gold">
-                      +{sub.reward_coins} 🪙
-                    </span>
-                    <p className="text-[10px] text-text-secondary">+{sub.reward_xp} XP</p>
-                  </div>
-                </div>
 
-                {/* Proof Media Preview based on Task Type */}
-                {/* 1. PHOTO or IMAGE */}
-                {sub.payload?.file_url && (sub.task_type === 'PHOTO_UPLOAD' || sub.task_type === 'PHOTO_PROOF' || sub.payload.file_url.match(/\.(jpg|jpeg|png|webp)$/i)) && (
-                  <div className="p-3 rounded-xl bg-surface border border-border-subtle space-y-2">
-                    <div
-                      onClick={() => setPreviewImage(sub.payload.file_url!)}
-                      className="relative aspect-video max-h-56 rounded-xl overflow-hidden cursor-pointer bg-black group"
-                    >
-                      <img
-                        src={sub.payload.file_url}
-                        alt="Bukti Foto"
-                        className="w-full h-full object-contain group-hover:scale-105 transition-transform"
-                      />
-                      <div className="absolute inset-0 bg-black/30 opacity-0 group-hover:opacity-100 flex items-center justify-center text-white text-xs font-bold transition-opacity">
-                        Ketuk untuk Memperbesar 🔍
+            {displayedSubmissions.length === 0 ? (
+              <div className="py-12 text-center bg-surface rounded-2xl border border-border-subtle space-y-2 p-6">
+                <div className="w-10 h-10 mx-auto rounded-xl bg-accent-magic/10 text-accent-magic flex items-center justify-center"><CheckCircle2 className="w-5 h-5" /></div>
+                <p className="font-bold text-text-primary text-sm">Tidak Ada Antrean Verifikasi</p>
+                <p className="text-xs text-text-secondary max-w-xs mx-auto">
+                  {submissionFilter === 'ALL'
+                    ? 'Semua tugas dari anggota sudah selesai diperiksa.'
+                    : `Tidak ada data submission dengan status ${submissionFilter}.`}
+                </p>
+              </div>
+            ) : (
+              displayedSubmissions.map((sub) => {
+                const isSubApproved = sub.status === 'APPROVED'
+                const isSubPending = sub.status === 'PENDING'
+                const isSubRejected = sub.status === 'REJECTED'
+                const isAutoQuiz = sub.submission_type === 'AUTO_QUIZ'
+
+                return (
+                  <div
+                    key={sub.id}
+                    className={`p-4 rounded-2xl border shadow-sm space-y-3 ${
+                      isSubApproved
+                        ? 'bg-surface border-status-success/30'
+                        : isSubRejected
+                        ? 'bg-surface border-status-error/30'
+                        : 'bg-surface border-border-subtle'
+                    }`}
+                  >
+                    <div className="flex items-start justify-between gap-2">
+                      <div>
+                        <div className="flex items-center gap-1.5">
+                          {getTaskTypeBadge(sub.task_type)}
+                          <span
+                            className={`flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-md ${
+                              isSubApproved
+                                ? 'bg-status-success/15 text-status-success'
+                                : isSubPending
+                                ? 'bg-accent-gold/15 text-accent-gold'
+                                : 'bg-status-error/15 text-status-error'
+                            }`}
+                          >
+                            {isSubApproved ? (
+                              <>
+                                <CheckCircle2 className="w-3 h-3" />
+                                <span>{isAutoQuiz ? 'Disetujui (Otomatis)' : 'Disetujui'}</span>
+                              </>
+                            ) : isSubPending ? (
+                              <>
+                                <Clock className="w-3 h-3" />
+                                <span>Menunggu Review</span>
+                              </>
+                            ) : (
+                              <>
+                                <XCircle className="w-3 h-3" />
+                                <span>Ditolak</span>
+                              </>
+                            )}
+                          </span>
+                        </div>
+                        <h4 className="font-heading font-bold text-text-primary text-base mt-1">
+                          {sub.task_title}
+                        </h4>
+                        <p className="text-xs text-text-secondary mt-0.5">
+                          Oleh: <strong className="text-text-primary">{sub.user_name}</strong> •{' '}
+                          {new Date(sub.created_at).toLocaleDateString('id-ID', {
+                            day: 'numeric',
+                            month: 'short',
+                            year: 'numeric',
+                          })}{' '}
+                          {new Date(sub.created_at).toLocaleTimeString('id-ID', {
+                            hour: '2-digit',
+                            minute: '2-digit',
+                          })}
+                        </p>
+                      </div>
+                      <div className="text-right shrink-0">
+                        <span className="text-xs font-bold text-accent-gold">
+                          +{sub.coins_earned || sub.reward_coins} 🪙
+                        </span>
+                        <p className="text-[10px] text-text-secondary">+{sub.xp_earned || sub.reward_xp} XP</p>
                       </div>
                     </div>
-                    {sub.payload.file_size && (
-                      <p className="text-[10px] text-text-secondary text-right">
-                        Ukuran: {(sub.payload.file_size / 1024).toFixed(0)} KB
-                      </p>
-                    )}
-                  </div>
-                )}
 
-                {/* 2. DOCUMENT */}
-                {sub.payload?.file_url && !(sub.task_type === 'PHOTO_UPLOAD' || sub.task_type === 'PHOTO_PROOF' || sub.payload.file_url.match(/\.(jpg|jpeg|png|webp)$/i)) && (
-                  <div className="p-3 rounded-xl bg-surface border border-border-subtle flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <FileText className="w-5 h-5 text-accent-magic" />
-                      <div>
-                        <p className="text-xs font-bold text-text-primary line-clamp-1">
-                          {sub.payload.file_name || 'Dokumen Bukti'}
-                        </p>
+                    {/* Proof Media Preview based on Task Type */}
+                    {/* 1. QUIZ / AUTO_QUIZ ANSWERS */}
+                    {sub.payload && (isAutoQuiz || (typeof sub.payload === 'object' && Object.keys(sub.payload).some((k) => k.startsWith('q') || k === 'answers'))) && (
+                      <div className="p-3 rounded-xl bg-surface-elevated border border-border-subtle space-y-1.5 text-xs">
+                        <p className="font-bold text-text-secondary">Jawaban Kuis Pengguna:</p>
+                        <div className="flex flex-wrap gap-2">
+                          {Object.entries(sub.payload.answers || sub.payload).map(([k, v]) => {
+                            if (typeof v === 'object' || k === 'submitted_at') return null
+                            return (
+                              <span key={k} className="px-2.5 py-1 rounded-lg bg-surface border border-border-subtle font-mono text-[11px] font-bold text-text-primary flex items-center gap-1.5">
+                                <span className="text-text-secondary uppercase">{k}:</span>
+                                <span className="text-accent-magic">{String(v)}</span>
+                              </span>
+                            )
+                          })}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* 2. PHOTO or IMAGE */}
+                    {sub.payload?.file_url && (sub.task_type === 'PHOTO_UPLOAD' || sub.task_type === 'PHOTO_PROOF' || sub.payload.file_url.match(/\.(jpg|jpeg|png|webp)$/i)) && (
+                      <div className="p-3 rounded-xl bg-surface border border-border-subtle space-y-2">
+                        <div
+                          onClick={() => setPreviewImage(sub.payload.file_url!)}
+                          className="relative aspect-video max-h-56 rounded-xl overflow-hidden cursor-pointer bg-black group"
+                        >
+                          <img
+                            src={sub.payload.file_url}
+                            alt="Bukti Foto"
+                            className="w-full h-full object-contain group-hover:scale-105 transition-transform"
+                          />
+                          <div className="absolute inset-0 bg-black/30 opacity-0 group-hover:opacity-100 flex items-center justify-center text-white text-xs font-bold transition-opacity">
+                            Ketuk untuk Memperbesar 🔍
+                          </div>
+                        </div>
                         {sub.payload.file_size && (
-                          <p className="text-[10px] text-text-secondary">
-                            {(sub.payload.file_size / 1024).toFixed(1)} KB
+                          <p className="text-[10px] text-text-secondary text-right">
+                            Ukuran: {(sub.payload.file_size / 1024).toFixed(0)} KB
                           </p>
                         )}
                       </div>
-                    </div>
-                    <a
-                      href={sub.payload.file_url}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="px-3 py-1.5 rounded-lg bg-surface-elevated border border-border-subtle text-xs font-bold text-accent-magic hover:underline flex items-center gap-1"
-                    >
-                      <span>Buka / Unduh</span>
-                      <ExternalLink className="w-3 h-3" />
-                    </a>
+                    )}
+
+                    {/* 3. DOCUMENT */}
+                    {sub.payload?.file_url && !(sub.task_type === 'PHOTO_UPLOAD' || sub.task_type === 'PHOTO_PROOF' || sub.payload.file_url.match(/\.(jpg|jpeg|png|webp)$/i)) && (
+                      <div className="p-3 rounded-xl bg-surface border border-border-subtle flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <FileText className="w-5 h-5 text-accent-magic" />
+                          <div>
+                            <p className="text-xs font-bold text-text-primary line-clamp-1">
+                              {sub.payload.file_name || 'Dokumen Bukti'}
+                            </p>
+                            {sub.payload.file_size && (
+                              <p className="text-[10px] text-text-secondary">
+                                {(sub.payload.file_size / 1024).toFixed(1)} KB
+                              </p>
+                            )}
+                          </div>
+                        </div>
+                        <a
+                          href={sub.payload.file_url}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="px-3 py-1.5 rounded-lg bg-surface-elevated border border-border-subtle text-xs font-bold text-accent-magic hover:underline flex items-center gap-1"
+                        >
+                          <span>Buka / Unduh</span>
+                          <ExternalLink className="w-3 h-3" />
+                        </a>
+                      </div>
+                    )}
+
+                    {/* 4. TEXT RESPONSE */}
+                    {sub.payload?.text && (
+                      <div className="p-3 rounded-xl bg-surface border border-border-subtle space-y-1">
+                        <p className="text-[10px] text-text-secondary uppercase font-bold flex items-center gap-1">
+                          <PenLine className="w-3 h-3" />
+                          <span>Respon Tertulis:</span>
+                        </p>
+                        <p className="text-xs text-text-primary whitespace-pre-wrap leading-relaxed">
+                          {sub.payload.text}
+                        </p>
+                      </div>
+                    )}
+
+                    {/* 5. MINI GAME STATS */}
+                    {sub.payload?.score !== undefined && (
+                      <div className="p-3 rounded-xl bg-surface border border-border-subtle flex items-center justify-between text-xs">
+                        <span className="font-bold text-text-secondary flex items-center gap-1">
+                          <Gamepad2 className="w-4 h-4 text-accent-magic" />
+                          <span>Skor Game:</span>
+                        </span>
+                        <span className="font-bold text-status-success">
+                          {sub.payload.score} Poin {sub.payload.moves ? `(${sub.payload.moves} langkah)` : ''}
+                        </span>
+                      </div>
+                    )}
+
+                    {sub.payload?.note && (
+                      <p className="text-xs text-text-secondary italic">
+                        Catatan: &quot;{sub.payload.note}&quot;
+                      </p>
+                    )}
+
+                    {sub.admin_notes && (
+                      <p className="text-xs text-text-secondary italic bg-surface-elevated p-2.5 rounded-xl border border-border-subtle">
+                        Catatan Admin: &quot;{sub.admin_notes}&quot;
+                      </p>
+                    )}
+
+                    {/* Pending Actions */}
+                    {isSubPending && (
+                      <>
+                        <label htmlFor={`note-${sub.id}`} className="text-[11px] font-bold text-text-secondary">Catatan untuk anggota (opsional, wajib jika menolak)</label>
+                        <input
+                          id={`note-${sub.id}`}
+                          type="text"
+                          placeholder="Contoh: Foto kurang jelas, ulangi dari sudut lain"
+                          value={actionNotes[sub.id] || ''}
+                          onChange={(e) =>
+                            setActionNotes((prev) => ({ ...prev, [sub.id]: e.target.value }))
+                          }
+                          className="w-full p-2.5 rounded-xl bg-surface border border-border-subtle text-xs text-text-primary placeholder:text-text-secondary/50 focus:outline-none focus:border-accent-magic focus:ring-1 focus:ring-accent-magic"
+                        />
+
+                        <div className="flex gap-2 pt-1">
+                          <button
+                            type="button"
+                            aria-label={`Tolak verifikasi ${sub.task_title}`}
+                            disabled={processingId === sub.id}
+                            onClick={() => handleVerifySubmission(sub.id, 'REJECTED')}
+                            className="flex-1 py-2.5 rounded-xl bg-surface border border-status-error/20 text-status-error hover:bg-status-error/10 font-bold text-xs flex items-center justify-center gap-1.5 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                          >
+                            <XCircle className="w-4 h-4" />
+                            <span>{processingId === sub.id ? 'Memproses...' : 'Tolak'}</span>
+                          </button>
+
+                          <button
+                            type="button"
+                            aria-label={`Setujui ${sub.task_title}`}
+                            disabled={processingId === sub.id}
+                            aria-busy={processingId === sub.id}
+                            onClick={() => handleVerifySubmission(sub.id, 'APPROVED')}
+                            className="flex-1 py-2.5 rounded-xl bg-status-success hover:brightness-110 text-white font-bold text-xs flex items-center justify-center gap-1.5 shadow-sm transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                          >
+                            <CheckCircle2 className="w-4 h-4" />
+                            <span>Setujui (+{sub.reward_coins}🪙)</span>
+                          </button>
+                        </div>
+                      </>
+                    )}
+
+                    {/* Approved Banner */}
+                    {isSubApproved && (
+                      <div className="p-3 rounded-xl bg-status-success/10 border border-status-success/20 text-xs text-status-success font-bold flex items-center justify-between">
+                        <span className="flex items-center gap-1.5">
+                          <CheckCircle2 className="w-4 h-4" />
+                          <span>Tugas telah disetujui {isAutoQuiz ? 'secara otomatis' : 'oleh admin'}</span>
+                        </span>
+                        <span className="text-accent-gold">+{sub.coins_earned || sub.reward_coins} Koin diberikan</span>
+                      </div>
+                    )}
+
+                    {/* Rejected Banner */}
+                    {isSubRejected && (
+                      <div className="p-3 rounded-xl bg-status-error/10 border border-status-error/20 text-xs text-status-error font-bold flex items-center gap-1.5">
+                        <XCircle className="w-4 h-4" />
+                        <span>Submission telah ditolak</span>
+                      </div>
+                    )}
                   </div>
-                )}
-
-                {/* 3. TEXT RESPONSE */}
-                {sub.payload?.text && (
-                  <div className="p-3 rounded-xl bg-surface border border-border-subtle space-y-1">
-                    <p className="text-[10px] text-text-secondary uppercase font-bold flex items-center gap-1">
-                      <PenLine className="w-3 h-3" />
-                      <span>Respon Tertulis:</span>
-                    </p>
-                    <p className="text-xs text-text-primary whitespace-pre-wrap leading-relaxed">
-                      {sub.payload.text}
-                    </p>
-                  </div>
-                )}
-
-                {/* 4. MINI GAME STATS */}
-                {sub.payload?.score !== undefined && (
-                  <div className="p-3 rounded-xl bg-surface border border-border-subtle flex items-center justify-between text-xs">
-                    <span className="font-bold text-text-secondary flex items-center gap-1">
-                      <Gamepad2 className="w-4 h-4 text-accent-magic" />
-                      <span>Skor Game:</span>
-                    </span>
-                    <span className="font-bold text-status-success">
-                      {sub.payload.score} Poin {sub.payload.moves ? `(${sub.payload.moves} langkah)` : ''}
-                    </span>
-                  </div>
-                )}
-
-                {sub.payload?.note && (
-                  <p className="text-xs text-text-secondary italic">
-                    Catatan: &quot;{sub.payload.note}&quot;
-                  </p>
-                )}
-
-                {/* Admin note — associated for rejection context */}
-                <label htmlFor={`note-${sub.id}`} className="text-[11px] font-bold text-text-secondary">Catatan untuk anggota (opsional, wajib jika menolak)</label>
-                <input
-                  id={`note-${sub.id}`}
-                  type="text"
-                  placeholder="Contoh: Foto kurang jelas, ulangi dari sudut lain"
-                  value={actionNotes[sub.id] || ''}
-                  onChange={(e) =>
-                    setActionNotes((prev) => ({ ...prev, [sub.id]: e.target.value }))
-                  }
-                  className="w-full p-2.5 rounded-xl bg-surface border border-border-subtle text-xs text-text-primary placeholder:text-text-secondary/50 focus:outline-none focus:border-accent-magic focus:ring-1 focus:ring-accent-magic"
-                />
-
-                {/* Action Buttons — Approve primary, Reject secondary */}
-                <div className="flex gap-2 pt-1">
-                  <button
-                    type="button"
-                    aria-label={`Tolak verifikasi ${sub.task_title}`}
-                    disabled={processingId === sub.id}
-                    onClick={() => handleVerifySubmission(sub.id, 'REJECTED')}
-                    className="flex-1 py-2.5 rounded-xl bg-surface border border-status-error/20 text-status-error hover:bg-status-error/10 font-bold text-xs flex items-center justify-center gap-1.5 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    <XCircle className="w-4 h-4" />
-                    <span>{processingId === sub.id ? 'Memproses...' : 'Tolak'}</span>
-                  </button>
-
-                  <button
-                    type="button"
-                    aria-label={`Setujui ${sub.task_title}`}
-                    disabled={processingId === sub.id}
-                    aria-busy={processingId === sub.id}
-                    onClick={() => handleVerifySubmission(sub.id, 'APPROVED')}
-                    className="flex-1 py-2.5 rounded-xl bg-status-success hover:brightness-110 text-white font-bold text-xs flex items-center justify-center gap-1.5 shadow-sm transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    <CheckCircle2 className="w-4 h-4" />
-                    <span>Setujui (+{sub.reward_coins}🪙)</span>
-                  </button>
-                </div>
-              </div>
-            ))
-          )}
-        </div>
-      )}
+                )
+              })
+            )}
+          </div>
+        )
+      })()}
 
       {/* --- TAB 2: PENCAIRAN KOIN & KLAIM --- */}
       {activeTab === 'claims' && (

@@ -116,10 +116,10 @@ func TestShopRedeem_OpenWindow_Success(t *testing.T) {
 }
 
 func TestShopRedeem_ClosedWindow_Rejected(t *testing.T) {
-	// Configure window to day 1-2 (closed when day != 1 or 2)
+	// Configure window to day 10-12 (closed when day is outside 10-12)
 	configData, _ := json.Marshal([]map[string]any{
-		{"key": "redemption_start_day", "value": "1"},
-		{"key": "redemption_end_day", "value": "2"},
+		{"key": "redemption_start_day", "value": "10"},
+		{"key": "redemption_end_day", "value": "12"},
 	})
 	client := &mockSupabaseClient{
 		getResp: configData,
@@ -136,7 +136,7 @@ func TestShopRedeem_ClosedWindow_Rejected(t *testing.T) {
 	rec := httptest.NewRecorder()
 	api.Handler(rec, req)
 
-	// August 31 is outside [1, 2], must be rejected with 400 Bad Request
+	// Outside [10, 12], must be rejected with 400 Bad Request
 	if rec.Code != http.StatusBadRequest {
 		t.Fatalf("expected 400 Bad Request for closed window, got %d: %s", rec.Code, rec.Body.String())
 	}

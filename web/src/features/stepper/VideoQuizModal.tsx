@@ -9,9 +9,10 @@ interface VideoQuizModalProps {
   task: TaskView
   onClose: () => void
   onSuccess: () => void
+  onNextTask?: () => void
 }
 
-export const VideoQuizModal: React.FC<VideoQuizModalProps> = ({ task, onClose, onSuccess }) => {
+export const VideoQuizModal: React.FC<VideoQuizModalProps> = ({ task, onClose, onSuccess, onNextTask }) => {
   const rawQuestions = task.config?.questions || []
   const questions: QuizQuestion[] = Array.isArray(rawQuestions) ? rawQuestions : []
   const youtubeUrl = task.config?.youtube_url || ''
@@ -32,8 +33,10 @@ export const VideoQuizModal: React.FC<VideoQuizModalProps> = ({ task, onClose, o
 
   const embedUrl = getEmbedUrl(youtubeUrl)
 
+  const isApproved = task.status === 'APPROVED'
+
   const [currentStep, setCurrentStep] = useState<'video' | 'quiz' | 'result'>(
-    embedUrl ? 'video' : 'quiz'
+    isApproved ? 'result' : embedUrl ? 'video' : 'quiz'
   )
   const [answers, setAnswers] = useState<Record<string, string>>({})
   const [submitting, setSubmitting] = useState(false)
@@ -265,31 +268,50 @@ export const VideoQuizModal: React.FC<VideoQuizModalProps> = ({ task, onClose, o
                     Hebat! Tugas Selesai 🎉
                   </h4>
                   <p className="text-sm text-text-secondary mt-1">
-                    Semua jawaban kuis kamu benar dan telah diverifikasi.
+                    {isApproved
+                      ? 'Tugas ini sudah kamu selesaikan dan reward telah diberikan.'
+                      : 'Semua jawaban kuis kamu benar dan telah diverifikasi.'}
                   </p>
                 </div>
 
                 <div className="inline-flex items-center gap-4 px-6 py-3 rounded-2xl bg-accent-gold/15 border border-accent-gold/30">
                   <div className="flex items-center gap-1.5 text-accent-gold font-bold">
                     <Award className="w-5 h-5" />
-                    <span>+{earnedRewards?.coins || task.reward_coins} Koin</span>
+                    <span>+{earnedRewards?.coins || task.coins_earned || task.reward_coins} Koin</span>
                   </div>
                   <div className="w-px h-5 bg-border-subtle" />
                   <div className="flex items-center gap-1.5 text-accent-magic font-bold">
                     <Sparkles className="w-5 h-5" />
-                    <span>+{earnedRewards?.xp || task.reward_xp} EXP</span>
+                    <span>+{earnedRewards?.xp || task.xp_earned || task.reward_xp} EXP</span>
                   </div>
                 </div>
 
-                <button
-                  onClick={() => {
-                    onSuccess()
-                    onClose()
-                  }}
-                  className="w-full py-4 rounded-2xl bg-accent-magic text-white font-heading font-bold shadow-lg shadow-accent-magic/30 hover:brightness-110 active:scale-[0.98] transition-all"
-                >
-                  Lanjut ke Tugas Berikutnya
-                </button>
+                <div className="space-y-2 pt-2">
+                  <button
+                    onClick={() => {
+                      if (onNextTask) {
+                        onNextTask()
+                      } else {
+                        onSuccess()
+                        onClose()
+                      }
+                    }}
+                    className="w-full py-4 rounded-2xl bg-accent-magic text-white font-heading font-bold shadow-lg shadow-accent-magic/30 hover:brightness-110 active:scale-[0.98] transition-all flex items-center justify-center gap-2"
+                  >
+                    <span>Lanjut ke Tugas Berikutnya</span>
+                    <ChevronRight className="w-5 h-5" />
+                  </button>
+
+                  {embedUrl && (
+                    <button
+                      type="button"
+                      onClick={() => setCurrentStep('video')}
+                      className="w-full py-2.5 rounded-xl text-text-secondary hover:text-text-primary text-xs font-bold transition-colors"
+                    >
+                      Tonton Ulang Video
+                    </button>
+                  )}
+                </div>
               </motion.div>
             )}
           </AnimatePresence>

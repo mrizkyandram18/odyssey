@@ -9,6 +9,7 @@ interface MiniGameModalProps {
   task: TaskView
   onClose: () => void
   onSuccess: () => void
+  onNextTask?: () => void
 }
 
 interface Card {
@@ -20,7 +21,8 @@ interface Card {
 
 const CARD_ICONS = ['🚀', '🌟', '💎', '🔥', '🛡️', '⚡', '👑', '🎯']
 
-export const MiniGameModal: React.FC<MiniGameModalProps> = ({ task, onClose, onSuccess }) => {
+export const MiniGameModal: React.FC<MiniGameModalProps> = ({ task, onClose, onSuccess, onNextTask }) => {
+  const isApproved = task.status === 'APPROVED'
   const targetScore = task.config?.target_score || 80
   const difficulty = task.config?.difficulty || 'MEDIUM'
 
@@ -32,12 +34,14 @@ export const MiniGameModal: React.FC<MiniGameModalProps> = ({ task, onClose, onS
   const [moves, setMoves] = useState(0)
   const [, setMatchedPairs] = useState(0)
   const [gameStarted, setGameStarted] = useState(false)
-  const [gameFinished, setGameFinished] = useState(false)
+  const [gameFinished, setGameFinished] = useState(isApproved)
   const [score, setScore] = useState(0)
   const [seconds, setSeconds] = useState(0)
   const [submitting, setSubmitting] = useState(false)
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
-  const [earnedRewards, setEarnedRewards] = useState<{ coins: number; xp: number } | null>(null)
+  const [earnedRewards, setEarnedRewards] = useState<{ coins: number; xp: number } | null>(
+    isApproved ? { coins: task.coins_earned || task.reward_coins, xp: task.xp_earned || task.reward_xp } : null
+  )
 
   // Initialize deck
   const initializeGame = useCallback(() => {
@@ -331,12 +335,17 @@ export const MiniGameModal: React.FC<MiniGameModalProps> = ({ task, onClose, onS
 
                 <button
                   onClick={() => {
-                    onSuccess()
-                    onClose()
+                    if (onNextTask) {
+                      onNextTask()
+                    } else {
+                      onSuccess()
+                      onClose()
+                    }
                   }}
-                  className="w-full py-4 rounded-2xl bg-accent-magic text-white font-heading font-bold shadow-lg shadow-accent-magic/30 hover:brightness-110 active:scale-[0.98] transition-all"
+                  className="w-full py-4 rounded-2xl bg-accent-magic text-white font-heading font-bold shadow-lg shadow-accent-magic/30 hover:brightness-110 active:scale-[0.98] transition-all flex items-center justify-center gap-2"
                 >
-                  Lanjut ke Tugas Berikutnya
+                  <span>Lanjut ke Tugas Berikutnya</span>
+                  <CheckCircle2 className="w-5 h-5" />
                 </button>
               </motion.div>
             )}

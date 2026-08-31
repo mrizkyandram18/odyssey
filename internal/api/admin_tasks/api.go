@@ -38,6 +38,10 @@ type PendingSubmissionView struct {
 	CreatedAt      string         `json:"created_at"`
 	RewardCoins    int            `json:"reward_coins"`
 	RewardXP       int            `json:"reward_xp"`
+	CoinsEarned    int            `json:"coins_earned,omitempty"`
+	XPEarned       int            `json:"xp_earned,omitempty"`
+	AdminNotes     *string        `json:"admin_notes,omitempty"`
+	ReviewedAt     *string        `json:"reviewed_at,omitempty"`
 }
 
 func (a *API) requireAdmin(w http.ResponseWriter, r *http.Request) (*auth.SessionClaims, bool) {
@@ -269,6 +273,11 @@ func (a *API) HandleUpdateTask(w http.ResponseWriter, r *http.Request, taskID in
 		shared.WriteJSONError(w, "gagal update tugas: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
+	// Supabase PATCH returns empty body without Prefer: return=representation
+	if len(raw) == 0 || string(raw) == "[]" || string(raw) == "null" {
+		shared.WriteJSON(w, http.StatusOK, map[string]any{"status": "updated", "id": taskID})
+		return
+	}
 	w.Header().Set("Content-Type", "application/json")
 	w.Write(raw)
 }
@@ -392,8 +401,21 @@ func (a *API) HandleListPendingSubmissions(w http.ResponseWriter, r *http.Reques
 		familyMemberUIDs[p.UID] = true
 	}
 
-	// 2. Fetch pending submissions
-	subRaw, err := a.client.Get(ctx, "odyssey_task_submissions", "status=eq.PENDING&order=created_at.desc")
+	// 2. Determine status filter
+	statusParam := strings.ToUpper(strings.TrimSpace(r.URL.Query().Get("status")))
+	subParams := "order=created_at.desc"
+	if statusParam == "PENDING" {
+		subParams = "status=eq.PENDING&order=created_at.desc"
+	} else if statusParam == "APPROVED" {
+		subParams = "status=eq.APPROVED&order=created_at.desc"
+	} else if statusParam == "REJECTED" {
+		subParams = "status=eq.REJECTED&order=created_at.desc"
+	} else if statusParam == "" && strings.HasSuffix(r.URL.Path, "/pending") {
+		subParams = "status=eq.PENDING&order=created_at.desc"
+	}
+
+	// Fetch submissions
+	subRaw, err := a.client.Get(ctx, "odyssey_task_submissions", subParams)
 	if err != nil {
 		shared.WriteJSONError(w, "gagal mengambil submission: "+err.Error(), http.StatusInternalServerError)
 		return
@@ -407,6 +429,10 @@ func (a *API) HandleListPendingSubmissions(w http.ResponseWriter, r *http.Reques
 		Status         string         `json:"status"`
 		Payload        map[string]any `json:"payload"`
 		CreatedAt      string         `json:"created_at"`
+		CoinsEarned    int            `json:"coins_earned"`
+		XPEarned       int            `json:"xp_earned"`
+		AdminNotes     *string        `json:"admin_notes"`
+		ReviewedAt     *string        `json:"reviewed_at"`
 	}
 	var subs []SubRow
 	_ = json.Unmarshal(subRaw, &subs)
@@ -448,6 +474,15 @@ func (a *API) HandleListPendingSubmissions(w http.ResponseWriter, r *http.Reques
 		if name == "" {
 			name = s.UserUID
 		}
+		rewardCoins := t.RewardCoins
+		if s.CoinsEarned > 0 {
+			rewardCoins = s.CoinsEarned
+		}
+		rewardXP := t.RewardXP
+		if s.XPEarned > 0 {
+			rewardXP = s.XPEarned
+		}
+
 		res[i] = PendingSubmissionView{
 			ID:             s.ID,
 			TaskID:         s.TaskID,
@@ -459,8 +494,12 @@ func (a *API) HandleListPendingSubmissions(w http.ResponseWriter, r *http.Reques
 			Status:         s.Status,
 			Payload:        s.Payload,
 			CreatedAt:      s.CreatedAt,
-			RewardCoins:    t.RewardCoins,
-			RewardXP:       t.RewardXP,
+			RewardCoins:    rewardCoins,
+			RewardXP:       rewardXP,
+			CoinsEarned:    s.CoinsEarned,
+			XPEarned:       s.XPEarned,
+			AdminNotes:     s.AdminNotes,
+			ReviewedAt:     s.ReviewedAt,
 		}
 	}
 
@@ -507,7 +546,7 @@ func (a *API) Handler(w http.ResponseWriter, r *http.Request) {
 	path := strings.TrimSuffix(r.URL.Path, "/")
 
 	// Submissions queue & verify
-	if r.Method == http.MethodGet && path == "/api/admin/submissions/pending" {
+	if r.Method == http.MethodGet && (path == "/api/admin/submissions/pending" || path == "/api/admin/submissions") {
 		a.HandleListPendingSubmissions(w, r)
 		return
 	}
