@@ -68,6 +68,9 @@ export const AdminPage: React.FC = () => {
   const [isCreateTaskModalOpen, setIsCreateTaskModalOpen] = useState(false)
   const [isCreateMemberModalOpen, setIsCreateMemberModalOpen] = useState(false)
   const [isEditMemberModalOpen, setIsEditMemberModalOpen] = useState(false)
+  const [editingTask, setEditingTask] = useState<TaskView | null>(null)
+  const [editTaskForm, setEditTaskForm] = useState({ title: '', description: '', youtube_url: '', reward_coins: 0, reward_xp: 0 })
+  const [isSavingTask, setIsSavingTask] = useState(false)
   const [selectedMember, setSelectedMember] = useState<MemberView | null>(null)
   const [previewImage, setPreviewImage] = useState<string | null>(null)
   const [actionNotes, setActionNotes] = useState<Record<number, string>>({})
@@ -230,6 +233,46 @@ export const AdminPage: React.FC = () => {
       fetchData()
     } catch (err: any) {
       alert('Gagal menduplikasi tugas: ' + err.message)
+    }
+  }
+
+  const handleOpenEditTask = (task: TaskView) => {
+    setEditingTask(task)
+    setEditTaskForm({
+      title: task.title || '',
+      description: task.description || '',
+      youtube_url: task.config?.youtube_url || '',
+      reward_coins: task.reward_coins || 0,
+      reward_xp: task.reward_xp || 0,
+    })
+  }
+
+  const handleSaveTask = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!editingTask) return
+    setIsSavingTask(true)
+    try {
+      const patch: Record<string, any> = {
+        title: editTaskForm.title,
+        description: editTaskForm.description,
+        reward_coins: editTaskForm.reward_coins,
+        reward_xp: editTaskForm.reward_xp,
+      }
+      if (editTaskForm.youtube_url !== undefined) {
+        patch.youtube_url = editTaskForm.youtube_url || null
+        // also propagate into config for frontend usage
+        patch.config = { ...((editingTask.config as Record<string, any>) || {}), youtube_url: editTaskForm.youtube_url || null }
+      }
+      await adminTasksApi.updateTask(editingTask.id, patch)
+      setTasks(prev => prev.map(t => t.id === editingTask.id
+        ? { ...t, title: editTaskForm.title, description: editTaskForm.description, reward_coins: editTaskForm.reward_coins, reward_xp: editTaskForm.reward_xp, config: patch.config ?? t.config }
+        : t
+      ))
+      setEditingTask(null)
+    } catch (err: any) {
+      alert('Gagal menyimpan tugas: ' + err.message)
+    } finally {
+      setIsSavingTask(false)
     }
   }
 
@@ -1067,6 +1110,16 @@ export const AdminPage: React.FC = () => {
                 <div className="flex items-center gap-1 shrink-0">
                   <button
                     type="button"
+                    onClick={() => handleOpenEditTask(task)}
+                    aria-label={`Edit tugas ${task.title}`}
+                    title="Edit Tugas"
+                    className="p-2 rounded-xl bg-surface border border-border-subtle text-text-secondary hover:text-accent-magic hover:bg-accent-magic/10 active:scale-95 transition-all"
+                  >
+                    <Edit3 className="w-4 h-4" />
+                  </button>
+
+                  <button
+                    type="button"
                     onClick={() => handleDuplicateTask(task.id)}
                     aria-label={`Duplikasi tugas ${task.title}`}
                     title="Duplikasi Tugas"
@@ -1394,6 +1447,111 @@ export const AdminPage: React.FC = () => {
               </button>
             </form>
           </div>
+        </div>
+      )}
+
+      {/* --- MODAL: EDIT TUGAS --- */}
+      {editingTask && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+          <motion.div
+            initial={{ scale: 0.96, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            className="w-full max-w-lg bg-surface border border-border-subtle rounded-2xl shadow-xl overflow-hidden flex flex-col max-h-[90vh]"
+          >
+            {/* Header */}
+            <div className="flex items-center justify-between px-5 py-4 border-b border-border-subtle bg-surface">
+              <div>
+                <h3 className="font-bold text-text-primary text-sm">Edit Tugas</h3>
+                <p className="text-xs text-text-secondary">#{editingTask.step_order} — {editingTask.task_type}</p>
+              </div>
+              <button
+                onClick={() => setEditingTask(null)}
+                className="w-8 h-8 rounded-full bg-surface-elevated flex items-center justify-center text-text-secondary hover:text-text-primary transition"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            {/* Form */}
+            <form onSubmit={handleSaveTask} className="flex-1 overflow-y-auto p-5 space-y-4">
+              {/* Judul */}
+              <div className="space-y-1">
+                <label className="text-xs font-semibold text-text-secondary uppercase tracking-wide">Judul Tugas</label>
+                <input
+                  type="text"
+                  required
+                  value={editTaskForm.title}
+                  onChange={e => setEditTaskForm({ ...editTaskForm, title: e.target.value })}
+                  className="w-full p-3 rounded-xl bg-surface-elevated border border-border-subtle text-sm text-text-primary focus:outline-none focus:border-accent-magic"
+                />
+              </div>
+
+              {/* Deskripsi */}
+              <div className="space-y-1">
+                <label className="text-xs font-semibold text-text-secondary uppercase tracking-wide">Deskripsi</label>
+                <textarea
+                  rows={3}
+                  value={editTaskForm.description}
+                  onChange={e => setEditTaskForm({ ...editTaskForm, description: e.target.value })}
+                  className="w-full p-3 rounded-xl bg-surface-elevated border border-border-subtle text-sm text-text-primary focus:outline-none focus:border-accent-magic resize-none"
+                />
+              </div>
+
+              {/* YouTube URL */}
+              <div className="space-y-1">
+                <label className="text-xs font-semibold text-text-secondary uppercase tracking-wide">Link YouTube (Opsional)</label>
+                <input
+                  type="url"
+                  value={editTaskForm.youtube_url}
+                  onChange={e => setEditTaskForm({ ...editTaskForm, youtube_url: e.target.value })}
+                  placeholder="https://www.youtube.com/watch?v=..."
+                  className="w-full p-3 rounded-xl bg-surface-elevated border border-border-subtle text-sm text-text-primary focus:outline-none focus:border-accent-magic"
+                />
+              </div>
+
+              {/* Rewards */}
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1">
+                  <label className="text-xs font-semibold text-text-secondary uppercase tracking-wide">Koin 🪙</label>
+                  <input
+                    type="number"
+                    min={0}
+                    value={editTaskForm.reward_coins}
+                    onChange={e => setEditTaskForm({ ...editTaskForm, reward_coins: Number(e.target.value) })}
+                    className="w-full p-3 rounded-xl bg-surface-elevated border border-border-subtle text-sm text-text-primary focus:outline-none focus:border-accent-magic"
+                  />
+                </div>
+                <div className="space-y-1">
+                  <label className="text-xs font-semibold text-text-secondary uppercase tracking-wide">XP ✨</label>
+                  <input
+                    type="number"
+                    min={0}
+                    value={editTaskForm.reward_xp}
+                    onChange={e => setEditTaskForm({ ...editTaskForm, reward_xp: Number(e.target.value) })}
+                    className="w-full p-3 rounded-xl bg-surface-elevated border border-border-subtle text-sm text-text-primary focus:outline-none focus:border-accent-magic"
+                  />
+                </div>
+              </div>
+
+              {/* Actions */}
+              <div className="flex gap-3 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setEditingTask(null)}
+                  className="flex-1 py-3 rounded-xl border border-border-subtle text-text-secondary text-sm font-semibold hover:bg-surface-elevated transition"
+                >
+                  Batal
+                </button>
+                <button
+                  type="submit"
+                  disabled={isSavingTask}
+                  className="flex-1 py-3 rounded-xl bg-accent-magic text-white text-sm font-bold hover:brightness-110 disabled:opacity-60 transition active:scale-95"
+                >
+                  {isSavingTask ? 'Menyimpan...' : 'Simpan Perubahan'}
+                </button>
+              </div>
+            </form>
+          </motion.div>
         </div>
       )}
 
