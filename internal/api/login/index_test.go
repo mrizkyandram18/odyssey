@@ -77,20 +77,20 @@ func setupDeps(a auth.Authenticator, s auth.SessionIssuer, p db.ProfileStore) {
 
 func makeValidClaims() *auth.SessionClaims {
 	return &auth.SessionClaims{
-		Version: 1,
-		Kind:    "user",
-		UID:     "user-1",
-		Role:    "SEEKER",
-		FamilyID:  "crew-1",
-		Issued:  1000,
-		Expires: 9999999999,
+		Version:  1,
+		Kind:     "user",
+		UID:      "user-1",
+		Role:     "SEEKER",
+		FamilyID: "crew-1",
+		Issued:   1000,
+		Expires:  9999999999,
 	}
 }
 
 func makeValidProfile() *db.UserProfile {
 	return &db.UserProfile{
 		UID:          "user-1",
-		FamilyID:       "crew-1",
+		FamilyID:     "crew-1",
 		ExplorerName: "Alice",
 		Role:         "SEEKER",
 		Level:        1,
@@ -216,108 +216,6 @@ func TestLoginHandler_InvalidCredential(t *testing.T) {
 
 	if w.Code != http.StatusUnauthorized {
 		t.Errorf("expected 401, got %d", w.Code)
-	}
-}
-
-func TestLoginHandler_DeviceOffline(t *testing.T) {
-	setupDeps(
-		&mockAuthenticator{err: auth.ErrDeviceOffline},
-		&mockIssuer{},
-		&mockProfileStore{},
-	)
-
-	body := `{"uid":"user-1","credential":"secret","device":{"device_id":"web-pwa","login_method":"BOTH"}}`
-	req := httptest.NewRequest(http.MethodPost, "/api/login", bytes.NewBufferString(body))
-	w := httptest.NewRecorder()
-	Handler(w, req)
-
-	if w.Code != http.StatusUnauthorized {
-		t.Errorf("expected 401, got %d", w.Code)
-	}
-}
-
-func TestLoginHandler_BuildTooOld(t *testing.T) {
-	setupDeps(
-		&mockAuthenticator{err: auth.ErrBuildTooOld},
-		&mockIssuer{},
-		&mockProfileStore{},
-	)
-
-	body := `{"uid":"user-1","credential":"secret","device":{"device_id":"web-pwa","login_method":"BOTH"}}`
-	req := httptest.NewRequest(http.MethodPost, "/api/login", bytes.NewBufferString(body))
-	w := httptest.NewRecorder()
-	Handler(w, req)
-
-	if w.Code != http.StatusUnauthorized {
-		t.Errorf("expected 401, got %d", w.Code)
-	}
-}
-
-func TestLoginHandler_PermissionsMissing(t *testing.T) {
-	setupDeps(
-		&mockAuthenticator{err: auth.ErrPermissionsMissing},
-		&mockIssuer{},
-		&mockProfileStore{},
-	)
-
-	body := `{"uid":"user-1","credential":"secret","device":{"device_id":"web-pwa","login_method":"BOTH"}}`
-	req := httptest.NewRequest(http.MethodPost, "/api/login", bytes.NewBufferString(body))
-	w := httptest.NewRecorder()
-	Handler(w, req)
-
-	if w.Code != http.StatusUnauthorized {
-		t.Errorf("expected 401, got %d", w.Code)
-	}
-}
-
-func TestLoginHandler_DeviceMismatch(t *testing.T) {
-	setupDeps(
-		&mockAuthenticator{err: auth.ErrDeviceMismatch},
-		&mockIssuer{},
-		&mockProfileStore{},
-	)
-
-	body := `{"uid":"user-1","credential":"secret","device":{"device_id":"web-pwa","login_method":"BOTH"}}`
-	req := httptest.NewRequest(http.MethodPost, "/api/login", bytes.NewBufferString(body))
-	w := httptest.NewRecorder()
-	Handler(w, req)
-
-	if w.Code != http.StatusUnauthorized {
-		t.Errorf("expected 401, got %d", w.Code)
-	}
-}
-
-func TestLoginHandler_GatekeeperNotFound(t *testing.T) {
-	setupDeps(
-		&mockAuthenticator{err: auth.ErrGatekeeperNotFound},
-		&mockIssuer{},
-		&mockProfileStore{},
-	)
-
-	body := `{"uid":"user-1","credential":"secret","device":{"device_id":"web-pwa","login_method":"BOTH"}}`
-	req := httptest.NewRequest(http.MethodPost, "/api/login", bytes.NewBufferString(body))
-	w := httptest.NewRecorder()
-	Handler(w, req)
-
-	if w.Code != http.StatusUnauthorized {
-		t.Errorf("expected 401, got %d", w.Code)
-	}
-}
-
-func TestLoginHandler_FirestoreUnavailable(t *testing.T) {
-	setupDeps(
-		&mockAuthenticator{err: auth.ErrFirestoreUnavailable},
-		&mockIssuer{},
-		&mockProfileStore{},
-	)
-
-	body := `{"uid":"user-1","credential":"secret","device":{"device_id":"web-pwa","login_method":"BOTH"}}`
-	req := httptest.NewRequest(http.MethodPost, "/api/login", bytes.NewBufferString(body))
-	w := httptest.NewRecorder()
-	Handler(w, req)
-
-	if w.Code != http.StatusServiceUnavailable {
-		t.Errorf("expected 503, got %d", w.Code)
 	}
 }
 

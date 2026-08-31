@@ -35,7 +35,7 @@ func TestObservability_Wrap_Concurrent(t *testing.T) {
 			defer wg.Done()
 			<-start
 			for j := 0; j < perWorker; j++ {
-				req := httptest.NewRequest(http.MethodPost, "/api/missions/complete", nil)
+				req := httptest.NewRequest(http.MethodPost, "/api/tasks/1/submit", nil)
 				req.Header.Set(HeaderRequestID, "stress-req")
 				w := httptest.NewRecorder()
 				handler.ServeHTTP(w, req)
@@ -48,8 +48,8 @@ func TestObservability_Wrap_Concurrent(t *testing.T) {
 	obs.Logger.Flush()
 	snap := obs.Metrics.Snapshot()
 	total := int64(workers * perWorker)
-	if snap.RequestCount["POST /api/missions/complete"] != total {
-		t.Errorf("expected %d requests, got %d", total, snap.RequestCount["POST /api/missions/complete"])
+	if snap.RequestCount["POST /api/tasks/1/submit"] != total {
+		t.Errorf("expected %d requests, got %d", total, snap.RequestCount["POST /api/tasks/1/submit"])
 	}
 	if len(snap.RequestLatencyMs) == 0 {
 		t.Error("expected request latency entries")

@@ -77,7 +77,7 @@ func RequestIDFromContext(ctx context.Context) string {
 type LogFields struct {
 	RequestID string
 	UserID    string
-	FamilyID    string
+	FamilyID  string
 	AdminUID  string
 	Endpoint  string
 	Method    string

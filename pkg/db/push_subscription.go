@@ -6,15 +6,19 @@ import (
 	"fmt"
 	"net/url"
 	"time"
-
-	"odyssey/pkg/game"
 )
+
+type PushSubscriptionStore interface {
+	UpsertSubscription(ctx context.Context, sub *PushSubscription) (*PushSubscription, error)
+	ListSubscriptionsByUID(ctx context.Context, uid string) ([]PushSubscription, error)
+	DeleteSubscription(ctx context.Context, uid string, endpoint string) error
+}
 
 type pushSubscriptionStore struct {
 	client SupabaseClient
 }
 
-func NewPushSubscriptionStore(client SupabaseClient) game.PushSubscriptionStore {
+func NewPushSubscriptionStore(client SupabaseClient) PushSubscriptionStore {
 	return &pushSubscriptionStore{client: client}
 }
 
@@ -28,29 +32,28 @@ type pushSubscriptionRow struct {
 	UpdatedAt time.Time `json:"updated_at"`
 }
 
-func (r *pushSubscriptionRow) toDomain() *game.PushSubscription {
+func (r *pushSubscriptionRow) toDomain() *PushSubscription {
 	if r == nil {
 		return nil
 	}
-	return &game.PushSubscription{
+	return &PushSubscription{
 		ID:        r.ID,
 		UID:       r.UID,
 		Endpoint:  r.Endpoint,
-		P256dh:    r.P256dh,
+		P256DH:    r.P256dh,
 		Auth:      r.Auth,
 		CreatedAt: r.CreatedAt,
-		UpdatedAt: r.UpdatedAt,
 	}
 }
 
-func (s *pushSubscriptionStore) UpsertSubscription(ctx context.Context, sub *game.PushSubscription) (*game.PushSubscription, error) {
+func (s *pushSubscriptionStore) UpsertSubscription(ctx context.Context, sub *PushSubscription) (*PushSubscription, error) {
 	if sub == nil || sub.UID == "" || sub.Endpoint == "" {
 		return nil, fmt.Errorf("invalid subscription payload")
 	}
 	payload := map[string]any{
 		"uid":        sub.UID,
 		"endpoint":   sub.Endpoint,
-		"p256dh":     sub.P256dh,
+		"p256dh":     sub.P256DH,
 		"auth":       sub.Auth,
 		"updated_at": time.Now().UTC(),
 	}
@@ -70,7 +73,7 @@ func (s *pushSubscriptionStore) UpsertSubscription(ctx context.Context, sub *gam
 	return rows[0].toDomain(), nil
 }
 
-func (s *pushSubscriptionStore) ListSubscriptionsByUID(ctx context.Context, uid string) ([]game.PushSubscription, error) {
+func (s *pushSubscriptionStore) ListSubscriptionsByUID(ctx context.Context, uid string) ([]PushSubscription, error) {
 	v := url.Values{}
 	v.Set("uid", "eq."+uid)
 	v.Set("order", "created_at.desc")
@@ -82,7 +85,7 @@ func (s *pushSubscriptionStore) ListSubscriptionsByUID(ctx context.Context, uid 
 	if err := json.Unmarshal(raw, &rows); err != nil {
 		return nil, fmt.Errorf("parse push subscriptions: %w", err)
 	}
-	out := make([]game.PushSubscription, len(rows))
+	out := make([]PushSubscription, len(rows))
 	for i, r := range rows {
 		out[i] = *r.toDomain()
 	}

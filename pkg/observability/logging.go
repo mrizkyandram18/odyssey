@@ -143,7 +143,7 @@ func (l *Logger) LogRequest(fields LogFields) {
 	f := map[string]any{
 		"request_id":  fields.RequestID,
 		"user_id":     fields.UserID,
-		"family_id":     fields.FamilyID,
+		"family_id":   fields.FamilyID,
 		"admin_uid":   fields.AdminUID,
 		"endpoint":    fields.Endpoint,
 		"method":      fields.Method,
@@ -237,9 +237,9 @@ func extractIdentityFromToken(r *http.Request) (uid, crewID, adminUID string) {
 		return
 	}
 	var claims struct {
-		UID    string `json:"uid"`
+		UID      string `json:"uid"`
 		FamilyID string `json:"family_id"`
-		Role   string `json:"role"`
+		Role     string `json:"role"`
 	}
 	if err := json.Unmarshal(raw, &claims); err != nil {
 		return

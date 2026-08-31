@@ -57,7 +57,7 @@ func (m *mockProfileStore) UpdateAvatar(ctx context.Context, uid string, style, 
 func makeProfile() *db.UserProfile {
 	return &db.UserProfile{
 		UID:          "user-1",
-		FamilyID:       "crew-1",
+		FamilyID:     "crew-1",
 		ExplorerName: "Alice",
 		Role:         "SEEKER",
 		Level:        1,
@@ -68,7 +68,7 @@ func makeProfile() *db.UserProfile {
 func makeUserToken(t *testing.T, issuer *auth.HMACSessionIssuer) string {
 	t.Helper()
 	token, _, err := issuer.IssueSession(auth.SessionKindUser, "user-1", &auth.SessionConfig{
-		Role:   auth.RoleSeeker,
+		Role:     auth.RoleSeeker,
 		FamilyID: "crew-1",
 	})
 	if err != nil {

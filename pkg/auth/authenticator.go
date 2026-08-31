@@ -37,18 +37,18 @@ type Authenticator interface {
 // SessionConfig carries optional claims to embed in an issued session token.
 // Pass nil for setup tokens or when role/crew information is unavailable.
 type SessionConfig struct {
-	Role   Role
+	Role     Role
 	FamilyID string
 }
 
 type SessionClaims struct {
-	Version int    `json:"v"`
-	Kind    string `json:"k"`
-	UID     string `json:"uid"`
-	Role    string `json:"role,omitempty"`
-	FamilyID  string `json:"family_id,omitempty"`
-	Issued  int64  `json:"iat"`
-	Expires int64  `json:"exp"`
+	Version  int    `json:"v"`
+	Kind     string `json:"k"`
+	UID      string `json:"uid"`
+	Role     string `json:"role,omitempty"`
+	FamilyID string `json:"family_id,omitempty"`
+	Issued   int64  `json:"iat"`
+	Expires  int64  `json:"exp"`
 }
 
 type SessionKind string
@@ -79,8 +79,16 @@ type PasswordHasher interface {
 	Verify(hashed, password string) error
 }
 
-// ErrSessionUID signals that the token UID does not match the expected UID.
-var ErrSessionUID = errors.New("session uid mismatch")
+var (
+	ErrUIDRequired        = errors.New("uid required")
+	ErrCredentialRequired = errors.New("credential required")
+	ErrCredentialInvalid  = errors.New("credential invalid")
+	ErrCredentialNotSet   = errors.New("credential not set")
+	ErrDeviceRequired     = errors.New("device id required")
+	ErrLoginMethodInvalid = errors.New("login method invalid")
+	ErrProfileUnavailable = errors.New("profile unavailable")
+	ErrSessionUID         = errors.New("session uid mismatch")
+)
 
 // SessionAuthErrorMessage translates session validation errors into
 // user-facing messages suitable for API error responses.

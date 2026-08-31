@@ -1,39 +1,26 @@
 package db
 
 import (
-	"encoding/json"
 	"time"
 )
 
 type UserProfile struct {
-	UID                    string    `json:"uid"`
-	FamilyID                 string    `json:"family_id"`
-	ExplorerName           string    `json:"explorer_name"`
-	Role                   string    `json:"role"`
-	Level                  int       `json:"level"`
-	XP                     int64     `json:"xp"`
-	Coins                  int64     `json:"coins"`
-	AvatarStyle            string    `json:"avatar_style"`
-	AvatarSeed             string    `json:"avatar_seed"`
-	AvatarFrame            string    `json:"avatar_frame"`
-	EquippedExplorerEffect string    `json:"equipped_explorer_effect"`
-	Version                int       `json:"version"`
-	PasswordHash           string    `json:"-"`
-	DeviceID               string    `json:"device_id,omitempty"`
-	CreatedAt              time.Time `json:"created_at"`
-	UpdatedAt              time.Time `json:"updated_at"`
-}
-
-// RewardLedger is the DB representation of a reward transaction.
-// Metadata is RawMessage so both JSON objects and strings from PostgREST parse cleanly.
-type RewardLedger struct {
-	ID         string          `json:"id" db:"id"`
-	UserID     string          `json:"user_id" db:"user_id"`
-	Source     string          `json:"source" db:"source"`
-	Amount     int64           `json:"amount" db:"amount"`
-	RewardType string          `json:"reward_type" db:"reward_type"`
-	Metadata   json.RawMessage `json:"metadata" db:"metadata"`
-	CreatedAt  time.Time       `json:"created_at" db:"created_at"`
+	UID          string    `json:"uid"`
+	FamilyID     string    `json:"family_id"`
+	ExplorerName string    `json:"explorer_name"`
+	Role         string    `json:"role"`
+	Level        int       `json:"level"`
+	XP           int64     `json:"xp"`
+	Coins        int64     `json:"coins"`
+	StreakDays   int       `json:"streak_days"`
+	LastActive   *string   `json:"last_active_date,omitempty"`
+	AvatarStyle  string    `json:"avatar_style"`
+	AvatarSeed   string    `json:"avatar_seed"`
+	Version      int       `json:"version"`
+	PasswordHash string    `json:"-"`
+	DeviceID     string    `json:"device_id,omitempty"`
+	CreatedAt    time.Time `json:"created_at"`
+	UpdatedAt    time.Time `json:"updated_at"`
 }
 
 type Family struct {
@@ -45,189 +32,11 @@ type Family struct {
 	UpdatedAt time.Time `json:"updated_at"`
 }
 
-type QuestInstance struct {
-	ID           int64      `json:"id"`
-	FamilyID       string     `json:"family_id"`
-	TemplateSlug string     `json:"template_slug"`
-	Title        string     `json:"title"`
-	Status       string     `json:"status"`
-	StartedAt    *time.Time `json:"started_at"`
-	StartedBy    *string    `json:"started_by"`
-	CompletedAt  *time.Time `json:"completed_at"`
-	CreatedAt    time.Time  `json:"created_at"`
-}
-
-type Exercise struct {
-	ID          int64      `json:"id"`
-	MissionID     int64      `json:"mission_id"`
-	Slug        string     `json:"slug"`
-	Description string     `json:"description"`
-	Status      string     `json:"status"`
-	AssignedTo  *string    `json:"assigned_to,omitempty"`
-	CompletedBy string     `json:"completed_by,omitempty"`
-	CompletedAt *time.Time `json:"completed_at"`
-	CreatedAt   time.Time  `json:"created_at"`
-}
-
-type JourneyProgress struct {
-	FamilyID         string    `json:"family_id"`
-	Journey          string    `json:"journey"`
-	Status         string    `json:"status"`
-	StoryBranch    string    `json:"story_branch"`
-	Progress       int       `json:"progress"`
-	LastUnlockedAt time.Time `json:"last_unlocked_at"`
-	UpdatedAt      time.Time `json:"updated_at"`
-}
-
-type CreativeItem struct {
-	ID        int64     `json:"id"`
-	FamilyID    string    `json:"family_id"`
-	Journey     string    `json:"journey"`
-	AuthorUID string    `json:"author_uid"`
-	Kind      string    `json:"kind"`
-	Payload   string    `json:"payload"`
-	CreatedAt time.Time `json:"created_at"`
-}
-
-type CreativeSubmission struct {
-	ID              int64      `json:"id"`
-	MissionID         int64      `json:"mission_id"`
-	ExerciseID     int64      `json:"exercise_id"`
-	FamilyID          string     `json:"family_id"`
-	AuthorUID       string     `json:"author_uid"`
-	Kind            string     `json:"kind"`
-	Content         string     `json:"content"`
-	Status          string     `json:"status"`
-	ReviewedBy      string     `json:"reviewed_by,omitempty"`
-	ReviewedAt      *time.Time `json:"reviewed_at,omitempty"`
-	RejectionReason string     `json:"rejection_reason,omitempty"`
-	CreatedAt       time.Time  `json:"created_at"`
-	UpdatedAt       time.Time  `json:"updated_at"`
-}
-
-type DailyMission struct {
+type PushSubscription struct {
 	ID        int64     `json:"id"`
 	UID       string    `json:"uid"`
-	Date      string    `json:"date"`
-	MissionSlug string    `json:"mission_slug"`
-	Completed bool      `json:"completed"`
+	Endpoint  string    `json:"endpoint"`
+	P256DH    string    `json:"p256dh"`
+	Auth      string    `json:"auth"`
 	CreatedAt time.Time `json:"created_at"`
-}
-
-type Achievement struct {
-	ID              int64     `json:"id"`
-	UID             string    `json:"uid"`
-	FamilyID          string    `json:"family_id"`
-	Code            string    `json:"code"`
-	Kind            string    `json:"kind"`
-	Trigger         string    `json:"trigger"`
-	CompletionCount int       `json:"completion_count"`
-	AwardedAt       time.Time `json:"awarded_at"`
-	CreatedAt       time.Time `json:"created_at"`
-}
-
-type Collection struct {
-	ID          int64     `json:"id"`
-	UID         string    `json:"uid"`
-	Code        string    `json:"code"`
-	Name        string    `json:"name"`
-	Description string    `json:"description"`
-	Journey       string    `json:"journey"`
-	Rarity      string    `json:"rarity"`
-	Image       string    `json:"image"`
-	Concept        string    `json:"concept"`
-	AwardedAt   time.Time `json:"awarded_at"`
-	CreatedAt   time.Time `json:"created_at"`
-}
-
-type Gift struct {
-	ID          int64      `json:"id"`
-	UID         string     `json:"uid"`
-	Source      string     `json:"source"`
-	GiftSlug   string     `json:"gift_slug"`
-	Rarity      string     `json:"rarity"`
-	Icon        string     `json:"icon"`
-	Description string     `json:"description"`
-	RewardRelic string     `json:"reward_relic"`
-	DropTable   string     `json:"drop_table"`
-	Opened      bool       `json:"opened"`
-	OpenedAt    *time.Time `json:"opened_at"`
-	CreatedAt   time.Time  `json:"created_at"`
-}
-
-type PlayerRelic struct {
-	ID           int64     `json:"id"`
-	UID          string    `json:"uid"`
-	CollectionSlug    string    `json:"collection_slug"`
-	CollectionID      int64     `json:"collection_id"`
-	OwnedCount   int       `json:"owned_count"`
-	IsNew        bool      `json:"is_new"`
-	DiscoveredAt time.Time `json:"discovered_at"`
-	CreatedAt    time.Time `json:"created_at"`
-	UpdatedAt    time.Time `json:"updated_at"`
-}
-
-type ChestDefinition struct {
-	ID          int64           `json:"id"`
-	Slug        string          `json:"slug"`
-	Name        string          `json:"name"`
-	Rarity      string          `json:"rarity"`
-	Icon        string          `json:"icon"`
-	Description string          `json:"description"`
-	SeasonSlug  string          `json:"season_slug"`
-	Published   bool            `json:"published"`
-	Draft       json.RawMessage `json:"draft"`
-	Version     int             `json:"version"`
-	UpdatedBy   string          `json:"updated_by"`
-	PublishedAt *time.Time      `json:"published_at"`
-	DeletedAt   *time.Time      `json:"deleted_at"`
-	CreatedAt   time.Time       `json:"created_at"`
-	UpdatedAt   time.Time       `json:"updated_at"`
-}
-
-type DropTableEntry struct {
-	ID        int64     `json:"id"`
-	GiftSlug string    `json:"gift_slug"`
-	CollectionID   int64     `json:"collection_id,omitempty"`
-	Rarity    string    `json:"rarity,omitempty"`
-	Weight    float64   `json:"weight"`
-	CreatedAt time.Time `json:"created_at"`
-}
-
-type RelicDefinition struct {
-	ID          int64           `json:"id"`
-	Slug        string          `json:"slug"`
-	Name        string          `json:"name"`
-	Description string          `json:"description"`
-	Journey       string          `json:"journey"`
-	Rarity      string          `json:"rarity"`
-	Image       string          `json:"image"`
-	Concept        string          `json:"concept"`
-	Published   bool            `json:"published"`
-	Draft       json.RawMessage `json:"draft"`
-	Version     int             `json:"version"`
-	UpdatedBy   string          `json:"updated_by"`
-	PublishedAt *time.Time      `json:"published_at"`
-	DeletedAt   *time.Time      `json:"deleted_at"`
-	CreatedAt   time.Time       `json:"created_at"`
-	UpdatedAt   time.Time       `json:"updated_at"`
-}
-
-type CourseProgress struct {
-	FamilyID      string     `json:"family_id"`
-	Course     string     `json:"course"`
-	Journey       string     `json:"journey"`
-	Status      string     `json:"status"`
-	CompletedAt *time.Time `json:"completed_at,omitempty"`
-	CreatedAt   time.Time  `json:"created_at"`
-	UpdatedAt   time.Time  `json:"updated_at"`
-}
-
-type LoreUnlock struct {
-	FamilyID     string    `json:"family_id"`
-	ConceptSlug   string    `json:"concept_slug"`
-	Journey      string    `json:"journey"`
-	Course    string    `json:"course"`
-	UnlockedAt time.Time `json:"unlocked_at"`
-	CreatedAt  time.Time `json:"created_at"`
 }

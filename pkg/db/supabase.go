@@ -11,41 +11,16 @@ import (
 )
 
 var allowedTables = map[string]bool{
-	"odyssey_user_profiles":               true,
-	"odyssey_families":                       true,
-	"odyssey_missions":                      true,
-	"odyssey_exercises":                  true,
-	"odyssey_journey_progress":              true,
-	"odyssey_creative_items":              true,
-	"odyssey_creative_submissions":        true,
-	"odyssey_daily_missions":                 true,
-	"odyssey_gifts":                      true,
-	"odyssey_collections":                      true,
-	"odyssey_player_collections":               true,
-	"odyssey_concept_unlocks":                true,
-	"odyssey_course_progress":            true,
-	"odyssey_achievements":                true,
-	"odyssey_chest_definitions":           true,
-	"odyssey_drop_tables":                 true,
-	"odyssey_relic_definitions":           true,
-	"odyssey_quest_definitions":           true,
-	"odyssey_course_definitions":         true,
-	"odyssey_journey_definitions":           true,
-	"odyssey_creative_prompt_definitions": true,
-	"odyssey_achievement_definitions":     true,
-	"odyssey_season_definitions":          true,
-	"odyssey_concept_definitions":            true,
-	"odyssey_audit_logs":                  true,
-	"odyssey_system_config":               true,
-	"odyssey_balance_configs":             true,
-	"odyssey_schema_version":              true,
-	"odyssey_reactions":                   true,
-	"odyssey_daily_activities":            true,
-	"odyssey_daily_activity_completions":  true,
-	"odyssey_local_users":                 true,
-	"odyssey_reward_ledgers":              true,
-	"odyssey_cosmetic_unlocks":            true,
-	"odyssey_push_subscriptions":          true,
+	"odyssey_user_profiles":      true,
+	"odyssey_families":           true,
+	"odyssey_local_users":        true,
+	"odyssey_tasks":              true,
+	"odyssey_task_submissions":   true,
+	"odyssey_reward_catalog":     true,
+	"odyssey_claims":             true,
+	"odyssey_coin_transactions":  true,
+	"odyssey_push_subscriptions": true,
+	"odyssey_schema_version":     true,
 }
 
 func validateTable(table string) error {
@@ -62,6 +37,8 @@ type SupabaseClient interface {
 	Get(ctx context.Context, table string, params string) ([]byte, error)
 	Mutate(ctx context.Context, method, table string, payload any, params string) ([]byte, error)
 	MutateAtomic(ctx context.Context, method, table string, payload any, params string, prefer string) ([]byte, error)
+	RPC(ctx context.Context, fnName string, payload any) ([]byte, error)
+	UploadStorage(ctx context.Context, bucket, path, contentType string, data []byte) (string, error)
 }
 
 type supabaseClient struct {
@@ -186,4 +163,67 @@ func (c *supabaseClient) mutate(ctx context.Context, method, table string, paylo
 		return nil, fmt.Errorf("supabase mutate %s: %s", resp.Status, raw)
 	}
 	return raw, nil
+}
+
+func (c *supabaseClient) RPC(ctx context.Context, fnName string, payload any) ([]byte, error) {
+	u := c.baseURL + restPath + "rpc/" + fnName
+	var bodyReader io.Reader
+	if payload != nil {
+		data, err := json.Marshal(payload)
+		if err != nil {
+			return nil, fmt.Errorf("marshal rpc payload: %w", err)
+		}
+		bodyReader = bytes.NewReader(data)
+	}
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, u, bodyReader)
+	if err != nil {
+		return nil, err
+	}
+	req.Header.Set("apikey", c.apiKey)
+	req.Header.Set("Authorization", "Bearer "+c.apiKey)
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Accept", "application/json")
+
+	resp, err := c.client.Do(req)
+	if err != nil {
+		return nil, fmt.Errorf("supabase rpc %s: %w", fnName, err)
+	}
+	defer resp.Body.Close()
+	raw, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return nil, fmt.Errorf("read rpc response: %w", err)
+	}
+	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
+		return nil, fmt.Errorf("supabase rpc %s %s: %s", fnName, resp.Status, raw)
+	}
+	return raw, nil
+}
+
+func (c *supabaseClient) UploadStorage(ctx context.Context, bucket, path, contentType string, data []byte) (string, error) {
+	u := fmt.Sprintf("%s/storage/v1/object/%s/%s", c.baseURL, bucket, path)
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, u, bytes.NewReader(data))
+	if err != nil {
+		return "", err
+	}
+	req.Header.Set("apikey", c.apiKey)
+	req.Header.Set("Authorization", "Bearer "+c.apiKey)
+	if contentType != "" {
+		req.Header.Set("Content-Type", contentType)
+	} else {
+		req.Header.Set("Content-Type", "application/octet-stream")
+	}
+	req.Header.Set("x-upsert", "true")
+
+	resp, err := c.client.Do(req)
+	if err != nil {
+		return "", fmt.Errorf("storage upload error: %w", err)
+	}
+	defer resp.Body.Close()
+	raw, _ := io.ReadAll(resp.Body)
+	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
+		return "", fmt.Errorf("storage upload %s: %s", resp.Status, raw)
+	}
+
+	publicURL := fmt.Sprintf("%s/storage/v1/object/public/%s/%s", c.baseURL, bucket, path)
+	return publicURL, nil
 }

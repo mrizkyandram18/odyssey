@@ -105,7 +105,7 @@ func TestObservability_Wrap_PreservesExistingRequestID(t *testing.T) {
 }
 
 func TestObservability_Wrap_LogsUserIdentity(t *testing.T) {
-	claims := `{"uid":"user-abc","family_id":"crew-xyz","role":"SEEKER"}`
+	claims := `{"uid":"user-abc","family_id":"fam-xyz","role":"SEEKER"}`
 	payload := base64.RawURLEncoding.EncodeToString([]byte(claims))
 	token := payload + ".sig"
 
@@ -121,7 +121,7 @@ func TestObservability_Wrap_LogsUserIdentity(t *testing.T) {
 	})
 
 	handler := obs.Wrap(inner)
-	req := httptest.NewRequest(http.MethodGet, "/api/missions", nil)
+	req := httptest.NewRequest(http.MethodGet, "/api/tasks", nil)
 	req.Header.Set("Authorization", "Bearer "+token)
 	w := httptest.NewRecorder()
 	handler.ServeHTTP(w, req)
@@ -135,13 +135,13 @@ func TestObservability_Wrap_LogsUserIdentity(t *testing.T) {
 	if entry["user_id"] != "user-abc" {
 		t.Errorf("expected user_id user-abc, got %v", entry["user_id"])
 	}
-	if entry["family_id"] != "crew-xyz" {
-		t.Errorf("expected family_id crew-xyz, got %v", entry["family_id"])
+	if entry["family_id"] != "fam-xyz" {
+		t.Errorf("expected family_id fam-xyz, got %v", entry["family_id"])
 	}
 }
 
 func TestObservability_Wrap_LogsAdminIdentity(t *testing.T) {
-	claims := `{"uid":"admin-1","family_id":"crew-1","role":"ADMIN"}`
+	claims := `{"uid":"admin-1","family_id":"fam-1","role":"ADMIN"}`
 	payload := base64.RawURLEncoding.EncodeToString([]byte(claims))
 	token := payload + ".sig"
 
@@ -188,18 +188,14 @@ func TestObservability_RecordLogin(t *testing.T) {
 
 func TestObservability_RecordBusinessEvent(t *testing.T) {
 	obs := NewObservability()
-	obs.RecordBusinessEvent("quest_completed")
-	obs.RecordBusinessEvent("chest_opened")
-	obs.RecordBusinessEvent("creative_submitted")
+	obs.RecordBusinessEvent("task_submitted")
+	obs.RecordBusinessEvent("reward_redeemed")
 	snap := obs.Metrics.Snapshot()
-	if snap.QuestCompleted != 1 {
-		t.Errorf("expected 1 quest_completed, got %d", snap.QuestCompleted)
+	if snap.TaskSubmitted != 1 {
+		t.Errorf("expected 1 task_submitted, got %d", snap.TaskSubmitted)
 	}
-	if snap.ChestOpened != 1 {
-		t.Errorf("expected 1 chest_opened, got %d", snap.ChestOpened)
-	}
-	if snap.CreativeSubmitted != 1 {
-		t.Errorf("expected 1 creative_submitted, got %d", snap.CreativeSubmitted)
+	if snap.RewardRedeemed != 1 {
+		t.Errorf("expected 1 reward_redeemed, got %d", snap.RewardRedeemed)
 	}
 }
 
@@ -209,18 +205,6 @@ func TestObservability_RecordAdminOp(t *testing.T) {
 	snap := obs.Metrics.Snapshot()
 	if snap.AdminOps != 1 {
 		t.Errorf("expected 1 admin op, got %d", snap.AdminOps)
-	}
-}
-
-func TestObservability_MergeCacheStats(t *testing.T) {
-	obs := NewObservability()
-	obs.MergeCacheStats(10, 5, 0)
-	snap := obs.Metrics.Snapshot()
-	if snap.CacheHits != 10 {
-		t.Errorf("expected 10 cache hits, got %d", snap.CacheHits)
-	}
-	if snap.CacheMisses != 5 {
-		t.Errorf("expected 5 cache misses, got %d", snap.CacheMisses)
 	}
 }
 

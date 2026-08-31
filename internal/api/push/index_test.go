@@ -11,21 +11,21 @@ import (
 	"testing"
 
 	"odyssey/pkg/auth"
-	"odyssey/pkg/game"
+	"odyssey/pkg/db"
 )
 
 type mockStore struct {
 	mu            sync.Mutex
-	subscriptions map[string][]game.PushSubscription // key: uid
+	subscriptions map[string][]db.PushSubscription // key: uid
 }
 
 func newMockStore() *mockStore {
 	return &mockStore{
-		subscriptions: make(map[string][]game.PushSubscription),
+		subscriptions: make(map[string][]db.PushSubscription),
 	}
 }
 
-func (m *mockStore) UpsertSubscription(ctx context.Context, sub *game.PushSubscription) (*game.PushSubscription, error) {
+func (m *mockStore) UpsertSubscription(ctx context.Context, sub *db.PushSubscription) (*db.PushSubscription, error) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 	subs := m.subscriptions[sub.UID]
@@ -41,7 +41,7 @@ func (m *mockStore) UpsertSubscription(ctx context.Context, sub *game.PushSubscr
 	return sub, nil
 }
 
-func (m *mockStore) ListSubscriptionsByUID(ctx context.Context, uid string) ([]game.PushSubscription, error) {
+func (m *mockStore) ListSubscriptionsByUID(ctx context.Context, uid string) ([]db.PushSubscription, error) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 	return m.subscriptions[uid], nil
@@ -55,7 +55,7 @@ func (m *mockStore) DeleteSubscription(ctx context.Context, uid string, endpoint
 		delete(m.subscriptions, uid)
 		return nil
 	}
-	filtered := make([]game.PushSubscription, 0, len(subs))
+	filtered := make([]db.PushSubscription, 0, len(subs))
 	for _, s := range subs {
 		if s.Endpoint != endpoint {
 			filtered = append(filtered, s)
@@ -67,9 +67,9 @@ func (m *mockStore) DeleteSubscription(ctx context.Context, uid string, endpoint
 
 func withAuth(req *http.Request, uid string) *http.Request {
 	ctx := auth.ContextWithClaims(req.Context(), &auth.SessionClaims{
-		UID:    uid,
+		UID:      uid,
 		FamilyID: "crew-1",
-		Role:   "SEEKER",
+		Role:     "SEEKER",
 	})
 	return req.WithContext(ctx)
 }
@@ -221,7 +221,6 @@ func TestSubscribe_OwnershipEnforced(t *testing.T) {
 	store := newMockStore()
 	Setup(store)
 
-	// User body trying to specify a different uid is ignored since claims.UID is used.
 	body := map[string]any{
 		"uid":      "victim-user",
 		"endpoint": "https://push.example.com/sub/attacker",
@@ -241,7 +240,6 @@ func TestSubscribe_OwnershipEnforced(t *testing.T) {
 		t.Fatalf("expected 201, got %d", w.Code)
 	}
 
-	// Verify it was stored under attacker-user, NOT victim-user
 	attackerSubs, _ := store.ListSubscriptionsByUID(context.Background(), "attacker-user")
 	if len(attackerSubs) != 1 {
 		t.Fatalf("expected subscription under attacker-user")
@@ -256,20 +254,19 @@ func TestUnsubscribe_Success(t *testing.T) {
 	store := newMockStore()
 	Setup(store)
 
-	store.UpsertSubscription(context.Background(), &game.PushSubscription{
+	store.UpsertSubscription(context.Background(), &db.PushSubscription{
 		UID:      "user-1",
 		Endpoint: "https://push.example.com/sub/1",
-		P256dh:   "k1",
+		P256DH:   "k1",
 		Auth:     "a1",
 	})
-	store.UpsertSubscription(context.Background(), &game.PushSubscription{
+	store.UpsertSubscription(context.Background(), &db.PushSubscription{
 		UID:      "user-1",
 		Endpoint: "https://push.example.com/sub/2",
-		P256dh:   "k2",
+		P256DH:   "k2",
 		Auth:     "a2",
 	})
 
-	// Delete specific endpoint
 	body := map[string]string{"endpoint": "https://push.example.com/sub/1"}
 	data, _ := json.Marshal(body)
 	req := httptest.NewRequest(http.MethodDelete, "/api/push/subscribe", bytes.NewReader(data))
@@ -292,14 +289,13 @@ func TestUnsubscribe_CannotDeleteOtherUserSubscription(t *testing.T) {
 	store := newMockStore()
 	Setup(store)
 
-	store.UpsertSubscription(context.Background(), &game.PushSubscription{
+	store.UpsertSubscription(context.Background(), &db.PushSubscription{
 		UID:      "victim-user",
 		Endpoint: "https://push.example.com/sub/victim",
-		P256dh:   "k",
+		P256DH:   "k",
 		Auth:     "a",
 	})
 
-	// Attacker tries to delete victim's endpoint
 	body := map[string]string{"endpoint": "https://push.example.com/sub/victim"}
 	data, _ := json.Marshal(body)
 	req := httptest.NewRequest(http.MethodDelete, "/api/push/subscribe", bytes.NewReader(data))
@@ -312,7 +308,6 @@ func TestUnsubscribe_CannotDeleteOtherUserSubscription(t *testing.T) {
 		t.Fatalf("expected 200, got %d", w.Code)
 	}
 
-	// Victim's subscription must remain untouched
 	victimSubs, _ := store.ListSubscriptionsByUID(context.Background(), "victim-user")
 	if len(victimSubs) != 1 {
 		t.Fatalf("attacker was able to delete victim's subscription!")

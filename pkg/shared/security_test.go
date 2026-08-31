@@ -324,18 +324,18 @@ func TestMaxBodyForPath(t *testing.T) {
 	cfg := DefaultSecurityConfig()
 	cfg.MaxBodyBytes = 1 << 20
 	cfg.MaxBodyBytesByPath = map[string]int64{
-		"/api/creative":  8 << 20,
-		"/api/creative/": 8 << 20,
+		"/api/tasks/upload":  10 << 20,
+		"/api/tasks/upload/": 10 << 20,
 	}
 
 	cases := []struct {
 		path string
 		want int64
 	}{
-		{"/api/creative", 8 << 20},
-		{"/api/creative/1/approve", 8 << 20},
+		{"/api/tasks/upload", 10 << 20},
+		{"/api/tasks/upload/evidence", 10 << 20},
 		{"/api/login", 1 << 20},
-		{"/api/missions", 1 << 20},
+		{"/api/tasks", 1 << 20},
 	}
 	for _, c := range cases {
 		if got := cfg.MaxBodyForPath(c.path); got != c.want {
@@ -347,7 +347,7 @@ func TestMaxBodyForPath(t *testing.T) {
 func TestBodySizeLimit_PerPathOverride(t *testing.T) {
 	cfg := DefaultSecurityConfig()
 	cfg.MaxBodyBytes = 100
-	cfg.MaxBodyBytesByPath = map[string]int64{"/api/creative": 1000}
+	cfg.MaxBodyBytesByPath = map[string]int64{"/api/tasks/upload": 1000}
 	called := false
 	next := func(w http.ResponseWriter, r *http.Request) {
 		called = true
@@ -357,7 +357,7 @@ func TestBodySizeLimit_PerPathOverride(t *testing.T) {
 
 	body := strings.Repeat("a", 500) // exceeds 100 but within 1000
 	w := httptest.NewRecorder()
-	r := httptest.NewRequest(http.MethodPost, "/api/creative", strings.NewReader(body))
+	r := httptest.NewRequest(http.MethodPost, "/api/tasks/upload", strings.NewReader(body))
 	handler(w, r)
 
 	if !called {

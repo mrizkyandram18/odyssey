@@ -41,12 +41,20 @@ func (m *mockSupabaseClient) MutateAtomic(ctx context.Context, method, table str
 	return m.data, m.err
 }
 
+func (m *mockSupabaseClient) RPC(ctx context.Context, fn string, params any) ([]byte, error) {
+	return m.data, m.err
+}
+
+func (m *mockSupabaseClient) UploadStorage(ctx context.Context, bucket, path, contentType string, data []byte) (string, error) {
+	return "https://example.com/storage/" + bucket + "/" + path, m.err
+}
+
 func TestProfileStore_GetUserProfile_Found(t *testing.T) {
 	now := time.Date(2026, 8, 3, 12, 0, 0, 0, time.UTC)
 	data, _ := json.Marshal([]UserProfile{
 		{
 			UID:          "user-1",
-			FamilyID:       "crew-1",
+			FamilyID:     "crew-1",
 			ExplorerName: "Alice",
 			Role:         "SEEKER",
 			Level:        1,

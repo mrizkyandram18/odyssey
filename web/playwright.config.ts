@@ -11,7 +11,7 @@ export default defineConfig({
   forbidOnly: isCI,
   retries: isCI ? 2 : 0,
   workers: 1,
-  reporter: isCI ? [['html'], ['github']] : 'html',
+  reporter: isCI ? [['html'], ['github']] : [['list'], ['html', { open: 'never' }]],
   use: {
     baseURL,
     trace: 'retain-on-failure',

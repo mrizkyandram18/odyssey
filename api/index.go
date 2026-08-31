@@ -37,4 +37,3 @@ func Handler(w http.ResponseWriter, r *http.Request) {
 	}
 	handler.ServeHTTP(w, r)
 }
-

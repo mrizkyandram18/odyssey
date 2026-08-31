@@ -3,27 +3,25 @@ package families
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"net/http"
 	"time"
 
 	"odyssey/pkg/auth"
-	"odyssey/pkg/game"
+	"odyssey/pkg/db"
 	"odyssey/pkg/shared"
 )
 
-// CrewStore provides access to crew data.
-type CrewStore interface {
-	GetCrew(ctx context.Context, crewID string) (*game.Family, error)
-	UpdateCrew(ctx context.Context, crewID string, patch map[string]any) error
+type FamilyStore interface {
+	GetFamily(ctx context.Context, familyID string) (*db.Family, error)
+	UpdateFamily(ctx context.Context, familyID string, patch map[string]any) error
 }
 
-// UserStore provides access to user data.
 type UserStore interface {
-	ListUsersByCrew(ctx context.Context, crewID string) ([]game.Player, error)
+	ListUsersByFamily(ctx context.Context, familyID string) ([]db.UserProfile, error)
 }
 
-// crewResponse is the JSON representation of a crew.
-type crewResponse struct {
+type familyResponse struct {
 	ID        string    `json:"id"`
 	Name      string    `json:"name,omitempty"`
 	BannerURL string    `json:"banner_url,omitempty"`
@@ -32,8 +30,8 @@ type crewResponse struct {
 	UpdatedAt time.Time `json:"updated_at"`
 }
 
-func mapCrew(c *game.Family) crewResponse {
-	return crewResponse{
+func mapFamily(c *db.Family) familyResponse {
+	return familyResponse{
 		ID:        c.ID,
 		Name:      c.Name,
 		BannerURL: c.BannerURL,
@@ -43,25 +41,19 @@ func mapCrew(c *game.Family) crewResponse {
 	}
 }
 
-type updateCrewRequest struct {
+type updateFamilyRequest struct {
 	BannerURL string `json:"banner_url,omitempty"`
 	Theme     string `json:"theme,omitempty"`
 }
 
-var store CrewStore
+var store FamilyStore
 var users UserStore
 
-// Setup injects the crew and user stores. Must be called once at startup before
-// the server serves requests.
-func Setup(s CrewStore, u UserStore) {
+func Setup(s FamilyStore, u UserStore) {
 	store = s
 	users = u
 }
 
-// Handler serves the /api/families endpoint.
-//
-// GET /api/families — returns the authenticated user's crew information.
-// PATCH /api/families — updates the authenticated user's crew banner and theme.
 func Handler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 
@@ -81,31 +73,31 @@ func Handler(w http.ResponseWriter, r *http.Request) {
 		if r.URL.Path == "/api/families/members" {
 			handleGetMembers(w, r, claims)
 		} else {
-			handleGetCrew(w, r, claims)
+			handleGetFamily(w, r, claims)
 		}
 	case http.MethodPatch:
-		handlePatchCrew(w, r, claims)
+		handlePatchFamily(w, r, claims)
 	default:
 		shared.WriteJSONError(w, "method not allowed", http.StatusMethodNotAllowed)
 	}
 }
 
-func handleGetCrew(w http.ResponseWriter, r *http.Request, claims *auth.SessionClaims) {
-	crew, err := store.GetCrew(r.Context(), claims.FamilyID)
+func handleGetFamily(w http.ResponseWriter, r *http.Request, claims *auth.SessionClaims) {
+	fam, err := store.GetFamily(r.Context(), claims.FamilyID)
 	if err != nil {
-		if err == game.ErrNotFound {
-			shared.WriteJSONError(w, "crew not found", http.StatusNotFound)
+		if errors.Is(err, db.ErrFamilyNotFound) {
+			shared.WriteJSONError(w, "family not found", http.StatusNotFound)
 			return
 		}
-		shared.WriteJSONError(w, "failed to get crew", http.StatusInternalServerError)
+		shared.WriteJSONError(w, "failed to get family", http.StatusInternalServerError)
 		return
 	}
 
-	shared.WriteJSON(w, http.StatusOK, mapCrew(crew))
+	shared.WriteJSON(w, http.StatusOK, mapFamily(fam))
 }
 
-func handlePatchCrew(w http.ResponseWriter, r *http.Request, claims *auth.SessionClaims) {
-	var req updateCrewRequest
+func handlePatchFamily(w http.ResponseWriter, r *http.Request, claims *auth.SessionClaims) {
+	var req updateFamilyRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		shared.WriteJSONError(w, "invalid request body", http.StatusBadRequest)
 		return
@@ -124,29 +116,33 @@ func handlePatchCrew(w http.ResponseWriter, r *http.Request, claims *auth.Sessio
 		return
 	}
 
-	if err := store.UpdateCrew(r.Context(), claims.FamilyID, patch); err != nil {
-		shared.WriteJSONError(w, "failed to update crew", http.StatusInternalServerError)
+	if err := store.UpdateFamily(r.Context(), claims.FamilyID, patch); err != nil {
+		shared.WriteJSONError(w, "failed to update family", http.StatusInternalServerError)
 		return
 	}
 
-	crew, err := store.GetCrew(r.Context(), claims.FamilyID)
+	fam, err := store.GetFamily(r.Context(), claims.FamilyID)
 	if err != nil {
-		shared.WriteJSONError(w, "failed to reload crew", http.StatusInternalServerError)
+		shared.WriteJSONError(w, "failed to reload family", http.StatusInternalServerError)
 		return
 	}
 
-	shared.WriteJSON(w, http.StatusOK, mapCrew(crew))
+	shared.WriteJSON(w, http.StatusOK, mapFamily(fam))
 }
 
 func handleGetMembers(w http.ResponseWriter, r *http.Request, claims *auth.SessionClaims) {
-	members, err := users.ListUsersByCrew(r.Context(), claims.FamilyID)
+	if users == nil {
+		shared.WriteJSON(w, http.StatusOK, []db.UserProfile{})
+		return
+	}
+	members, err := users.ListUsersByFamily(r.Context(), claims.FamilyID)
 	if err != nil {
-		shared.WriteJSONError(w, "failed to get crew members", http.StatusInternalServerError)
+		shared.WriteJSONError(w, "failed to get family members", http.StatusInternalServerError)
 		return
 	}
 
 	if members == nil {
-		members = []game.Player{}
+		members = []db.UserProfile{}
 	}
 
 	shared.WriteJSON(w, http.StatusOK, members)

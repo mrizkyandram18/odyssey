@@ -6,8 +6,6 @@ import (
 	"strings"
 	"testing"
 	"time"
-
-	"odyssey/pkg/game"
 )
 
 type mockPushSupabaseClient struct {
@@ -52,6 +50,14 @@ func (m *mockPushSupabaseClient) MutateAtomic(ctx context.Context, method, table
 	return m.mutateResp, nil
 }
 
+func (m *mockPushSupabaseClient) RPC(ctx context.Context, fn string, params any) ([]byte, error) {
+	return nil, nil
+}
+
+func (m *mockPushSupabaseClient) UploadStorage(ctx context.Context, bucket, path, contentType string, data []byte) (string, error) {
+	return "", nil
+}
+
 func TestPushSubscriptionStore_Upsert(t *testing.T) {
 	client := &mockPushSupabaseClient{}
 	store := NewPushSubscriptionStore(client)
@@ -67,10 +73,10 @@ func TestPushSubscriptionStore_Upsert(t *testing.T) {
 	}
 	client.mutateResp, _ = json.Marshal([]pushSubscriptionRow{subRow})
 
-	sub := &game.PushSubscription{
+	sub := &PushSubscription{
 		UID:      "u1",
 		Endpoint: "https://push.example.com/1",
-		P256dh:   "p256",
+		P256DH:   "p256",
 		Auth:     "auth",
 	}
 

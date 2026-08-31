@@ -77,12 +77,12 @@ func (o *Observability) Wrap(next http.Handler) http.Handler {
 			o.Profiler.RecordRequest(rp)
 		}
 
-		uid, crewID, adminUID := extractIdentityFromToken(r)
+		uid, familyID, adminUID := extractIdentityFromToken(r)
 		if o.Logger != nil {
 			o.Logger.LogRequest(LogFields{
 				RequestID: requestID,
 				UserID:    uid,
-				FamilyID:    crewID,
+				FamilyID:  familyID,
 				AdminUID:  adminUID,
 				Endpoint:  r.URL.Path,
 				Method:    r.Method,
@@ -108,17 +108,13 @@ func recordBusinessEvents(m *Metrics, r *http.Request, status int) {
 		if is2xx {
 			m.RecordAdminOp()
 		}
-	case strings.HasPrefix(path, "/api/missions"):
-		if method == http.MethodPost && strings.Contains(path, "/complete") && is2xx {
-			m.RecordBusinessEvent("quest_completed")
-		}
-	case strings.HasPrefix(path, "/api/gifts"):
-		if method == http.MethodPost && strings.Contains(path, "/open") && is2xx {
-			m.RecordBusinessEvent("chest_opened")
-		}
-	case strings.HasPrefix(path, "/api/creative"):
+	case strings.HasPrefix(path, "/api/tasks") && strings.HasSuffix(path, "/submit"):
 		if method == http.MethodPost && is2xx {
-			m.RecordBusinessEvent("creative_submitted")
+			m.RecordBusinessEvent("task_submitted")
+		}
+	case path == "/api/shop/redeem" || path == "/api/shop/redeem/":
+		if method == http.MethodPost && is2xx {
+			m.RecordBusinessEvent("reward_redeemed")
 		}
 	}
 }
@@ -147,51 +143,15 @@ func (o *Observability) RecordXP(amount int64) {
 	}
 }
 
-func (o *Observability) RecordRealmCompleted() {
-	if o.Metrics != nil {
-		o.Metrics.RecordRealmCompleted()
-	}
-}
-
-func (o *Observability) RecordChestCreated() {
-	if o.Metrics != nil {
-		o.Metrics.RecordChestCreated()
-	}
-}
-
-func (o *Observability) RecordRewardsGenerated(n int) {
-	if o.Metrics != nil {
-		o.Metrics.RecordRewardsGenerated(n)
-	}
-}
-
 func (o *Observability) RecordDuplicatePrevented(n int) {
 	if o.Metrics != nil {
 		o.Metrics.RecordDuplicatePrevented(n)
 	}
 }
 
-func (o *Observability) RecordLockConflict() {
-	if o.Metrics != nil {
-		o.Metrics.RecordLockConflict()
-	}
-}
-
-func (o *Observability) RecordReplayIgnored() {
-	if o.Metrics != nil {
-		o.Metrics.RecordReplayIgnored()
-	}
-}
-
 func (o *Observability) RecordValidationFailure() {
 	if o.Metrics != nil {
 		o.Metrics.RecordValidationFailure()
-	}
-}
-
-func (o *Observability) MergeCacheStats(hits, misses, evictions int64) {
-	if o.Metrics != nil {
-		o.Metrics.MergeCacheStats(hits, misses, evictions)
 	}
 }
 

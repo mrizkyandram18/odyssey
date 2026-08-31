@@ -18,8 +18,8 @@ func TestLogger_LogRequest(t *testing.T) {
 	logger.LogRequest(LogFields{
 		RequestID: "req-123",
 		UserID:    "user-1",
-		FamilyID:    "crew-1",
-		Endpoint:  "/api/missions",
+		FamilyID:  "fam-1",
+		Endpoint:  "/api/tasks",
 		Method:    "GET",
 		Duration:  42 * time.Millisecond,
 		Status:    200,
@@ -37,11 +37,11 @@ func TestLogger_LogRequest(t *testing.T) {
 	if entry["user_id"] != "user-1" {
 		t.Errorf("expected user_id user-1, got %v", entry["user_id"])
 	}
-	if entry["family_id"] != "crew-1" {
-		t.Errorf("expected family_id crew-1, got %v", entry["family_id"])
+	if entry["family_id"] != "fam-1" {
+		t.Errorf("expected family_id fam-1, got %v", entry["family_id"])
 	}
-	if entry["endpoint"] != "/api/missions" {
-		t.Errorf("expected endpoint /api/missions, got %v", entry["endpoint"])
+	if entry["endpoint"] != "/api/tasks" {
+		t.Errorf("expected endpoint /api/tasks, got %v", entry["endpoint"])
 	}
 	if entry["method"] != "GET" {
 		t.Errorf("expected method GET, got %v", entry["method"])
@@ -63,7 +63,7 @@ func TestLogger_LogRequest_WithAdmin(t *testing.T) {
 	logger.LogRequest(LogFields{
 		RequestID: "req-456",
 		AdminUID:  "admin-1",
-		Endpoint:  "/api/admin/content/status",
+		Endpoint:  "/api/admin/tasks",
 		Method:    "GET",
 		Duration:  10 * time.Millisecond,
 		Status:    200,
@@ -86,7 +86,7 @@ func TestLogger_LogRequest_WithError(t *testing.T) {
 	logger.LogRequest(LogFields{
 		RequestID: "req-789",
 		UserID:    "user-2",
-		Endpoint:  "/api/missions",
+		Endpoint:  "/api/tasks",
 		Method:    "POST",
 		Duration:  5 * time.Millisecond,
 		Status:    500,

@@ -178,35 +178,6 @@ func ConfigHealthCheck(isConfigured bool) HealthCheckFunc {
 	}
 }
 
-func CacheHealthCheck(hc CacheHealthProvider) HealthCheckFunc {
-	return func(ctx context.Context) error {
-		if hc == nil {
-			return errCacheUnavailable
-		}
-		return hc.CacheHealthCheck()
-	}
-}
-
-func ContentHealthCheck(cs ContentHealthProvider) HealthCheckFunc {
-	return func(ctx context.Context) error {
-		if cs == nil {
-			return errContentUnavailable
-		}
-		_, err := cs.Status(ctx)
-		return err
-	}
-}
-
-type CacheHealthProvider interface {
-	CacheHealthCheck() error
-}
-
-type ContentHealthProvider interface {
-	Status(ctx context.Context) (map[string]any, error)
-}
-
 var (
-	errConfigNotLoaded    = newHealthError("configuration not loaded")
-	errCacheUnavailable   = newHealthError("cache unavailable")
-	errContentUnavailable = newHealthError("content service unavailable")
+	errConfigNotLoaded = newHealthError("configuration not loaded")
 )

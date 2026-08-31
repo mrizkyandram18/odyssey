@@ -1,27 +1,23 @@
 // @vitest-environment jsdom
-import '@testing-library/jest-dom/vitest'
 import React from 'react'
+import '@testing-library/jest-dom/vitest'
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { render, screen, waitFor, cleanup } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
 import { HomePage } from './HomePage'
-import { apiClient } from '../../shared/lib/api'
+import { tasksApi } from '../../shared/lib/api'
 import { useSession } from '../../shared/hooks/useSession'
 
 // Mock dependencies
 vi.mock('../../shared/lib/api', () => ({
+  tasksApi: {
+    getToday: vi.fn(),
+    submit: vi.fn(),
+  },
   apiClient: {
-    request: vi.fn(),
-    get: vi.fn().mockResolvedValue({
-      id: 1, title: 'Test', question: 'Q?', type: 'MCQ', options: ['A'], completed: false, xp_reward: 10
-    }),
-    post: vi.fn(),
-  },
-  chestsApi: {
-    open: vi.fn(),
-  },
-  crewsApi: {
     get: vi.fn(),
+    post: vi.fn(),
+    request: vi.fn(),
   },
 }))
 
@@ -29,20 +25,19 @@ vi.mock('../../shared/hooks/useSession', () => ({
   useSession: vi.fn(),
 }))
 
-// Mock ConnectedReactionBar to easily inspect its props
-vi.mock('../../shared/components/molecules/ConnectedReactionBar', () => ({
-  ConnectedReactionBar: ({ targetType, targetId }: { targetType: string, targetId: number }) => (
-    <div data-testid={`reaction-bar-${targetType}-${targetId}`}>
-      Mock Reaction Bar
-    </div>
-  )
-}))
-
 describe('HomePage', () => {
   beforeEach(() => {
     vi.resetAllMocks()
     vi.mocked(useSession).mockReturnValue({
       session: { uid: 'u1' } as any,
+      profile: {
+        uid: 'u1',
+        explorer_name: 'Tester',
+        level: 2,
+        xp: 250,
+        coins: 150,
+        streak_days: 3,
+      } as any,
       loading: false,
       error: null,
       login: vi.fn(),
@@ -55,16 +50,24 @@ describe('HomePage', () => {
     cleanup()
   })
 
-  it('renders correctly with Aktivitas Hari Ini and Misi Berikutnya sections', async () => {
-    vi.mocked(apiClient.request).mockResolvedValueOnce({
-      player: { explorer_name: 'Tester', coins: 10 },
-      journey_progress: [{ journey: 'Whispering Woods', progress: 50, status: 'ACTIVE' }],
-      daily_mission: { available: true, streak_days: 1 },
-      active_missions: [
-        { id: 201, title: 'Shadow Trail', challenge_count: 2, completed_count: 1, status: 'ACTIVE', Mission_type: 'SOLO' },
+  it('renders linear task stepper with today tasks', async () => {
+    vi.mocked(tasksApi.getToday).mockResolvedValueOnce({
+      tasks: [
+        {
+          id: 1,
+          title: 'Belajar Menabung',
+          description: 'Nonton video kuis',
+          task_type: 'VIDEO_QUIZ',
+          step_order: 1,
+          reward_coins: 50,
+          reward_xp: 100,
+          config: {},
+          is_locked: false,
+          status: 'UNLOCKED',
+          coins_earned: 0,
+          xp_earned: 0,
+        },
       ],
-      completed_missions_today: [],
-      available_gifts: [],
     })
 
     render(
@@ -74,25 +77,10 @@ describe('HomePage', () => {
     )
 
     await waitFor(() => {
-      expect(screen.getByText('Misi Berikutnya')).toBeInTheDocument()
-      expect(screen.getByText('Shadow Trail')).toBeInTheDocument()
+      expect(screen.getByText('Petualangan Harian')).toBeInTheDocument()
+      expect(screen.getByText('Belajar Menabung')).toBeInTheDocument()
+      expect(screen.getByText('3 Hari')).toBeInTheDocument()
+      expect(screen.getByText('150')).toBeInTheDocument()
     })
-  })
-
-  it('renders onboarding immediately on first visit even before home loads', async () => {
-    // delay mock to simulate slow load
-    vi.mocked(apiClient.request).mockImplementationOnce(() => new Promise((resolve) => setTimeout(() => resolve({} as any), 1000)))
-    localStorage.removeItem('odyssey_onboarded')
-    
-    render(
-      <MemoryRouter>
-        <HomePage />
-      </MemoryRouter>
-    )
-
-    // Onboarding modal shows up immediately
-    expect(screen.getByText(/Odyssey membantu kamu belajar/i)).toBeInTheDocument()
-    // Home loader shows up under it
-    expect(screen.getByText('Memuat dunia...')).toBeInTheDocument()
   })
 })

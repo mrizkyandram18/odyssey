@@ -21,7 +21,7 @@ type loginResponse struct {
 	Session    string `json:"session,omitempty"`
 	SetupToken string `json:"setup_token,omitempty"`
 	UID        string `json:"uid,omitempty"`
-	FamilyID     string `json:"family_id,omitempty"`
+	FamilyID   string `json:"family_id,omitempty"`
 	Kind       string `json:"kind,omitempty"`
 	Role       string `json:"role,omitempty"`
 	Expires    int64  `json:"expires,omitempty"`
@@ -74,7 +74,7 @@ func writeSuccess(w http.ResponseWriter, r *http.Request, ctx context.Context, u
 	if profiles != nil {
 		if profile, err := profiles.GetUserProfile(ctx, uid); err == nil && profile != nil {
 			cfg = &auth.SessionConfig{
-				Role:   auth.Role(profile.Role),
+				Role:     auth.Role(profile.Role),
 				FamilyID: profile.FamilyID,
 			}
 		}
@@ -89,13 +89,13 @@ func writeSuccess(w http.ResponseWriter, r *http.Request, ctx context.Context, u
 	auth.SetSessionCookie(w, token, auth.UserSessionTTL, r.TLS != nil)
 
 	shared.WriteJSON(w, http.StatusOK, loginResponse{
-		Status:  "success",
-		Session: token,
-		UID:     uid,
-		FamilyID:  claims.FamilyID,
-		Kind:    "user",
-		Role:    claims.Role,
-		Expires: claims.Expires,
+		Status:   "success",
+		Session:  token,
+		UID:      uid,
+		FamilyID: claims.FamilyID,
+		Kind:     "user",
+		Role:     claims.Role,
+		Expires:  claims.Expires,
 	})
 }
 
@@ -129,16 +129,8 @@ func writeError(w http.ResponseWriter, r *http.Request, uid string, err error) {
 		errors.Is(err, auth.ErrDeviceRequired):
 		shared.WriteJSONError(w, "invalid request", http.StatusBadRequest)
 
-	case errors.Is(err, auth.ErrCredentialInvalid),
-		errors.Is(err, auth.ErrDeviceOffline),
-		errors.Is(err, auth.ErrBuildTooOld),
-		errors.Is(err, auth.ErrPermissionsMissing),
-		errors.Is(err, auth.ErrDeviceMismatch),
-		errors.Is(err, auth.ErrGatekeeperNotFound):
+	case errors.Is(err, auth.ErrCredentialInvalid):
 		shared.WriteJSONError(w, "authentication failed", http.StatusUnauthorized)
-
-	case errors.Is(err, auth.ErrFirestoreUnavailable):
-		shared.WriteJSONError(w, "auth service unavailable", http.StatusServiceUnavailable)
 
 	case errors.Is(err, auth.ErrProfileUnavailable):
 		shared.WriteJSONError(w, "profile unavailable", http.StatusInternalServerError)

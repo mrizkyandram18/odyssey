@@ -15,8 +15,6 @@ type ProfileStore interface {
 	GetPasswordHash(ctx context.Context, uid string) (string, error)
 	GetBoundDeviceID(ctx context.Context, uid string) (string, error)
 	UpdateAvatar(ctx context.Context, uid string, style, seed string) error
-	SetAvatarFrame(ctx context.Context, uid, frame string) error
-	SetExplorerEffect(ctx context.Context, uid, effect string) error
 }
 
 type supabaseProfileStore struct {

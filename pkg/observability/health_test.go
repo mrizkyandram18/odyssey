@@ -37,6 +37,14 @@ func (m *mockSupabaseClient) MutateAtomic(ctx context.Context, method, table str
 	return []byte(`[]`), nil
 }
 
+func (m *mockSupabaseClient) RPC(ctx context.Context, fnName string, payload any) ([]byte, error) {
+	return []byte(`{}`), nil
+}
+
+func (m *mockSupabaseClient) UploadStorage(ctx context.Context, bucket, path, contentType string, data []byte) (string, error) {
+	return "", nil
+}
+
 func TestHealthChecker_AllPass(t *testing.T) {
 	hc := NewHealthChecker(
 		HealthCheck{Name: "config", Fn: func(ctx context.Context) error { return nil }},
@@ -137,36 +145,6 @@ func TestConfigHealthCheck_Fail(t *testing.T) {
 	fn := ConfigHealthCheck(false)
 	if err := fn(context.Background()); err == nil {
 		t.Fatal("expected error for unconfigured")
-	}
-}
-
-func TestCacheHealthCheck_Nil(t *testing.T) {
-	fn := CacheHealthCheck(nil)
-	if err := fn(context.Background()); err == nil {
-		t.Fatal("expected error for nil cache")
-	}
-}
-
-func TestContentHealthCheck_Pass(t *testing.T) {
-	cs := &mockContentProvider{}
-	fn := ContentHealthCheck(cs)
-	if err := fn(context.Background()); err != nil {
-		t.Fatalf("expected no error, got %v", err)
-	}
-}
-
-func TestContentHealthCheck_Fail(t *testing.T) {
-	cs := &mockContentProvider{err: errContentUnavailable}
-	fn := ContentHealthCheck(cs)
-	if err := fn(context.Background()); err == nil {
-		t.Fatal("expected error")
-	}
-}
-
-func TestContentHealthCheck_Nil(t *testing.T) {
-	fn := ContentHealthCheck(nil)
-	if err := fn(context.Background()); err == nil {
-		t.Fatal("expected error for nil content service")
 	}
 }
 

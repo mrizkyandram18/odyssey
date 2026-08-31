@@ -7,13 +7,13 @@ import (
 	"strings"
 
 	"odyssey/pkg/auth"
-	"odyssey/pkg/game"
+	"odyssey/pkg/db"
 	"odyssey/pkg/shared"
 )
 
-var store game.PushSubscriptionStore
+var store db.PushSubscriptionStore
 
-func Setup(s game.PushSubscriptionStore) {
+func Setup(s db.PushSubscriptionStore) {
 	store = s
 }
 
@@ -85,10 +85,10 @@ func handleSubscribe(w http.ResponseWriter, r *http.Request, claims *auth.Sessio
 		return
 	}
 
-	sub := &game.PushSubscription{
+	sub := &db.PushSubscription{
 		UID:      claims.UID,
 		Endpoint: req.Endpoint,
-		P256dh:   req.Keys.P256dh,
+		P256DH:   req.Keys.P256dh,
 		Auth:     req.Keys.Auth,
 	}
 

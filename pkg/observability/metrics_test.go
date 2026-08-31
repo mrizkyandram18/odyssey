@@ -8,13 +8,13 @@ import (
 
 func TestMetrics_RecordRequest(t *testing.T) {
 	m := NewMetrics()
-	m.RecordRequest("GET", "/api/missions", 200, 10*time.Millisecond)
+	m.RecordRequest("GET", "/api/tasks/today", 200, 10*time.Millisecond)
 	m.RecordRequest("POST", "/api/login", 401, 5*time.Millisecond)
-	m.RecordRequest("GET", "/api/missions", 200, 15*time.Millisecond)
+	m.RecordRequest("GET", "/api/tasks/today", 200, 15*time.Millisecond)
 
 	snap := m.Snapshot()
-	if snap.RequestCount["GET /api/missions"] != 2 {
-		t.Errorf("expected 2 requests for GET /api/missions, got %d", snap.RequestCount["GET /api/missions"])
+	if snap.RequestCount["GET /api/tasks/today"] != 2 {
+		t.Errorf("expected 2 requests for GET /api/tasks/today, got %d", snap.RequestCount["GET /api/tasks/today"])
 	}
 	if snap.RequestCount["POST /api/login"] != 1 {
 		t.Errorf("expected 1 request for POST /api/login, got %d", snap.RequestCount["POST /api/login"])
@@ -36,38 +36,19 @@ func TestMetrics_RecordLogin(t *testing.T) {
 	}
 }
 
-func TestMetrics_RecordCache(t *testing.T) {
-	m := NewMetrics()
-	m.RecordCacheHit()
-	m.RecordCacheHit()
-	m.RecordCacheMiss()
-
-	snap := m.Snapshot()
-	if snap.CacheHits != 2 {
-		t.Errorf("expected 2 cache hits, got %d", snap.CacheHits)
-	}
-	if snap.CacheMisses != 1 {
-		t.Errorf("expected 1 cache miss, got %d", snap.CacheMisses)
-	}
-}
-
 func TestMetrics_RecordBusinessEvent(t *testing.T) {
 	m := NewMetrics()
-	m.RecordBusinessEvent("quest_completed")
-	m.RecordBusinessEvent("quest_completed")
-	m.RecordBusinessEvent("chest_opened")
-	m.RecordBusinessEvent("creative_submitted")
+	m.RecordBusinessEvent("task_submitted")
+	m.RecordBusinessEvent("task_submitted")
+	m.RecordBusinessEvent("reward_redeemed")
 	m.RecordBusinessEvent("unknown_event")
 
 	snap := m.Snapshot()
-	if snap.QuestCompleted != 2 {
-		t.Errorf("expected 2 quest completions, got %d", snap.QuestCompleted)
+	if snap.TaskSubmitted != 2 {
+		t.Errorf("expected 2 task submissions, got %d", snap.TaskSubmitted)
 	}
-	if snap.ChestOpened != 1 {
-		t.Errorf("expected 1 chest opened, got %d", snap.ChestOpened)
-	}
-	if snap.CreativeSubmitted != 1 {
-		t.Errorf("expected 1 creative submitted, got %d", snap.CreativeSubmitted)
+	if snap.RewardRedeemed != 1 {
+		t.Errorf("expected 1 reward redeemed, got %d", snap.RewardRedeemed)
 	}
 }
 
@@ -110,20 +91,6 @@ func TestMetrics_RecordDBLatency_Slow(t *testing.T) {
 	}
 }
 
-func TestMetrics_MergeCacheStats(t *testing.T) {
-	m := NewMetrics()
-	m.RecordCacheHit()
-	m.MergeCacheStats(5, 3, 0)
-
-	snap := m.Snapshot()
-	if snap.CacheHits != 6 {
-		t.Errorf("expected 6 cache hits, got %d", snap.CacheHits)
-	}
-	if snap.CacheMisses != 3 {
-		t.Errorf("expected 3 cache misses, got %d", snap.CacheMisses)
-	}
-}
-
 func TestMetrics_SnapshotJSON(t *testing.T) {
 	m := NewMetrics()
 	m.RecordRequest("GET", "/api/test", 200, 5*time.Millisecond)
@@ -156,8 +123,7 @@ func TestMetricsHandler(t *testing.T) {
 	m.RecordLogin(false)
 
 	handler := MetricsHandler(m)
-	snap := handler
-	_ = snap
+	_ = handler
 }
 
 func TestMetrics_Concurrency(t *testing.T) {
@@ -167,7 +133,6 @@ func TestMetrics_Concurrency(t *testing.T) {
 		go func() {
 			m.RecordRequest("GET", "/api/test", 200, time.Millisecond)
 			m.RecordLogin(true)
-			m.RecordCacheHit()
 			m.RecordDBLatency(time.Millisecond)
 			done <- struct{}{}
 		}()
@@ -182,9 +147,6 @@ func TestMetrics_Concurrency(t *testing.T) {
 	}
 	if snap.LoginSuccess != 100 {
 		t.Errorf("expected 100 login successes, got %d", snap.LoginSuccess)
-	}
-	if snap.CacheHits != 100 {
-		t.Errorf("expected 100 cache hits, got %d", snap.CacheHits)
 	}
 	if snap.DBCallCount != 100 {
 		t.Errorf("expected 100 DB calls, got %d", snap.DBCallCount)

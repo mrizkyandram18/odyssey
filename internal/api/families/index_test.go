@@ -11,25 +11,25 @@ import (
 	"time"
 
 	"odyssey/pkg/auth"
-	"odyssey/pkg/game"
+	"odyssey/pkg/db"
 )
 
 type mockCrewStore struct {
-	crew *game.Family
+	crew *db.Family
 	err  error
 }
 
-func (m *mockCrewStore) GetCrew(ctx context.Context, crewID string) (*game.Family, error) {
+func (m *mockCrewStore) GetFamily(ctx context.Context, crewID string) (*db.Family, error) {
 	if m.err != nil {
 		return nil, m.err
 	}
 	if m.crew == nil {
-		return nil, game.ErrNotFound
+		return nil, db.ErrFamilyNotFound
 	}
 	return m.crew, nil
 }
 
-func (m *mockCrewStore) UpdateCrew(ctx context.Context, crewID string, patch map[string]any) error {
+func (m *mockCrewStore) UpdateFamily(ctx context.Context, crewID string, patch map[string]any) error {
 	if m.err != nil {
 		return m.err
 	}
@@ -47,7 +47,7 @@ func (m *mockCrewStore) UpdateCrew(ctx context.Context, crewID string, patch map
 func makeToken(t *testing.T, issuer *auth.HMACSessionIssuer) string {
 	t.Helper()
 	token, _, err := issuer.IssueSession(auth.SessionKindUser, "user-1", &auth.SessionConfig{
-		Role:   auth.RoleSeeker,
+		Role:     auth.RoleSeeker,
 		FamilyID: "crew-1",
 	})
 	if err != nil {
@@ -56,8 +56,8 @@ func makeToken(t *testing.T, issuer *auth.HMACSessionIssuer) string {
 	return token
 }
 
-func makeCrew() *game.Family {
-	return &game.Family{
+func makeCrew() *db.Family {
+	return &db.Family{
 		ID:        "crew-1",
 		Name:      "The Explorer Family",
 		BannerURL: "",
@@ -125,7 +125,7 @@ func TestCrews_Handler_Success(t *testing.T) {
 		t.Fatalf("expected 200, got %d: %s", w.Code, w.Body.String())
 	}
 
-	var resp crewResponse
+	var resp familyResponse
 	if err := json.Unmarshal(w.Body.Bytes(), &resp); err != nil {
 		t.Fatalf("unmarshal: %v", err)
 	}
@@ -138,7 +138,7 @@ func TestCrews_Handler_Success(t *testing.T) {
 }
 
 func TestCrews_Handler_NotFound(t *testing.T) {
-	Setup(&mockCrewStore{err: game.ErrNotFound}, nil)
+	Setup(&mockCrewStore{err: db.ErrFamilyNotFound}, nil)
 	issuer := auth.NewSessionIssuer("test-secret")
 	mw := auth.NewMiddleware(issuer)
 	token := makeToken(t, issuer)
@@ -186,7 +186,7 @@ func TestCrews_Handler_PatchSuccess(t *testing.T) {
 		t.Fatalf("expected 200, got %d: %s", w.Code, w.Body.String())
 	}
 
-	var resp crewResponse
+	var resp familyResponse
 	if err := json.Unmarshal(w.Body.Bytes(), &resp); err != nil {
 		t.Fatalf("unmarshal: %v", err)
 	}
