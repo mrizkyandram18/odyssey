@@ -44,6 +44,21 @@ vi.mock('../../shared/lib/api', () => ({
 }))
 
 describe('RewardShopPage Component', () => {
+  const mockShopConfig = {
+    redemption_start_day: 24,
+    redemption_end_day: 26,
+    payout_day: 24,
+    earning_period_days: 30,
+    is_open: true,
+    is_payout_day: true,
+    current_day: 24,
+    conversion_rate: 10,
+    payout_target_rupiah: 320000,
+    payout_target_coins: 32000,
+    max_payout_coins: 32000,
+    timezone: 'Asia/Jakarta',
+  }
+
   beforeEach(() => {
     vi.clearAllMocks()
     vi.mocked(useSession).mockReturnValue({
@@ -55,14 +70,7 @@ describe('RewardShopPage Component', () => {
       logout: vi.fn(),
       refreshProfile: vi.fn(),
     })
-    vi.mocked(shopApi.getConfig).mockResolvedValue({
-      redemption_start_day: 21,
-      redemption_end_day: 26,
-      is_open: true,
-      current_day: 22,
-      conversion_rate: 10,
-      timezone: 'Asia/Jakarta',
-    })
+    vi.mocked(shopApi.getConfig).mockResolvedValue(mockShopConfig)
     vi.mocked(shopApi.getMyClaims).mockResolvedValue([])
   })
 
@@ -79,7 +87,7 @@ describe('RewardShopPage Component', () => {
 
     expect(await screen.findByText('● Penukaran Dibuka')).toBeInTheDocument()
     expect(screen.getByText(/1[.,]?250/)).toBeInTheDocument()
-    expect(screen.getByText(/12[.,]?500/)).toBeInTheDocument()
+    expect(screen.getAllByText(/12[.,]?500/).length).toBeGreaterThan(0)
     expect(screen.getByText('Tukarkan Koin Sekarang')).toBeInTheDocument()
   })
 
@@ -95,12 +103,11 @@ describe('RewardShopPage Component', () => {
     })
 
     vi.mocked(shopApi.getConfig).mockResolvedValue({
+      ...mockShopConfig,
       redemption_start_day: 10,
       redemption_end_day: 15,
       is_open: false,
       current_day: 2,
-      conversion_rate: 10,
-      timezone: 'Asia/Jakarta',
     })
     vi.mocked(shopApi.getMyClaims).mockResolvedValue([])
 
@@ -127,12 +134,9 @@ describe('RewardShopPage Component', () => {
     })
 
     vi.mocked(shopApi.getConfig).mockResolvedValue({
-      redemption_start_day: 21,
-      redemption_end_day: 26,
+      ...mockShopConfig,
       is_open: false,
       current_day: 30,
-      conversion_rate: 10,
-      timezone: 'Asia/Jakarta',
     })
     vi.mocked(shopApi.getMyClaims).mockResolvedValue([
       {

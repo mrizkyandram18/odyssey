@@ -5,6 +5,8 @@ import { Card } from '../../shared/components/atoms/Card'
 import { useSession } from '../../shared/hooks/useSession'
 import type { DevicePayload } from '../../shared/types'
 
+import { getOrCreateDeviceId } from '../../shared/lib/device'
+
 export function LoginPage() {
   const { login } = useSession()
   const [username, setUsername] = useState('')
@@ -18,7 +20,7 @@ export function LoginPage() {
     setError(null)
     try {
       const device: DevicePayload = {
-        device_id: 'web-pwa',
+        device_id: getOrCreateDeviceId(),
         login_method: 'BOTH',
       }
       await login(username, credential, device)

@@ -360,3 +360,76 @@ func TestAdminConfig_UpdateSuccessAndValidation(t *testing.T) {
 		})
 	}
 }
+
+func TestAdminDuplicateTask_Success(t *testing.T) {
+	origTask, _ := json.Marshal([]map[string]any{
+		{
+			"id":              10,
+			"family_id":       "fam-alpha",
+			"title":           "Original Task",
+			"description":     "Task Desc",
+			"task_type":       "VIDEO",
+			"evaluation_type": "AUTO",
+			"step_order":      1,
+			"reward_coins":    50,
+			"reward_xp":       100,
+			"target_scope":    "ALL",
+			"is_active":       true,
+		},
+	})
+
+	client := &mockSupabaseClient{
+		getResp:    origTask,
+		mutateResp: []byte(`{"id":11,"title":"Original Task (Salinan)"}`),
+	}
+	api := NewAPI(client)
+
+	req := httptest.NewRequest(http.MethodPost, "/api/admin/tasks/10/duplicate", nil)
+	guideClaims := &auth.SessionClaims{UID: "admin-1", FamilyID: "fam-alpha", Role: "GUIDE"}
+	req = req.WithContext(auth.ContextWithClaims(req.Context(), guideClaims))
+
+	rec := httptest.NewRecorder()
+	api.Handler(rec, req)
+
+	if rec.Code != http.StatusCreated {
+		t.Fatalf("expected 201 Created on task duplicate, got %d: %s", rec.Code, rec.Body.String())
+	}
+
+	mutateMap, ok := client.lastMutatePayload.(map[string]any)
+	if !ok {
+		t.Fatalf("expected map payload on duplicate task mutate")
+	}
+
+	if mutateMap["title"] != "Original Task (Salinan)" {
+		t.Errorf("expected duplicated title 'Original Task (Salinan)', got %v", mutateMap["title"])
+	}
+	if mutateMap["family_id"] != "fam-alpha" {
+		t.Errorf("expected family_id 'fam-alpha', got %v", mutateMap["family_id"])
+	}
+}
+
+func TestAdminDuplicateTask_FamilyMismatchForbidden(t *testing.T) {
+	origTask, _ := json.Marshal([]map[string]any{
+		{
+			"id":        10,
+			"family_id": "fam-other",
+			"title":     "Other Family Task",
+		},
+	})
+
+	client := &mockSupabaseClient{
+		getResp: origTask,
+	}
+	api := NewAPI(client)
+
+	req := httptest.NewRequest(http.MethodPost, "/api/admin/tasks/10/duplicate", nil)
+	guideClaims := &auth.SessionClaims{UID: "admin-1", FamilyID: "fam-alpha", Role: "GUIDE"}
+	req = req.WithContext(auth.ContextWithClaims(req.Context(), guideClaims))
+
+	rec := httptest.NewRecorder()
+	api.Handler(rec, req)
+
+	if rec.Code != http.StatusForbidden {
+		t.Errorf("expected 403 Forbidden on duplicating cross-family task, got %d", rec.Code)
+	}
+}

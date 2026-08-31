@@ -8,6 +8,9 @@ import type {
   ClaimView,
   PendingSubmissionView,
   RedemptionConfig,
+  MemberView,
+  CreateMemberInput,
+  UpdateMemberInput,
 } from '../types'
 import { getSession, isSessionExpired } from './session'
 
@@ -154,13 +157,20 @@ export const shopApi = {
   getMyClaims: () => apiClient.get<ClaimView[]>('/api/shop/claims'),
 }
 
+export const adminMembersApi = {
+  getMembers: () => apiClient.get<MemberView[]>('/api/admin/members'),
+  createMember: (data: CreateMemberInput) => apiClient.post<MemberView>('/api/admin/members', data),
+  updateMember: (uid: string, patch: UpdateMemberInput) => apiClient.patch<MemberView>(`/api/admin/members/${uid}`, patch),
+}
+
 export const adminTasksApi = {
   getConfig: () => apiClient.get<RedemptionConfig>('/api/admin/config'),
-  updateConfig: (data: { start_day: number; end_day: number }) =>
+  updateConfig: (data: { start_day?: number; end_day?: number; payout_day?: number; earning_period_days?: number; conversion_rate?: number; payout_target_rupiah?: number; payout_target_coins?: number; max_payout_coins?: number; timezone?: string }) =>
     apiClient.post<RedemptionConfig>('/api/admin/config', data),
   getTasks: (date?: string) => apiClient.get<TaskView[]>(`/api/admin/tasks${date ? '?date=' + date : ''}`),
   createTask: (data: any) => apiClient.post<TaskView>('/api/admin/tasks', data),
   updateTask: (id: number, patch: any) => apiClient.patch<TaskView>(`/api/admin/tasks/${id}`, patch),
+  duplicateTask: (id: number) => apiClient.post<TaskView>(`/api/admin/tasks/${id}/duplicate`, {}),
   deleteTask: (id: number) => apiClient.delete<{ status: string }>(`/api/admin/tasks/${id}`),
   getPendingSubmissions: () => apiClient.get<PendingSubmissionView[]>('/api/admin/submissions/pending'),
   verifySubmission: (id: number, status: 'APPROVED' | 'REJECTED', notes?: string) =>

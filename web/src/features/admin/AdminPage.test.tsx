@@ -44,26 +44,32 @@ vi.mock('../../shared/lib/api', () => ({
 }))
 
 describe('AdminPage Component', () => {
+  const mockConfig = {
+    redemption_start_day: 24,
+    redemption_end_day: 26,
+    payout_day: 24,
+    earning_period_days: 30,
+    is_open: true,
+    is_payout_day: true,
+    current_day: 24,
+    conversion_rate: 100,
+    payout_target_rupiah: 320000,
+    payout_target_coins: 3200,
+    max_payout_coins: 3200,
+    timezone: 'Asia/Jakarta',
+  }
+
   beforeEach(() => {
     vi.clearAllMocks()
     vi.mocked(adminTasksApi.getTasks).mockResolvedValue([])
     vi.mocked(adminTasksApi.getPendingSubmissions).mockResolvedValue([])
     vi.mocked(adminTasksApi.getClaims).mockResolvedValue([])
-    vi.mocked(adminTasksApi.getConfig).mockResolvedValue({
-      redemption_start_day: 21,
-      redemption_end_day: 26,
-      is_open: true,
-      current_day: 22,
-      conversion_rate: 10,
-      timezone: 'Asia/Jakarta',
-    })
+    vi.mocked(adminTasksApi.getConfig).mockResolvedValue(mockConfig)
     vi.mocked(adminTasksApi.updateConfig).mockResolvedValue({
+      ...mockConfig,
       redemption_start_day: 10,
       redemption_end_day: 15,
-      is_open: true,
       current_day: 12,
-      conversion_rate: 10,
-      timezone: 'Asia/Jakarta',
     })
   })
 
@@ -109,7 +115,7 @@ describe('AdminPage Component', () => {
     await waitFor(() => {
       expect(screen.getByText(/Antrean Verifikasi Bukti Tugas/i)).toBeInTheDocument()
       expect(screen.getByText('Tidak Ada Antrean Verifikasi')).toBeInTheDocument()
-      expect(screen.getByText(/21[–-]26/)).toBeInTheDocument()
+      expect(screen.getByText(/24[–-]26/)).toBeInTheDocument()
     })
   })
 

@@ -15,6 +15,7 @@ import (
 )
 
 type mockSupabaseClient struct {
+	getFunc    func(ctx context.Context, table string, params string) ([]byte, error)
 	getResp    []byte
 	getErr     error
 	mutateResp []byte
@@ -26,6 +27,9 @@ type mockSupabaseClient struct {
 }
 
 func (m *mockSupabaseClient) Get(ctx context.Context, table string, params string) ([]byte, error) {
+	if m.getFunc != nil {
+		return m.getFunc(ctx, table, params)
+	}
 	if m.getErr != nil {
 		return nil, m.getErr
 	}
@@ -439,5 +443,123 @@ func TestHandleGetTask_NotFound(t *testing.T) {
 
 	if rec.Code != http.StatusNotFound {
 		t.Fatalf("expected status 404 Not Found on missing task, got %d", rec.Code)
+	}
+}
+
+func TestHandleGetToday_PersonalTaskTargeting(t *testing.T) {
+	tasks := []TaskRecord{
+		{ID: 1, FamilyID: "fam-1", Title: "Shared Task", TaskType: "VIDEO", StepOrder: 1, TargetScope: "ALL", IsActive: true},
+		{ID: 2, FamilyID: "fam-1", Title: "User A Personal Task", TaskType: "QUIZ", StepOrder: 2, TargetScope: "USER", TargetUserUID: "user-A", IsActive: true},
+		{ID: 3, FamilyID: "fam-1", Title: "User B Personal Task", TaskType: "PHOTO_UPLOAD", StepOrder: 3, TargetScope: "USER", TargetUserUID: "user-B", IsActive: true},
+	}
+	tasksBytes, _ := json.Marshal(tasks)
+
+	client := &mockSupabaseClient{
+		getResp: tasksBytes,
+	}
+	api := NewAPI(client)
+
+	// User A request
+	reqA := httptest.NewRequest(http.MethodGet, "/api/tasks/today", nil)
+	claimsA := &auth.SessionClaims{UID: "user-A", FamilyID: "fam-1", Role: "SEEKER"}
+	reqA = reqA.WithContext(auth.ContextWithClaims(reqA.Context(), claimsA))
+	recA := httptest.NewRecorder()
+	api.Handler(recA, reqA)
+
+	var respA struct {
+		Tasks []TaskView `json:"tasks"`
+	}
+	_ = json.Unmarshal(recA.Body.Bytes(), &respA)
+
+	if len(respA.Tasks) != 2 {
+		t.Fatalf("expected User A to see 2 tasks (Shared & User A), got %d", len(respA.Tasks))
+	}
+	if respA.Tasks[0].ID != 1 || respA.Tasks[1].ID != 2 {
+		t.Errorf("unexpected tasks for User A: %+v", respA.Tasks)
+	}
+
+	// User B request
+	reqB := httptest.NewRequest(http.MethodGet, "/api/tasks/today", nil)
+	claimsB := &auth.SessionClaims{UID: "user-B", FamilyID: "fam-1", Role: "SEEKER"}
+	reqB = reqB.WithContext(auth.ContextWithClaims(reqB.Context(), claimsB))
+	recB := httptest.NewRecorder()
+	api.Handler(recB, reqB)
+
+	var respB struct {
+		Tasks []TaskView `json:"tasks"`
+	}
+	_ = json.Unmarshal(recB.Body.Bytes(), &respB)
+
+	if len(respB.Tasks) != 2 {
+		t.Fatalf("expected User B to see 2 tasks (Shared & User B), got %d", len(respB.Tasks))
+	}
+	if respB.Tasks[0].ID != 1 || respB.Tasks[1].ID != 3 {
+		t.Errorf("unexpected tasks for User B: %+v", respB.Tasks)
+	}
+}
+
+func TestHandleSubmit_PersonalTaskForbidden(t *testing.T) {
+	// Task 2 belongs to user-A
+	task := []TaskRecord{
+		{ID: 2, FamilyID: "fam-1", Title: "User A Personal Task", TaskType: "QUIZ", StepOrder: 1, TargetScope: "USER", TargetUserUID: "user-A", IsActive: true},
+	}
+	taskBytes, _ := json.Marshal(task)
+
+	client := &mockSupabaseClient{
+		getResp: taskBytes,
+	}
+	api := NewAPI(client)
+
+	// User B tries to submit User A's personal task
+	body := `{"answers":{"q1":"A"}}`
+	req := httptest.NewRequest(http.MethodPost, "/api/tasks/2/submit", strings.NewReader(body))
+	req.Header.Set("Content-Type", "application/json")
+	claims := &auth.SessionClaims{UID: "user-B", FamilyID: "fam-1", Role: "SEEKER"}
+	req = req.WithContext(auth.ContextWithClaims(req.Context(), claims))
+
+	rec := httptest.NewRecorder()
+	api.Handler(rec, req)
+
+	if rec.Code != http.StatusForbidden {
+		t.Errorf("expected 403 Forbidden when user-B submits user-A's personal task, got %d", rec.Code)
+	}
+}
+
+func TestHandleGetToday_NewUserJoinDateBacklogGuard(t *testing.T) {
+	tasks := []TaskRecord{
+		{ID: 10, FamilyID: "fam-1", Title: "Past Task", TaskType: "VIDEO", StepOrder: 1, ActiveDate: "2026-08-01", TargetScope: "ALL", IsActive: true},
+		{ID: 11, FamilyID: "fam-1", Title: "Join Date Task", TaskType: "VIDEO", StepOrder: 2, ActiveDate: "2026-08-15", TargetScope: "ALL", IsActive: true},
+	}
+	tasksBytes, _ := json.Marshal(tasks)
+	profileBytes := []byte(`[{"uid":"user-new","family_id":"fam-1","explorer_name":"New User","role":"SEEKER","is_active":true,"created_at":"2026-08-15T10:00:00Z"}]`)
+
+	client := &mockSupabaseClient{
+		getFunc: func(ctx context.Context, table string, params string) ([]byte, error) {
+			if table == "odyssey_user_profiles" {
+				return profileBytes, nil
+			}
+			return tasksBytes, nil
+		},
+	}
+	api := NewAPI(client)
+
+	// User created on 2026-08-15
+	req := httptest.NewRequest(http.MethodGet, "/api/tasks/today", nil)
+	claims := &auth.SessionClaims{UID: "user-new", FamilyID: "fam-1", Role: "SEEKER"}
+	req = req.WithContext(auth.ContextWithClaims(req.Context(), claims))
+
+	rec := httptest.NewRecorder()
+	api.Handler(rec, req)
+
+	var resp struct {
+		Tasks []TaskView `json:"tasks"`
+	}
+	_ = json.Unmarshal(rec.Body.Bytes(), &resp)
+
+	// User created on 2026-08-15 will see tasks starting from 2026-08-15 (Task 11), NOT historical Task 10 (2026-08-01)
+	for _, task := range resp.Tasks {
+		if task.ID == 10 {
+			t.Errorf("backlog guard failure: new user received historical task prior to join date")
+		}
 	}
 }

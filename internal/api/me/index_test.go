@@ -35,6 +35,27 @@ func (m *mockProfileStore) GetBoundDeviceID(ctx context.Context, uid string) (st
 	return "", nil
 }
 
+func (m *mockProfileStore) BindOrVerifyDevice(ctx context.Context, uid, deviceID string) (bool, error) {
+	if m.profile != nil {
+		if m.profile.DeviceID == "" {
+			m.profile.DeviceID = deviceID
+			return true, nil
+		}
+		if m.profile.DeviceID == deviceID {
+			return false, nil
+		}
+		return false, auth.ErrDeviceBlocked
+	}
+	return false, nil
+}
+
+func (m *mockProfileStore) ResetDeviceBinding(ctx context.Context, uid string) error {
+	if m.profile != nil {
+		m.profile.DeviceID = ""
+	}
+	return nil
+}
+
 func (m *mockProfileStore) SetAvatarFrame(ctx context.Context, uid, frame string) error {
 	return nil
 }

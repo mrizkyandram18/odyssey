@@ -82,8 +82,11 @@ func TestShopConfig_Get(t *testing.T) {
 	if res["redemption_start_day"] != float64(10) || res["redemption_end_day"] != float64(20) {
 		t.Fatalf("expected start 10, end 20, got %v", res)
 	}
-	if res["conversion_rate"] != float64(10) {
-		t.Fatalf("expected conversion_rate 10, got %v", res["conversion_rate"])
+	if res["conversion_rate"] != float64(100) {
+		t.Fatalf("expected conversion_rate 100, got %v", res["conversion_rate"])
+	}
+	if res["max_payout_coins"] != float64(3200) {
+		t.Fatalf("expected max_payout_coins 3200, got %v", res["max_payout_coins"])
 	}
 }
 

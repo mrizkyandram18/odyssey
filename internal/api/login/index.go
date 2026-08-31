@@ -73,9 +73,14 @@ func writeSuccess(w http.ResponseWriter, r *http.Request, ctx context.Context, u
 	var cfg *auth.SessionConfig
 	if profiles != nil {
 		if profile, err := profiles.GetUserProfile(ctx, uid); err == nil && profile != nil {
+			if !profile.IsActive {
+				shared.WriteJSONError(w, "akun Anda nonaktif, silakan hubungi admin", http.StatusForbidden)
+				return
+			}
 			cfg = &auth.SessionConfig{
 				Role:     auth.Role(profile.Role),
 				FamilyID: profile.FamilyID,
+				DeviceID: profile.DeviceID,
 			}
 		}
 	}
@@ -101,6 +106,11 @@ func writeSuccess(w http.ResponseWriter, r *http.Request, ctx context.Context, u
 
 func writeError(w http.ResponseWriter, r *http.Request, uid string, err error) {
 	switch {
+	case errors.Is(err, auth.ErrDeviceBlocked):
+		shared.WriteJSONError(w, "Akun sudah terhubung ke perangkat lain. Silakan gunakan perangkat yang sudah terdaftar atau hubungi admin.", http.StatusForbidden)
+
+	case errors.Is(err, auth.ErrAccountDisabled):
+		shared.WriteJSONError(w, "akun Anda nonaktif, silakan hubungi admin", http.StatusForbidden)
 	case errors.Is(err, auth.ErrCredentialNotSet):
 		token, claims, issueErr := sessionIssuer.IssueSession(auth.SessionKindSetup, uid, nil)
 		if issueErr != nil {

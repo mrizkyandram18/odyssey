@@ -1,6 +1,6 @@
 import React, { useState } from 'react'
 import { motion } from 'framer-motion'
-import { Coins, Smartphone, Wallet, Building2, AlertCircle, CheckCircle2, Banknote, X } from 'lucide-react'
+import { Coins, Wallet, Building2, AlertCircle, CheckCircle2, Banknote, X } from 'lucide-react'
 import { shopApi } from '../../shared/lib/api'
 
 interface RedeemModalProps {
@@ -105,7 +105,7 @@ export const RedeemModal: React.FC<RedeemModalProps> = ({
                 <label className="text-xs font-bold text-text-secondary">
                   Pilih Metode Pencairan:
                 </label>
-                <div className="grid grid-cols-3 gap-2">
+                <div className="grid grid-cols-2 gap-2">
                   <button
                     type="button"
                     onClick={() => handleTypeChange('EWALLET')}
@@ -116,7 +116,7 @@ export const RedeemModal: React.FC<RedeemModalProps> = ({
                     }`}
                   >
                     <Wallet className="w-4 h-4" />
-                    <span>E-Wallet</span>
+                    <span>Dompet Digital</span>
                   </button>
 
                   <button
@@ -131,30 +131,13 @@ export const RedeemModal: React.FC<RedeemModalProps> = ({
                     <Building2 className="w-4 h-4" />
                     <span>Transfer Bank</span>
                   </button>
-
-                  <button
-                    type="button"
-                    onClick={() => handleTypeChange('PHONE')}
-                    className={`p-3 rounded-2xl border text-xs font-heading font-bold flex flex-col items-center gap-1.5 transition-all ${
-                      targetType === 'PHONE'
-                        ? 'bg-accent-cyan/15 border-accent-cyan text-accent-cyan shadow-sm'
-                        : 'bg-surface border-border-subtle text-text-secondary hover:text-text-primary'
-                    }`}
-                  >
-                    <Smartphone className="w-4 h-4" />
-                    <span>Pulsa / HP</span>
-                  </button>
                 </div>
               </div>
 
               {/* Provider Selection */}
               <div className="space-y-1.5">
                 <label className="text-xs font-bold text-text-secondary">
-                  {targetType === 'EWALLET'
-                    ? 'Pilihan Dompet Digital:'
-                    : targetType === 'BANK'
-                    ? 'Pilihan Bank:'
-                    : 'Pilihan Operator:'}
+                  {targetType === 'EWALLET' ? 'Pilihan Dompet Digital:' : 'Pilihan Bank:'}
                 </label>
                 <select
                   value={provider}
@@ -178,22 +161,13 @@ export const RedeemModal: React.FC<RedeemModalProps> = ({
                       <option value="BSI">Bank Syariah Indonesia (BSI)</option>
                     </>
                   )}
-                  {targetType === 'PHONE' && (
-                    <>
-                      <option value="Telkomsel">Telkomsel</option>
-                      <option value="Indosat (IM3)">Indosat (IM3)</option>
-                      <option value="XL Axiata">XL Axiata</option>
-                      <option value="Tri (3)">Tri (3)</option>
-                      <option value="Smartfren">Smartfren</option>
-                    </>
-                  )}
                 </select>
               </div>
 
               {/* Target Number */}
               <div className="space-y-1.5">
                 <label className="text-xs font-bold text-text-secondary">
-                  {targetType === 'BANK' ? 'Nomor Rekening:' : 'Nomor HP Tujuan:'}
+                  {targetType === 'BANK' ? 'Nomor Rekening:' : 'Nomor Akun Tujuan:'}
                 </label>
                 <input
                   type="text"
@@ -327,7 +301,7 @@ export const RedeemModal: React.FC<RedeemModalProps> = ({
                 }}
                 className="w-full py-3.5 rounded-2xl bg-accent-magic text-white font-heading font-bold text-sm shadow-md shadow-accent-magic/30 hover:brightness-110 transition-all"
               >
-                Kembali ke Toko Hadiah
+                Kembali ke Halaman Penukaran
               </button>
             </div>
           )}

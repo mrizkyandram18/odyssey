@@ -46,7 +46,7 @@ func (a *API) requireGuide(w http.ResponseWriter, r *http.Request) (*auth.Sessio
 		shared.WriteUnauthorized(w)
 		return nil, false
 	}
-	if claims.Role != "GUIDE" {
+	if claims.Role != "GUIDE" && claims.Role != "ADMIN" && claims.Role != "BUILDER" {
 		shared.WriteJSONError(w, "akses ditolak: hanya untuk admin/guide", http.StatusForbidden)
 		return nil, false
 	}
@@ -128,6 +128,38 @@ func (a *API) HandleCreateTask(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
+	targetScope := strings.ToUpper(strings.TrimSpace(req.TargetScope))
+	if targetScope == "" {
+		targetScope = "ALL"
+	}
+	if targetScope != "ALL" && targetScope != "FAMILY" && targetScope != "USER" {
+		shared.WriteJSONError(w, "target_scope tidak valid", http.StatusBadRequest)
+		return
+	}
+
+	targetUID := strings.TrimSpace(req.TargetUserUID)
+	if targetScope == "USER" {
+		if targetUID == "" {
+			shared.WriteJSONError(w, "target_user_uid wajib diisi untuk target user tertentu", http.StatusBadRequest)
+			return
+		}
+		// Validate target user exists and belongs to admin's family
+		uRaw, err := a.client.Get(ctx, "odyssey_user_profiles", fmt.Sprintf("uid=eq.%s", targetUID))
+		if err != nil || len(uRaw) == 0 {
+			shared.WriteJSONError(w, "user target tidak ditemukan", http.StatusBadRequest)
+			return
+		}
+		type UserCheck struct {
+			FamilyID string `json:"family_id"`
+		}
+		var uChecks []UserCheck
+		_ = json.Unmarshal(uRaw, &uChecks)
+		if len(uChecks) > 0 && claims.FamilyID != "" && uChecks[0].FamilyID != "" && uChecks[0].FamilyID != claims.FamilyID {
+			shared.WriteJSONError(w, "akses ditolak: user target bukan milik keluarga Anda", http.StatusForbidden)
+			return
+		}
+	}
+
 	payload := map[string]any{
 		"title":           req.Title,
 		"description":     req.Description,
@@ -137,9 +169,13 @@ func (a *API) HandleCreateTask(w http.ResponseWriter, r *http.Request) {
 		"reward_coins":    req.RewardCoins,
 		"reward_xp":       req.RewardXP,
 		"config":          req.Config,
+		"target_scope":    targetScope,
 		"is_active":       req.IsActive,
 		"created_by":      claims.UID,
 		"family_id":       claims.FamilyID,
+	}
+	if targetScope == "USER" {
+		payload["target_user_uid"] = targetUID
 	}
 	if req.ActiveDate != "" {
 		payload["active_date"] = req.ActiveDate
@@ -265,6 +301,67 @@ func (a *API) HandleDeleteTask(w http.ResponseWriter, r *http.Request, taskID in
 		return
 	}
 	shared.WriteJSON(w, http.StatusOK, map[string]string{"status": "deleted"})
+}
+
+func (a *API) HandleDuplicateTask(w http.ResponseWriter, r *http.Request, taskID int64) {
+	claims, ok := a.requireGuide(w, r)
+	if !ok {
+		return
+	}
+	ctx := r.Context()
+
+	tRaw, err := a.client.Get(ctx, "odyssey_tasks", fmt.Sprintf("id=eq.%d", taskID))
+	if err != nil || len(tRaw) == 0 {
+		shared.WriteJSONError(w, "task not found", http.StatusNotFound)
+		return
+	}
+	var list []map[string]any
+	_ = json.Unmarshal(tRaw, &list)
+	if len(list) == 0 {
+		shared.WriteJSONError(w, "task not found", http.StatusNotFound)
+		return
+	}
+	orig := list[0]
+
+	if claims.FamilyID != "" {
+		if famID, ok := orig["family_id"].(string); ok && famID != "" && famID != claims.FamilyID {
+			shared.WriteJSONError(w, "akses ditolak: tugas bukan milik keluarga Anda", http.StatusForbidden)
+			return
+		}
+	}
+
+	newTitle := fmt.Sprintf("%v (Salinan)", orig["title"])
+	payload := map[string]any{
+		"title":           newTitle,
+		"description":     orig["description"],
+		"task_type":       orig["task_type"],
+		"evaluation_type": orig["evaluation_type"],
+		"step_order":      orig["step_order"],
+		"reward_coins":    orig["reward_coins"],
+		"reward_xp":       orig["reward_xp"],
+		"config":          orig["config"],
+		"is_active":       orig["is_active"],
+		"created_by":      claims.UID,
+		"family_id":       claims.FamilyID,
+	}
+	if actDate, ok := orig["active_date"].(string); ok && actDate != "" {
+		payload["active_date"] = actDate
+	}
+	if scope, ok := orig["target_scope"].(string); ok && scope != "" {
+		payload["target_scope"] = scope
+	}
+	if targetUID, ok := orig["target_user_uid"].(string); ok && targetUID != "" {
+		payload["target_user_uid"] = targetUID
+	}
+
+	raw, err := a.client.MutateAtomic(ctx, http.MethodPost, "odyssey_tasks", payload, "", "return=representation")
+	if err != nil {
+		shared.WriteJSONError(w, "gagal duplikasi tugas: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusCreated)
+	w.Write(raw)
 }
 
 func (a *API) HandleListPendingSubmissions(w http.ResponseWriter, r *http.Request) {
@@ -449,6 +546,14 @@ func (a *API) Handler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if strings.HasPrefix(path, "/api/admin/tasks/") {
+		if strings.HasSuffix(path, "/duplicate") && r.Method == http.MethodPost {
+			subPath := strings.TrimPrefix(path, "/api/admin/tasks/")
+			taskIDStr := strings.TrimSuffix(subPath, "/duplicate")
+			if taskID, err := strconv.ParseInt(taskIDStr, 10, 64); err == nil {
+				a.HandleDuplicateTask(w, r, taskID)
+				return
+			}
+		}
 		taskIDStr := strings.TrimPrefix(path, "/api/admin/tasks/")
 		taskID, err := strconv.ParseInt(taskIDStr, 10, 64)
 		if err == nil {
@@ -474,7 +579,14 @@ func (a *API) HandleGetAdminConfig(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	startDay := shared.DefaultRedemptionStartDay
 	endDay := shared.DefaultRedemptionEndDay
-	raw, err := a.client.Get(ctx, "odyssey_system_config", "key=in.(redemption_start_day,redemption_end_day)")
+	payoutDay := shared.DefaultPayoutDay
+	earningPeriodDays := shared.DefaultEarningPeriodDays
+	conversionRate := shared.DefaultCoinConversionRate
+	payoutTargetRupiah := shared.DefaultPayoutTargetRupiah
+	payoutTargetCoins := shared.DefaultPayoutTargetCoins
+	maxPayoutCoins := shared.DefaultMaxPayoutCoins
+	timezone := shared.DefaultTimezone
+	raw, err := a.client.Get(ctx, "odyssey_system_config", "key=in.(redemption_start_day,redemption_end_day,payout_day,earning_period_days,coin_conversion_rate,payout_target_rupiah,payout_target_coins,max_payout_coins,timezone)")
 	if err == nil && len(raw) > 0 {
 		type ConfigRow struct {
 			Key   string `json:"key"`
@@ -483,20 +595,66 @@ func (a *API) HandleGetAdminConfig(w http.ResponseWriter, r *http.Request) {
 		var rows []ConfigRow
 		if err := json.Unmarshal(raw, &rows); err == nil {
 			for _, row := range rows {
-				if row.Key == "redemption_start_day" {
+				switch row.Key {
+				case "redemption_start_day":
 					if v, err := strconv.Atoi(row.Value); err == nil && v >= 1 && v <= 31 {
 						startDay = v
 					}
-				} else if row.Key == "redemption_end_day" {
+				case "redemption_end_day":
 					if v, err := strconv.Atoi(row.Value); err == nil && v >= 1 && v <= 31 {
 						endDay = v
+					}
+				case "payout_day":
+					if v, err := strconv.Atoi(row.Value); err == nil && v >= 1 && v <= 31 {
+						payoutDay = v
+					}
+				case "earning_period_days":
+					if v, err := strconv.Atoi(row.Value); err == nil && v > 0 {
+						earningPeriodDays = v
+					}
+				case "coin_conversion_rate":
+					if v, err := strconv.Atoi(row.Value); err == nil && v > 0 {
+						conversionRate = v
+					}
+				case "payout_target_rupiah":
+					if v, err := strconv.Atoi(row.Value); err == nil && v >= 0 {
+						payoutTargetRupiah = v
+					}
+				case "payout_target_coins":
+					if v, err := strconv.Atoi(row.Value); err == nil && v > 0 {
+						payoutTargetCoins = v
+					}
+				case "max_payout_coins":
+					if v, err := strconv.Atoi(row.Value); err == nil && v > 0 {
+						maxPayoutCoins = v
+					}
+				case "timezone":
+					if v := strings.TrimSpace(row.Value); v != "" {
+						if _, err := time.LoadLocation(v); err == nil {
+							timezone = v
+						}
 					}
 				}
 			}
 		}
 	}
-	tz := shared.LoadConfig().Timezone
-	cfg := shared.ResolveRedemptionConfig(startDay, endDay, tz, time.Now())
+	if timezone == shared.DefaultTimezone {
+		if envTZ := shared.LoadConfig().Timezone; envTZ != "" {
+			timezone = envTZ
+		}
+	}
+	cfg := shared.ResolveRedemptionConfigFull(shared.ResolveRedemptionConfigParams{
+		StartDay:           startDay,
+		EndDay:             endDay,
+		PayoutDay:          payoutDay,
+		EarningPeriodDays:  earningPeriodDays,
+		Timezone:           timezone,
+		Now:                time.Now(),
+		ConversionRate:     conversionRate,
+		PayoutTargetRupiah: payoutTargetRupiah,
+		PayoutTargetCoins:  payoutTargetCoins,
+		MaxPayoutCoins:     maxPayoutCoins,
+	})
 	shared.WriteJSON(w, http.StatusOK, cfg)
 }
 
@@ -508,38 +666,155 @@ func (a *API) HandleUpdateAdminConfig(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 
 	var req struct {
-		StartDay int `json:"start_day"`
-		EndDay   int `json:"end_day"`
+		StartDay           *int    `json:"start_day"`
+		EndDay             *int    `json:"end_day"`
+		PayoutDay          *int    `json:"payout_day"`
+		EarningPeriodDays  *int    `json:"earning_period_days"`
+		ConversionRate     *int    `json:"conversion_rate"`
+		PayoutTargetRupiah *int    `json:"payout_target_rupiah"`
+		PayoutTargetCoins  *int    `json:"payout_target_coins"`
+		MaxPayoutCoins     *int    `json:"max_payout_coins"`
+		Timezone           *string `json:"timezone"`
 	}
 	if err := shared.ReadJSON(r, &req); err != nil {
 		shared.WriteJSONError(w, "invalid request payload: "+err.Error(), http.StatusBadRequest)
 		return
 	}
 
-	if req.StartDay < 1 || req.StartDay > 31 || req.EndDay < 1 || req.EndDay > 31 || req.StartDay > req.EndDay {
-		shared.WriteJSONError(w, "rentang tanggal penukaran tidak valid (1 <= start_day <= end_day <= 31)", http.StatusBadRequest)
+	// Fetch current config to merge
+	currentRaw, _ := a.client.Get(ctx, "odyssey_system_config", "key=in.(redemption_start_day,redemption_end_day,payout_day,earning_period_days,coin_conversion_rate,payout_target_rupiah,max_payout_coins,timezone)")
+	curMap := map[string]string{}
+	if len(currentRaw) > 0 {
+		var typed []struct {
+			Key   string `json:"key"`
+			Value string `json:"value"`
+		}
+		if err := json.Unmarshal(currentRaw, &typed); err == nil {
+			for _, r := range typed {
+				curMap[r.Key] = r.Value
+			}
+		}
+	}
+
+	// Determine effective range for validation
+	effectiveStart := shared.DefaultRedemptionStartDay
+	effectiveEnd := shared.DefaultRedemptionEndDay
+	if v, err := strconv.Atoi(curMap["redemption_start_day"]); err == nil {
+		effectiveStart = v
+	}
+	if v, err := strconv.Atoi(curMap["redemption_end_day"]); err == nil {
+		effectiveEnd = v
+	}
+	if req.StartDay != nil {
+		effectiveStart = *req.StartDay
+	}
+	if req.EndDay != nil {
+		effectiveEnd = *req.EndDay
+	}
+	if effectiveStart > effectiveEnd {
+		shared.WriteJSONError(w, "start_day cannot be greater than end_day", http.StatusBadRequest)
 		return
 	}
 
-	startPayload := map[string]any{
-		"key":   "redemption_start_day",
-		"value": strconv.Itoa(req.StartDay),
+	// Validate target coins <= max payout
+	effectiveRate := shared.DefaultCoinConversionRate
+	if v, err := strconv.Atoi(curMap["coin_conversion_rate"]); err == nil {
+		effectiveRate = v
 	}
-	endPayload := map[string]any{
-		"key":   "redemption_end_day",
-		"value": strconv.Itoa(req.EndDay),
-	}
-
-	_, err := a.client.MutateAtomic(ctx, http.MethodPost, "odyssey_system_config", startPayload, "", "resolution=merge-duplicates")
-	if err != nil {
-		_, _ = a.client.Mutate(ctx, http.MethodPatch, "odyssey_system_config", map[string]any{"value": strconv.Itoa(req.StartDay)}, "key=eq.redemption_start_day")
-	}
-	_, err = a.client.MutateAtomic(ctx, http.MethodPost, "odyssey_system_config", endPayload, "", "resolution=merge-duplicates")
-	if err != nil {
-		_, _ = a.client.Mutate(ctx, http.MethodPatch, "odyssey_system_config", map[string]any{"value": strconv.Itoa(req.EndDay)}, "key=eq.redemption_end_day")
+	if req.ConversionRate != nil {
+		effectiveRate = *req.ConversionRate
 	}
 
-	tz := shared.LoadConfig().Timezone
-	cfg := shared.ResolveRedemptionConfig(req.StartDay, req.EndDay, tz, time.Now())
-	shared.WriteJSON(w, http.StatusOK, cfg)
+	effectiveTargetRupiah := shared.DefaultPayoutTargetRupiah
+	if v, err := strconv.Atoi(curMap["payout_target_rupiah"]); err == nil {
+		effectiveTargetRupiah = v
+	}
+	if req.PayoutTargetRupiah != nil {
+		effectiveTargetRupiah = *req.PayoutTargetRupiah
+	}
+
+	effectiveMaxPayout := shared.DefaultMaxPayoutCoins
+	if v, err := strconv.Atoi(curMap["max_payout_coins"]); err == nil {
+		effectiveMaxPayout = v
+	}
+	if req.MaxPayoutCoins != nil {
+		effectiveMaxPayout = *req.MaxPayoutCoins
+	}
+
+	if effectiveRate > 0 && effectiveTargetRupiah >= 0 {
+		effectiveTargetCoins := effectiveTargetRupiah / effectiveRate
+		if effectiveTargetCoins > effectiveMaxPayout {
+			shared.WriteJSONError(w, fmt.Sprintf("target payout (%d coins) cannot exceed max payout (%d coins)", effectiveTargetCoins, effectiveMaxPayout), http.StatusBadRequest)
+			return
+		}
+	}
+
+	// Helper to upsert key
+	upsert := func(key, value string) {
+		payload := map[string]any{"key": key, "value": value}
+		_, err := a.client.MutateAtomic(ctx, http.MethodPost, "odyssey_system_config", payload, "", "resolution=merge-duplicates")
+		if err != nil {
+			_, _ = a.client.Mutate(ctx, http.MethodPatch, "odyssey_system_config", map[string]any{"value": value}, "key=eq."+key)
+		}
+	}
+
+	if req.StartDay != nil {
+		if *req.StartDay < 1 || *req.StartDay > 31 {
+			shared.WriteJSONError(w, "start_day must be 1-31", http.StatusBadRequest)
+			return
+		}
+		upsert("redemption_start_day", strconv.Itoa(*req.StartDay))
+	}
+	if req.EndDay != nil {
+		if *req.EndDay < 1 || *req.EndDay > 31 {
+			shared.WriteJSONError(w, "end_day must be 1-31", http.StatusBadRequest)
+			return
+		}
+		upsert("redemption_end_day", strconv.Itoa(*req.EndDay))
+	}
+	if req.PayoutDay != nil {
+		if *req.PayoutDay < 1 || *req.PayoutDay > 31 {
+			shared.WriteJSONError(w, "payout_day must be 1-31", http.StatusBadRequest)
+			return
+		}
+		upsert("payout_day", strconv.Itoa(*req.PayoutDay))
+	}
+	if req.EarningPeriodDays != nil {
+		if *req.EarningPeriodDays < 1 || *req.EarningPeriodDays > 365 {
+			shared.WriteJSONError(w, "earning_period_days must be 1-365", http.StatusBadRequest)
+			return
+		}
+		upsert("earning_period_days", strconv.Itoa(*req.EarningPeriodDays))
+	}
+	if req.ConversionRate != nil {
+		if *req.ConversionRate <= 0 {
+			shared.WriteJSONError(w, "conversion_rate must be > 0", http.StatusBadRequest)
+			return
+		}
+		upsert("coin_conversion_rate", strconv.Itoa(*req.ConversionRate))
+	}
+	if req.PayoutTargetRupiah != nil {
+		if *req.PayoutTargetRupiah < 0 {
+			shared.WriteJSONError(w, "payout_target_rupiah must be >= 0", http.StatusBadRequest)
+			return
+		}
+		upsert("payout_target_rupiah", strconv.Itoa(*req.PayoutTargetRupiah))
+	}
+	if req.MaxPayoutCoins != nil {
+		if *req.MaxPayoutCoins <= 0 {
+			shared.WriteJSONError(w, "max_payout_coins must be > 0", http.StatusBadRequest)
+			return
+		}
+		upsert("max_payout_coins", strconv.Itoa(*req.MaxPayoutCoins))
+	}
+	if req.Timezone != nil {
+		if _, err := time.LoadLocation(*req.Timezone); err != nil {
+			shared.WriteJSONError(w, "invalid timezone", http.StatusBadRequest)
+			return
+		}
+		upsert("timezone", *req.Timezone)
+	}
+
+	// Return updated config
+	a.HandleGetAdminConfig(w, r)
 }

@@ -1,6 +1,7 @@
 package family_tasks
 
 import (
+	"context"
 	"crypto/rand"
 	"encoding/hex"
 	"encoding/json"
@@ -21,6 +22,22 @@ type API struct {
 	client db.SupabaseClient
 }
 
+func fetchSystemTimezone(ctx context.Context, client db.SupabaseClient) string {
+	tz := shared.LoadConfig().Timezone
+	raw, err := client.Get(ctx, "odyssey_system_config", "key=eq.timezone")
+	if err == nil && len(raw) > 0 {
+		var rows []struct {
+			Value string `json:"value"`
+		}
+		if err := json.Unmarshal(raw, &rows); err == nil && len(rows) > 0 && strings.TrimSpace(rows[0].Value) != "" {
+			if _, loadErr := time.LoadLocation(strings.TrimSpace(rows[0].Value)); loadErr == nil {
+				return strings.TrimSpace(rows[0].Value)
+			}
+		}
+	}
+	return tz
+}
+
 func NewAPI(client db.SupabaseClient) *API {
 	return &API{client: client}
 }
@@ -33,11 +50,14 @@ type TaskRecord struct {
 	TaskType       string         `json:"task_type"`
 	EvaluationType string         `json:"evaluation_type,omitempty"`
 	StepOrder      int            `json:"step_order"`
+	ActiveDate     string         `json:"active_date,omitempty"`
 	RewardCoins    int            `json:"reward_coins"`
 	RewardXP       int            `json:"reward_xp"`
 	YoutubeURL     string         `json:"youtube_url,omitempty"`
 	Questions      any            `json:"questions,omitempty"`
 	Config         map[string]any `json:"config,omitempty"`
+	TargetScope    string         `json:"target_scope,omitempty"`
+	TargetUserUID  string         `json:"target_user_uid,omitempty"`
 	IsActive       bool           `json:"is_active"`
 }
 
@@ -65,6 +85,8 @@ type TaskView struct {
 	Status         string         `json:"status"` // "UNLOCKED", "LOCKED", "PENDING", "APPROVED", "REJECTED"
 	IsLocked       bool           `json:"is_locked"`
 	Config         map[string]any `json:"config,omitempty"`
+	TargetScope    string         `json:"target_scope,omitempty"`
+	TargetUserUID  string         `json:"target_user_uid,omitempty"`
 	AdminNotes     *string        `json:"admin_notes,omitempty"`
 	CoinsEarned    int            `json:"coins_earned"`
 	XPEarned       int            `json:"xp_earned"`
@@ -138,10 +160,36 @@ func (a *API) HandleGetToday(w http.ResponseWriter, r *http.Request) {
 	uid := claims.UID
 	familyID := claims.FamilyID
 
-	// 1. Fetch active tasks for today, filtered by family_id
-	params := "is_active=eq.true&order=step_order.asc"
+	// 0. Fetch user profile for active check & join-date backlog guard
+	var userJoinDateStr string
+	profRaw, err := a.client.Get(ctx, "odyssey_user_profiles", fmt.Sprintf("uid=eq.%s", uid))
+	if err == nil && len(profRaw) > 0 {
+		var profs []db.UserProfile
+		if err := json.Unmarshal(profRaw, &profs); err == nil && len(profs) > 0 {
+			if !profs[0].IsActive {
+				shared.WriteJSONError(w, "akun Anda nonaktif, silakan hubungi admin", http.StatusForbidden)
+				return
+			}
+			tzName := fetchSystemTimezone(ctx, a.client)
+			loc, err := time.LoadLocation(tzName)
+			if err != nil {
+				loc = time.FixedZone("WIB", 7*3600)
+			}
+			userJoinDateStr = profs[0].CreatedAt.In(loc).Format("2006-01-02")
+		}
+	}
+
+	// 1. Fetch active tasks for today, filtered by family_id and active_date using system timezone
+	tzName := fetchSystemTimezone(ctx, a.client)
+	loc, err := time.LoadLocation(tzName)
+	if err != nil {
+		loc = time.FixedZone("WIB", 7*3600)
+	}
+	todayStr := time.Now().In(loc).Format("2006-01-02")
+
+	params := fmt.Sprintf("is_active=eq.true&active_date=eq.%s&order=step_order.asc", todayStr)
 	if familyID != "" {
-		params = fmt.Sprintf("is_active=eq.true&family_id=eq.%s&order=step_order.asc", familyID)
+		params = fmt.Sprintf("is_active=eq.true&family_id=eq.%s&active_date=eq.%s&order=step_order.asc", familyID, todayStr)
 	}
 
 	taskRaw, err := a.client.Get(ctx, "odyssey_tasks", params)
@@ -156,16 +204,23 @@ func (a *API) HandleGetToday(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// In-memory fallback filter if family_id was not handled in URL param
-	if familyID != "" {
-		filtered := make([]TaskRecord, 0, len(dbTaskList))
-		for _, t := range dbTaskList {
-			if t.FamilyID == familyID {
-				filtered = append(filtered, t)
-			}
+	// In-memory filter: family_id, target scope authorization, and new user backlog guard
+	filtered := make([]TaskRecord, 0, len(dbTaskList))
+	for _, t := range dbTaskList {
+		if familyID != "" && t.FamilyID != familyID {
+			continue
 		}
-		dbTaskList = filtered
+		// Personal task authorization: USER scope must match authenticated UID
+		if t.TargetScope == "USER" && t.TargetUserUID != uid {
+			continue
+		}
+		// New user backlog guard: task date cannot be before user join date
+		if userJoinDateStr != "" && t.ActiveDate != "" && t.ActiveDate < userJoinDateStr {
+			continue
+		}
+		filtered = append(filtered, t)
 	}
+	dbTaskList = filtered
 
 	// 2. Fetch user's submissions
 	subRaw, err := a.client.Get(ctx, "odyssey_task_submissions", fmt.Sprintf("user_uid=eq.%s", uid))
@@ -226,6 +281,8 @@ func (a *API) HandleGetToday(w http.ResponseWriter, r *http.Request) {
 			StepOrder:      t.StepOrder,
 			RewardCoins:    t.RewardCoins,
 			RewardXP:       t.RewardXP,
+			TargetScope:    t.TargetScope,
+			TargetUserUID:  t.TargetUserUID,
 			Config:         cfg,
 		}
 
@@ -302,6 +359,12 @@ func (a *API) HandleSubmit(w http.ResponseWriter, r *http.Request) {
 	// Tenant check: Task must belong to the user's family
 	if targetTask.FamilyID != "" && claims.FamilyID != "" && targetTask.FamilyID != claims.FamilyID {
 		shared.WriteJSONError(w, "access denied: task belongs to another family", http.StatusForbidden)
+		return
+	}
+
+	// Personal task authorization: USER scope must match authenticated UID
+	if targetTask.TargetScope == "USER" && targetTask.TargetUserUID != uid {
+		shared.WriteJSONError(w, "access denied: task is assigned to another user", http.StatusForbidden)
 		return
 	}
 
@@ -518,6 +581,12 @@ func (a *API) HandleGetTask(w http.ResponseWriter, r *http.Request, taskID int64
 		return
 	}
 
+	// Personal task authorization: USER scope must match authenticated UID
+	if targetTask.TargetScope == "USER" && targetTask.TargetUserUID != uid {
+		shared.WriteJSONError(w, "access denied: task is assigned to another user", http.StatusForbidden)
+		return
+	}
+
 	// Fetch user's submission for this task if any
 	subRaw, _ := a.client.Get(ctx, "odyssey_task_submissions", fmt.Sprintf("task_id=eq.%d&user_uid=eq.%s", taskID, uid))
 	var submissions []SubmissionRecord
@@ -570,6 +639,8 @@ func (a *API) HandleGetTask(w http.ResponseWriter, r *http.Request, taskID int64
 		StepOrder:      targetTask.StepOrder,
 		RewardCoins:    targetTask.RewardCoins,
 		RewardXP:       targetTask.RewardXP,
+		TargetScope:    targetTask.TargetScope,
+		TargetUserUID:  targetTask.TargetUserUID,
 		Config:         cfg,
 		Status:         "UNLOCKED",
 		IsLocked:       false,

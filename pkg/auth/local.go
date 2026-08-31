@@ -21,9 +21,14 @@ type LocalUserStore interface {
 	GetLocalUserByUsername(ctx context.Context, username string) (*LocalUser, error)
 }
 
+type ProfileDeviceBinder interface {
+	BindOrVerifyDevice(ctx context.Context, uid, deviceID string) (bool, error)
+}
+
 type LocalAuthProvider struct {
 	hasher PasswordHasher
 	store  LocalUserStore
+	binder ProfileDeviceBinder
 }
 
 func NewLocalAuthProvider(hasher PasswordHasher, store LocalUserStore) *LocalAuthProvider {
@@ -33,12 +38,23 @@ func NewLocalAuthProvider(hasher PasswordHasher, store LocalUserStore) *LocalAut
 	}
 }
 
+func NewLocalAuthProviderWithBinder(hasher PasswordHasher, store LocalUserStore, binder ProfileDeviceBinder) *LocalAuthProvider {
+	return &LocalAuthProvider{
+		hasher: hasher,
+		store:  store,
+		binder: binder,
+	}
+}
+
 func (p *LocalAuthProvider) Verify(ctx context.Context, identifier, credential string, device DevicePayload) (string, bool, error) {
 	if identifier == "" {
 		return "", false, ErrUIDRequired
 	}
 	if credential == "" {
 		return "", false, ErrCredentialRequired
+	}
+	if device.DeviceID == "" {
+		return "", false, ErrDeviceRequired
 	}
 
 	user, err := p.store.GetLocalUserByUsername(ctx, identifier)
@@ -53,6 +69,14 @@ func (p *LocalAuthProvider) Verify(ctx context.Context, identifier, credential s
 		return "", false, ErrCredentialInvalid
 	}
 
-	// Local provider doesn't track new device bindings in the same way as gatekeeper, always false for newlyBound
-	return user.ProfileUID, false, nil
+	newlyBound := false
+	if p.binder != nil {
+		bound, err := p.binder.BindOrVerifyDevice(ctx, user.ProfileUID, device.DeviceID)
+		if err != nil {
+			return "", false, err
+		}
+		newlyBound = bound
+	}
+
+	return user.ProfileUID, newlyBound, nil
 }

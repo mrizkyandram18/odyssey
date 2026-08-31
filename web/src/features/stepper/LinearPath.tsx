@@ -1,8 +1,8 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react'
 import { Link } from 'react-router-dom'
-import { Flame, Coins, Trophy, Calendar, RefreshCw, CheckCircle2, Clock, Lock, ArrowRight, AlertTriangle, Play, FileText, Camera, HelpCircle, PenLine, Gamepad2, Sparkles } from 'lucide-react'
-import type { TaskView } from '../../shared/types'
-import { tasksApi } from '../../shared/lib/api'
+import { Flame, Coins, Trophy, Calendar, RefreshCw, CheckCircle2, Clock, Lock, ArrowRight, AlertTriangle, Play, FileText, Camera, HelpCircle, PenLine, Gamepad2, Sparkles, Banknote } from 'lucide-react'
+import type { TaskView, RedemptionConfig } from '../../shared/types'
+import { tasksApi, shopApi } from '../../shared/lib/api'
 import { useSession } from '../../shared/hooks/useSession'
 import { Card } from '../../shared/components/atoms/Card'
 import { Button } from '../../shared/components/atoms/Button'
@@ -43,6 +43,7 @@ export const LinearPath: React.FC = () => {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [activeModalTask, setActiveModalTask] = useState<TaskView | null>(null)
+  const [shopConfig, setShopConfig] = useState<RedemptionConfig | null>(null)
 
   const loadTasks = useCallback(async () => {
     try {
@@ -58,6 +59,9 @@ export const LinearPath: React.FC = () => {
   }, [])
 
   useEffect(() => { loadTasks() }, [loadTasks])
+  useEffect(() => {
+    shopApi.getConfig().then((c) => setShopConfig(c)).catch(() => {})
+  }, [])
 
   const handleTaskClick = (task: TaskView) => {
     if (task.is_locked || task.status === 'LOCKED') return
@@ -154,7 +158,7 @@ export const LinearPath: React.FC = () => {
           </div>
           <div className="grid grid-cols-2 gap-2 mt-4">
             <Link to="/shop" className="inline-flex items-center justify-center gap-1.5 py-3 rounded-xl bg-accent-magic text-white font-bold text-sm shadow-sm hover:brightness-110 transition-colors">
-              <Coins className="w-4 h-4" /> Lihat Hadiah
+              <Coins className="w-4 h-4" /> Tukar Koin
             </Link>
             <Link to="/profile" className="inline-flex items-center justify-center gap-1.5 py-3 rounded-xl bg-surface-elevated border border-border-subtle text-text-primary font-bold text-sm hover:bg-surface transition-colors">
               <Trophy className="w-4 h-4" /> Perkembangan
@@ -232,21 +236,55 @@ export const LinearPath: React.FC = () => {
 
       {/* 4. Coins / Reward — supporting, not dominant */}
       <Card className="p-4">
-        <div className="flex items-center justify-between gap-3">
-          <div className="flex items-center gap-3 min-w-0">
-            <span className="text-xl p-2 rounded-xl bg-accent-gold/15 border border-accent-gold/20 shrink-0">🪙</span>
-            <div className="min-w-0">
-              <p className="text-xs font-bold text-text-secondary uppercase tracking-wide">Saldo Koin</p>
-              <p className="text-lg font-bold text-text-primary leading-none mt-0.5">
-                {userCoins.toLocaleString('id-ID')} <span className="text-xs font-semibold text-text-secondary">Koin</span>
-              </p>
-              <p className="text-[11px] text-text-secondary mt-1">Kumpulkan dan tukarkan dengan hadiah.</p>
-            </div>
-          </div>
-          <Link to="/shop" className="shrink-0 inline-flex items-center gap-1.5 px-3.5 py-2.5 rounded-xl bg-surface-elevated border border-border-subtle text-text-primary font-bold text-xs hover:bg-surface transition-colors">
-            Lihat Hadiah <ArrowRight className="w-3.5 h-3.5" />
-          </Link>
-        </div>
+        {(() => {
+          if (!shopConfig) {
+            return (
+              <div className="flex items-center justify-between gap-3 animate-pulse">
+                <div className="h-10 w-36 bg-surface-elevated rounded-xl" />
+                <div className="h-8 w-24 bg-surface-elevated rounded-xl" />
+              </div>
+            )
+          }
+          const conv = shopConfig.conversion_rate
+          const maxCoins = shopConfig.max_payout_coins
+          const estCash = userCoins * conv
+          const maxCash = maxCoins * conv
+          const targetCash = shopConfig.payout_target_rupiah
+          const isPayoutDay = shopConfig.is_payout_day
+          return (
+            <>
+              <div className="flex items-center justify-between gap-3">
+                <div className="flex items-center gap-3 min-w-0">
+                  <span className="text-xl p-2 rounded-xl bg-accent-gold/15 border border-accent-gold/20 shrink-0">🪙</span>
+                  <div className="min-w-0">
+                    <p className="text-xs font-bold text-text-secondary uppercase tracking-wide">Saldo Koin</p>
+                    <p className="text-lg font-bold text-text-primary leading-none mt-0.5">
+                      {userCoins.toLocaleString('id-ID')} <span className="text-xs font-semibold text-text-secondary">Koin</span>
+                    </p>
+                    <p className="text-[11px] text-text-secondary mt-1">
+                      Estimasi Rp {estCash.toLocaleString('id-ID')} • Maks Rp {maxCash.toLocaleString('id-ID')}
+                    </p>
+                    <p className="text-[11px] text-text-secondary">Koin bisa ditukarkan • EXP hanya untuk Level</p>
+                  </div>
+                </div>
+                <Link to="/shop" className="shrink-0 inline-flex items-center gap-1.5 px-3.5 py-2.5 rounded-xl bg-surface-elevated border border-border-subtle text-text-primary font-bold text-xs hover:bg-surface transition-colors">
+                  Tukar Koin <ArrowRight className="w-3.5 h-3.5" />
+                </Link>
+              </div>
+              {isPayoutDay && userCoins > 0 && (
+                <div className="mt-3 p-3 rounded-xl bg-status-success/10 border border-status-success/20 flex items-start gap-2">
+                  <Banknote className="w-4 h-4 text-status-success shrink-0 mt-0.5" />
+                  <div>
+                    <p className="text-xs font-bold text-status-success">🎉 Saatnya Tukarkan Koinmu!</p>
+                    <p className="text-[11px] text-text-secondary mt-0.5">
+                      Kamu mengumpulkan {userCoins.toLocaleString('id-ID')} Koin = Rp {estCash.toLocaleString('id-ID')} (Target Rp {targetCash.toLocaleString('id-ID')} • Maks Rp {maxCash.toLocaleString('id-ID')}). Tukarkan di Halaman Penukaran tanggal {shopConfig.redemption_start_day}–{shopConfig.redemption_end_day}.
+                    </p>
+                  </div>
+                </div>
+              )}
+            </>
+          )
+        })()}
       </Card>
 
       {/* 5. Task list — readable, no bubble navigation */}

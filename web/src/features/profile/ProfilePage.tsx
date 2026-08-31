@@ -6,7 +6,7 @@ import { Card } from '../../shared/components/atoms/Card'
 import { useSession } from '../../shared/hooks/useSession'
 import { apiClient } from '../../shared/lib/api'
 import { Avatar } from '../../shared/components/atoms/Avatar'
-import { Shuffle, ArrowLeft, LogOut, ShoppingBag, Flame } from 'lucide-react'
+import { Shuffle, ArrowLeft, LogOut, Banknote, Flame } from 'lucide-react'
 import { PushNotificationToggle } from '../../shared/components/molecules/PushNotificationToggle'
 
 export function ProfilePage() {
@@ -138,13 +138,13 @@ export function ProfilePage() {
                   <span className="text-xl font-bold text-text-primary">{profile.coins ?? 0}</span>
                   <span className="text-xs font-semibold text-text-secondary">Koin</span>
                 </p>
-                <p className="text-xs text-text-secondary">Tukarkan di Toko Hadiah</p>
+                <p className="text-xs text-text-secondary">Tukarkan koin menjadi uang tunai</p>
               </div>
               <Link
                 to="/shop"
                 className="shrink-0 inline-flex items-center gap-1.5 px-4 py-2.5 rounded-xl bg-accent-magic hover:brightness-110 text-white font-bold text-xs shadow-sm transition-all active:scale-95"
               >
-                <ShoppingBag size={14} /> Tukar Hadiah
+                <Banknote size={14} /> Pencairan Koin
               </Link>
             </div>
           </Card>

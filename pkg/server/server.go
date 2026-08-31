@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"time"
 
+	apiAdminMembers "odyssey/internal/api/admin_members"
 	apiAdminTasks "odyssey/internal/api/admin_tasks"
 	"odyssey/internal/api/families"
 	apiFamilyTasks "odyssey/internal/api/family_tasks"
@@ -56,9 +57,10 @@ func BuildHandler() (*Server, error) {
 
 	bgCtx, cancelBg := context.WithCancel(context.Background())
 
-	authenticator := auth.NewLocalAuthProvider(
+	authenticator := auth.NewLocalAuthProviderWithBinder(
 		auth.NewBcryptHasher(),
 		localUserStore,
+		profileStore,
 	)
 
 	sessionSecret := config.SessionSecret
@@ -75,6 +77,7 @@ func BuildHandler() (*Server, error) {
 
 	familyTasksAPI := apiFamilyTasks.NewAPI(supabaseClient)
 	adminTasksAPI := apiAdminTasks.NewAPI(supabaseClient)
+	adminMembersAPI := apiAdminMembers.NewAPI(supabaseClient)
 	shopAPI := apiShop.NewAPI(supabaseClient)
 
 	secCfg := shared.DefaultSecurityConfig()
@@ -186,7 +189,9 @@ func BuildHandler() (*Server, error) {
 	mux.HandleFunc("/api/shop", secure(mw.RequireAuth(shopAPI.Handler)))
 	mux.HandleFunc("/api/shop/", secure(mw.RequireAuth(shopAPI.Handler)))
 
-	// Admin Panel: Tasks, Verification Queue, Claims Payout
+	// Admin Panel: Members, Tasks, Verification Queue, Claims Payout
+	mux.HandleFunc("/api/admin/members", secure(rateLimit(adminLimiter, mw.RequireAuth(adminMembersAPI.Handler))))
+	mux.HandleFunc("/api/admin/members/", secure(rateLimit(adminLimiter, mw.RequireAuth(adminMembersAPI.Handler))))
 	mux.HandleFunc("/api/admin/tasks", secure(rateLimit(adminLimiter, mw.RequireAuth(adminTasksAPI.Handler))))
 	mux.HandleFunc("/api/admin/tasks/", secure(rateLimit(adminLimiter, mw.RequireAuth(adminTasksAPI.Handler))))
 	mux.HandleFunc("/api/admin/submissions", secure(rateLimit(adminLimiter, mw.RequireAuth(adminTasksAPI.Handler))))

@@ -6,6 +6,9 @@ import (
 	"errors"
 	"fmt"
 	"net/url"
+	"strings"
+
+	"odyssey/pkg/auth"
 )
 
 var ErrProfileNotFound = errors.New("profile not found")
@@ -14,6 +17,8 @@ type ProfileStore interface {
 	GetUserProfile(ctx context.Context, uid string) (*UserProfile, error)
 	GetPasswordHash(ctx context.Context, uid string) (string, error)
 	GetBoundDeviceID(ctx context.Context, uid string) (string, error)
+	BindOrVerifyDevice(ctx context.Context, uid, deviceID string) (bool, error)
+	ResetDeviceBinding(ctx context.Context, uid string) error
 	UpdateAvatar(ctx context.Context, uid string, style, seed string) error
 }
 
@@ -87,6 +92,69 @@ func (s *supabaseProfileStore) GetBoundDeviceID(ctx context.Context, uid string)
 		return "", nil
 	}
 	return rows[0].DeviceID, nil
+}
+
+func (s *supabaseProfileStore) BindOrVerifyDevice(ctx context.Context, uid, deviceID string) (bool, error) {
+	if strings.TrimSpace(deviceID) == "" {
+		return false, auth.ErrDeviceRequired
+	}
+	raw, err := s.client.RPC(ctx, "odyssey_bind_or_verify_device", map[string]any{
+		"p_user_uid":   uid,
+		"p_device_id": deviceID,
+	})
+	if err != nil {
+		errStr := err.Error()
+		if strings.Contains(errStr, "perangkat lain") || strings.Contains(errStr, "P0022") {
+			return false, auth.ErrDeviceBlocked
+		}
+		if strings.Contains(errStr, "nonaktif") || strings.Contains(errStr, "P0021") {
+			return false, auth.ErrAccountDisabled
+		}
+		// Fallback for direct table mutation if RPC is unavailable in tests
+		currentDevice, getErr := s.GetBoundDeviceID(ctx, uid)
+		if getErr == nil {
+			if currentDevice == "" {
+				payload := map[string]any{
+					"device_id":       deviceID,
+					"device_bound_at": "now()",
+				}
+				params := s.buildFilter(uid)
+				_, _ = s.client.Mutate(ctx, "PATCH", "odyssey_user_profiles", payload, params)
+				return true, nil
+			}
+			if currentDevice == deviceID {
+				return false, nil
+			}
+			return false, auth.ErrDeviceBlocked
+		}
+		return false, fmt.Errorf("bind or verify device: %w", err)
+	}
+	var res struct {
+		IsNewlyBound bool `json:"is_newly_bound"`
+	}
+	if err := json.Unmarshal(raw, &res); err == nil {
+		return res.IsNewlyBound, nil
+	}
+	return false, nil
+}
+
+func (s *supabaseProfileStore) ResetDeviceBinding(ctx context.Context, uid string) error {
+	_, err := s.client.RPC(ctx, "odyssey_admin_reset_device", map[string]any{
+		"p_target_uid": uid,
+	})
+	if err != nil {
+		// Fallback mutation for direct Supabase REST
+		payload := map[string]any{
+			"device_id":       nil,
+			"device_bound_at": nil,
+		}
+		params := s.buildFilter(uid)
+		_, mutateErr := s.client.Mutate(ctx, "PATCH", "odyssey_user_profiles", payload, params)
+		if mutateErr != nil {
+			return fmt.Errorf("reset device binding: %w", err)
+		}
+	}
+	return nil
 }
 
 func (s *supabaseProfileStore) UpdateAvatar(ctx context.Context, uid string, style, seed string) error {

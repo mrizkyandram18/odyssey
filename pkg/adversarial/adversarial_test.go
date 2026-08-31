@@ -15,8 +15,10 @@ import (
 	"testing"
 	"time"
 
+	apiAdminMembers "odyssey/internal/api/admin_members"
 	apiAdminTasks "odyssey/internal/api/admin_tasks"
 	apiFamilyTasks "odyssey/internal/api/family_tasks"
+	apiLogin "odyssey/internal/api/login"
 	apiShop "odyssey/internal/api/shop"
 	"odyssey/pkg/auth"
 	"odyssey/pkg/db"
@@ -30,6 +32,8 @@ import (
 type mockAdversarialDB struct {
 	mu           sync.RWMutex
 	profiles     map[string]*db.UserProfile
+	localUsers   map[string]map[string]any
+	sysConfig    map[string]string
 	tasks        map[int64]map[string]any
 	submissions  map[string]map[string]any // key: fmt.Sprintf("%d:%s", taskID, uid)
 	claims       map[int64]map[string]any
@@ -41,6 +45,8 @@ type mockAdversarialDB struct {
 func newMockDB() *mockAdversarialDB {
 	return &mockAdversarialDB{
 		profiles:    make(map[string]*db.UserProfile),
+		localUsers:  make(map[string]map[string]any),
+		sysConfig:   make(map[string]string),
 		tasks:       make(map[int64]map[string]any),
 		submissions: make(map[string]map[string]any),
 		claims:      make(map[int64]map[string]any),
@@ -68,6 +74,7 @@ func (m *mockAdversarialDB) Get(ctx context.Context, table string, params string
 	targetID := ""
 	targetUID := ""
 	targetTaskID := ""
+	targetUsername := ""
 	for _, p := range parts {
 		if strings.HasPrefix(p, "family_id=eq.") {
 			targetFam = strings.TrimPrefix(p, "family_id=eq.")
@@ -83,11 +90,14 @@ func (m *mockAdversarialDB) Get(ctx context.Context, table string, params string
 		if strings.HasPrefix(p, "uid=eq.") {
 			targetUID = strings.TrimPrefix(p, "uid=eq.")
 		}
+		if strings.HasPrefix(p, "username=eq.") {
+			targetUsername = strings.TrimPrefix(p, "username=eq.")
+		}
 	}
 
 	switch table {
 	case "odyssey_tasks":
-		var list []map[string]any
+		list := make([]map[string]any, 0)
 		for _, t := range m.tasks {
 			if targetFam != "" && fmt.Sprintf("%v", t["family_id"]) != targetFam {
 				continue
@@ -100,7 +110,7 @@ func (m *mockAdversarialDB) Get(ctx context.Context, table string, params string
 		return json.Marshal(list)
 
 	case "odyssey_task_submissions":
-		var list []map[string]any
+		list := make([]map[string]any, 0)
 		for _, s := range m.submissions {
 			if targetUID != "" && fmt.Sprintf("%v", s["user_uid"]) != targetUID {
 				continue
@@ -122,13 +132,33 @@ func (m *mockAdversarialDB) Get(ctx context.Context, table string, params string
 		})
 
 	case "odyssey_system_config":
+		if len(m.sysConfig) > 0 {
+			list := make([]map[string]any, 0)
+			for k, v := range m.sysConfig {
+				list = append(list, map[string]any{"key": k, "value": v})
+			}
+			return json.Marshal(list)
+		}
 		return json.Marshal([]map[string]any{
 			{"key": "redemption_start_day", "value": "1"},
 			{"key": "redemption_end_day", "value": "31"},
 		})
 
+	case "odyssey_local_users":
+		list := make([]map[string]any, 0)
+		for _, u := range m.localUsers {
+			if targetUsername != "" && fmt.Sprintf("%v", u["username"]) != targetUsername {
+				continue
+			}
+			if targetUID != "" && fmt.Sprintf("%v", u["profile_uid"]) != targetUID {
+				continue
+			}
+			list = append(list, u)
+		}
+		return json.Marshal(list)
+
 	case "odyssey_claims":
-		var list []map[string]any
+		list := make([]map[string]any, 0)
 		for _, c := range m.claims {
 			if targetID != "" && fmt.Sprintf("%v", c["id"]) != targetID {
 				continue
@@ -141,12 +171,16 @@ func (m *mockAdversarialDB) Get(ctx context.Context, table string, params string
 		return json.Marshal(list)
 
 	case "odyssey_user_profiles":
-		var list []db.UserProfile
+		list := make([]db.UserProfile, 0)
 		for _, p := range m.profiles {
+			if targetFam != "" && p.FamilyID != targetFam {
+				continue
+			}
 			if targetUID != "" && p.UID != targetUID {
 				continue
 			}
-			list = append(list, *p)
+			prof := *p
+			list = append(list, prof)
 		}
 		return json.Marshal(list)
 
@@ -164,6 +198,74 @@ func (m *mockAdversarialDB) MutateAtomic(ctx context.Context, method, table stri
 	defer m.mu.Unlock()
 
 	switch table {
+	case "odyssey_user_profiles":
+		if method == "POST" {
+			data, _ := json.Marshal(payload)
+			var item db.UserProfile
+			_ = json.Unmarshal(data, &item)
+			if item.UID != "" {
+				if item.CreatedAt.IsZero() {
+					item.CreatedAt = time.Now().UTC()
+				}
+				item.IsActive = true
+				m.profiles[item.UID] = &item
+			}
+			res, _ := json.Marshal([]db.UserProfile{item})
+			return res, nil
+		}
+		if method == "PATCH" {
+			uidStr := extractParam(params, "uid=eq.")
+			if p, ok := m.profiles[uidStr]; ok {
+				data, _ := json.Marshal(payload)
+				var patch map[string]any
+				_ = json.Unmarshal(data, &patch)
+				if name, ok := patch["explorer_name"].(string); ok {
+					p.ExplorerName = name
+				}
+				if role, ok := patch["role"].(string); ok {
+					p.Role = role
+				}
+				if act, ok := patch["is_active"].(bool); ok {
+					p.IsActive = act
+				}
+				res, _ := json.Marshal([]db.UserProfile{*p})
+				return res, nil
+			}
+		}
+
+	case "odyssey_local_users":
+		if method == "POST" {
+			data, _ := json.Marshal(payload)
+			var item map[string]any
+			_ = json.Unmarshal(data, &item)
+			if un, ok := item["username"].(string); ok {
+				m.localUsers[un] = item
+			}
+			res, _ := json.Marshal([]map[string]any{item})
+			return res, nil
+		}
+
+	case "odyssey_system_config":
+		data, _ := json.Marshal(payload)
+		var item map[string]any
+		if err := json.Unmarshal(data, &item); err == nil {
+			if k, ok := item["key"].(string); ok {
+				v := fmt.Sprintf("%v", item["value"])
+				m.sysConfig[k] = v
+			}
+		}
+		var list []map[string]any
+		if err := json.Unmarshal(data, &list); err == nil {
+			for _, elem := range list {
+				if k, ok := elem["key"].(string); ok {
+					v := fmt.Sprintf("%v", elem["value"])
+					m.sysConfig[k] = v
+				}
+			}
+		}
+		res, _ := json.Marshal(m.sysConfig)
+		return res, nil
+
 	case "odyssey_tasks":
 		if method == "POST" {
 			data, _ := json.Marshal(payload)
@@ -565,8 +667,95 @@ func (m *mockAdversarialDB) RPC(ctx context.Context, fnName string, payload any)
 	return []byte(`{}`), nil
 }
 
-func (m *mockAdversarialDB) UploadStorage(ctx context.Context, bucket, path, contentType string, data []byte) (string, error) {
-	return "https://cdn.example.com/" + path, nil
+func (m *mockAdversarialDB) UploadStorage(ctx context.Context, bucket string, storagePath string, contentType string, fileBytes []byte) (string, error) {
+	return "http://localhost/storage/" + storagePath, nil
+}
+
+func (m *mockAdversarialDB) GetLocalUserByUsername(ctx context.Context, username string) (*auth.LocalUser, error) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	u, ok := m.localUsers[username]
+	if !ok {
+		return nil, auth.ErrLocalUserNotFound
+	}
+	return &auth.LocalUser{
+		Username:     fmt.Sprintf("%v", u["username"]),
+		PasswordHash: fmt.Sprintf("%v", u["password_hash"]),
+		ProfileUID:   fmt.Sprintf("%v", u["profile_uid"]),
+	}, nil
+}
+
+func (m *mockAdversarialDB) GetUserProfile(ctx context.Context, uid string) (*db.UserProfile, error) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	p, ok := m.profiles[uid]
+	if !ok || p == nil {
+		return nil, db.ErrProfileNotFound
+	}
+	return p, nil
+}
+
+func (m *mockAdversarialDB) GetPasswordHash(ctx context.Context, uid string) (string, error) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	for _, u := range m.localUsers {
+		if fmt.Sprintf("%v", u["profile_uid"]) == uid {
+			return fmt.Sprintf("%v", u["password_hash"]), nil
+		}
+	}
+	return "", nil
+}
+
+func (m *mockAdversarialDB) GetBoundDeviceID(ctx context.Context, uid string) (string, error) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	p, ok := m.profiles[uid]
+	if ok && p != nil {
+		return p.DeviceID, nil
+	}
+	return "", nil
+}
+
+func (m *mockAdversarialDB) BindOrVerifyDevice(ctx context.Context, uid, deviceID string) (bool, error) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	p, ok := m.profiles[uid]
+	if !ok || p == nil {
+		return false, db.ErrProfileNotFound
+	}
+	if deviceID == "" {
+		return false, auth.ErrDeviceRequired
+	}
+	if p.DeviceID == "" {
+		p.DeviceID = deviceID
+		return true, nil
+	}
+	if p.DeviceID == deviceID {
+		return false, nil
+	}
+	return false, auth.ErrDeviceBlocked
+}
+
+func (m *mockAdversarialDB) ResetDeviceBinding(ctx context.Context, uid string) error {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	p, ok := m.profiles[uid]
+	if ok && p != nil {
+		p.DeviceID = ""
+	}
+	return nil
+}
+
+func (m *mockAdversarialDB) SetAvatarFrame(ctx context.Context, uid, frame string) error {
+	return nil
+}
+
+func (m *mockAdversarialDB) SetExplorerEffect(ctx context.Context, uid, effect string) error {
+	return nil
+}
+
+func (m *mockAdversarialDB) UpdateAvatar(ctx context.Context, uid string, style, seed string) error {
+	return nil
 }
 
 // -----------------------------------------------------------------------------
@@ -577,10 +766,10 @@ func TestAdversarial_CrossFamilyIDORMatrix(t *testing.T) {
 	dbMock := newMockDB()
 
 	// Seed Family A and Family B
-	dbMock.profiles["member-a"] = &db.UserProfile{UID: "member-a", FamilyID: "family-alpha", Role: "SEEKER", Coins: 100}
-	dbMock.profiles["admin-a"] = &db.UserProfile{UID: "admin-a", FamilyID: "family-alpha", Role: "GUIDE", Coins: 500}
-	dbMock.profiles["member-b"] = &db.UserProfile{UID: "member-b", FamilyID: "family-beta", Role: "SEEKER", Coins: 100}
-	dbMock.profiles["admin-b"] = &db.UserProfile{UID: "admin-b", FamilyID: "family-beta", Role: "GUIDE", Coins: 500}
+	dbMock.profiles["member-a"] = &db.UserProfile{UID: "member-a", FamilyID: "family-alpha", Role: "SEEKER", Coins: 100, IsActive: true}
+	dbMock.profiles["admin-a"] = &db.UserProfile{UID: "admin-a", FamilyID: "family-alpha", Role: "GUIDE", Coins: 500, IsActive: true}
+	dbMock.profiles["member-b"] = &db.UserProfile{UID: "member-b", FamilyID: "family-beta", Role: "SEEKER", Coins: 100, IsActive: true}
+	dbMock.profiles["admin-b"] = &db.UserProfile{UID: "admin-b", FamilyID: "family-beta", Role: "GUIDE", Coins: 500, IsActive: true}
 
 	// Task 1: Family Alpha
 	dbMock.tasks[1] = map[string]any{
@@ -2057,4 +2246,143 @@ func TestAdversarial_Phase9_ConcurrentCompositeSubmissions_100Goroutines(t *test
 	if dbMock.profiles["rush-seeker"].Coins != 50 {
 		t.Fatalf("INCORRECT LEDGER BALANCE: expected exactly 50 coins, got %d", dbMock.profiles["rush-seeker"].Coins)
 	}
+}
+
+func TestAdversarial_Phase10_ConcurrentDeviceBinding_100Goroutines(t *testing.T) {
+	dbMock := newMockDB()
+	hasher := auth.NewBcryptHasher()
+	pwdHash, _ := hasher.Hash("secret123")
+
+	// Pre-create user profile and local user
+	dbMock.profiles["target-user-uid"] = &db.UserProfile{
+		UID:          "target-user-uid",
+		FamilyID:     "fam-A",
+		ExplorerName: "Target User",
+		Role:         "SEEKER",
+		IsActive:     true,
+		DeviceID:     "", // Unbound initial state
+	}
+	dbMock.localUsers["bounduser"] = map[string]any{
+		"username":      "bounduser",
+		"password_hash": pwdHash,
+		"profile_uid":   "target-user-uid",
+	}
+
+	authenticator := auth.NewLocalAuthProviderWithBinder(hasher, dbMock, dbMock)
+	issuer := auth.NewSessionIssuer("test-secret-32-bytes-long-signature")
+	apiLogin.Setup(authenticator, issuer, dbMock)
+
+	concurrency := 100
+	var wg sync.WaitGroup
+	wg.Add(concurrency)
+
+	var successCount int64
+	var blockedCount int64
+
+	startGate := make(chan struct{})
+
+	for i := 0; i < concurrency; i++ {
+		devID := fmt.Sprintf("device-alpha")
+		if i%2 == 1 {
+			devID = fmt.Sprintf("device-beta")
+		}
+
+		go func(deviceID string) {
+			defer wg.Done()
+			<-startGate
+
+			body := fmt.Sprintf(`{"uid":"bounduser","credential":"secret123","device":{"device_id":"%s","login_method":"BOTH"}}`, deviceID)
+			req := httptest.NewRequest(http.MethodPost, "/api/login", strings.NewReader(body))
+			req.Header.Set("Content-Type", "application/json")
+			w := httptest.NewRecorder()
+
+			apiLogin.Handler(w, req)
+
+			if w.Code == http.StatusOK {
+				atomic.AddInt64(&successCount, 1)
+			} else if w.Code == http.StatusForbidden && strings.Contains(w.Body.String(), "Akun sudah terhubung ke perangkat lain") {
+				atomic.AddInt64(&blockedCount, 1)
+			}
+		}(devID)
+	}
+
+	close(startGate)
+	wg.Wait()
+
+	// Verify atomic single device binding
+	if dbMock.profiles["target-user-uid"].DeviceID != "device-alpha" && dbMock.profiles["target-user-uid"].DeviceID != "device-beta" {
+		t.Fatalf("EXPECTED bound device ID to be device-alpha or device-beta, got empty or corrupt: %s", dbMock.profiles["target-user-uid"].DeviceID)
+	}
+
+	total := successCount + blockedCount
+	if total != int64(concurrency) {
+		t.Fatalf("EXPECTED all 100 logins to be handled (success or 403 blocked), got success=%d, blocked=%d, total=%d", successCount, blockedCount, total)
+	}
+	if successCount != 50 || blockedCount != 50 {
+		t.Fatalf("EXPECTED exactly 50 wins for winning device and 50 blocks for losing device, got success=%d, blocked=%d", successCount, blockedCount)
+	}
+}
+
+func TestAdversarial_Phase11_TenantIsolationAndLegacyRejection(t *testing.T) {
+	dbMock := newMockDB()
+	dbMock.profiles["member-famA"] = &db.UserProfile{UID: "member-famA", FamilyID: "fam-A", ExplorerName: "User A", Role: "SEEKER", IsActive: true}
+	dbMock.profiles["member-famB"] = &db.UserProfile{UID: "member-famB", FamilyID: "fam-B", ExplorerName: "User B", Role: "SEEKER", IsActive: true}
+
+	adminMembersAPI := apiAdminMembers.NewAPI(dbMock)
+
+	t.Run("1. Guide of Family A cannot reset device or edit member of Family B", func(t *testing.T) {
+		guideAClaims := &auth.SessionClaims{UID: "guide-famA", FamilyID: "fam-A", Role: "GUIDE"}
+		patchBody := `{"reset_device": true}`
+		req := httptest.NewRequest(http.MethodPatch, "/api/admin/members/member-famB", strings.NewReader(patchBody))
+		req = req.WithContext(auth.ContextWithClaims(req.Context(), guideAClaims))
+		w := httptest.NewRecorder()
+
+		adminMembersAPI.HandleUpdateMember(w, req, "member-famB")
+
+		if w.Code != http.StatusForbidden {
+			t.Fatalf("CROSS-TENANT VIOLATION: Guide of Family A was able to update member of Family B! Got status %d: %s", w.Code, w.Body.String())
+		}
+	})
+
+	t.Run("2. SEEKER cannot call Admin Member APIs", func(t *testing.T) {
+		seekerClaims := &auth.SessionClaims{UID: "seeker-1", FamilyID: "fam-A", Role: "SEEKER"}
+		patchBody := `{"reset_device": true}`
+		req := httptest.NewRequest(http.MethodPatch, "/api/admin/members/member-famA", strings.NewReader(patchBody))
+		req = req.WithContext(auth.ContextWithClaims(req.Context(), seekerClaims))
+		w := httptest.NewRecorder()
+
+		adminMembersAPI.HandleUpdateMember(w, req, "member-famA")
+
+		if w.Code != http.StatusForbidden {
+			t.Fatalf("UNAUTHORIZED ROLE BYPASS: SEEKER was able to call admin member API! Got status %d: %s", w.Code, w.Body.String())
+		}
+	})
+
+	t.Run("3. Legacy /api/shop/items returns 404 Not Found", func(t *testing.T) {
+		shopAPI := apiShop.NewAPI(dbMock)
+		req := httptest.NewRequest(http.MethodGet, "/api/shop/items", nil)
+		w := httptest.NewRecorder()
+
+		shopAPI.Handler(w, req)
+
+		if w.Code != http.StatusNotFound {
+			t.Fatalf("LEGACY ROUTE REACHABLE: /api/shop/items returned status %d instead of 404 Not Found!", w.Code)
+		}
+	})
+
+	t.Run("4. Non-cash TargetType (PULSA/PHONE/VOUCHER) rejected with 400", func(t *testing.T) {
+		shopAPI := apiShop.NewAPI(dbMock)
+		seekerClaims := &auth.SessionClaims{UID: "member-famA", FamilyID: "fam-A", Role: "SEEKER"}
+
+		reqBody := `{"coins": 100, "target_type": "PULSA", "target_value": "08123456789"}`
+		req := httptest.NewRequest(http.MethodPost, "/api/shop/redeem", strings.NewReader(reqBody))
+		req = req.WithContext(auth.ContextWithClaims(req.Context(), seekerClaims))
+		w := httptest.NewRecorder()
+
+		shopAPI.HandleRedeem(w, req)
+
+		if w.Code != http.StatusBadRequest || !strings.Contains(w.Body.String(), "hanya mendukung pencairan tunai") {
+			t.Fatalf("LEGACY ECONOMY REJECTION FAILED: PULSA target type accepted or wrong error! Status %d: %s", w.Code, w.Body.String())
+		}
+	})
 }

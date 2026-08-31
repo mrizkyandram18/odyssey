@@ -1,5 +1,5 @@
 import { Link, useLocation } from 'react-router-dom'
-import { Home, ShoppingBag, User, ShieldCheck } from 'lucide-react'
+import { Home, Banknote, User, ShieldCheck } from 'lucide-react'
 import { useSession } from '../../hooks/useSession'
 
 export function BottomNav() {
@@ -9,7 +9,7 @@ export function BottomNav() {
 
   const navItems = [
     { label: 'Beranda', to: '/', icon: Home },
-    { label: 'Toko Hadiah', to: '/shop', icon: ShoppingBag },
+    { label: 'Pencairan Koin', to: '/shop', icon: Banknote },
     { label: 'Profil', to: '/profile', icon: User },
     ...(isGuide ? [{ label: 'Admin', to: '/admin', icon: ShieldCheck }] : []),
   ]

@@ -39,6 +39,7 @@ type Authenticator interface {
 type SessionConfig struct {
 	Role     Role
 	FamilyID string
+	DeviceID string
 }
 
 type SessionClaims struct {
@@ -47,6 +48,7 @@ type SessionClaims struct {
 	UID      string `json:"uid"`
 	Role     string `json:"role,omitempty"`
 	FamilyID string `json:"family_id,omitempty"`
+	DeviceID string `json:"dev,omitempty"`
 	Issued   int64  `json:"iat"`
 	Expires  int64  `json:"exp"`
 }
@@ -88,6 +90,8 @@ var (
 	ErrLoginMethodInvalid = errors.New("login method invalid")
 	ErrProfileUnavailable = errors.New("profile unavailable")
 	ErrSessionUID         = errors.New("session uid mismatch")
+	ErrAccountDisabled    = errors.New("account disabled")
+	ErrDeviceBlocked      = errors.New("account bound to another device")
 )
 
 // SessionAuthErrorMessage translates session validation errors into

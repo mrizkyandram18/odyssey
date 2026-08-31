@@ -55,25 +55,79 @@ type ConfigRow struct {
 func fetchRedemptionConfig(ctx context.Context, client db.SupabaseClient) shared.RedemptionConfig {
 	startDay := shared.DefaultRedemptionStartDay
 	endDay := shared.DefaultRedemptionEndDay
-	raw, err := client.Get(ctx, "odyssey_system_config", "key=in.(redemption_start_day,redemption_end_day)")
+	payoutDay := shared.DefaultPayoutDay
+	earningPeriodDays := shared.DefaultEarningPeriodDays
+	conversionRate := shared.DefaultCoinConversionRate
+	payoutTargetRupiah := shared.DefaultPayoutTargetRupiah
+	payoutTargetCoins := shared.DefaultPayoutTargetCoins
+	maxPayoutCoins := shared.DefaultMaxPayoutCoins
+	timezone := shared.DefaultTimezone
+	raw, err := client.Get(ctx, "odyssey_system_config", "key=in.(redemption_start_day,redemption_end_day,payout_day,earning_period_days,coin_conversion_rate,payout_target_rupiah,payout_target_coins,max_payout_coins,timezone)")
 	if err == nil && len(raw) > 0 {
 		var rows []ConfigRow
 		if err := json.Unmarshal(raw, &rows); err == nil {
 			for _, r := range rows {
-				if r.Key == "redemption_start_day" {
+				switch r.Key {
+				case "redemption_start_day":
 					if v, err := strconv.Atoi(r.Value); err == nil && v >= 1 && v <= 31 {
 						startDay = v
 					}
-				} else if r.Key == "redemption_end_day" {
+				case "redemption_end_day":
 					if v, err := strconv.Atoi(r.Value); err == nil && v >= 1 && v <= 31 {
 						endDay = v
+					}
+				case "payout_day":
+					if v, err := strconv.Atoi(r.Value); err == nil && v >= 1 && v <= 31 {
+						payoutDay = v
+					}
+				case "earning_period_days":
+					if v, err := strconv.Atoi(r.Value); err == nil && v > 0 && v <= 365 {
+						earningPeriodDays = v
+					}
+				case "coin_conversion_rate":
+					if v, err := strconv.Atoi(r.Value); err == nil && v > 0 && v <= 100000 {
+						conversionRate = v
+					}
+				case "payout_target_rupiah":
+					if v, err := strconv.Atoi(r.Value); err == nil && v >= 0 && v <= 100000000 {
+						payoutTargetRupiah = v
+					}
+				case "payout_target_coins":
+					if v, err := strconv.Atoi(r.Value); err == nil && v > 0 && v <= 10000000 {
+						payoutTargetCoins = v
+					}
+				case "max_payout_coins":
+					if v, err := strconv.Atoi(r.Value); err == nil && v > 0 && v <= 10000000 {
+						maxPayoutCoins = v
+					}
+				case "timezone":
+					if v := strings.TrimSpace(r.Value); v != "" {
+						if _, err := time.LoadLocation(v); err == nil {
+							timezone = v
+						}
 					}
 				}
 			}
 		}
 	}
-	tz := shared.LoadConfig().Timezone
-	return shared.ResolveRedemptionConfig(startDay, endDay, tz, time.Now())
+	// Fallback timezone from env if not in DB
+	if timezone == shared.DefaultTimezone {
+		if envTZ := shared.LoadConfig().Timezone; envTZ != "" {
+			timezone = envTZ
+		}
+	}
+	return shared.ResolveRedemptionConfigFull(shared.ResolveRedemptionConfigParams{
+		StartDay:           startDay,
+		EndDay:             endDay,
+		PayoutDay:          payoutDay,
+		EarningPeriodDays:  earningPeriodDays,
+		Timezone:           timezone,
+		Now:                time.Now(),
+		ConversionRate:     conversionRate,
+		PayoutTargetRupiah: payoutTargetRupiah,
+		PayoutTargetCoins:  payoutTargetCoins,
+		MaxPayoutCoins:     maxPayoutCoins,
+	})
 }
 
 func (a *API) HandleGetShopConfig(w http.ResponseWriter, r *http.Request) {
@@ -126,6 +180,14 @@ func (a *API) HandleRedeem(w http.ResponseWriter, r *http.Request) {
 	}
 	if strings.TrimSpace(req.TargetType) == "" || strings.TrimSpace(req.TargetValue) == "" {
 		shared.WriteJSONError(w, "tipe tujuan dan nomor/rekening penukaran wajib diisi", http.StatusBadRequest)
+		return
+	}
+
+	targetType := strings.ToUpper(strings.TrimSpace(req.TargetType))
+	isValidCashTarget := targetType == "EWALLET" || targetType == "BANK" || targetType == "CASH" ||
+		targetType == "GOPAY" || targetType == "DANA" || targetType == "OVO" || targetType == "SHOPEEPAY" || targetType == "TRANSFER_BANK"
+	if !isValidCashTarget {
+		shared.WriteJSONError(w, "tipe penukaran tidak valid: Odyssey hanya mendukung pencairan tunai (EWALLET atau BANK)", http.StatusBadRequest)
 		return
 	}
 
@@ -333,10 +395,6 @@ func (a *API) Handler(w http.ResponseWriter, r *http.Request) {
 
 	if path == "/api/shop/config" && r.Method == http.MethodGet {
 		a.HandleGetShopConfig(w, r)
-		return
-	}
-	if path == "/api/shop/items" && r.Method == http.MethodGet {
-		a.HandleGetCatalog(w, r)
 		return
 	}
 	if path == "/api/shop/redeem" && r.Method == http.MethodPost {

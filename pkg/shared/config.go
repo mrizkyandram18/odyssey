@@ -130,40 +130,153 @@ func getEnvSlice(key string) []string {
 type RedemptionConfig struct {
 	RedemptionStartDay int    `json:"redemption_start_day"`
 	RedemptionEndDay   int    `json:"redemption_end_day"`
+	PayoutDay          int    `json:"payout_day"`
+	EarningPeriodDays  int    `json:"earning_period_days"`
 	IsOpen             bool   `json:"is_open"`
+	IsPayoutDay        bool   `json:"is_payout_day"`
 	CurrentDay         int    `json:"current_day"`
 	ConversionRate     int    `json:"conversion_rate"`
+	PayoutTargetRupiah int    `json:"payout_target_rupiah"`
+	PayoutTargetCoins  int    `json:"payout_target_coins"`
+	MaxPayoutCoins     int    `json:"max_payout_coins"`
 	Timezone           string `json:"timezone"`
 }
 
-const DefaultRedemptionStartDay = 21
+const DefaultRedemptionStartDay = 24
 const DefaultRedemptionEndDay = 26
-const DefaultCoinConversionRate = 10
+const DefaultPayoutDay = 24
+const DefaultEarningPeriodDays = 30
+const DefaultCoinConversionRate = 100
+const DefaultPayoutTargetRupiah = 320000
+const DefaultPayoutTargetCoins = 3200
+const DefaultMaxPayoutCoins = 3200
+const DefaultTimezone = "Asia/Jakarta"
 
 func ResolveRedemptionConfig(startDay, endDay int, tzName string, now time.Time) RedemptionConfig {
-	if startDay <= 0 {
-		startDay = DefaultRedemptionStartDay
+	return ResolveRedemptionConfigFull(ResolveRedemptionConfigParams{
+		StartDay:           startDay,
+		EndDay:             endDay,
+		Timezone:           tzName,
+		Now:                now,
+		ConversionRate:     DefaultCoinConversionRate,
+		PayoutTargetRupiah: DefaultPayoutTargetRupiah,
+		PayoutTargetCoins:  DefaultPayoutTargetCoins,
+		MaxPayoutCoins:     DefaultMaxPayoutCoins,
+		PayoutDay:          DefaultPayoutDay,
+		EarningPeriodDays:  DefaultEarningPeriodDays,
+	})
+}
+
+type ResolveRedemptionConfigParams struct {
+	StartDay           int
+	EndDay             int
+	Timezone           string
+	Now                time.Time
+	ConversionRate     int
+	PayoutTargetRupiah int
+	PayoutTargetCoins  int
+	MaxPayoutCoins     int
+	PayoutDay          int
+	EarningPeriodDays  int
+}
+
+func ResolveRedemptionConfigWithRate(startDay, endDay int, tzName string, now time.Time, conversionRate int, maxPayoutCoins int) RedemptionConfig {
+	return ResolveRedemptionConfigFull(ResolveRedemptionConfigParams{
+		StartDay:           startDay,
+		EndDay:             endDay,
+		Timezone:           tzName,
+		Now:                now,
+		ConversionRate:     conversionRate,
+		MaxPayoutCoins:     maxPayoutCoins,
+		PayoutDay:          DefaultPayoutDay,
+		EarningPeriodDays:  DefaultEarningPeriodDays,
+		PayoutTargetRupiah: DefaultPayoutTargetRupiah,
+		PayoutTargetCoins:  DefaultPayoutTargetCoins,
+	})
+}
+
+func ResolveRedemptionConfigFull(p ResolveRedemptionConfigParams) RedemptionConfig {
+	if p.StartDay <= 0 {
+		p.StartDay = DefaultRedemptionStartDay
 	}
-	if endDay <= 0 {
-		endDay = DefaultRedemptionEndDay
+	if p.EndDay <= 0 {
+		p.EndDay = DefaultRedemptionEndDay
 	}
-	if tzName == "" {
-		tzName = "Asia/Jakarta"
+	if p.PayoutDay <= 0 || p.PayoutDay > 31 {
+		p.PayoutDay = DefaultPayoutDay
 	}
-	loc, err := time.LoadLocation(tzName)
+	if p.EarningPeriodDays <= 0 {
+		p.EarningPeriodDays = DefaultEarningPeriodDays
+	}
+	if p.ConversionRate <= 0 {
+		p.ConversionRate = DefaultCoinConversionRate
+	}
+	if p.PayoutTargetRupiah < 0 {
+		p.PayoutTargetRupiah = DefaultPayoutTargetRupiah
+	}
+	if p.MaxPayoutCoins <= 0 {
+		p.MaxPayoutCoins = DefaultMaxPayoutCoins
+	}
+	if p.Timezone == "" {
+		p.Timezone = DefaultTimezone
+	}
+	// Derive target coins from rupiah/rate (single source of truth derivation)
+	if p.ConversionRate > 0 && p.PayoutTargetRupiah >= 0 {
+		p.PayoutTargetCoins = p.PayoutTargetRupiah / p.ConversionRate
+	}
+	if p.PayoutTargetCoins <= 0 {
+		p.PayoutTargetCoins = p.MaxPayoutCoins
+	}
+
+	loc, err := time.LoadLocation(p.Timezone)
 	if err != nil {
 		loc = time.FixedZone("WIB", 7*3600)
 	}
-	nowInTz := now.In(loc)
+	nowInTz := p.Now.In(loc)
 	curDay := nowInTz.Day()
-	isOpen := curDay >= startDay && curDay <= endDay
+	isOpen := curDay >= p.StartDay && curDay <= p.EndDay
+	isPayoutDay := curDay == p.PayoutDay
 
 	return RedemptionConfig{
-		RedemptionStartDay: startDay,
-		RedemptionEndDay:   endDay,
+		RedemptionStartDay: p.StartDay,
+		RedemptionEndDay:   p.EndDay,
+		PayoutDay:          p.PayoutDay,
+		EarningPeriodDays:  p.EarningPeriodDays,
 		IsOpen:             isOpen,
+		IsPayoutDay:        isPayoutDay,
 		CurrentDay:         curDay,
-		ConversionRate:     DefaultCoinConversionRate,
-		Timezone:           tzName,
+		ConversionRate:     p.ConversionRate,
+		PayoutTargetRupiah: p.PayoutTargetRupiah,
+		PayoutTargetCoins:  p.PayoutTargetCoins,
+		MaxPayoutCoins:     p.MaxPayoutCoins,
+		Timezone:           p.Timezone,
 	}
+}
+
+func ValidateEconomyConfig(cfg RedemptionConfig) error {
+	if cfg.ConversionRate <= 0 {
+		return fmt.Errorf("coin_conversion_rate must be > 0")
+	}
+	if cfg.MaxPayoutCoins <= 0 {
+		return fmt.Errorf("max_payout_coins must be > 0")
+	}
+	if cfg.PayoutTargetRupiah < 0 {
+		return fmt.Errorf("payout_target_rupiah must be >= 0")
+	}
+	if cfg.EarningPeriodDays <= 0 {
+		return fmt.Errorf("earning_period_days must be > 0")
+	}
+	if cfg.PayoutDay < 1 || cfg.PayoutDay > 31 {
+		return fmt.Errorf("payout_day must be 1-31")
+	}
+	if cfg.RedemptionStartDay < 1 || cfg.RedemptionStartDay > 31 || cfg.RedemptionEndDay < 1 || cfg.RedemptionEndDay > 31 {
+		return fmt.Errorf("redemption window days must be 1-31")
+	}
+	if cfg.PayoutTargetCoins > cfg.MaxPayoutCoins {
+		return fmt.Errorf("payout_target_coins (%d) must not exceed max_payout_coins (%d)", cfg.PayoutTargetCoins, cfg.MaxPayoutCoins)
+	}
+	if _, err := time.LoadLocation(cfg.Timezone); err != nil {
+		return fmt.Errorf("invalid timezone %q", cfg.Timezone)
+	}
+	return nil
 }

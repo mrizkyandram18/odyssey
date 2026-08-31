@@ -16,6 +16,8 @@ type TaskInput struct {
 	RewardCoins    int            `json:"reward_coins"`
 	RewardXP       int            `json:"reward_xp"`
 	Config         map[string]any `json:"config"`
+	TargetScope    string         `json:"target_scope,omitempty"`
+	TargetUserUID  string         `json:"target_user_uid,omitempty"`
 	IsActive       bool           `json:"is_active"`
 }
 

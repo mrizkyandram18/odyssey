@@ -62,6 +62,7 @@ func (s *HMACSessionIssuer) IssueSession(kind SessionKind, uid string, cfg *Sess
 	if cfg != nil {
 		claims.Role = string(cfg.Role)
 		claims.FamilyID = cfg.FamilyID
+		claims.DeviceID = cfg.DeviceID
 	}
 
 	token, err := signSession(claims, s.secret)

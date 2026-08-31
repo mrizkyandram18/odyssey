@@ -137,6 +137,34 @@ export interface TaskConfig extends VideoConfig, QuizConfig, PhotoUploadConfig, 
   [key: string]: any
 }
 
+export interface MemberView {
+  uid: string
+  family_id: string
+  explorer_name: string
+  username: string
+  role: Role
+  is_active: boolean
+  level: number
+  xp: number
+  coins: number
+  created_at: string
+}
+
+export interface CreateMemberInput {
+  username: string
+  password: string
+  explorer_name: string
+  role?: Role
+}
+
+export interface UpdateMemberInput {
+  explorer_name?: string
+  role?: Role
+  is_active?: boolean
+  password?: string
+  reset_device?: boolean
+}
+
 export interface TaskView {
   id: number
   title: string
@@ -147,6 +175,8 @@ export interface TaskView {
   reward_coins: number
   reward_xp: number
   config: TaskConfig
+  target_scope?: 'ALL' | 'FAMILY' | 'USER'
+  target_user_uid?: string
   is_locked: boolean
   status: TaskStatus
   admin_notes?: string
@@ -170,9 +200,15 @@ export interface SubmitTaskResponse {
 export interface RedemptionConfig {
   redemption_start_day: number
   redemption_end_day: number
+  payout_day: number
+  earning_period_days: number
   is_open: boolean
+  is_payout_day: boolean
   current_day: number
   conversion_rate: number
+  payout_target_rupiah: number
+  payout_target_coins: number
+  max_payout_coins: number
   timezone: string
 }
 

@@ -38,7 +38,7 @@ describe('BottomNav Component', () => {
     )
 
     expect(screen.getByText('Beranda')).toBeInTheDocument()
-    expect(screen.getByText('Toko Hadiah')).toBeInTheDocument()
+    expect(screen.getByText('Pencairan Koin')).toBeInTheDocument()
     expect(screen.getByText('Profil')).toBeInTheDocument()
     expect(screen.queryByText('Admin')).not.toBeInTheDocument()
   })
@@ -61,7 +61,7 @@ describe('BottomNav Component', () => {
     )
 
     expect(screen.getByText('Beranda')).toBeInTheDocument()
-    expect(screen.getByText('Toko Hadiah')).toBeInTheDocument()
+    expect(screen.getByText('Pencairan Koin')).toBeInTheDocument()
     expect(screen.getByText('Profil')).toBeInTheDocument()
     expect(screen.getByText('Admin')).toBeInTheDocument()
   })

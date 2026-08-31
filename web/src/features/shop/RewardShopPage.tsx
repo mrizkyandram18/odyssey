@@ -56,13 +56,22 @@ export const RewardShopPage: React.FC = () => {
     }
   }
 
-  const conversionRate = config?.conversion_rate || 10
+  const conversionRate = config ? config.conversion_rate : 0
+  const maxPayoutCoins = config ? config.max_payout_coins : 0
+  const payoutTargetCoins = config ? config.payout_target_coins : 0
+  const payoutTargetRupiah = config ? config.payout_target_rupiah : 0
+  const maxPayoutCash = maxPayoutCoins * conversionRate
   const estimatedCash = userCoins * conversionRate
-  const isOpen = config?.is_open ?? false
-  const startDay = config?.redemption_start_day ?? 21
-  const endDay = config?.redemption_end_day ?? 26
+  const isOpen = config ? config.is_open : false
+  const startDay = config ? config.redemption_start_day : 0
+  const endDay = config ? config.redemption_end_day : 0
 
   const pendingClaims = claims.filter((c) => c.status === 'PENDING')
+  const approvedCoins = claims.filter((c) => c.status === 'APPROVED').reduce((s, c) => s + c.coins_redeemed, 0)
+  const pendingCoins = pendingClaims.reduce((s, c) => s + c.coins_redeemed, 0)
+  const usedPayoutCoins = approvedCoins + pendingCoins
+  const remainingCoins = Math.max(0, maxPayoutCoins - usedPayoutCoins)
+  const isMaxReached = usedPayoutCoins >= maxPayoutCoins
 
   return (
     <div className="w-full flex flex-col gap-4">
@@ -71,10 +80,10 @@ export const RewardShopPage: React.FC = () => {
         <div>
           <h1 className="text-lg font-bold text-text-primary flex items-center gap-2">
             <Coins className="w-5 h-5 text-accent-gold" />
-            <span>Toko Hadiah</span>
+            <span>Penukaran Koin</span>
           </h1>
           <p className="text-xs text-text-secondary mt-0.5">
-            Tukarkan koin menjadi saldo digital
+            Tukarkan koin menjadi uang tunai atau saldo digital
           </p>
         </div>
         <button
@@ -96,6 +105,7 @@ export const RewardShopPage: React.FC = () => {
               <span className="text-2xl font-bold text-accent-gold">{userCoins.toLocaleString('id-ID')}</span>
               <span className="text-xs font-semibold text-text-secondary">Koin</span>
             </p>
+            <p className="text-[11px] text-text-secondary mt-1">Koin bisa ditukarkan menjadi uang</p>
           </div>
           <div className="text-right">
             <p className="text-[11px] font-bold uppercase tracking-wide text-text-secondary">Estimasi Tunai</p>
@@ -105,6 +115,31 @@ export const RewardShopPage: React.FC = () => {
             </p>
             <p className="text-[11px] text-text-secondary">1 Koin = Rp {conversionRate.toLocaleString('id-ID')}</p>
           </div>
+        </div>
+        {/* Max payout progress - config driven */}
+        <div className="mt-4 space-y-2">
+          <div className="flex items-center justify-between text-[11px] font-bold">
+            <span className="text-text-secondary">Progress pencairan</span>
+            <span className={isMaxReached ? 'text-status-success' : 'text-text-primary'}>
+              {isMaxReached ? 'Maximum tercapai' : `Rp ${estimatedCash.toLocaleString('id-ID')} / Rp ${payoutTargetRupiah.toLocaleString('id-ID')}`}
+            </span>
+          </div>
+          <div className="h-2 rounded-full bg-surface-elevated border border-border-subtle overflow-hidden">
+            <div
+              className={`h-full rounded-full transition-all ${isMaxReached ? 'bg-status-success' : 'bg-accent-gold'}`}
+              style={{ width: `${Math.min(100, Math.round(((userCoins + usedPayoutCoins) / payoutTargetCoins) * 100))}%` }}
+            />
+          </div>
+          <div className="flex items-center justify-between text-[11px] text-text-secondary">
+            <span>
+              Target: <strong className="text-text-primary">{payoutTargetCoins.toLocaleString('id-ID')} Koin</strong> = Rp {payoutTargetRupiah.toLocaleString('id-ID')} • Maks {maxPayoutCoins.toLocaleString('id-ID')} Koin
+            </span>
+            <span>Sisa kuota: {remainingCoins.toLocaleString('id-ID')} Koin</span>
+          </div>
+          <p className="text-[11px] text-text-secondary">Periode {config?.earning_period_days ?? 30} hari • Gajian tgl {config?.payout_day ?? 24} • {conversionRate.toLocaleString('id-ID')} /koin</p>
+          <p className="text-[11px] text-text-secondary bg-surface-elevated border border-border-subtle rounded-lg p-2">
+            <strong className="text-text-primary">Koin</strong> bisa ditukarkan menjadi uang. <strong className="text-text-primary">EXP</strong> hanya untuk Level dan tidak dapat ditukarkan.
+          </p>
         </div>
       </div>
 
@@ -212,6 +247,18 @@ export const RewardShopPage: React.FC = () => {
               )}
             </div>
           </div>
+
+          {isMaxReached && (
+            <div className="p-3 rounded-xl bg-status-success/10 border border-status-success/20 flex items-start gap-2.5">
+              <CheckCircle2 className="w-4 h-4 text-status-success shrink-0 mt-0.5" />
+              <div>
+                <p className="font-bold text-xs text-status-success">Maximum pencairan tercapai 🎉</p>
+                <p className="text-xs text-text-secondary leading-relaxed mt-0.5">
+                  Kamu sudah mencapai batas {maxPayoutCoins.toLocaleString('id-ID')} Koin = Rp {maxPayoutCash.toLocaleString('id-ID')}. Koin tambahan tetap menambah EXP & Level.
+                </p>
+              </div>
+            </div>
+          )}
 
           {pendingClaims.length > 0 && (
             <div className="p-3 rounded-xl bg-accent-gold/10 border border-accent-gold/20 flex items-start gap-2.5">

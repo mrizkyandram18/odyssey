@@ -59,15 +59,36 @@ func (m *mockProfileStore) GetBoundDeviceID(ctx context.Context, uid string) (st
 	return "", nil
 }
 
+func (m *mockProfileStore) BindOrVerifyDevice(ctx context.Context, uid, deviceID string) (bool, error) {
+	if m.profile != nil {
+		if m.profile.DeviceID == "" {
+			m.profile.DeviceID = deviceID
+			return true, nil
+		}
+		if m.profile.DeviceID == deviceID {
+			return false, nil
+		}
+		return false, auth.ErrDeviceBlocked
+	}
+	return false, nil
+}
+
+func (m *mockProfileStore) ResetDeviceBinding(ctx context.Context, uid string) error {
+	if m.profile != nil {
+		m.profile.DeviceID = ""
+	}
+	return nil
+}
+
+func (m *mockProfileStore) UpdateAvatar(ctx context.Context, uid string, style, seed string) error {
+	return nil
+}
+
 func (m *mockProfileStore) SetAvatarFrame(_ context.Context, _, _ string) error {
 	return nil
 }
 
 func (m *mockProfileStore) SetExplorerEffect(_ context.Context, _, _ string) error {
-	return nil
-}
-
-func (m *mockProfileStore) UpdateAvatar(_ context.Context, _ string, _, _ string) error {
 	return nil
 }
 
@@ -93,6 +114,7 @@ func makeValidProfile() *db.UserProfile {
 		FamilyID:     "crew-1",
 		ExplorerName: "Alice",
 		Role:         "SEEKER",
+		IsActive:     true,
 		Level:        1,
 		XP:           0,
 	}

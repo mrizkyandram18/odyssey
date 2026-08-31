@@ -67,7 +67,7 @@ describe('ProfilePage', () => {
     expect(screen.getByText('Level 3')).toBeInTheDocument()
     expect(screen.getByText('1500')).toBeInTheDocument()
     expect(screen.getByText('5 Hari Streak')).toBeInTheDocument()
-    expect(screen.getByText('Tukar Hadiah')).toBeInTheDocument()
+    expect(screen.getByText('Pencairan Koin')).toBeInTheDocument()
   })
 
   it('switches to settings view when clicking settings button', async () => {

@@ -26,15 +26,18 @@ import {
   Building2,
   Wallet,
   Smartphone,
+  Users,
+  UserPlus,
+  Edit3,
 } from 'lucide-react'
 import { useSession } from '../../shared/hooks/useSession'
-import { adminTasksApi } from '../../shared/lib/api'
-import type { TaskView, PendingSubmissionView, ClaimView, TaskType, RedemptionConfig } from '../../shared/types'
+import { adminTasksApi, adminMembersApi } from '../../shared/lib/api'
+import type { TaskView, PendingSubmissionView, ClaimView, TaskType, RedemptionConfig, MemberView, Role } from '../../shared/types'
 
 export const AdminPage: React.FC = () => {
   const { session, profile, loading: sessionLoading } = useSession()
 
-  const [activeTab, setActiveTab] = useState<'submissions' | 'claims' | 'tasks' | 'settings'>('submissions')
+  const [activeTab, setActiveTab] = useState<'submissions' | 'claims' | 'tasks' | 'members' | 'settings'>('submissions')
   const [selectedDate, setSelectedDate] = useState<string>(
     new Date().toISOString().split('T')[0]
   )
@@ -43,22 +46,48 @@ export const AdminPage: React.FC = () => {
   const [tasks, setTasks] = useState<TaskView[]>([])
   const [submissions, setSubmissions] = useState<PendingSubmissionView[]>([])
   const [claims, setClaims] = useState<ClaimView[]>([])
+  const [members, setMembers] = useState<MemberView[]>([])
   const [config, setConfig] = useState<RedemptionConfig | null>(null)
   const [isFetching, setIsFetching] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
-  // Config settings form states
-  const [startDayInput, setStartDayInput] = useState<number>(21)
+  // Config settings form states — fully config-driven economy
+  const [startDayInput, setStartDayInput] = useState<number>(24)
   const [endDayInput, setEndDayInput] = useState<number>(26)
+  const [payoutDayInput, setPayoutDayInput] = useState<number>(24)
+  const [earningPeriodInput, setEarningPeriodInput] = useState<number>(30)
+  const [conversionRateInput, setConversionRateInput] = useState<number>(100)
+  const [targetRupiahInput, setTargetRupiahInput] = useState<number>(320000)
+  const [maxPayoutInput, setMaxPayoutInput] = useState<number>(3200)
+  const [timezoneInput, setTimezoneInput] = useState<string>('Asia/Jakarta')
   const [isSavingConfig, setIsSavingConfig] = useState(false)
   const [configSuccessMsg, setConfigSuccessMsg] = useState<string | null>(null)
   const [configErrorMsg, setConfigErrorMsg] = useState<string | null>(null)
 
   // Modals & UI states
   const [isCreateTaskModalOpen, setIsCreateTaskModalOpen] = useState(false)
+  const [isCreateMemberModalOpen, setIsCreateMemberModalOpen] = useState(false)
+  const [isEditMemberModalOpen, setIsEditMemberModalOpen] = useState(false)
+  const [selectedMember, setSelectedMember] = useState<MemberView | null>(null)
   const [previewImage, setPreviewImage] = useState<string | null>(null)
   const [actionNotes, setActionNotes] = useState<Record<number, string>>({})
   const [processingId, setProcessingId] = useState<number | null>(null)
+
+  // Member form states
+  const [newMember, setNewMember] = useState({
+    username: '',
+    password: '',
+    explorer_name: '',
+    role: 'SEEKER' as Role,
+  })
+
+  const [editMemberForm, setEditMemberForm] = useState({
+    explorer_name: '',
+    role: 'SEEKER' as Role,
+    is_active: true,
+    password: '',
+    reset_device: false,
+  })
 
   // New task form state
   const [newTask, setNewTask] = useState({
@@ -69,6 +98,8 @@ export const AdminPage: React.FC = () => {
     active_date: selectedDate,
     reward_coins: 50,
     reward_xp: 100,
+    target_scope: 'ALL' as 'ALL' | 'USER',
+    target_user_uid: '',
     // Video
     youtube_url: '',
     min_watch_seconds: 60,
@@ -101,19 +132,27 @@ export const AdminPage: React.FC = () => {
     try {
       setIsFetching(true)
       setError(null)
-      const [tList, subList, claimList, cfg] = await Promise.all([
+      const [tList, subList, claimList, cfg, mList] = await Promise.all([
         adminTasksApi.getTasks(selectedDate),
         adminTasksApi.getPendingSubmissions(),
         adminTasksApi.getClaims('PENDING'),
         adminTasksApi.getConfig(),
+        adminMembersApi.getMembers().catch(() => []),
       ])
       setTasks(tList || [])
       setSubmissions(subList || [])
       setClaims(claimList || [])
+      setMembers(mList || [])
       if (cfg) {
         setConfig(cfg)
         setStartDayInput(cfg.redemption_start_day)
         setEndDayInput(cfg.redemption_end_day)
+        if (cfg.payout_day) setPayoutDayInput(cfg.payout_day)
+        if (cfg.earning_period_days) setEarningPeriodInput(cfg.earning_period_days)
+        if (cfg.conversion_rate) setConversionRateInput(cfg.conversion_rate)
+        if (cfg.payout_target_rupiah) setTargetRupiahInput(cfg.payout_target_rupiah)
+        if (cfg.max_payout_coins) setMaxPayoutInput(cfg.max_payout_coins)
+        if (cfg.timezone) setTimezoneInput(cfg.timezone)
       }
     } catch (err: any) {
       setError(err.message || 'Gagal memuat data admin dashboard')
@@ -183,6 +222,56 @@ export const AdminPage: React.FC = () => {
     }
   }
 
+  const handleDuplicateTask = async (taskId: number) => {
+    try {
+      await adminTasksApi.duplicateTask(taskId)
+      fetchData()
+    } catch (err: any) {
+      alert('Gagal menduplikasi tugas: ' + err.message)
+    }
+  }
+
+  const handleCreateMember = async (e: React.FormEvent) => {
+    e.preventDefault()
+    try {
+      await adminMembersApi.createMember(newMember)
+      setIsCreateMemberModalOpen(false)
+      setNewMember({
+        username: '',
+        password: '',
+        explorer_name: '',
+        role: 'SEEKER',
+      })
+      fetchData()
+    } catch (err: any) {
+      alert('Gagal membuat anggota: ' + err.message)
+    }
+  }
+
+  const handleUpdateMember = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!selectedMember) return
+    try {
+      const patch: any = {
+        explorer_name: editMemberForm.explorer_name,
+        role: editMemberForm.role,
+        is_active: editMemberForm.is_active,
+      }
+      if (editMemberForm.password.trim()) {
+        patch.password = editMemberForm.password.trim()
+      }
+      if (editMemberForm.reset_device) {
+        patch.reset_device = true
+      }
+      await adminMembersApi.updateMember(selectedMember.uid, patch)
+      setIsEditMemberModalOpen(false)
+      setSelectedMember(null)
+      fetchData()
+    } catch (err: any) {
+      alert('Gagal memperbarui anggota: ' + err.message)
+    }
+  }
+
   const handleSaveConfig = async (e: React.FormEvent) => {
     e.preventDefault()
     setConfigSuccessMsg(null)
@@ -196,17 +285,48 @@ export const AdminPage: React.FC = () => {
       setConfigErrorMsg('Tanggal mulai tidak boleh lebih besar dari tanggal berakhir')
       return
     }
+    if (payoutDayInput < 1 || payoutDayInput > 31 || earningPeriodInput < 1 || earningPeriodInput > 365) {
+      setConfigErrorMsg('Tanggal gajian atau durasi periode tidak valid')
+      return
+    }
+    if (conversionRateInput <= 0 || maxPayoutInput <= 0 || targetRupiahInput < 0) {
+      setConfigErrorMsg('Nilai konversi atau batas payout tidak valid')
+      return
+    }
+    if (targetRupiahInput > 0 && conversionRateInput > 0) {
+      const derived = Math.floor(targetRupiahInput / conversionRateInput)
+      if (derived > maxPayoutInput) {
+        setConfigErrorMsg(`Target ${derived} koin melebihi batas maksimum ${maxPayoutInput} koin`)
+        return
+      }
+    }
 
     setIsSavingConfig(true)
     try {
       const updated = await adminTasksApi.updateConfig({
         start_day: Number(startDayInput),
         end_day: Number(endDayInput),
+        payout_day: Number(payoutDayInput),
+        earning_period_days: Number(earningPeriodInput),
+        conversion_rate: Number(conversionRateInput),
+        payout_target_rupiah: Number(targetRupiahInput),
+        max_payout_coins: Number(maxPayoutInput),
+        timezone: timezoneInput,
       })
       setConfig(updated)
-      setConfigSuccessMsg(`Periode penukaran berhasil diperbarui ke tanggal ${updated.redemption_start_day}–${updated.redemption_end_day} setiap bulan.`)
+      setStartDayInput(updated.redemption_start_day)
+      setEndDayInput(updated.redemption_end_day)
+      setPayoutDayInput(updated.payout_day)
+      setEarningPeriodInput(updated.earning_period_days)
+      setConversionRateInput(updated.conversion_rate)
+      setTargetRupiahInput(updated.payout_target_rupiah)
+      setMaxPayoutInput(updated.max_payout_coins)
+      setTimezoneInput(updated.timezone)
+      setConfigSuccessMsg(
+        `Konfigurasi tersimpan: Target ${updated.payout_target_coins} koin = Rp ${updated.payout_target_rupiah.toLocaleString('id-ID')} • Maks ${updated.max_payout_coins} koin • Gajian tgl ${updated.payout_day} • Periode ${updated.earning_period_days} hari`
+      )
     } catch (err: any) {
-      setConfigErrorMsg(err.message || 'Gagal menyimpan pengaturan periode penukaran.')
+      setConfigErrorMsg(err.message || 'Gagal menyimpan pengaturan.')
     } finally {
       setIsSavingConfig(false)
     }
@@ -281,12 +401,13 @@ export const AdminPage: React.FC = () => {
         active_date: newTask.active_date || selectedDate,
         reward_coins: Number(newTask.reward_coins),
         reward_xp: Number(newTask.reward_xp),
+        target_scope: newTask.target_scope,
+        target_user_uid: newTask.target_scope === 'USER' ? newTask.target_user_uid : undefined,
         config: taskConfig,
         is_active: true,
       })
 
       setIsCreateTaskModalOpen(false)
-      // Reset form
       setNewTask({
         title: '',
         description: '',
@@ -295,6 +416,8 @@ export const AdminPage: React.FC = () => {
         active_date: selectedDate,
         reward_coins: 50,
         reward_xp: 100,
+        target_scope: 'ALL',
+        target_user_uid: '',
         youtube_url: '',
         min_watch_seconds: 60,
         question_text: '',
@@ -314,13 +437,13 @@ export const AdminPage: React.FC = () => {
         max_chars: 1000,
         game_type: 'MEMORY',
         game_difficulty: 'MEDIUM',
-        target_score: 80,
-      })
-      fetchData()
-    } catch (err: any) {
-      alert('Gagal membuat tugas: ' + err.message)
-    }
+      target_score: 80,
+    })
+    fetchData()
+  } catch (err: any) {
+    alert('Gagal membuat tugas: ' + err.message)
   }
+}
 
   const getTaskTypeBadge = (tType: string) => {
     switch (tType) {
@@ -425,7 +548,7 @@ export const AdminPage: React.FC = () => {
         </div>
       )}
 
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+      <div className="grid grid-cols-2 lg:grid-cols-5 gap-3">
         <button
           onClick={() => setActiveTab('submissions')}
           aria-current={activeTab === 'submissions' ? 'true' : undefined}
@@ -475,7 +598,7 @@ export const AdminPage: React.FC = () => {
         >
           <span className="text-[11px] font-bold text-text-secondary flex items-center gap-1">
             <Calendar className="w-3.5 h-3.5 text-accent-cyan" />
-            Tugas Hari Ini
+            Tugas
           </span>
           <p className="mt-1 flex items-baseline gap-1">
             <span className="text-xl font-bold text-text-primary">{tasks.length}</span>
@@ -484,9 +607,28 @@ export const AdminPage: React.FC = () => {
         </button>
 
         <button
+          onClick={() => setActiveTab('members')}
+          aria-current={activeTab === 'members' ? 'true' : undefined}
+          className={`text-left p-3 rounded-2xl border transition-colors ${
+            activeTab === 'members'
+              ? 'bg-accent-magic/10 border-accent-magic/30'
+              : 'bg-surface border-border-subtle hover:bg-surface-elevated'
+          }`}
+        >
+          <span className="text-[11px] font-bold text-text-secondary flex items-center gap-1">
+            <Users className="w-3.5 h-3.5 text-accent-magic" />
+            Anggota
+          </span>
+          <p className="mt-1 flex items-baseline gap-1">
+            <span className="text-xl font-bold text-text-primary">{members.length}</span>
+            <span className="text-[11px] text-text-secondary">orang</span>
+          </p>
+        </button>
+
+        <button
           onClick={() => setActiveTab('settings')}
           aria-current={activeTab === 'settings' ? 'true' : undefined}
-          className={`text-left p-3 rounded-2xl border transition-colors ${
+          className={`text-left p-3 rounded-2xl border transition-colors col-span-2 lg:col-span-1 ${
             activeTab === 'settings'
               ? 'bg-accent-gold/10 border-accent-gold/30'
               : 'bg-surface border-border-subtle hover:bg-surface-elevated'
@@ -497,7 +639,7 @@ export const AdminPage: React.FC = () => {
             Periode
           </span>
           <p className="mt-1 flex items-baseline gap-1">
-            <span className="text-lg font-bold text-text-primary">{config ? `${config.redemption_start_day}–${config.redemption_end_day}` : '21–26'}</span>
+            <span className="text-lg font-bold text-text-primary">{config ? `${config.redemption_start_day}–${config.redemption_end_day}` : '24–26'}</span>
             <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full ${config?.is_open ? 'bg-status-success/15 text-status-success' : 'bg-surface-elevated text-text-secondary border border-border-subtle'}`}>{config?.is_open ? 'Buka' : 'Tutup'}</span>
           </p>
         </button>
@@ -507,7 +649,7 @@ export const AdminPage: React.FC = () => {
         <button
           data-testid="admin-tab-submissions"
           onClick={() => setActiveTab('submissions')}
-          className={`flex-1 min-w-[120px] py-2.5 px-3 rounded-lg font-bold text-xs flex items-center justify-center gap-1.5 transition-colors ${
+          className={`flex-1 min-w-[100px] py-2.5 px-3 rounded-lg font-bold text-xs flex items-center justify-center gap-1.5 transition-colors ${
             activeTab === 'submissions' ? 'bg-accent-magic text-white shadow-sm' : 'text-text-secondary hover:text-text-primary'
           }`}
         >
@@ -518,7 +660,7 @@ export const AdminPage: React.FC = () => {
         <button
           data-testid="admin-tab-claims"
           onClick={() => setActiveTab('claims')}
-          className={`flex-1 min-w-[120px] py-2.5 px-3 rounded-lg font-bold text-xs flex items-center justify-center gap-1.5 transition-colors ${
+          className={`flex-1 min-w-[100px] py-2.5 px-3 rounded-lg font-bold text-xs flex items-center justify-center gap-1.5 transition-colors ${
             activeTab === 'claims' ? 'bg-accent-magic text-white shadow-sm' : 'text-text-secondary hover:text-text-primary'
           }`}
         >
@@ -529,22 +671,34 @@ export const AdminPage: React.FC = () => {
         <button
           data-testid="admin-tab-tasks"
           onClick={() => setActiveTab('tasks')}
-          className={`flex-1 min-w-[120px] py-2.5 px-3 rounded-lg font-bold text-xs flex items-center justify-center gap-1.5 transition-colors ${
+          className={`flex-1 min-w-[100px] py-2.5 px-3 rounded-lg font-bold text-xs flex items-center justify-center gap-1.5 transition-colors ${
             activeTab === 'tasks' ? 'bg-accent-magic text-white shadow-sm' : 'text-text-secondary hover:text-text-primary'
           }`}
         >
-          Jadwal Tugas
+          Tugas
+        </button>
+
+        <button
+          data-testid="admin-tab-members"
+          onClick={() => setActiveTab('members')}
+          className={`flex-1 min-w-[100px] py-2.5 px-3 rounded-lg font-bold text-xs flex items-center justify-center gap-1.5 transition-colors ${
+            activeTab === 'members' ? 'bg-accent-magic text-white shadow-sm' : 'text-text-secondary hover:text-text-primary'
+          }`}
+        >
+          <Users className="w-3.5 h-3.5" />
+          Anggota
+          {members.length > 0 && <span className="px-1.5 py-0.5 rounded-full bg-white/20 text-white font-mono text-[10px]">{members.length}</span>}
         </button>
 
         <button
           data-testid="admin-tab-settings"
           onClick={() => setActiveTab('settings')}
-          className={`flex-1 min-w-[120px] py-2.5 px-3 rounded-lg font-bold text-xs flex items-center justify-center gap-1.5 transition-colors ${
+          className={`flex-1 min-w-[100px] py-2.5 px-3 rounded-lg font-bold text-xs flex items-center justify-center gap-1.5 transition-colors ${
             activeTab === 'settings' ? 'bg-accent-magic text-white shadow-sm' : 'text-text-secondary hover:text-text-primary'
           }`}
         >
           <Settings className="w-3.5 h-3.5" />
-          Periode
+          Pengaturan
         </button>
       </div>
 
@@ -883,9 +1037,16 @@ export const AdminPage: React.FC = () => {
                     #{task.step_order}
                   </div>
                   <div>
-                    <h4 className="font-heading font-bold text-text-primary text-sm">
-                      {task.title}
-                    </h4>
+                    <div className="flex items-center gap-2">
+                      <h4 className="font-heading font-bold text-text-primary text-sm">
+                        {task.title}
+                      </h4>
+                      {task.target_scope === 'USER' && (
+                        <span className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-accent-magic/20 text-accent-magic">
+                          Personal: {members.find(m => m.uid === task.target_user_uid)?.explorer_name || task.target_user_uid}
+                        </span>
+                      )}
+                    </div>
                     <p className="text-xs text-text-secondary line-clamp-1">
                       {task.description || 'Tanpa deskripsi'}
                     </p>
@@ -901,17 +1062,131 @@ export const AdminPage: React.FC = () => {
                   </div>
                 </div>
 
-                <button
-                  type="button"
-                  onClick={() => handleDeleteTask(task.id)}
-                  aria-label={`Hapus tugas ${task.title}`}
-                  title="Hapus Tugas — tindakan tidak dapat dibatalkan"
-                  className="p-2 rounded-xl bg-surface border border-border-subtle text-status-error/70 hover:text-status-error hover:bg-status-error/10 hover:border-status-error/20 active:scale-95 transition-all"
-                >
-                  <Trash2 className="w-4 h-4" />
-                </button>
+                <div className="flex items-center gap-1 shrink-0">
+                  <button
+                    type="button"
+                    onClick={() => handleDuplicateTask(task.id)}
+                    aria-label={`Duplikasi tugas ${task.title}`}
+                    title="Duplikasi Tugas"
+                    className="p-2 rounded-xl bg-surface border border-border-subtle text-accent-magic hover:bg-accent-magic/10 active:scale-95 transition-all"
+                  >
+                    <Copy className="w-4 h-4" />
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => handleDeleteTask(task.id)}
+                    aria-label={`Hapus tugas ${task.title}`}
+                    title="Hapus Tugas — tindakan tidak dapat dibatalkan"
+                    className="p-2 rounded-xl bg-surface border border-border-subtle text-status-error/70 hover:text-status-error hover:bg-status-error/10 hover:border-status-error/20 active:scale-95 transition-all"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </button>
+                </div>
               </div>
             ))
+          )}
+        </div>
+      )}
+
+      {/* --- TAB: MANAJEMEN ANGGOTA --- */}
+      {activeTab === 'members' && (
+        <div className="space-y-4">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+            <div>
+              <h3 className="font-bold text-text-primary text-sm flex items-center gap-2">
+                <Users className="w-4 h-4 text-accent-magic" />
+                <span>Daftar Anggota Keluarga ({members.length})</span>
+              </h3>
+              <p className="text-xs text-text-secondary mt-0.5">
+                Kelola profil anggota, role, status aktif, dan buat akun baru.
+              </p>
+            </div>
+            <button
+              onClick={() => setIsCreateMemberModalOpen(true)}
+              className="px-3.5 py-2 rounded-xl bg-accent-magic text-white font-heading font-bold text-xs flex items-center gap-1.5 shadow-sm shadow-accent-magic/30 hover:brightness-110 active:scale-95 transition-all shrink-0"
+            >
+              <UserPlus className="w-4 h-4" />
+              <span>+ Tambah Anggota</span>
+            </button>
+          </div>
+
+          {members.length === 0 ? (
+            <div className="py-12 text-center bg-surface rounded-2xl border border-border-subtle space-y-2 p-6">
+              <div className="w-10 h-10 mx-auto rounded-xl bg-accent-magic/10 text-accent-magic flex items-center justify-center">
+                <Users className="w-5 h-5" />
+              </div>
+              <p className="font-bold text-text-primary text-sm">Belum Ada Anggota</p>
+              <p className="text-xs text-text-secondary max-w-xs mx-auto">
+                Klik &quot;+ Tambah Anggota&quot; untuk mendaftarkan anggota keluarga baru.
+              </p>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              {members.map((member) => (
+                <div
+                  key={member.uid}
+                  className="p-4 rounded-2xl bg-surface border border-border-subtle shadow-sm flex items-start justify-between gap-3"
+                >
+                  <div className="space-y-1">
+                    <div className="flex items-center gap-2">
+                      <h4 className="font-heading font-bold text-text-primary text-sm">
+                        {member.explorer_name}
+                      </h4>
+                      <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
+                        member.role === 'GUIDE'
+                          ? 'bg-accent-magic/15 text-accent-magic'
+                          : 'bg-surface-elevated text-text-secondary border border-border-subtle'
+                      }`}>
+                        {member.role}
+                      </span>
+                      <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
+                        member.is_active
+                          ? 'bg-status-success/15 text-status-success'
+                          : 'bg-status-error/15 text-status-error'
+                      }`}>
+                        {member.is_active ? 'Aktif' : 'Nonaktif'}
+                      </span>
+                    </div>
+
+                    <p className="text-xs text-text-secondary font-mono">
+                      @{member.username} • <span className="text-[10px] opacity-70">UID: {member.uid}</span>
+                    </p>
+
+                    <div className="flex items-center gap-3 text-xs pt-1">
+                      <span className="font-bold text-accent-gold flex items-center gap-1">
+                        <Coins className="w-3.5 h-3.5" /> {member.coins} Koin
+                      </span>
+                      <span className="font-bold text-accent-magic">
+                        Level {member.level} ({member.xp} XP)
+                      </span>
+                    </div>
+
+                    <p className="text-[10px] text-text-secondary pt-0.5">
+                      Bergabung: {new Date(member.created_at).toLocaleDateString('id-ID', { year: 'numeric', month: 'short', day: 'numeric' })}
+                    </p>
+                  </div>
+
+                  <button
+                    onClick={() => {
+                      setSelectedMember(member)
+                      setEditMemberForm({
+                        explorer_name: member.explorer_name,
+                        role: member.role,
+                        is_active: member.is_active,
+                        password: '',
+                        reset_device: false,
+                      })
+                      setIsEditMemberModalOpen(true)
+                    }}
+                    className="p-2 rounded-xl bg-surface border border-border-subtle text-text-secondary hover:text-text-primary hover:bg-surface-elevated transition-all shrink-0"
+                    title="Edit Anggota"
+                  >
+                    <Edit3 className="w-4 h-4" />
+                  </button>
+                </div>
+              ))}
+            </div>
           )}
         </div>
       )}
@@ -948,7 +1223,110 @@ export const AdminPage: React.FC = () => {
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="space-y-1.5">
                   <label className="text-xs font-bold text-text-secondary">
-                    Tanggal Mulai Setiap Bulan (1–31):
+                    Nilai 1 Koin (Rupiah):
+                  </label>
+                  <input
+                    type="number"
+                    min={1}
+                    required
+                    value={conversionRateInput}
+                    onChange={(e) => setConversionRateInput(Number(e.target.value))}
+                    className="w-full p-3 rounded-xl bg-surface border border-border-subtle text-sm font-bold text-text-primary focus:outline-none focus:border-accent-magic font-mono"
+                  />
+                  <p className="text-[11px] text-text-secondary">
+                    Contoh: <strong>100</strong> (1 Koin = Rp 100)
+                  </p>
+                </div>
+
+                <div className="space-y-1.5">
+                  <label className="text-xs font-bold text-text-secondary">
+                    Target Penghasilan Normal (Rupiah):
+                  </label>
+                  <input
+                    type="number"
+                    min={0}
+                    required
+                    value={targetRupiahInput}
+                    onChange={(e) => setTargetRupiahInput(Number(e.target.value))}
+                    className="w-full p-3 rounded-xl bg-surface border border-border-subtle text-sm font-bold text-text-primary focus:outline-none focus:border-accent-magic font-mono"
+                  />
+                  <p className="text-[11px] text-text-secondary">
+                    Hasil kalkulasi koin: <strong>{conversionRateInput > 0 ? Math.floor(targetRupiahInput / conversionRateInput) : 0} Koin</strong>
+                  </p>
+                </div>
+
+                <div className="space-y-1.5">
+                  <label className="text-xs font-bold text-text-secondary">
+                    Batas Maksimum Pencairan (Koin):
+                  </label>
+                  <input
+                    type="number"
+                    min={1}
+                    required
+                    value={maxPayoutInput}
+                    onChange={(e) => setMaxPayoutInput(Number(e.target.value))}
+                    className="w-full p-3 rounded-xl bg-surface border border-border-subtle text-sm font-bold text-text-primary focus:outline-none focus:border-accent-magic font-mono"
+                  />
+                  <p className="text-[11px] text-text-secondary">
+                    Batas keras (cap) pencairan per periode
+                  </p>
+                </div>
+
+                <div className="space-y-1.5">
+                  <label className="text-xs font-bold text-text-secondary">
+                    Tanggal Gajian / Payday (1–31):
+                  </label>
+                  <input
+                    type="number"
+                    min={1}
+                    max={31}
+                    required
+                    value={payoutDayInput}
+                    onChange={(e) => setPayoutDayInput(Number(e.target.value))}
+                    className="w-full p-3 rounded-xl bg-surface border border-border-subtle text-sm font-bold text-text-primary focus:outline-none focus:border-accent-magic font-mono"
+                  />
+                  <p className="text-[11px] text-text-secondary">
+                    Hari kalender perayaan gajian
+                  </p>
+                </div>
+
+                <div className="space-y-1.5">
+                  <label className="text-xs font-bold text-text-secondary">
+                    Durasi Periode Earning (Hari):
+                  </label>
+                  <input
+                    type="number"
+                    min={1}
+                    max={365}
+                    required
+                    value={earningPeriodInput}
+                    onChange={(e) => setEarningPeriodInput(Number(e.target.value))}
+                    className="w-full p-3 rounded-xl bg-surface border border-border-subtle text-sm font-bold text-text-primary focus:outline-none focus:border-accent-magic font-mono"
+                  />
+                  <p className="text-[11px] text-text-secondary">
+                    Contoh: <strong>30</strong> (30 hari kerja)
+                  </p>
+                </div>
+
+                <div className="space-y-1.5">
+                  <label className="text-xs font-bold text-text-secondary">
+                    Timezone:
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    value={timezoneInput}
+                    onChange={(e) => setTimezoneInput(e.target.value)}
+                    className="w-full p-3 rounded-xl bg-surface border border-border-subtle text-sm font-bold text-text-primary focus:outline-none focus:border-accent-magic"
+                  />
+                  <p className="text-[11px] text-text-secondary">
+                    Contoh: <strong>Asia/Jakarta</strong>
+                  </p>
+                </div>
+
+                <div className="space-y-1.5">
+                  <label className="text-xs font-bold text-text-secondary">
+                    Tanggal Mulai Penukaran (1–31):
                   </label>
                   <input
                     type="number"
@@ -959,14 +1337,11 @@ export const AdminPage: React.FC = () => {
                     onChange={(e) => setStartDayInput(Number(e.target.value))}
                     className="w-full p-3 rounded-xl bg-surface border border-border-subtle text-sm font-bold text-text-primary focus:outline-none focus:border-accent-magic font-mono"
                   />
-                  <p className="text-[11px] text-text-secondary">
-                    Contoh: <strong>21</strong> (periode dibuka mulai tanggal 21)
-                  </p>
                 </div>
 
                 <div className="space-y-1.5">
                   <label className="text-xs font-bold text-text-secondary">
-                    Tanggal Berakhir Setiap Bulan (1–31):
+                    Tanggal Akhir Penukaran (1–31):
                   </label>
                   <input
                     type="number"
@@ -977,15 +1352,14 @@ export const AdminPage: React.FC = () => {
                     onChange={(e) => setEndDayInput(Number(e.target.value))}
                     className="w-full p-3 rounded-xl bg-surface border border-border-subtle text-sm font-bold text-text-primary focus:outline-none focus:border-accent-magic font-mono"
                   />
-                  <p className="text-[11px] text-text-secondary">
-                    Contoh: <strong>26</strong> (periode ditutup setelah tanggal 26)
-                  </p>
                 </div>
               </div>
 
               <div className="p-3 rounded-xl bg-surface border border-border-subtle text-xs">
                 <span className="text-text-secondary font-medium">Pratinjau:</span>
-                <span className="font-bold text-text-primary ml-1">Tanggal {startDayInput} s/d {endDayInput} tiap bulan</span>
+                <span className="font-bold text-text-primary ml-1">
+                  Target Rp {targetRupiahInput.toLocaleString('id-ID')} ({conversionRateInput > 0 ? Math.floor(targetRupiahInput / conversionRateInput) : 0} koin) • Maks {maxPayoutInput} koin • Gajian tgl {payoutDayInput} • Penukaran tgl {startDayInput}–{endDayInput} • {earningPeriodInput} hari ({timezoneInput})
+                </span>
               </div>
 
               {configErrorMsg && (
@@ -1074,26 +1448,81 @@ export const AdminPage: React.FC = () => {
                 </div>
               </div>
 
-              {/* 2 — Tipe & Urutan */}
+              {/* 2 — Target & Tipe */}
               <div className="space-y-3">
-                <h4 className="text-xs font-bold tracking-wide uppercase text-text-secondary">2 — Tipe & Urutan</h4>
+                <h4 className="text-xs font-bold tracking-wide uppercase text-text-secondary">2 — Target & Tipe</h4>
+                
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div className="space-y-1">
-                    <label htmlFor="task-type" className="text-xs font-bold text-text-secondary">Tipe Tugas</label>
+                    <label htmlFor="task-target-scope" className="text-xs font-bold text-text-secondary">Target Penerima</label>
                     <select
-                      id="task-type"
-                      value={newTask.task_type}
-                      onChange={(e) => setNewTask({ ...newTask, task_type: e.target.value as TaskType })}
+                      id="task-target-scope"
+                      value={newTask.target_scope}
+                      onChange={(e) => setNewTask({ ...newTask, target_scope: e.target.value as 'ALL' | 'USER' })}
                       className="w-full p-3 rounded-xl bg-surface border border-border-subtle text-sm text-text-primary focus:outline-none focus:border-accent-magic font-bold"
                     >
-                      <option value="VIDEO">🎥 Video YouTube</option>
-                      <option value="QUIZ">🧠 Kuis Pilihan Ganda</option>
-                      <option value="PHOTO_UPLOAD">📸 Upload Foto Bukti</option>
-                      <option value="DOCUMENT_UPLOAD">📄 Upload Dokumen (Excel/Word/PDF)</option>
-                      <option value="TEXT_RESPONSE">✍️ Respon Teks / Esai</option>
-                      <option value="MINI_GAME">🎮 Mini Game Memori</option>
+                      <option value="ALL">🌐 Semua Anggota Program</option>
+                      <option value="USER">👤 User Tertentu (Personal Task)</option>
                     </select>
                   </div>
+
+                  {newTask.target_scope === 'USER' ? (
+                    <div className="space-y-1">
+                      <label htmlFor="task-target-user" className="text-xs font-bold text-text-secondary">Pilih User Target</label>
+                      <select
+                        id="task-target-user"
+                        required
+                        value={newTask.target_user_uid}
+                        onChange={(e) => setNewTask({ ...newTask, target_user_uid: e.target.value })}
+                        className="w-full p-3 rounded-xl bg-surface border border-border-subtle text-sm text-text-primary focus:outline-none focus:border-accent-magic font-bold"
+                      >
+                        <option value="">-- Pilih Anggota --</option>
+                        {members.map((m) => (
+                          <option key={m.uid} value={m.uid}>
+                            {m.explorer_name} (@{m.username})
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  ) : (
+                    <div className="space-y-1">
+                      <label htmlFor="task-type" className="text-xs font-bold text-text-secondary">Tipe Tugas</label>
+                      <select
+                        id="task-type"
+                        value={newTask.task_type}
+                        onChange={(e) => setNewTask({ ...newTask, task_type: e.target.value as TaskType })}
+                        className="w-full p-3 rounded-xl bg-surface border border-border-subtle text-sm text-text-primary focus:outline-none focus:border-accent-magic font-bold"
+                      >
+                        <option value="VIDEO">🎥 Video YouTube</option>
+                        <option value="QUIZ">🧠 Kuis Pilihan Ganda</option>
+                        <option value="PHOTO_UPLOAD">📸 Upload Foto Bukti</option>
+                        <option value="DOCUMENT_UPLOAD">📄 Upload Dokumen (Excel/Word/PDF)</option>
+                        <option value="TEXT_RESPONSE">✍️ Respon Teks / Esai</option>
+                        <option value="MINI_GAME">🎮 Mini Game Memori</option>
+                      </select>
+                    </div>
+                  )}
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  {newTask.target_scope === 'USER' && (
+                    <div className="space-y-1">
+                      <label htmlFor="task-type" className="text-xs font-bold text-text-secondary">Tipe Tugas</label>
+                      <select
+                        id="task-type"
+                        value={newTask.task_type}
+                        onChange={(e) => setNewTask({ ...newTask, task_type: e.target.value as TaskType })}
+                        className="w-full p-3 rounded-xl bg-surface border border-border-subtle text-sm text-text-primary focus:outline-none focus:border-accent-magic font-bold"
+                      >
+                        <option value="VIDEO">🎥 Video YouTube</option>
+                        <option value="QUIZ">🧠 Kuis Pilihan Ganda</option>
+                        <option value="PHOTO_UPLOAD">📸 Upload Foto Bukti</option>
+                        <option value="DOCUMENT_UPLOAD">📄 Upload Dokumen (Excel/Word/PDF)</option>
+                        <option value="TEXT_RESPONSE">✍️ Respon Teks / Esai</option>
+                        <option value="MINI_GAME">🎮 Mini Game Memori</option>
+                      </select>
+                    </div>
+                  )}
 
                   <div className="space-y-1">
                     <label htmlFor="task-step" className="text-xs font-bold text-text-secondary">Urutan Step (1, 2..)</label>
@@ -1410,6 +1839,210 @@ export const AdminPage: React.FC = () => {
               <X className="w-4 h-4" />
             </button>
           </div>
+        </div>
+      )}
+      {/* --- MODAL: CREATE MEMBER --- */}
+      {isCreateMemberModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+          <motion.div
+            initial={{ scale: 0.96, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            className="w-full max-w-md bg-surface border border-border-subtle rounded-2xl shadow-xl overflow-hidden"
+          >
+            <div className="flex items-center justify-between px-5 py-4 border-b border-border-subtle bg-surface">
+              <div>
+                <h3 className="font-bold text-text-primary text-sm flex items-center gap-2">
+                  <UserPlus className="w-4 h-4 text-accent-magic" />
+                  <span>Tambah Anggota Baru</span>
+                </h3>
+                <p className="text-xs text-text-secondary">Akun baru dapat langsung login di HP anggota.</p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsCreateMemberModalOpen(false)}
+                className="w-8 h-8 rounded-full bg-surface-elevated border border-border-subtle text-text-secondary hover:text-text-primary flex items-center justify-center transition-colors"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <form onSubmit={handleCreateMember} className="p-5 space-y-4">
+              <div className="space-y-1">
+                <label className="text-xs font-bold text-text-secondary">Nama Lengkap / Panggilan <span className="text-status-error">*</span></label>
+                <input
+                  type="text"
+                  required
+                  placeholder="Contoh: Andi Wijaya"
+                  value={newMember.explorer_name}
+                  onChange={(e) => setNewMember({ ...newMember, explorer_name: e.target.value })}
+                  className="w-full p-3 rounded-xl bg-surface border border-border-subtle text-sm text-text-primary focus:outline-none focus:border-accent-magic"
+                />
+              </div>
+
+              <div className="space-y-1">
+                <label className="text-xs font-bold text-text-secondary">Username (untuk Login) <span className="text-status-error">*</span></label>
+                <input
+                  type="text"
+                  required
+                  placeholder="Contoh: andiwijaya"
+                  value={newMember.username}
+                  onChange={(e) => setNewMember({ ...newMember, username: e.target.value })}
+                  className="w-full p-3 rounded-xl bg-surface border border-border-subtle text-sm text-text-primary focus:outline-none focus:border-accent-magic font-mono"
+                />
+              </div>
+
+              <div className="space-y-1">
+                <label className="text-xs font-bold text-text-secondary">Password Awal <span className="text-status-error">*</span></label>
+                <input
+                  type="password"
+                  required
+                  minLength={6}
+                  placeholder="Minimal 6 karakter"
+                  value={newMember.password}
+                  onChange={(e) => setNewMember({ ...newMember, password: e.target.value })}
+                  className="w-full p-3 rounded-xl bg-surface border border-border-subtle text-sm text-text-primary focus:outline-none focus:border-accent-magic font-mono"
+                />
+              </div>
+
+              <div className="space-y-1">
+                <label className="text-xs font-bold text-text-secondary">Role</label>
+                <select
+                  value={newMember.role}
+                  onChange={(e) => setNewMember({ ...newMember, role: e.target.value as Role })}
+                  className="w-full p-3 rounded-xl bg-surface border border-border-subtle text-sm font-bold text-text-primary focus:outline-none focus:border-accent-magic"
+                >
+                  <option value="SEEKER">SEEKER (Anggota biasa)</option>
+                  <option value="GUIDE">GUIDE (Admin keluarga)</option>
+                </select>
+              </div>
+
+              <div className="pt-2 flex gap-3">
+                <button
+                  type="button"
+                  onClick={() => setIsCreateMemberModalOpen(false)}
+                  className="flex-1 py-3 rounded-xl bg-surface-elevated border border-border-subtle text-text-primary font-bold text-sm"
+                >
+                  Batal
+                </button>
+                <button
+                  type="submit"
+                  className="flex-1 py-3 rounded-xl bg-accent-magic text-white font-bold text-sm shadow-md hover:brightness-110"
+                >
+                  Buat Akun
+                </button>
+              </div>
+            </form>
+          </motion.div>
+        </div>
+      )}
+
+      {/* --- MODAL: EDIT MEMBER --- */}
+      {isEditMemberModalOpen && selectedMember && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+          <motion.div
+            initial={{ scale: 0.96, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            className="w-full max-w-md bg-surface border border-border-subtle rounded-2xl shadow-xl overflow-hidden"
+          >
+            <div className="flex items-center justify-between px-5 py-4 border-b border-border-subtle bg-surface">
+              <div>
+                <h3 className="font-bold text-text-primary text-sm flex items-center gap-2">
+                  <Edit3 className="w-4 h-4 text-accent-magic" />
+                  <span>Edit Anggota @{selectedMember.username}</span>
+                </h3>
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  setIsEditMemberModalOpen(false)
+                  setSelectedMember(null)
+                }}
+                className="w-8 h-8 rounded-full bg-surface-elevated border border-border-subtle text-text-secondary hover:text-text-primary flex items-center justify-center transition-colors"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <form onSubmit={handleUpdateMember} className="p-5 space-y-4">
+              <div className="space-y-1">
+                <label className="text-xs font-bold text-text-secondary">Nama Lengkap</label>
+                <input
+                  type="text"
+                  required
+                  value={editMemberForm.explorer_name}
+                  onChange={(e) => setEditMemberForm({ ...editMemberForm, explorer_name: e.target.value })}
+                  className="w-full p-3 rounded-xl bg-surface border border-border-subtle text-sm text-text-primary focus:outline-none focus:border-accent-magic"
+                />
+              </div>
+
+              <div className="space-y-1">
+                <label className="text-xs font-bold text-text-secondary">Role</label>
+                <select
+                  value={editMemberForm.role}
+                  onChange={(e) => setEditMemberForm({ ...editMemberForm, role: e.target.value as Role })}
+                  className="w-full p-3 rounded-xl bg-surface border border-border-subtle text-sm font-bold text-text-primary focus:outline-none focus:border-accent-magic"
+                >
+                  <option value="SEEKER">SEEKER (Anggota biasa)</option>
+                  <option value="GUIDE">GUIDE (Admin keluarga)</option>
+                </select>
+              </div>
+
+              <div className="space-y-1">
+                <label className="text-xs font-bold text-text-secondary">Status Akun</label>
+                <select
+                  value={editMemberForm.is_active ? 'active' : 'inactive'}
+                  onChange={(e) => setEditMemberForm({ ...editMemberForm, is_active: e.target.value === 'active' })}
+                  className="w-full p-3 rounded-xl bg-surface border border-border-subtle text-sm font-bold text-text-primary focus:outline-none focus:border-accent-magic"
+                >
+                  <option value="active">● Aktif (Bisa Login & Mengerjakan Tugas)</option>
+                  <option value="inactive">○ Nonaktif (Akses Login Diblokir)</option>
+                </select>
+              </div>
+
+              <div className="space-y-1">
+                <label className="text-xs font-bold text-text-secondary">Reset Password (Opsional)</label>
+                <input
+                  type="password"
+                  placeholder="Kosongkan jika tidak diubah"
+                  value={editMemberForm.password}
+                  onChange={(e) => setEditMemberForm({ ...editMemberForm, password: e.target.value })}
+                  className="w-full p-3 rounded-xl bg-surface border border-border-subtle text-sm text-text-primary focus:outline-none focus:border-accent-magic font-mono"
+                />
+              </div>
+
+              <div className="p-3 rounded-xl bg-accent-gold/10 border border-accent-gold/20 flex items-center justify-between">
+                <div>
+                  <p className="text-xs font-bold text-text-primary">Reset Binding Perangkat</p>
+                  <p className="text-[11px] text-text-secondary">Izinkan akun login di HP/perangkat baru</p>
+                </div>
+                <input
+                  type="checkbox"
+                  checked={editMemberForm.reset_device}
+                  onChange={(e) => setEditMemberForm({ ...editMemberForm, reset_device: e.target.checked })}
+                  className="w-4 h-4 rounded border-border-subtle text-accent-magic focus:ring-accent-magic"
+                />
+              </div>
+
+              <div className="pt-2 flex gap-3">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsEditMemberModalOpen(false)
+                    setSelectedMember(null)
+                  }}
+                  className="flex-1 py-3 rounded-xl bg-surface-elevated border border-border-subtle text-text-primary font-bold text-sm"
+                >
+                  Batal
+                </button>
+                <button
+                  type="submit"
+                  className="flex-1 py-3 rounded-xl bg-accent-magic text-white font-bold text-sm shadow-md hover:brightness-110"
+                >
+                  Simpan Perubahan
+                </button>
+              </div>
+            </form>
+          </motion.div>
         </div>
       )}
     </div>
