@@ -7,14 +7,14 @@ export async function login(page: Page, username: string = 'demo1') {
   await page.goto('/#/login');
   await page.fill('input[autocomplete="username"]', username);
   await page.fill('input[type="password"]', 'odyssey123');
-  await page.click('button:has-text("Mulai Petualangan")');
+  await page.click('button:has-text("Masuk")');
 
   try {
     await expect(page).toHaveURL(/.*#\/$/, { timeout: 4000 });
   } catch {
     // Retry once after a 2-second delay to handle Vercel API rate limiting / cold start
     await page.waitForTimeout(2500);
-    const signInBtn = page.locator('button:has-text("Mulai Petualangan")');
+    const signInBtn = page.locator('button:has-text("Masuk")');
     if (await signInBtn.isVisible() && await signInBtn.isEnabled()) {
       await signInBtn.click({ timeout: 2000 }).catch(() => {});
     }

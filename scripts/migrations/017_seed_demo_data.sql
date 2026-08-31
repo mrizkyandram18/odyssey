@@ -10,8 +10,7 @@ ON CONFLICT (id) DO NOTHING;
 INSERT INTO odyssey_user_profiles (uid, crew_id, explorer_name, role, level, xp)
 VALUES
   ('demo-uid-1', 'demo-crew-1', 'Leo', 'SEEKER', 2, 150),
-  ('demo-uid-2', 'demo-crew-1', 'Maya', 'GUIDE', 2, 175),
-  ('demo-uid-3', 'demo-crew-1', 'Sam', 'BUILDER', 1, 90)
+  ('demo-uid-2', 'demo-crew-1', 'Maya', 'GUIDE', 2, 175)
 ON CONFLICT (uid) DO NOTHING;
 
 
@@ -39,7 +38,7 @@ ON CONFLICT (id) DO NOTHING;
 
 INSERT INTO odyssey_challenges (quest_id, slug, description, status, completed_by, completed_at)
 VALUES
-  (102, 'spot-the-green', 'Point out three shades of green you can see right now.', 'DONE', 'demo-uid-3', timezone('utc'::text, now() - interval '1 day')),
+  (102, 'spot-the-green', 'Point out three shades of green you can see right now.', 'DONE', 'demo-uid-1', timezone('utc'::text, now() - interval '1 day')),
   (102, 'herb-lore', 'Name one use for a common houseplant.', 'PENDING', NULL, NULL)
 ON CONFLICT (id) DO NOTHING;
 
@@ -59,7 +58,6 @@ INSERT INTO odyssey_creative_items (crew_id, realm, author_uid, kind, payload, c
 VALUES
   ('demo-crew-1', 'whispering-woods', 'demo-uid-1', 'STORY', 'I found a dewdrop on a spiderweb that looked exactly like a tiny diamond. It disappeared when the sun hit it fully.', timezone('utc'::text, now() - interval '2 days')),
   ('demo-crew-1', 'whispering-woods', 'demo-uid-2', 'STORY', 'Morning sunlight takes 8 minutes and 20 seconds to travel from the sun to the earth. I thought it was instant!', timezone('utc'::text, now() - interval '2 days')),
-  ('demo-crew-1', 'whispering-woods', 'demo-uid-3', 'STORY', 'The basil plant in our kitchen smells like summer. I think it counts as a forest herb.', timezone('utc'::text, now() - interval '1 day')),
   ('demo-crew-1', 'whispering-woods', 'demo-uid-1', 'STORY', 'I saw a shadow stretching across the living room carpet that looked like a long, thin dragon.', timezone('utc'::text, now() - interval '4 hours')),
   ('demo-crew-1', 'whispering-woods', 'demo-uid-2', 'STORY', 'If trees could walk, I bet they would move very slowly, like giant wooden tortoises.', timezone('utc'::text, now() - interval '1 hour'))
 ON CONFLICT (id) DO NOTHING;
@@ -71,9 +69,7 @@ VALUES
   ('demo-uid-1', current_date - interval '2 days', 'morning-light', true, timezone('utc'::text, now() - interval '2 days')),
   ('demo-uid-1', current_date - interval '1 day', 'gather-herbs', true, timezone('utc'::text, now() - interval '1 day')),
   ('demo-uid-2', current_date - interval '2 days', 'morning-light', true, timezone('utc'::text, now() - interval '2 days')),
-  ('demo-uid-2', current_date - interval '1 day', 'gather-herbs', true, timezone('utc'::text, now() - interval '1 day')),
-  ('demo-uid-3', current_date - interval '2 days', 'morning-light', true, timezone('utc'::text, now() - interval '2 days')),
-  ('demo-uid-3', current_date - interval '1 day', 'gather-herbs', false, timezone('utc'::text, now() - interval '1 day'))
+  ('demo-uid-2', current_date - interval '1 day', 'gather-herbs', true, timezone('utc'::text, now() - interval '1 day'))
 ON CONFLICT (id) DO NOTHING;
 
 -- 9. Rewards (Relics & Chests)
@@ -86,8 +82,7 @@ ON CONFLICT (id) DO NOTHING;
 INSERT INTO odyssey_chests (uid, source, opened, opened_at)
 VALUES
   ('demo-uid-1', 'LEVEL_UP', true, timezone('utc'::text, now() - interval '1 day')),
-  ('demo-uid-2', 'QUEST', false, NULL),
-  ('demo-uid-3', 'LEVEL_UP', true, timezone('utc'::text, now() - interval '12 hours'))
+  ('demo-uid-2', 'QUEST', false, NULL)
 ON CONFLICT (id) DO NOTHING;
 
 -- Update schema version

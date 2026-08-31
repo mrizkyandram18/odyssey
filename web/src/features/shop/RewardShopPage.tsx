@@ -169,7 +169,7 @@ export const RewardShopPage: React.FC = () => {
                   Belum Ada Riwayat Penukaran
                 </p>
                 <p className="text-xs text-text-secondary max-w-xs mx-auto">
-                  Kerjakan misi harian untuk mengumpulkan koin dan tukar dengan pulsa atau uang nyata.
+                  Kerjakan tugas harian untuk mengumpulkan koin dan tukar dengan pulsa atau uang nyata.
                 </p>
               </div>
             ) : (

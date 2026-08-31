@@ -45,14 +45,14 @@ export function LoginPage() {
             <span className="text-3xl">🧭</span>
           </div>
           <h1 className="font-heading text-4xl text-text-primary mb-2 tracking-wide">Odyssey</h1>
-          <p className="text-base text-text-secondary">Krumu sedang menunggu petualangan berikutnya.</p>
+          <p className="text-base text-text-secondary">Platform produktivitas & tugas keluarga.</p>
         </div>
 
         <Card className="shadow-2xl shadow-black/50 border-border-subtle/50 bg-surface-glass">
           <form onSubmit={handleLogin} className="flex flex-col gap-6">
             <div className="space-y-4">
               <Input
-                label="Nama Penjelajah"
+                label="Nama Pengguna"
                 placeholder="Masukkan nama pengguna"
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
@@ -60,7 +60,7 @@ export function LoginPage() {
                 required
               />
               <Input
-                label="Kata Rahasia"
+                label="Kata Sandi"
                 type="password"
                 placeholder="••••••••"
                 value={credential}
@@ -82,7 +82,7 @@ export function LoginPage() {
               className="w-full mt-2"
               isLoading={loading}
             >
-              Mulai Petualangan
+              Masuk
             </Button>
           </form>
         </Card>

@@ -16,7 +16,7 @@ export function ProtectedRoute() {
           <div className="flex h-16 w-16 items-center justify-center rounded-full bg-surface-elevated border border-accent-magic/30 shadow-[0_0_20px_rgba(6,182,222,0.2)] animate-pulse">
             <span className="text-3xl">🧭</span>
           </div>
-          <div className="text-sm text-text-secondary">Loading your adventure...</div>
+          <div className="text-sm text-text-secondary">Memuat aplikasi...</div>
         </div>
       </div>
     )

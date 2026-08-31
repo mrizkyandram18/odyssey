@@ -103,7 +103,7 @@ export const LinearPath: React.FC = () => {
       <div className="p-4 flex items-center justify-between">
         <div>
           <h2 className="text-xl font-heading font-extrabold text-text-primary flex items-center gap-2">
-            <span>Petualangan Harian</span>
+            <span>Tugas Harian</span>
             <Sparkles className="w-4 h-4 text-accent-gold" />
           </h2>
           <p className="text-xs text-text-secondary mt-0.5 flex items-center gap-1">
@@ -126,7 +126,7 @@ export const LinearPath: React.FC = () => {
           <div className="py-20 flex flex-col items-center gap-3">
             <div className="w-12 h-12 rounded-full border-4 border-accent-magic border-t-transparent animate-spin" />
             <p className="text-xs text-text-secondary font-heading tracking-wider uppercase">
-              Memuat Jalur Misi...
+              Memuat Alur Tugas...
             </p>
           </div>
         ) : error ? (
@@ -182,7 +182,7 @@ export const LinearPath: React.FC = () => {
                 <Trophy className="w-7 h-7" />
               </div>
               <p className="text-xs font-heading font-bold text-text-secondary mt-2">
-                Puncak Petualangan Hari Ini
+                Target Hari Ini Selesai
               </p>
             </div>
           </div>
