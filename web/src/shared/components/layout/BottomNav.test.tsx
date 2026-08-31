@@ -60,9 +60,9 @@ describe('BottomNav Component', () => {
       </MemoryRouter>
     )
 
-    expect(screen.getByText('Beranda')).toBeInTheDocument()
-    expect(screen.getByText('Pencairan Koin')).toBeInTheDocument()
+    expect(screen.getByText('Admin Panel')).toBeInTheDocument()
     expect(screen.getByText('Profil')).toBeInTheDocument()
-    expect(screen.getByText('Admin')).toBeInTheDocument()
+    expect(screen.queryByText('Beranda')).not.toBeInTheDocument()
+    expect(screen.queryByText('Pencairan Koin')).not.toBeInTheDocument()
   })
 })

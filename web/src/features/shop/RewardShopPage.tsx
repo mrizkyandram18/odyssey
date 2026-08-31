@@ -12,6 +12,7 @@ import {
   Smartphone,
   RefreshCw,
 } from 'lucide-react'
+import { Navigate } from 'react-router-dom'
 import type { ClaimView, RedemptionConfig } from '../../shared/types'
 import { shopApi } from '../../shared/lib/api'
 import { useSession } from '../../shared/hooks/useSession'
@@ -19,6 +20,12 @@ import { RedeemModal } from './RedeemModal'
 
 export const RewardShopPage: React.FC = () => {
   const { profile, refreshProfile } = useSession()
+  const isAdmin = profile?.role === 'ADMIN' || profile?.role === 'GUIDE' || profile?.role === 'BUILDER'
+
+  if (isAdmin) {
+    return <Navigate to="/admin" replace />
+  }
+
   const [activeTab, setActiveTab] = useState<'redeem' | 'history'>('redeem')
   const [claims, setClaims] = useState<ClaimView[]>([])
   const [config, setConfig] = useState<RedemptionConfig | null>(null)

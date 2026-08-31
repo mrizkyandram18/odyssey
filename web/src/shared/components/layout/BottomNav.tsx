@@ -7,12 +7,16 @@ export function BottomNav() {
   const { profile } = useSession()
   const isAdmin = profile?.role === 'ADMIN' || profile?.role === 'GUIDE' || profile?.role === 'BUILDER'
 
-  const navItems = [
-    { label: 'Beranda', to: '/', icon: Home },
-    { label: 'Pencairan Koin', to: '/shop', icon: Banknote },
-    { label: 'Profil', to: '/profile', icon: User },
-    ...(isAdmin ? [{ label: 'Admin', to: '/admin', icon: ShieldCheck }] : []),
-  ]
+  const navItems = isAdmin
+    ? [
+        { label: 'Admin Panel', to: '/admin', icon: ShieldCheck },
+        { label: 'Profil', to: '/profile', icon: User },
+      ]
+    : [
+        { label: 'Beranda', to: '/', icon: Home },
+        { label: 'Pencairan Koin', to: '/shop', icon: Banknote },
+        { label: 'Profil', to: '/profile', icon: User },
+      ]
 
   return (
     <nav aria-label="Navigasi Utama" className="flex items-center justify-around py-2 px-2 safe-pb">
