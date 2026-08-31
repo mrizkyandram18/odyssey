@@ -30,8 +30,7 @@ export function OnboardingModal() {
             exit={{ opacity: 0, scale: 0.9, y: 20 }}
             className="w-full max-w-md"
           >
-            <Card className="p-6 md:p-8 bg-surface-elevated border-accent-magic/30 shadow-2xl overflow-hidden relative">
-              <div className="absolute top-0 right-0 w-32 h-32 bg-accent-magic/10 rounded-bl-full -z-10" />
+            <Card className="p-6 md:p-8 shadow-xl overflow-hidden relative">
               
               {step === 1 && (
                 <div className="flex flex-col h-full justify-between items-center text-center">

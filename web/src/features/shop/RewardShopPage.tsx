@@ -65,87 +65,76 @@ export const RewardShopPage: React.FC = () => {
   const pendingClaims = claims.filter((c) => c.status === 'PENDING')
 
   return (
-    <div className="w-full max-w-lg mx-auto min-h-[calc(100vh-80px)] pb-24 flex flex-col space-y-4">
-      {/* 1. Header Bar */}
-      <header className="flex items-center justify-between pb-2 border-b border-border-subtle">
+    <div className="w-full flex flex-col gap-4">
+      {/* 1. Header */}
+      <header className="flex items-center justify-between">
         <div>
-          <h1 className="font-heading font-extrabold text-text-primary text-xl flex items-center gap-2">
-            <Coins className="w-6 h-6 text-accent-gold" />
+          <h1 className="text-lg font-bold text-text-primary flex items-center gap-2">
+            <Coins className="w-5 h-5 text-accent-gold" />
             <span>Toko Hadiah</span>
           </h1>
           <p className="text-xs text-text-secondary mt-0.5">
-            Pencairan koin reward menjadi uang tunai atau saldo digital
+            Tukarkan koin menjadi saldo digital
           </p>
         </div>
         <button
           onClick={loadData}
           disabled={loading}
-          className="p-2 rounded-xl bg-surface-elevated border border-border-subtle text-text-secondary hover:text-text-primary active:scale-95 transition-all shadow-sm"
-          title="Perbarui Data"
+          aria-label="Muat ulang"
+          className="p-2 rounded-xl bg-surface border border-border-subtle text-text-secondary hover:text-text-primary transition-colors"
         >
           <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
         </button>
       </header>
 
-      {/* 2. Hero Card: Saldo Koin & Nilai Tunai */}
-      <div className="relative overflow-hidden p-5 rounded-3xl bg-gradient-to-br from-surface-elevated via-surface-elevated/90 to-surface-base border border-border-subtle shadow-md">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      {/* 2. Hero Balance Card */}
+      <div className="p-4 rounded-2xl bg-surface border border-border-subtle shadow-sm">
+        <div className="flex items-center justify-between gap-4">
           <div>
-            <span className="text-[11px] font-bold uppercase tracking-wider text-text-secondary">
-              Saldo Koin Kamu
-            </span>
-            <div className="flex items-center gap-2 mt-1">
-              <span className="text-3xl font-heading font-extrabold text-accent-gold">
-                {userCoins.toLocaleString('id-ID')}
-              </span>
-              <span className="text-sm font-bold text-text-secondary">Koin</span>
-            </div>
-          </div>
-
-          <div className="sm:text-right border-t sm:border-t-0 pt-3 sm:pt-0 border-border-subtle/50">
-            <span className="text-[11px] font-bold uppercase tracking-wider text-text-secondary">
-              Nilai Penukaran Tunai
-            </span>
-            <div className="flex sm:justify-end items-center gap-1.5 mt-1">
-              <Banknote className="w-5 h-5 text-status-success" />
-              <span className="text-2xl font-heading font-extrabold text-status-success">
-                Rp {estimatedCash.toLocaleString('id-ID')}
-              </span>
-            </div>
-            <p className="text-[10px] text-text-secondary mt-0.5">
-              1 Koin = Rp {conversionRate.toLocaleString('id-ID')}
+            <p className="text-[11px] font-bold uppercase tracking-wide text-text-secondary">Saldo Koin</p>
+            <p className="mt-1 flex items-baseline gap-1.5">
+              <span className="text-2xl font-bold text-accent-gold">{userCoins.toLocaleString('id-ID')}</span>
+              <span className="text-xs font-semibold text-text-secondary">Koin</span>
             </p>
+          </div>
+          <div className="text-right">
+            <p className="text-[11px] font-bold uppercase tracking-wide text-text-secondary">Estimasi Tunai</p>
+            <p className="mt-1 flex items-center justify-end gap-1 text-status-success font-bold">
+              <Banknote className="w-4 h-4" />
+              <span className="text-lg">Rp {estimatedCash.toLocaleString('id-ID')}</span>
+            </p>
+            <p className="text-[11px] text-text-secondary">1 Koin = Rp {conversionRate.toLocaleString('id-ID')}</p>
           </div>
         </div>
       </div>
 
-      {/* 3. Navigation Tabs (Collision-Free) */}
-      <div className="flex p-1 bg-surface-base rounded-2xl border border-border-subtle gap-1">
+      {/* 3. Tabs */}
+      <div className="flex p-1 bg-surface rounded-xl border border-border-subtle gap-1">
         <button
           data-testid="tab-redeem"
           onClick={() => setActiveTab('redeem')}
-          className={`flex-1 py-2.5 px-3 rounded-xl font-heading font-bold text-xs flex items-center justify-center gap-1.5 transition-all text-center ${
+          className={`flex-1 py-2.5 px-3 rounded-lg font-bold text-xs flex items-center justify-center gap-1.5 transition-colors ${
             activeTab === 'redeem'
-              ? 'bg-accent-magic text-white shadow-md shadow-accent-magic/30'
+              ? 'bg-accent-magic text-white shadow-sm'
               : 'text-text-secondary hover:text-text-primary'
           }`}
         >
           <Banknote className="w-4 h-4 shrink-0" />
-          <span className="truncate">Penukaran Koin</span>
+          <span>Penukaran</span>
         </button>
         <button
           data-testid="tab-history"
           onClick={() => setActiveTab('history')}
-          className={`flex-1 py-2.5 px-3 rounded-xl font-heading font-bold text-xs flex items-center justify-center gap-1.5 transition-all text-center ${
+          className={`flex-1 py-2.5 px-3 rounded-lg font-bold text-xs flex items-center justify-center gap-1.5 transition-colors ${
             activeTab === 'history'
-              ? 'bg-accent-magic text-white shadow-md shadow-accent-magic/30'
+              ? 'bg-accent-magic text-white shadow-sm'
               : 'text-text-secondary hover:text-text-primary'
           }`}
         >
           <Clock className="w-4 h-4 shrink-0" />
-          <span className="truncate">Riwayat Penukaran</span>
+          <span>Riwayat</span>
           {claims.length > 0 && (
-            <span className="px-1.5 py-0.5 rounded-full bg-surface-base text-text-primary font-mono text-[10px] shrink-0">
+            <span className="px-1.5 py-0.5 rounded-full bg-white/20 text-white font-mono text-[10px] shrink-0">
               {claims.length}
             </span>
           )}
@@ -154,17 +143,17 @@ export const RewardShopPage: React.FC = () => {
 
       {/* 4. Tab Contents */}
       {loading && !config ? (
-        <div className="py-20 flex flex-col items-center gap-3">
-          <div className="w-10 h-10 rounded-full border-4 border-accent-magic border-t-transparent animate-spin" />
-          <p className="text-xs text-text-secondary">Memuat data penukaran koin...</p>
+        <div className="py-16 flex flex-col items-center gap-3">
+          <div className="w-8 h-8 rounded-full border-2 border-accent-magic border-t-transparent animate-spin" />
+          <p className="text-xs text-text-secondary font-medium">Memuat data...</p>
         </div>
       ) : error ? (
-        <div className="p-6 text-center bg-status-error/10 border border-status-error/20 rounded-3xl space-y-3">
-          <AlertCircle className="w-8 h-8 text-status-error mx-auto" />
-          <p className="text-sm text-status-error font-bold">{error}</p>
+        <div className="p-5 text-center bg-surface border border-status-error/20 rounded-2xl space-y-3">
+          <AlertCircle className="w-7 h-7 text-status-error mx-auto" />
+          <p className="text-sm text-status-error font-semibold">{error}</p>
           <button
             onClick={loadData}
-            className="px-4 py-2 rounded-xl bg-surface-elevated text-xs font-bold text-text-primary shadow hover:bg-surface-base"
+            className="px-4 py-2 rounded-xl bg-surface border border-border-subtle text-xs font-bold text-text-primary hover:bg-surface-elevated transition-colors"
           >
             Coba Lagi
           </button>
@@ -173,130 +162,89 @@ export const RewardShopPage: React.FC = () => {
         <div className="space-y-4">
           {/* Status Period Card */}
           <div
-            className={`p-5 rounded-3xl border transition-all ${
+            className={`p-4 rounded-2xl border ${
               isOpen
-                ? 'bg-status-success/10 border-status-success/30'
-                : 'bg-surface-elevated border-border-subtle'
+                ? 'bg-status-success/10 border-status-success/20'
+                : 'bg-surface border-border-subtle'
             }`}
           >
-            <div className="flex items-start justify-between gap-3">
-              <div className="space-y-1">
-                <div className="flex items-center gap-2">
-                  <span
-                    className={`text-[11px] font-extrabold px-3 py-1 rounded-full uppercase tracking-wider ${
-                      isOpen
-                        ? 'bg-status-success text-white shadow-sm shadow-status-success/30'
-                        : 'bg-surface-base text-text-secondary border border-border-subtle'
-                    }`}
-                  >
-                    {isOpen ? '● Penukaran Dibuka' : '○ Penukaran Ditutup'}
-                  </span>
-                </div>
-                <h3 className="font-heading font-bold text-text-primary text-base pt-1">
-                  {isOpen ? 'Periode Penukaran Sedang Aktif' : 'Penukaran Koin Belum Dibuka'}
-                </h3>
-                <p className="text-xs text-text-secondary leading-relaxed">
-                  {isOpen
-                    ? `Kamu dapat mengajukan penukaran koin menjadi cash pada periode tanggal ${startDay}–${endDay} bulan ini.`
-                    : `Penukaran saat ini ditutup. Periode penukaran dibuka setiap tanggal ${startDay}–${endDay} setiap bulan.`}
-                </p>
-              </div>
-            </div>
+            <span
+              className={`inline-flex text-[11px] font-bold px-2.5 py-1 rounded-full ${
+                isOpen
+                  ? 'bg-status-success text-white'
+                  : 'bg-surface-elevated text-text-secondary border border-border-subtle'
+              }`}
+            >
+              {isOpen ? '● Penukaran Dibuka' : '○ Penukaran Ditutup'}
+            </span>
+            <h3 className="font-bold text-text-primary text-sm mt-2">
+              {isOpen ? 'Periode Penukaran Sedang Aktif' : 'Penukaran Koin Belum Dibuka'}
+            </h3>
+            <p className="text-xs text-text-secondary leading-relaxed mt-1">
+              {isOpen
+                ? `Ajukan penukaran koin menjadi cash pada tanggal ${startDay}–${endDay} bulan ini.`
+                : `Penukaran dibuka setiap tanggal ${startDay}–${endDay} setiap bulan.`}
+            </p>
 
-            {/* Action CTA */}
-            <div className="mt-4 pt-3 border-t border-border-subtle/50">
+            <div className="mt-4">
               {isOpen ? (
                 <button
                   onClick={() => setIsRedeemModalOpen(true)}
                   disabled={userCoins <= 0 || pendingClaims.length > 0}
-                  className="w-full py-3.5 px-4 rounded-2xl bg-status-success hover:brightness-110 active:scale-[0.98] text-white font-heading font-bold text-sm shadow-lg shadow-status-success/30 transition-all flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="w-full py-3 px-4 rounded-xl bg-accent-magic hover:brightness-110 text-white font-bold text-sm shadow-sm transition-all flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  <Banknote className="w-5 h-5" />
+                  <Banknote className="w-4 h-4" />
                   <span>
                     {pendingClaims.length > 0
-                      ? 'Ada Pengajuan Pending yang Sedang Diproses'
+                      ? 'Menunggu verifikasi admin'
                       : userCoins <= 0
-                      ? 'Saldo Koin 0 (Kerjakan Tugas Terlebih Dahulu)'
+                      ? 'Kerjakan tugas untuk kumpulkan koin'
                       : 'Tukarkan Koin Sekarang'}
                   </span>
                 </button>
               ) : (
-                <div className="flex items-center gap-2 text-xs text-text-secondary p-3 rounded-xl bg-surface-base border border-border-subtle">
-                  <Info className="w-4 h-4 shrink-0 text-accent-magic" />
+                <div className="flex items-start gap-2 text-xs text-text-secondary p-3 rounded-xl bg-surface-elevated border border-border-subtle">
+                  <Info className="w-4 h-4 shrink-0 text-accent-magic mt-0.5" />
                   <span>
-                    Tombol penukaran akan otomatis aktif ketika tanggal kalender memasuki periode{' '}
-                    <strong>
-                      {startDay}–{endDay}
-                    </strong>
-                    .
+                    Penukaran aktif otomatis pada tanggal <strong>{startDay}–{endDay}</strong>.
                   </span>
                 </div>
               )}
             </div>
           </div>
 
-          {/* Pending Claim Banner if exists */}
           {pendingClaims.length > 0 && (
-            <div className="p-4 rounded-2xl bg-accent-gold/10 border border-accent-gold/30 flex items-start gap-3">
-              <Clock className="w-5 h-5 text-accent-gold shrink-0 mt-0.5" />
-              <div className="space-y-0.5">
-                <h4 className="font-heading font-bold text-xs text-text-primary">
-                  Pengajuan Pencairan Sedang Menunggu Verifikasi Admin
-                </h4>
-                <p className="text-[11px] text-text-secondary leading-relaxed">
-                  Kamu telah mengajukan pencairan{' '}
-                  <strong>{pendingClaims[0].coins_redeemed.toLocaleString('id-ID')} Koin</strong> (
-                  {pendingClaims[0].target_value}). Mohon tunggu admin keluarga mentransfer dana.
+            <div className="p-3 rounded-xl bg-accent-gold/10 border border-accent-gold/20 flex items-start gap-2.5">
+              <Clock className="w-4 h-4 text-accent-gold shrink-0 mt-0.5" />
+              <div>
+                <p className="font-bold text-xs text-text-primary">Pengajuan menunggu verifikasi</p>
+                <p className="text-xs text-text-secondary leading-relaxed mt-0.5">
+                  {pendingClaims[0].coins_redeemed.toLocaleString('id-ID')} Koin — {pendingClaims[0].target_value}
                 </p>
               </div>
             </div>
           )}
 
-          {/* Information Guide Card */}
-          <div className="p-5 rounded-3xl bg-surface-elevated border border-border-subtle space-y-3">
-            <h4 className="font-heading font-bold text-text-primary text-xs uppercase tracking-wider flex items-center gap-1.5">
+          <div className="p-4 rounded-2xl bg-surface border border-border-subtle space-y-3">
+            <h4 className="font-bold text-text-primary text-xs flex items-center gap-1.5">
               <Info className="w-4 h-4 text-accent-magic" />
-              <span>Cara Kerja Pencairan Reward</span>
+              <span>Cara kerja</span>
             </h4>
-            <div className="space-y-2.5 text-xs text-text-secondary">
-              <div className="flex items-start gap-2.5">
-                <div className="w-5 h-5 rounded-full bg-accent-magic/15 text-accent-magic font-bold text-[11px] flex items-center justify-center shrink-0 mt-0.5">
-                  1
-                </div>
-                <p>
-                  Selesaikan tugas harian (video, kuis, foto, dokumen) untuk mengumpulkan koin.
-                </p>
-              </div>
-              <div className="flex items-start gap-2.5">
-                <div className="w-5 h-5 rounded-full bg-accent-magic/15 text-accent-magic font-bold text-[11px] flex items-center justify-center shrink-0 mt-0.5">
-                  2
-                </div>
-                <p>
-                  Setiap tanggal <strong>{startDay}–{endDay}</strong>, periode penukaran dibuka.
-                </p>
-              </div>
-              <div className="flex items-start gap-2.5">
-                <div className="w-5 h-5 rounded-full bg-accent-magic/15 text-accent-magic font-bold text-[11px] flex items-center justify-center shrink-0 mt-0.5">
-                  3
-                </div>
-                <p>
-                  Tukarkan koin ke rekening Bank, E-Wallet (GoPay, DANA, OVO), atau uang tunai langsung.
-                </p>
-              </div>
-            </div>
+            <ol className="space-y-2 text-xs text-text-secondary list-decimal list-inside leading-relaxed">
+              <li>Selesaikan tugas harian untuk kumpulkan koin</li>
+              <li>Tunggu periode penukaran tanggal <strong>{startDay}–{endDay}</strong></li>
+              <li>Tukarkan ke Bank, E-Wallet, atau tunai</li>
+            </ol>
           </div>
         </div>
       ) : (
-        /* History Tab */
         <div className="space-y-3">
           {claims.length === 0 ? (
-            <div className="py-16 text-center bg-surface-elevated rounded-3xl border border-border-subtle space-y-2 p-6">
-              <p className="text-3xl">📭</p>
-              <p className="font-heading font-bold text-text-primary text-sm">
-                Belum Ada Riwayat Penukaran
-              </p>
+            <div className="py-12 text-center bg-surface rounded-2xl border border-border-subtle p-6 space-y-2">
+              <p className="text-2xl">📭</p>
+              <p className="font-bold text-text-primary text-sm">Belum ada riwayat</p>
               <p className="text-xs text-text-secondary max-w-xs mx-auto">
-                Kumpulkan koin dengan menyelesaikan tugas harian, lalu tukarkan saat periode penukaran dibuka.
+                Selesaikan tugas untuk kumpulkan koin, lalu tukarkan saat periode dibuka.
               </p>
             </div>
           ) : (
@@ -305,7 +253,7 @@ export const RewardShopPage: React.FC = () => {
               return (
                 <div
                   key={claim.id}
-                  className="p-4 rounded-2xl bg-surface-elevated border border-border-subtle shadow-sm space-y-2.5"
+                  className="p-4 rounded-2xl bg-surface border border-border-subtle shadow-sm space-y-3"
                 >
                   <div className="flex items-start justify-between gap-2">
                     <div>
@@ -317,22 +265,22 @@ export const RewardShopPage: React.FC = () => {
                         ) : (
                           <Smartphone className="w-4 h-4 text-accent-cyan" />
                         )}
-                        <span className="font-heading font-bold text-text-primary text-sm">
+                        <span className="font-bold text-text-primary text-sm">
                           Pencairan {claim.target_type}
                         </span>
                       </div>
-                      <p className="text-xs text-text-secondary font-mono mt-0.5">
+                      <p className="text-xs text-text-secondary font-mono mt-0.5 break-all">
                         {claim.target_value}
                       </p>
                     </div>
 
                     <span
-                      className={`text-[10px] font-bold px-2.5 py-1 rounded-full flex items-center gap-1 shrink-0 ${
+                      className={`text-[10px] font-bold px-2.5 py-1 rounded-full flex items-center gap-1 shrink-0 border ${
                         claim.status === 'APPROVED'
-                          ? 'bg-status-success/15 text-status-success'
+                          ? 'bg-status-success/10 text-status-success border-status-success/20'
                           : claim.status === 'PENDING'
-                          ? 'bg-accent-gold/15 text-accent-gold animate-pulse'
-                          : 'bg-status-error/15 text-status-error'
+                          ? 'bg-accent-gold/10 text-accent-gold border-accent-gold/20'
+                          : 'bg-status-error/10 text-status-error border-status-error/20'
                       }`}
                     >
                       {claim.status === 'APPROVED' ? (

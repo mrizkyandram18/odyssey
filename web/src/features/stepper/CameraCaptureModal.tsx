@@ -1,6 +1,6 @@
 import React, { useState, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Camera, RefreshCw, CheckCircle2, AlertCircle, Sparkles, Clock, ArrowRight } from 'lucide-react'
+import { Camera, RefreshCw, X, CheckCircle2, AlertCircle, Sparkles, Clock, ArrowRight } from 'lucide-react'
 import type { TaskView } from '../../shared/types'
 import { tasksApi } from '../../shared/lib/api'
 import { compressImage, uploadTaskProof } from '../../shared/lib/compress'
@@ -78,10 +78,10 @@ export const CameraCaptureModal: React.FC<CameraCaptureModalProps> = ({ task, on
         initial={{ scale: 0.95, opacity: 0, y: 20 }}
         animate={{ scale: 1, opacity: 1, y: 0 }}
         exit={{ scale: 0.95, opacity: 0, y: 20 }}
-        className="w-full max-w-lg bg-surface-elevated border border-border-subtle rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh]"
+        className="w-full max-w-lg bg-surface-elevated border border-border-subtle rounded-2xl shadow-xl overflow-hidden flex flex-col max-h-[90vh]"
       >
         {/* Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-border-subtle bg-surface-base">
+        <div className="flex items-center justify-between px-6 py-4 border-b border-border-subtle bg-surface">
           <div className="flex items-center gap-2">
             <span className="w-8 h-8 rounded-full bg-accent-magic/20 text-accent-magic flex items-center justify-center font-bold text-sm">
               #{task.step_order}
@@ -92,9 +92,10 @@ export const CameraCaptureModal: React.FC<CameraCaptureModalProps> = ({ task, on
           </div>
           <button
             onClick={onClose}
+            aria-label="Tutup"
             className="w-8 h-8 rounded-full bg-surface-elevated text-text-secondary hover:text-text-primary flex items-center justify-center transition-colors"
           >
-            ✕
+            <X className="w-4 h-4" />
           </button>
         </div>
 
@@ -119,7 +120,7 @@ export const CameraCaptureModal: React.FC<CameraCaptureModalProps> = ({ task, on
                 </div>
 
                 {task.description && (
-                  <p className="text-sm text-text-secondary bg-surface-base p-4 rounded-2xl border border-border-subtle leading-relaxed">
+                  <p className="text-sm text-text-secondary bg-surface p-4 rounded-2xl border border-border-subtle leading-relaxed">
                     {task.description}
                   </p>
                 )}
@@ -138,7 +139,7 @@ export const CameraCaptureModal: React.FC<CameraCaptureModalProps> = ({ task, on
                 {!previewUrl ? (
                   <div
                     onClick={() => cameraInputRef.current?.click()}
-                    className="aspect-square w-full max-w-[280px] mx-auto border-2 border-dashed border-accent-magic/50 bg-accent-magic/5 rounded-3xl flex flex-col items-center justify-center gap-3 cursor-pointer hover:bg-accent-magic/10 active:scale-95 transition-all p-6 text-center shadow-inner"
+                    className="aspect-square w-full max-w-[280px] mx-auto border-2 border-dashed border-accent-magic/50 bg-accent-magic/5 rounded-2xl flex flex-col items-center justify-center gap-3 cursor-pointer hover:bg-accent-magic/10 active:scale-95 transition-all p-6 text-center shadow-inner"
                   >
                     <div className="w-16 h-16 rounded-full bg-accent-magic text-white flex items-center justify-center shadow-lg shadow-accent-magic/30">
                       <Camera className="w-8 h-8" />
@@ -154,7 +155,7 @@ export const CameraCaptureModal: React.FC<CameraCaptureModalProps> = ({ task, on
                   </div>
                 ) : (
                   <div className="space-y-3">
-                    <div className="relative aspect-square w-full max-w-[280px] mx-auto rounded-3xl overflow-hidden border-2 border-accent-magic shadow-md bg-black">
+                    <div className="relative aspect-square w-full max-w-[280px] mx-auto rounded-2xl overflow-hidden border-2 border-accent-magic shadow-md bg-black">
                       <img
                         src={previewUrl}
                         alt="Preview Foto"
@@ -225,7 +226,7 @@ export const CameraCaptureModal: React.FC<CameraCaptureModalProps> = ({ task, on
                   </p>
                 </div>
 
-                <div className="p-4 rounded-2xl bg-surface-base border border-border-subtle text-left flex items-start gap-3">
+                <div className="p-4 rounded-2xl bg-surface border border-border-subtle text-left flex items-start gap-3">
                   <CheckCircle2 className="w-5 h-5 text-status-success shrink-0 mt-0.5" />
                   <p className="text-xs text-text-secondary leading-relaxed">
                     <strong className="text-text-primary">Tugas berikutnya sudah terbuka!</strong> Kamu tidak perlu menunggu verifikasi admin untuk lanjut ke tugas berikutnya.

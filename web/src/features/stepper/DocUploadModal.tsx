@@ -1,6 +1,6 @@
 import React, { useState, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { FileUp, FileText, CheckCircle2, AlertCircle, Sparkles, Clock, ArrowRight, Download } from 'lucide-react'
+import { FileUp, FileText, X, CheckCircle2, AlertCircle, Sparkles, Clock, ArrowRight, Download } from 'lucide-react'
 import type { TaskView } from '../../shared/types'
 import { tasksApi } from '../../shared/lib/api'
 import { uploadTaskProof } from '../../shared/lib/compress'
@@ -73,10 +73,10 @@ export const DocUploadModal: React.FC<DocUploadModalProps> = ({ task, onClose, o
         initial={{ scale: 0.95, opacity: 0, y: 20 }}
         animate={{ scale: 1, opacity: 1, y: 0 }}
         exit={{ scale: 0.95, opacity: 0, y: 20 }}
-        className="w-full max-w-lg bg-surface-elevated border border-border-subtle rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh]"
+        className="w-full max-w-lg bg-surface-elevated border border-border-subtle rounded-2xl shadow-xl overflow-hidden flex flex-col max-h-[90vh]"
       >
         {/* Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-border-subtle bg-surface-base">
+        <div className="flex items-center justify-between px-6 py-4 border-b border-border-subtle bg-surface">
           <div className="flex items-center gap-2">
             <span className="w-8 h-8 rounded-full bg-accent-magic/20 text-accent-magic flex items-center justify-center font-bold text-sm">
               #{task.step_order}
@@ -87,9 +87,10 @@ export const DocUploadModal: React.FC<DocUploadModalProps> = ({ task, onClose, o
           </div>
           <button
             onClick={onClose}
+            aria-label="Tutup"
             className="w-8 h-8 rounded-full bg-surface-elevated text-text-secondary hover:text-text-primary flex items-center justify-center transition-colors"
           >
-            ✕
+            <X className="w-4 h-4" />
           </button>
         </div>
 
@@ -114,14 +115,14 @@ export const DocUploadModal: React.FC<DocUploadModalProps> = ({ task, onClose, o
                 </div>
 
                 {task.description && (
-                  <p className="text-sm text-text-secondary bg-surface-base p-4 rounded-2xl border border-border-subtle leading-relaxed">
+                  <p className="text-sm text-text-secondary bg-surface p-4 rounded-2xl border border-border-subtle leading-relaxed">
                     {task.description}
                   </p>
                 )}
 
                 {/* Optional Template / Attachment Download Box */}
                 {attachmentUrl && (
-                  <div className="p-4 rounded-2xl bg-surface-base border border-border-subtle flex items-center justify-between gap-3">
+                  <div className="p-4 rounded-2xl bg-surface border border-border-subtle flex items-center justify-between gap-3">
                     <div className="flex items-center gap-3">
                       <div className="w-10 h-10 rounded-xl bg-accent-magic/15 text-accent-magic flex items-center justify-center shrink-0">
                         <FileText className="w-5 h-5" />
@@ -162,7 +163,7 @@ export const DocUploadModal: React.FC<DocUploadModalProps> = ({ task, onClose, o
                   className={`p-6 border-2 border-dashed rounded-2xl cursor-pointer text-center transition-all ${
                     selectedFile
                       ? 'border-accent-magic bg-accent-magic/10'
-                      : 'border-border-subtle hover:border-accent-magic/40 bg-surface-base'
+                      : 'border-border-subtle hover:border-accent-magic/40 bg-surface'
                   }`}
                 >
                   {selectedFile ? (
@@ -190,7 +191,7 @@ export const DocUploadModal: React.FC<DocUploadModalProps> = ({ task, onClose, o
                     value={note}
                     onChange={(e) => setNote(e.target.value)}
                     placeholder="Tuliskan keterangan singkat jika ada..."
-                    className="w-full p-3 rounded-xl bg-surface-base border border-border-subtle text-sm text-text-primary placeholder:text-text-secondary/50 focus:outline-none focus:border-accent-magic resize-none"
+                    className="w-full p-3 rounded-xl bg-surface border border-border-subtle text-sm text-text-primary placeholder:text-text-secondary/50 focus:outline-none focus:border-accent-magic resize-none"
                   />
                 </div>
 
@@ -236,7 +237,7 @@ export const DocUploadModal: React.FC<DocUploadModalProps> = ({ task, onClose, o
                   </p>
                 </div>
 
-                <div className="p-4 rounded-2xl bg-surface-base border border-border-subtle text-left flex items-start gap-3">
+                <div className="p-4 rounded-2xl bg-surface border border-border-subtle text-left flex items-start gap-3">
                   <CheckCircle2 className="w-5 h-5 text-status-success shrink-0 mt-0.5" />
                   <p className="text-xs text-text-secondary leading-relaxed">
                     <strong className="text-text-primary">Tugas berikutnya sudah terbuka!</strong> Kamu bisa langsung melanjutkan tugas step berikutnya tanpa perlu menunggu verifikasi admin.

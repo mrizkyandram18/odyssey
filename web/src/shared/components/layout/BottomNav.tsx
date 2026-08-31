@@ -15,7 +15,7 @@ export function BottomNav() {
   ]
 
   return (
-    <nav aria-label="Navigasi Utama" className="flex items-center justify-around py-2 px-4">
+    <nav aria-label="Navigasi Utama" className="flex items-center justify-around py-2 px-2 safe-pb">
       {navItems.map((item) => {
         const Icon = item.icon
         const isActive = location.pathname === item.to
@@ -23,14 +23,15 @@ export function BottomNav() {
           <Link
             key={item.to}
             to={item.to}
-            className={`flex flex-col items-center gap-1 py-1 px-3 rounded-xl transition-all duration-200 ${
+            aria-current={isActive ? 'page' : undefined}
+            className={`flex flex-col items-center gap-1 py-2 px-4 rounded-xl transition-colors min-w-[64px] ${
               isActive
-                ? 'text-accent-reward font-bold scale-105'
-                : 'text-text-secondary hover:text-text-primary'
+                ? 'text-accent-magic bg-accent-magic/10 font-bold'
+                : 'text-text-secondary hover:text-text-primary hover:bg-surface'
             }`}
           >
             <Icon size={20} className={isActive ? 'stroke-[2.5]' : 'stroke-2'} />
-            <span className="text-[11px] font-medium tracking-tight">{item.label}</span>
+            <span className="text-[11px] font-semibold tracking-tight leading-none">{item.label}</span>
           </Link>
         )
       })}

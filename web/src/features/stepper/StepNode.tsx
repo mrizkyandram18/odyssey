@@ -9,26 +9,26 @@ interface StepNodeProps {
   onClick: (task: TaskView) => void
 }
 
-export const StepNode: React.FC<StepNodeProps> = ({ task, index, onClick }) => {
+export const StepNode: React.FC<StepNodeProps> = ({ task, onClick }) => {
   const getTaskIcon = () => {
     switch (task.task_type) {
       case 'VIDEO':
       case 'VIDEO_QUIZ':
       case 'YOUTUBE_VIDEO':
-        return <Play className="w-6 h-6 fill-current" />
+        return <Play className="w-5 h-5 fill-current" />
       case 'QUIZ':
-        return <HelpCircle className="w-6 h-6" />
+        return <HelpCircle className="w-5 h-5" />
       case 'DOCUMENT_UPLOAD':
-        return <FileText className="w-6 h-6" />
+        return <FileText className="w-5 h-5" />
       case 'PHOTO_UPLOAD':
       case 'PHOTO_PROOF':
-        return <Camera className="w-6 h-6" />
+        return <Camera className="w-5 h-5" />
       case 'TEXT_RESPONSE':
-        return <PenLine className="w-6 h-6" />
+        return <PenLine className="w-5 h-5" />
       case 'MINI_GAME':
-        return <Gamepad2 className="w-6 h-6" />
+        return <Gamepad2 className="w-5 h-5" />
       default:
-        return <Sparkles className="w-6 h-6" />
+        return <Sparkles className="w-5 h-5" />
     }
   }
 
@@ -39,51 +39,51 @@ export const StepNode: React.FC<StepNodeProps> = ({ task, index, onClick }) => {
   const isLocked = task.status === 'LOCKED' || task.is_locked
   const isRejected = task.status === 'REJECTED'
 
-  // Dynamic alternating horizontal offset for winding snake path
-  const xOffset = index % 2 === 0 ? 'translate-x-0' : index % 4 === 1 ? 'translate-x-8' : '-translate-x-8'
+  const isActive = isUnlocked || isPending
 
   return (
-    <div className={`relative flex flex-col items-center my-3 transition-transform ${xOffset}`}>
+    <div className="relative flex flex-col items-center py-3 w-full max-w-[200px]">
       {/* Node Button */}
       <motion.button
-        whileHover={!isLocked ? { scale: 1.06 } : {}}
-        whileTap={!isLocked ? { scale: 0.95 } : {}}
+        whileHover={!isLocked ? { scale: 1.04 } : {}}
+        whileTap={!isLocked ? { scale: 0.97 } : {}}
         onClick={() => onClick(task)}
         disabled={isLocked}
-        className={`relative w-20 h-20 rounded-full flex items-center justify-center transition-all shadow-lg select-none ${
+        aria-label={`${task.title} - ${task.status}`}
+        className={`relative w-[68px] h-[68px] rounded-full flex items-center justify-center transition-all select-none shrink-0 ${
           isApproved
-            ? 'bg-status-success text-white shadow-status-success/30 border-4 border-status-success/40'
+            ? 'bg-status-success text-white shadow-sm border-2 border-status-success'
             : isPending
-            ? 'bg-accent-gold text-white shadow-accent-gold/40 border-4 border-accent-gold/40 animate-pulse'
+            ? 'bg-accent-gold text-white shadow-sm border-2 border-accent-gold'
             : isUnlocked
-            ? 'bg-accent-magic text-white shadow-accent-magic/50 border-4 border-white dark:border-surface-elevated ring-4 ring-accent-magic/40 animate-bounce'
+            ? 'bg-accent-magic text-white shadow-md border-2 border-white ring-2 ring-accent-magic/30'
             : isRejected
-            ? 'bg-status-error text-white shadow-status-error/30 border-4 border-status-error/40'
-            : 'bg-surface-base text-text-secondary/40 border-4 border-border-subtle opacity-70 cursor-not-allowed shadow-none'
-        }`}
+            ? 'bg-status-error text-white shadow-sm border-2 border-status-error'
+            : 'bg-surface text-text-secondary/50 border-2 border-border-subtle shadow-none'
+        } ${isActive && !isLocked ? 'cursor-pointer' : isLocked ? 'cursor-not-allowed opacity-60' : ''}`}
       >
         {/* Main Icon */}
         {isApproved ? (
-          <Check className="w-8 h-8 stroke-[3]" />
+          <Check className="w-6 h-6 stroke-[2.5]" />
         ) : isPending ? (
-          <Clock className="w-8 h-8 animate-spin" />
+          <Clock className="w-6 h-6" />
         ) : isLocked ? (
-          <Lock className="w-7 h-7" />
+          <Lock className="w-5 h-5" />
         ) : isRejected ? (
-          <AlertTriangle className="w-7 h-7" />
+          <AlertTriangle className="w-5 h-5" />
         ) : (
           getTaskIcon()
         )}
 
         {/* Step Badge */}
         <span
-          className={`absolute -top-1 -right-1 w-6 h-6 rounded-full text-xs font-bold flex items-center justify-center shadow-md ${
+          className={`absolute -top-1 -right-1 w-6 h-6 rounded-full text-[11px] font-bold flex items-center justify-center shadow-sm border-2 border-white ${
             isApproved
-              ? 'bg-white text-status-success'
+              ? 'bg-status-success text-white'
               : isPending
-              ? 'bg-white text-accent-gold'
+              ? 'bg-accent-gold text-white'
               : isUnlocked
-              ? 'bg-accent-gold text-text-primary'
+              ? 'bg-white text-accent-magic border-accent-magic/20'
               : 'bg-surface-elevated text-text-secondary'
           }`}
         >
@@ -92,34 +92,24 @@ export const StepNode: React.FC<StepNodeProps> = ({ task, index, onClick }) => {
       </motion.button>
 
       {/* Title & Reward Label Below Node */}
-      <div className="mt-2.5 text-center max-w-[140px]">
-        <p className={`text-xs font-heading font-bold line-clamp-1 ${
+      <div className="mt-2 text-center max-w-[160px]">
+        <p className={`text-xs font-bold line-clamp-2 leading-tight ${
           isLocked ? 'text-text-secondary/60' : 'text-text-primary'
         }`}>
           {task.title}
         </p>
-
-        {isApproved ? (
-          <span className="inline-block mt-0.5 text-[10px] text-status-success font-bold bg-status-success/15 px-2 py-0.5 rounded-full">
-            ✅ Selesai (+{task.coins_earned || task.reward_coins}🪙)
-          </span>
-        ) : isPending ? (
-          <span className="inline-block mt-0.5 text-[10px] text-accent-gold font-bold bg-accent-gold/15 px-2 py-0.5 rounded-full">
-            ⏳ Menunggu Review
-          </span>
-        ) : isUnlocked ? (
-          <span className="inline-block mt-0.5 text-[10px] text-accent-magic font-bold bg-accent-magic/15 px-2 py-0.5 rounded-full animate-pulse">
-            ⚡ Mulai (+{task.reward_coins}🪙)
-          </span>
-        ) : isRejected ? (
-          <span className="inline-block mt-0.5 text-[10px] text-status-error font-bold bg-status-error/15 px-2 py-0.5 rounded-full">
-            ⚠️ Perlu Revisi
-          </span>
-        ) : (
-          <span className="inline-block mt-0.5 text-[10px] text-text-secondary/60 font-medium">
-            🔒 Terkunci
-          </span>
-        )}
+        <span className={`inline-flex items-center mt-1 text-[11px] font-semibold px-2 py-0.5 rounded-full border ${
+          isApproved ? 'bg-status-success/10 text-status-success border-status-success/20' :
+          isPending ? 'bg-accent-gold/10 text-accent-gold border-accent-gold/20' :
+          isUnlocked ? 'bg-accent-magic/10 text-accent-magic border-accent-magic/20' :
+          isRejected ? 'bg-status-error/10 text-status-error border-status-error/20' :
+          'bg-surface border-border-subtle text-text-secondary/60'
+        }`}>
+          {isApproved ? `Selesai +${task.coins_earned || task.reward_coins}` :
+           isPending ? 'Menunggu review' :
+           isUnlocked ? `Mulai +${task.reward_coins}` :
+           isRejected ? 'Perlu revisi' : 'Terkunci'}
+        </span>
       </div>
     </div>
   )

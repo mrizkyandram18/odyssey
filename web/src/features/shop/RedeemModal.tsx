@@ -78,10 +78,10 @@ export const RedeemModal: React.FC<RedeemModalProps> = ({
         initial={{ scale: 0.95, opacity: 0, y: 15 }}
         animate={{ scale: 1, opacity: 1, y: 0 }}
         exit={{ scale: 0.95, opacity: 0, y: 15 }}
-        className="w-full max-w-md bg-surface-elevated border border-border-subtle rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh]"
+        className="w-full max-w-md bg-surface-elevated border border-border-subtle rounded-2xl shadow-xl overflow-hidden flex flex-col max-h-[90vh]"
       >
         {/* Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-border-subtle bg-surface-base">
+        <div className="flex items-center justify-between px-6 py-4 border-b border-border-subtle bg-surface">
           <div className="flex items-center gap-2">
             <Banknote className="w-5 h-5 text-status-success" />
             <h3 className="font-heading font-bold text-text-primary text-base">
@@ -112,7 +112,7 @@ export const RedeemModal: React.FC<RedeemModalProps> = ({
                     className={`p-3 rounded-2xl border text-xs font-heading font-bold flex flex-col items-center gap-1.5 transition-all ${
                       targetType === 'EWALLET'
                         ? 'bg-accent-magic/15 border-accent-magic text-accent-magic shadow-sm'
-                        : 'bg-surface-base border-border-subtle text-text-secondary hover:text-text-primary'
+                        : 'bg-surface border-border-subtle text-text-secondary hover:text-text-primary'
                     }`}
                   >
                     <Wallet className="w-4 h-4" />
@@ -125,7 +125,7 @@ export const RedeemModal: React.FC<RedeemModalProps> = ({
                     className={`p-3 rounded-2xl border text-xs font-heading font-bold flex flex-col items-center gap-1.5 transition-all ${
                       targetType === 'BANK'
                         ? 'bg-status-success/15 border-status-success text-status-success shadow-sm'
-                        : 'bg-surface-base border-border-subtle text-text-secondary hover:text-text-primary'
+                        : 'bg-surface border-border-subtle text-text-secondary hover:text-text-primary'
                     }`}
                   >
                     <Building2 className="w-4 h-4" />
@@ -138,7 +138,7 @@ export const RedeemModal: React.FC<RedeemModalProps> = ({
                     className={`p-3 rounded-2xl border text-xs font-heading font-bold flex flex-col items-center gap-1.5 transition-all ${
                       targetType === 'PHONE'
                         ? 'bg-accent-cyan/15 border-accent-cyan text-accent-cyan shadow-sm'
-                        : 'bg-surface-base border-border-subtle text-text-secondary hover:text-text-primary'
+                        : 'bg-surface border-border-subtle text-text-secondary hover:text-text-primary'
                     }`}
                   >
                     <Smartphone className="w-4 h-4" />
@@ -159,7 +159,7 @@ export const RedeemModal: React.FC<RedeemModalProps> = ({
                 <select
                   value={provider}
                   onChange={(e) => setProvider(e.target.value)}
-                  className="w-full p-3 rounded-xl bg-surface-base border border-border-subtle text-sm text-text-primary focus:outline-none focus:border-accent-magic font-medium"
+                  className="w-full p-3 rounded-xl bg-surface border border-border-subtle text-sm text-text-primary focus:outline-none focus:border-accent-magic font-medium"
                 >
                   {targetType === 'EWALLET' && (
                     <>
@@ -205,7 +205,7 @@ export const RedeemModal: React.FC<RedeemModalProps> = ({
                       ? 'Contoh: 1234567890'
                       : 'Contoh: 081234567890'
                   }
-                  className="w-full p-3 rounded-xl bg-surface-base border border-border-subtle text-sm text-text-primary placeholder:text-text-secondary/50 focus:outline-none focus:border-accent-magic font-mono"
+                  className="w-full p-3 rounded-xl bg-surface border border-border-subtle text-sm text-text-primary placeholder:text-text-secondary/50 focus:outline-none focus:border-accent-magic font-mono"
                 />
               </div>
 
@@ -219,7 +219,7 @@ export const RedeemModal: React.FC<RedeemModalProps> = ({
                   value={accountName}
                   onChange={(e) => setAccountName(e.target.value)}
                   placeholder="Contoh: Budi Santoso"
-                  className="w-full p-3 rounded-xl bg-surface-base border border-border-subtle text-sm text-text-primary placeholder:text-text-secondary/50 focus:outline-none focus:border-accent-magic"
+                  className="w-full p-3 rounded-xl bg-surface border border-border-subtle text-sm text-text-primary placeholder:text-text-secondary/50 focus:outline-none focus:border-accent-magic"
                 />
               </div>
 
@@ -240,7 +240,7 @@ export const RedeemModal: React.FC<RedeemModalProps> = ({
                     max={userCoins}
                     value={coinsToRedeem}
                     onChange={(e) => setCoinsToRedeem(Number(e.target.value))}
-                    className="w-full p-3.5 rounded-xl bg-surface-base border border-border-subtle text-base font-bold text-text-primary focus:outline-none focus:border-accent-magic font-mono"
+                    className="w-full p-3.5 rounded-xl bg-surface border border-border-subtle text-base font-bold text-text-primary focus:outline-none focus:border-accent-magic font-mono"
                   />
                   <div className="absolute right-3 top-3.5 flex items-center gap-1 text-accent-gold text-xs font-bold">
                     <Coins className="w-4 h-4" />
@@ -253,7 +253,7 @@ export const RedeemModal: React.FC<RedeemModalProps> = ({
                   <button
                     type="button"
                     onClick={() => setCoinsToRedeem(userCoins)}
-                    className="px-3 py-1 rounded-lg bg-surface-base border border-border-subtle text-[11px] font-bold text-text-secondary hover:text-text-primary"
+                    className="px-3 py-1 rounded-lg bg-surface border border-border-subtle text-[11px] font-bold text-text-secondary hover:text-text-primary"
                   >
                     Semua Koin ({userCoins})
                   </button>
@@ -261,7 +261,7 @@ export const RedeemModal: React.FC<RedeemModalProps> = ({
                     <button
                       type="button"
                       onClick={() => setCoinsToRedeem(Math.floor(userCoins / 2))}
-                      className="px-3 py-1 rounded-lg bg-surface-base border border-border-subtle text-[11px] font-bold text-text-secondary hover:text-text-primary"
+                      className="px-3 py-1 rounded-lg bg-surface border border-border-subtle text-[11px] font-bold text-text-secondary hover:text-text-primary"
                     >
                       50% ({Math.floor(userCoins / 2)})
                     </button>

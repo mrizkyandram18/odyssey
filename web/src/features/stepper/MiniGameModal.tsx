@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import confetti from 'canvas-confetti'
-import { Gamepad2, Award, Sparkles, CheckCircle2, RotateCcw, Clock, Target, AlertCircle } from 'lucide-react'
+import { Gamepad2, Award, X, Sparkles, CheckCircle2, RotateCcw, Clock, Target, AlertCircle } from 'lucide-react'
 import type { TaskView } from '../../shared/types'
 import { tasksApi } from '../../shared/lib/api'
 
@@ -166,10 +166,10 @@ export const MiniGameModal: React.FC<MiniGameModalProps> = ({ task, onClose, onS
         initial={{ scale: 0.95, opacity: 0, y: 20 }}
         animate={{ scale: 1, opacity: 1, y: 0 }}
         exit={{ scale: 0.95, opacity: 0, y: 20 }}
-        className="w-full max-w-lg bg-surface-elevated border border-border-subtle rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh]"
+        className="w-full max-w-lg bg-surface-elevated border border-border-subtle rounded-2xl shadow-xl overflow-hidden flex flex-col max-h-[90vh]"
       >
         {/* Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-border-subtle bg-surface-base">
+        <div className="flex items-center justify-between px-6 py-4 border-b border-border-subtle bg-surface">
           <div className="flex items-center gap-2">
             <span className="w-8 h-8 rounded-full bg-accent-magic/20 text-accent-magic flex items-center justify-center font-bold text-sm">
               #{task.step_order}
@@ -180,9 +180,10 @@ export const MiniGameModal: React.FC<MiniGameModalProps> = ({ task, onClose, onS
           </div>
           <button
             onClick={onClose}
+            aria-label="Tutup"
             className="w-8 h-8 rounded-full bg-surface-elevated text-text-secondary hover:text-text-primary flex items-center justify-center transition-colors"
           >
-            ✕
+            <X className="w-4 h-4" />
           </button>
         </div>
 
@@ -192,7 +193,7 @@ export const MiniGameModal: React.FC<MiniGameModalProps> = ({ task, onClose, onS
             {!earnedRewards ? (
               <motion.div key="game-panel" initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-4">
                 {/* Stats Bar */}
-                <div className="flex items-center justify-between p-3 rounded-2xl bg-surface-base border border-border-subtle text-xs font-bold text-text-secondary">
+                <div className="flex items-center justify-between p-3 rounded-2xl bg-surface border border-border-subtle text-xs font-bold text-text-secondary">
                   <div className="flex items-center gap-1.5 text-accent-magic">
                     <Gamepad2 className="w-4 h-4" />
                     <span>Langkah: {moves}</span>
@@ -208,7 +209,7 @@ export const MiniGameModal: React.FC<MiniGameModalProps> = ({ task, onClose, onS
                 </div>
 
                 {task.description && (
-                  <p className="text-xs text-text-secondary leading-relaxed bg-surface-base p-3 rounded-xl">
+                  <p className="text-xs text-text-secondary leading-relaxed bg-surface p-3 rounded-xl">
                     {task.description}
                   </p>
                 )}
@@ -234,7 +235,7 @@ export const MiniGameModal: React.FC<MiniGameModalProps> = ({ task, onClose, onS
                             ? 'bg-status-success/20 border-2 border-status-success text-status-success ring-2 ring-status-success/30'
                             : card.isFlipped
                             ? 'bg-accent-magic text-white border-2 border-white dark:border-surface-elevated ring-2 ring-accent-magic/50'
-                            : 'bg-surface-base border border-border-subtle hover:border-accent-magic/50 text-transparent select-none cursor-pointer'
+                            : 'bg-surface border border-border-subtle hover:border-accent-magic/50 text-transparent select-none cursor-pointer'
                         }`}
                       >
                         {isRevealed ? card.icon : '❓'}
@@ -274,7 +275,7 @@ export const MiniGameModal: React.FC<MiniGameModalProps> = ({ task, onClose, onS
                   <button
                     type="button"
                     onClick={initializeGame}
-                    className="p-3 rounded-2xl border border-border-subtle bg-surface-base text-text-secondary hover:text-text-primary font-bold text-xs flex items-center gap-1.5 transition-colors"
+                    className="p-3 rounded-2xl border border-border-subtle bg-surface text-text-secondary hover:text-text-primary font-bold text-xs flex items-center gap-1.5 transition-colors"
                   >
                     <RotateCcw className="w-4 h-4" />
                     <span>Ulang</span>
