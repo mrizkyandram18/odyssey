@@ -140,7 +140,7 @@ export const LinearPath: React.FC = () => {
           </div>
           <h2 className="text-sm font-bold text-text-primary mt-3">Belum ada tugas hari ini</h2>
           <p className="text-xs text-text-secondary mt-1 leading-relaxed max-w-[30ch] mx-auto">
-            Admin keluarga belum menambahkan tugas. Kamu akan mendapat notifikasi saat tugas baru tersedia.
+            Admin belum menambahkan tugas. Kamu akan mendapat notifikasi saat tugas baru tersedia.
           </p>
         </Card>
       ) : stats.isAllDone ? (

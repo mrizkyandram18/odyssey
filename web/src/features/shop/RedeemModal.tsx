@@ -290,7 +290,7 @@ export const RedeemModal: React.FC<RedeemModalProps> = ({
                   Pengajuan Berhasil Dikirim! 🎉
                 </h4>
                 <p className="text-xs text-text-secondary max-w-xs mx-auto leading-relaxed">
-                  Koinmu telah berhasil dipotong dan dicatat dalam riwayat penukaran. Admin keluarga akan segera mentransfer dana pencairan.
+                  Koinmu telah berhasil dipotong dan dicatat dalam riwayat penukaran. Admin akan segera memproses transfer dana pencairan.
                 </p>
               </div>
 

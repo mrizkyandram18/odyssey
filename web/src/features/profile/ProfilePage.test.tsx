@@ -63,7 +63,7 @@ describe('ProfilePage', () => {
     )
 
     expect(screen.getByText('Budi Santoso')).toBeInTheDocument()
-    expect(screen.getByText('Anggota Keluarga')).toBeInTheDocument()
+    expect(screen.getByText('Anggota')).toBeInTheDocument()
     expect(screen.getByText('Level 3')).toBeInTheDocument()
     expect(screen.getByText('1500')).toBeInTheDocument()
     expect(screen.getByText('5 Hari Streak')).toBeInTheDocument()

@@ -61,7 +61,7 @@ export function ProfilePage() {
     )
   }
 
-  const roleLabel = profile.role === 'GUIDE' ? 'Admin Keluarga' : 'Anggota Keluarga'
+  const roleLabel = profile.role === 'ADMIN' || profile.role === 'GUIDE' ? 'Administrator' : 'Anggota'
   const xpPercent = Math.min(100, (profile.xp ?? 0) % 100)
   const streakDays = profile.streak_days ?? 0
 

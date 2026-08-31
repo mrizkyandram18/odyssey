@@ -93,7 +93,7 @@ export function OnboardingModal() {
                        <span className="bg-accent-reward/10 text-accent-reward px-3 py-1 rounded-full">Poin</span>
                     </div>
                     <p className="text-sm text-text-secondary mt-6">
-                      Lihat perkembanganmu bersama keluarga!
+                      Lihat perkembangan dan pencapaian belajarmu!
                     </p>
                   </div>
                   <Button size="lg" className="w-full text-lg shadow-sm" onClick={handleStart}>

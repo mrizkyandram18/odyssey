@@ -721,7 +721,7 @@ export const AdminPage: React.FC = () => {
             <div className="py-12 text-center bg-surface rounded-2xl border border-border-subtle space-y-2 p-6">
               <div className="w-10 h-10 mx-auto rounded-xl bg-accent-magic/10 text-accent-magic flex items-center justify-center"><CheckCircle2 className="w-5 h-5" /></div>
               <p className="font-bold text-text-primary text-sm">Tidak Ada Antrean Verifikasi</p>
-              <p className="text-xs text-text-secondary max-w-xs mx-auto">Semua tugas dari anggota keluarga sudah selesai diperiksa.</p>
+              <p className="text-xs text-text-secondary max-w-xs mx-auto">Semua tugas dari anggota sudah selesai diperiksa.</p>
             </div>
           ) : (
             submissions.map((sub) => (
@@ -1024,7 +1024,7 @@ export const AdminPage: React.FC = () => {
             <div className="py-12 text-center bg-surface rounded-2xl border border-border-subtle space-y-2 p-6">
               <div className="w-10 h-10 mx-auto rounded-xl bg-accent-cyan/10 text-accent-cyan flex items-center justify-center"><FileText className="w-5 h-5" /></div>
               <p className="font-bold text-text-primary text-sm">Belum Ada Tugas pada Tanggal Ini</p>
-              <p className="text-xs text-text-secondary max-w-xs mx-auto">Klik &quot;Tambah Tugas&quot; untuk membuat urutan tugas keluarga.</p>
+              <p className="text-xs text-text-secondary max-w-xs mx-auto">Klik &quot;Tambah Tugas&quot; untuk membuat urutan tugas.</p>
             </div>
           ) : (
             tasks.map((task) => (
@@ -1096,7 +1096,7 @@ export const AdminPage: React.FC = () => {
             <div>
               <h3 className="font-bold text-text-primary text-sm flex items-center gap-2">
                 <Users className="w-4 h-4 text-accent-magic" />
-                <span>Daftar Anggota Keluarga ({members.length})</span>
+                <span>Daftar Anggota ({members.length})</span>
               </h3>
               <p className="text-xs text-text-secondary mt-0.5">
                 Kelola profil anggota, role, status aktif, dan buat akun baru.
@@ -1118,7 +1118,7 @@ export const AdminPage: React.FC = () => {
               </div>
               <p className="font-bold text-text-primary text-sm">Belum Ada Anggota</p>
               <p className="text-xs text-text-secondary max-w-xs mx-auto">
-                Klik &quot;+ Tambah Anggota&quot; untuk mendaftarkan anggota keluarga baru.
+                Klik &quot;+ Tambah Anggota&quot; untuk mendaftarkan anggota baru.
               </p>
             </div>
           ) : (
@@ -1202,7 +1202,7 @@ export const AdminPage: React.FC = () => {
                   <span>Pengaturan Periode Penukaran Koin</span>
                 </h3>
                 <p className="text-xs text-text-secondary mt-1 leading-relaxed">
-                  Tentukan tanggal kalender setiap bulan di mana anggota keluarga dapat mengajukan pencairan koin menjadi uang tunai.
+                  Tentukan tanggal kalender setiap bulan di mana anggota dapat mengajukan pencairan koin menjadi uang tunai.
                 </p>
               </div>
 
@@ -1442,7 +1442,7 @@ export const AdminPage: React.FC = () => {
                     rows={2}
                     value={newTask.description}
                     onChange={(e) => setNewTask({ ...newTask, description: e.target.value })}
-                    placeholder="Jelaskan apa yang harus dilakukan oleh anggota keluarga..."
+                    placeholder="Jelaskan apa yang harus dilakukan oleh anggota..."
                     className="w-full p-3 rounded-xl bg-surface border border-border-subtle text-sm text-text-primary focus:outline-none focus:border-accent-magic focus:ring-1 focus:ring-accent-magic resize-none"
                   />
                 </div>
@@ -1912,7 +1912,7 @@ export const AdminPage: React.FC = () => {
                   className="w-full p-3 rounded-xl bg-surface border border-border-subtle text-sm font-bold text-text-primary focus:outline-none focus:border-accent-magic"
                 >
                   <option value="MEMBER">MEMBER (Anggota biasa)</option>
-                  <option value="ADMIN">ADMIN (Admin keluarga)</option>
+                  <option value="ADMIN">ADMIN (Administrator)</option>
                 </select>
               </div>
 
@@ -1983,7 +1983,7 @@ export const AdminPage: React.FC = () => {
                   className="w-full p-3 rounded-xl bg-surface border border-border-subtle text-sm font-bold text-text-primary focus:outline-none focus:border-accent-magic"
                 >
                   <option value="MEMBER">MEMBER (Anggota biasa)</option>
-                  <option value="ADMIN">ADMIN (Admin keluarga)</option>
+                  <option value="ADMIN">ADMIN (Administrator)</option>
                 </select>
               </div>
 

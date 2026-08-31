@@ -39,7 +39,7 @@ export function LoginPage() {
             <span className="text-2xl">🧭</span>
           </div>
           <h1 className="text-2xl font-bold text-text-primary tracking-tight">Odyssey</h1>
-          <p className="text-sm text-text-secondary mt-1">Masuk untuk melanjutkan tugas keluarga</p>
+          <p className="text-sm text-text-secondary mt-1">Masuk untuk melanjutkan aktivitas belajar</p>
         </div>
 
         <Card className="shadow-sm">
@@ -79,7 +79,7 @@ export function LoginPage() {
               Masuk
             </Button>
             <p className="text-center text-[11px] text-text-secondary">
-              Login menggunakan kredensial Gatekeeper keluarga
+              Login menggunakan akun terdaftar
             </p>
           </form>
         </Card>
