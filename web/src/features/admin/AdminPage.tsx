@@ -161,11 +161,13 @@ export const AdminPage: React.FC = () => {
     }
   }, [selectedDate])
 
+  const isAdmin = session?.role === 'ADMIN' || profile?.role === 'ADMIN' || session?.role === 'GUIDE' || profile?.role === 'GUIDE' || session?.role === 'BUILDER' || profile?.role === 'BUILDER'
+
   useEffect(() => {
-    if (session?.role === 'GUIDE' || profile?.role === 'GUIDE') {
+    if (isAdmin) {
       fetchData()
     }
-  }, [fetchData, session, profile])
+  }, [fetchData, isAdmin])
 
   if (sessionLoading) {
     return (
@@ -179,7 +181,7 @@ export const AdminPage: React.FC = () => {
   }
 
   // Security guard
-  if (session?.role !== 'GUIDE' && profile?.role !== 'GUIDE') {
+  if (!isAdmin) {
     return <Navigate to="/" replace />
   }
 
@@ -508,7 +510,7 @@ export const AdminPage: React.FC = () => {
           <h1 className="text-lg font-bold text-text-primary flex items-center gap-2">
             <ShieldCheck className="w-5 h-5 text-accent-magic" />
             <span>Panel Operasional Admin</span>
-            <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-accent-magic/10 text-accent-magic border border-accent-magic/20">GUIDE</span>
+            <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-accent-magic/10 text-accent-magic border border-accent-magic/20">ADMIN</span>
           </h1>
         </div>
         <button
@@ -1134,7 +1136,7 @@ export const AdminPage: React.FC = () => {
                         {member.explorer_name}
                       </h4>
                       <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
-                        member.role === 'GUIDE'
+                        member.role === 'ADMIN' || member.role === 'GUIDE'
                           ? 'bg-accent-magic/15 text-accent-magic'
                           : 'bg-surface-elevated text-text-secondary border border-border-subtle'
                       }`}>

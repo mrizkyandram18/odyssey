@@ -93,10 +93,10 @@ describe('AdminPage Component', () => {
     expect(screen.queryByText('Panel Operasional Admin')).toBeNull()
   })
 
-  it('renders operations dashboard for GUIDE role with metric tiles', async () => {
+  it('renders operations dashboard for ADMIN role with metric tiles', async () => {
     vi.mocked(useSession).mockReturnValue({
-      session: { uid: '1', family_id: '1', role: 'GUIDE', kind: 'user', expires: 9999999999, token: 'abc' },
-      profile: { uid: '1', role: 'GUIDE' },
+      session: { uid: '1', family_id: '1', role: 'ADMIN', kind: 'user', expires: 9999999999, token: 'abc' },
+      profile: { uid: '1', role: 'ADMIN' },
       loading: false,
     } as any)
 
