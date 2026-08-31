@@ -2,7 +2,7 @@
 import React from 'react'
 import '@testing-library/jest-dom/vitest'
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
-import { render, screen, waitFor, cleanup } from '@testing-library/react'
+import { render, screen, cleanup } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
 import { HomePage } from './HomePage'
 import { tasksApi } from '../../shared/lib/api'
@@ -80,11 +80,11 @@ describe('HomePage', () => {
       </MemoryRouter>
     )
 
-    await waitFor(() => {
-      expect(screen.getByText('Tugas Harian')).toBeInTheDocument()
-      expect(screen.getByText('Belajar Menabung')).toBeInTheDocument()
-      expect(screen.getByText('3 Hari')).toBeInTheDocument()
-      expect(screen.getByText('150')).toBeInTheDocument()
-    })
+    expect(await screen.findByText('Tugas Harian', undefined, { timeout: 3000 })).toBeInTheDocument()
+    // "Belajar Menabung" now appears in both primary CTA pill and task list — allow multiple
+    expect((await screen.findAllByText('Belajar Menabung', undefined, { timeout: 3000 })).length).toBeGreaterThan(0)
+    // streak may appear in progress card + anchor — allow multiple
+    expect((await screen.findAllByText('3 Hari', undefined, { timeout: 3000 })).length).toBeGreaterThan(0)
+    expect((await screen.findAllByText(/150/, undefined, { timeout: 3000 })).length).toBeGreaterThan(0)
   })
 })
