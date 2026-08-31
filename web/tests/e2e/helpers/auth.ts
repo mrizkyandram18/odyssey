@@ -1,12 +1,13 @@
 import { Page, expect } from '@playwright/test';
 
-export async function login(page: Page, username: string = 'demo1') {
+export async function login(page: Page, username: string = 'user_testing', password?: string) {
+  const pwd = password || (username === 'admin' ? 'admin123' : 'odyssey123');
   await page.addInitScript(() => {
     localStorage.setItem('odyssey_onboarded', 'true');
   });
   await page.goto('/#/login');
   await page.fill('input[autocomplete="username"]', username);
-  await page.fill('input[type="password"]', 'odyssey123');
+  await page.fill('input[type="password"]', pwd);
   await page.click('button:has-text("Masuk")');
 
   try {

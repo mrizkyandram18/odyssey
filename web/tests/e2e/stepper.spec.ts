@@ -1,21 +1,21 @@
-﻿import { test, expect } from '@playwright/test';
+import { test, expect } from '@playwright/test';
 import { login } from './helpers/auth';
 
 test.describe('Member Task Stepper Journeys', () => {
   test.beforeEach(async ({ page }) => {
-    await login(page, 'demo1');
+    await login(page, 'user_testing');
     await expect(page).toHaveURL(/.*#\/$/);
   });
 
   test('Journey 3: Member loads daily task stepper and stats header', async ({ page }) => {
     // Assert daily title banner
-    await expect(page.locator('h2:has-text("Petualangan Harian")')).toBeVisible();
+    await expect(page.locator('h2:has-text("Tugas Harian")')).toBeVisible();
     
     // Assert stats header (level and coins)
     await expect(page.locator('header').getByText('Lv.')).toBeVisible();
     
     // Check if task nodes or empty state is rendered
-    const taskContent = page.locator('h4:has-text("Belum Ada Tugas"), .step-node, div:has-text("Puncak Petualangan")').first();
+    const taskContent = page.locator('h4:has-text("Belum Ada Tugas"), .step-node, div:has-text("Target Hari Ini Selesai")').first();
     await expect(taskContent).toBeVisible({ timeout: 10000 });
   });
 

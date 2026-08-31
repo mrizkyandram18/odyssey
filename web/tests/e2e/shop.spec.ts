@@ -3,7 +3,7 @@ import { login } from './helpers/auth';
 
 test.describe('Reward Shop Journeys', () => {
   test.beforeEach(async ({ page }) => {
-    await login(page, 'demo1');
+    await login(page, 'user_testing');
     await expect(page).toHaveURL(/.*#\/$/);
     const shopLink = page.locator('nav a:has-text("Toko Hadiah"), a[href="#/shop"]');
     await shopLink.click();

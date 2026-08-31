@@ -1,9 +1,9 @@
-﻿import { test, expect } from '@playwright/test';
+import { test, expect } from '@playwright/test';
 import { login } from './helpers/auth';
 
 test.describe('Admin Management Journeys', () => {
   test.beforeEach(async ({ page }) => {
-    await login(page, 'demo2');
+    await login(page, 'admin');
     await expect(page).toHaveURL(/.*#\/$/);
     const adminLink = page.locator('nav a:has-text("Admin"), a[href="#/admin"]');
     await adminLink.click();
