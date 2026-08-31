@@ -214,7 +214,6 @@ func (a *API) HandleCreateMember(w http.ResponseWriter, r *http.Request) {
 	profPayload := map[string]any{
 		"uid":                  uid,
 		"family_id":            familyID,
-		"crew_id":              familyID,
 		"explorer_name":        req.ExplorerName,
 		"role":                 role,
 		"level":                1,
