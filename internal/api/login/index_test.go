@@ -84,6 +84,10 @@ func (m *mockProfileStore) UpdateAvatar(ctx context.Context, uid string, style, 
 	return nil
 }
 
+func (m *mockProfileStore) ChangePassword(_ context.Context, _ string, _ string) error {
+	return nil
+}
+
 func (m *mockProfileStore) SetAvatarFrame(_ context.Context, _, _ string) error {
 	return nil
 }

@@ -212,18 +212,19 @@ func (a *API) HandleCreateMember(w http.ResponseWriter, r *http.Request) {
 	// 3. Insert user profile
 	now := time.Now().UTC()
 	profPayload := map[string]any{
-		"uid":           uid,
-		"family_id":      familyID,
-		"crew_id":        familyID,
-		"explorer_name":  req.ExplorerName,
-		"role":           role,
-		"level":          1,
-		"xp":             0,
-		"coins":          0,
-		"streak_days":    0,
-		"is_active":      true,
-		"created_at":     now.Format(time.RFC3339),
-		"updated_at":     now.Format(time.RFC3339),
+		"uid":                  uid,
+		"family_id":            familyID,
+		"crew_id":              familyID,
+		"explorer_name":        req.ExplorerName,
+		"role":                 role,
+		"level":                1,
+		"xp":                   0,
+		"coins":                0,
+		"streak_days":          0,
+		"is_active":            true,
+		"must_change_password": true,
+		"created_at":           now.Format(time.RFC3339),
+		"updated_at":           now.Format(time.RFC3339),
 	}
 
 	_, err = a.client.MutateAtomic(ctx, http.MethodPost, "odyssey_user_profiles", profPayload, "", "return=representation")
@@ -307,7 +308,7 @@ func (a *API) HandleUpdateMember(w http.ResponseWriter, r *http.Request, targetU
 	}
 	if req.Role != nil {
 		role := strings.ToUpper(strings.TrimSpace(*req.Role))
-		if role != "SEEKER" && role != "GUIDE" {
+		if role != "MEMBER" && role != "ADMIN" && role != "SEEKER" && role != "GUIDE" {
 			shared.WriteJSONError(w, "role tidak valid", http.StatusBadRequest)
 			return
 		}
@@ -322,15 +323,6 @@ func (a *API) HandleUpdateMember(w http.ResponseWriter, r *http.Request, targetU
 		_, _ = a.client.RPC(ctx, "odyssey_admin_reset_device", map[string]any{"p_target_uid": targetUID})
 	}
 
-	if len(profPatch) > 0 {
-		profPatch["updated_at"] = time.Now().UTC().Format(time.RFC3339)
-		_, err := a.client.Mutate(ctx, http.MethodPatch, "odyssey_user_profiles", profPatch, fmt.Sprintf("uid=eq.%s", targetUID))
-		if err != nil {
-			shared.WriteJSONError(w, "gagal update profil anggota: "+err.Error(), http.StatusInternalServerError)
-			return
-		}
-	}
-
 	// Handle password reset if provided
 	if req.Password != nil && strings.TrimSpace(*req.Password) != "" {
 		pass := strings.TrimSpace(*req.Password)
@@ -338,9 +330,11 @@ func (a *API) HandleUpdateMember(w http.ResponseWriter, r *http.Request, targetU
 			shared.WriteJSONError(w, "password baru minimal 6 karakter", http.StatusBadRequest)
 			return
 		}
+		profPatch["must_change_password"] = true
+
 		hash, err := a.hasher.Hash(pass)
 		if err != nil {
-			shared.WriteJSONError(w, "gagal memproses enkripsi password", http.StatusInternalServerError)
+			shared.WriteJSONError(w, "gagal memproses password", http.StatusInternalServerError)
 			return
 		}
 		localPatch := map[string]any{
@@ -350,6 +344,15 @@ func (a *API) HandleUpdateMember(w http.ResponseWriter, r *http.Request, targetU
 		_, err = a.client.Mutate(ctx, http.MethodPatch, "odyssey_local_users", localPatch, fmt.Sprintf("profile_uid=eq.%s", targetUID))
 		if err != nil {
 			shared.WriteJSONError(w, "gagal update password anggota: "+err.Error(), http.StatusInternalServerError)
+			return
+		}
+	}
+
+	if len(profPatch) > 0 {
+		profPatch["updated_at"] = time.Now().UTC().Format(time.RFC3339)
+		_, err := a.client.Mutate(ctx, http.MethodPatch, "odyssey_user_profiles", profPatch, fmt.Sprintf("uid=eq.%s", targetUID))
+		if err != nil {
+			shared.WriteJSONError(w, "gagal update profil anggota: "+err.Error(), http.StatusInternalServerError)
 			return
 		}
 	}

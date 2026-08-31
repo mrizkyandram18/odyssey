@@ -75,6 +75,10 @@ func (m *mockProfileStore) UpdateAvatar(ctx context.Context, uid string, style, 
 	return nil
 }
 
+func (m *mockProfileStore) ChangePassword(_ context.Context, _ string, _ string) error {
+	return nil
+}
+
 func makeProfile() *db.UserProfile {
 	return &db.UserProfile{
 		UID:          "user-1",
@@ -110,7 +114,7 @@ func makeSetupToken(t *testing.T, issuer *auth.HMACSessionIssuer) string {
 func TestMeHandler_MethodNotAllowed(t *testing.T) {
 	Setup(&mockProfileStore{profile: makeProfile()})
 
-	req := httptest.NewRequest(http.MethodPost, "/api/me", nil)
+	req := httptest.NewRequest(http.MethodDelete, "/api/me", nil)
 	w := httptest.NewRecorder()
 	Handler(w, req)
 

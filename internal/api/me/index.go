@@ -19,7 +19,7 @@ func Setup(p db.ProfileStore) {
 func Handler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 
-	if r.Method != http.MethodGet && r.Method != http.MethodPatch {
+	if r.Method != http.MethodGet && r.Method != http.MethodPatch && r.Method != http.MethodPost {
 		shared.WriteJSONError(w, "method not allowed", http.StatusMethodNotAllowed)
 		return
 	}
@@ -37,6 +37,37 @@ func Handler(w http.ResponseWriter, r *http.Request) {
 
 	if profiles == nil {
 		shared.WriteJSONError(w, "server not configured", http.StatusServiceUnavailable)
+		return
+	}
+
+	if r.Method == http.MethodPost {
+		if r.URL.Path != "/api/me/change-password" && r.URL.Path != "/api/me/change-password/" {
+			shared.WriteJSONError(w, "not found", http.StatusNotFound)
+			return
+		}
+
+		var req struct {
+			NewPassword string `json:"new_password"`
+		}
+		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+			shared.WriteJSONError(w, "invalid request body", http.StatusBadRequest)
+			return
+		}
+
+		if len(req.NewPassword) < 6 {
+			shared.WriteJSONError(w, "kata sandi baru minimal 6 karakter", http.StatusBadRequest)
+			return
+		}
+
+		if err := profiles.ChangePassword(r.Context(), claims.UID, req.NewPassword); err != nil {
+			shared.WriteJSONError(w, "gagal mengubah kata sandi: "+err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		shared.WriteJSON(w, http.StatusOK, map[string]string{
+			"status":  "success",
+			"message": "Kata sandi berhasil diubah",
+		})
 		return
 	}
 

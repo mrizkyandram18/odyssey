@@ -2,6 +2,7 @@ import type { ReactNode } from 'react'
 import { useLocation } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import { BottomNav } from './BottomNav'
+import { ForceChangePasswordModal } from '../../../features/auth/ForceChangePasswordModal'
 
 interface AppLayoutProps {
   children: ReactNode
@@ -13,6 +14,9 @@ export function AppLayout({ children }: AppLayoutProps) {
 
   return (
     <div className="flex min-h-screen bg-bg-app">
+      {/* Force password change overlay for new members */}
+      <ForceChangePasswordModal />
+
       {/* Main Content Area */}
       <div className="flex-1 flex flex-col min-h-screen">
         <main

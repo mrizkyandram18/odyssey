@@ -758,6 +758,10 @@ func (m *mockAdversarialDB) UpdateAvatar(ctx context.Context, uid string, style,
 	return nil
 }
 
+func (m *mockAdversarialDB) ChangePassword(_ context.Context, _ string, _ string) error {
+	return nil
+}
+
 // -----------------------------------------------------------------------------
 // ADVERSARIAL TEST 1: IDOR & Cross-Family Isolation Matrix
 // -----------------------------------------------------------------------------

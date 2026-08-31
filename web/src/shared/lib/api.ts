@@ -142,6 +142,12 @@ export const pushApi = {
   delete: () => apiClient.delete<{ success: boolean }>('/api/push'),
 }
 
+export const profileApi = {
+  getProfile: () => apiClient.get<Explorer>('/api/me'),
+  updateAvatar: (data: { avatar_style: string; avatar_seed: string }) => apiClient.patch<{ status: string }>('/api/me/avatar', data),
+  changePassword: (newPassword: string) => apiClient.post<{ status: string; message: string }>('/api/me/change-password', { new_password: newPassword }),
+}
+
 export const tasksApi = {
   getToday: () => apiClient.get<{ tasks: TaskView[] }>('/api/tasks/today'),
   getTask: (taskId: number) => apiClient.get<TaskView>(`/api/tasks/${taskId}`),

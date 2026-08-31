@@ -62,6 +62,7 @@ export interface Explorer {
   avatar_seed: string
   avatar_frame?: string
   equipped_explorer_effect?: string
+  must_change_password?: boolean
   created_at: string
   updated_at: string
 }

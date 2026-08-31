@@ -18,10 +18,11 @@ type UserProfile struct {
 	AvatarSeed   string    `json:"avatar_seed"`
 	Version      int       `json:"version"`
 	PasswordHash string    `json:"-"`
-	DeviceID     string    `json:"device_id,omitempty"`
-	IsActive     bool      `json:"is_active"`
-	CreatedAt    time.Time `json:"created_at"`
-	UpdatedAt    time.Time `json:"updated_at"`
+	DeviceID           string    `json:"device_id,omitempty"`
+	IsActive           bool      `json:"is_active"`
+	MustChangePassword bool      `json:"must_change_password"`
+	CreatedAt          time.Time `json:"created_at"`
+	UpdatedAt          time.Time `json:"updated_at"`
 }
 
 type Family struct {

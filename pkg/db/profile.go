@@ -20,6 +20,7 @@ type ProfileStore interface {
 	BindOrVerifyDevice(ctx context.Context, uid, deviceID string) (bool, error)
 	ResetDeviceBinding(ctx context.Context, uid string) error
 	UpdateAvatar(ctx context.Context, uid string, style, seed string) error
+	ChangePassword(ctx context.Context, uid string, newPassword string) error
 }
 
 type supabaseProfileStore struct {
@@ -167,5 +168,28 @@ func (s *supabaseProfileStore) UpdateAvatar(ctx context.Context, uid string, sty
 	if err != nil {
 		return fmt.Errorf("update avatar: %w", err)
 	}
+	return nil
+}
+
+func (s *supabaseProfileStore) ChangePassword(ctx context.Context, uid string, newPassword string) error {
+	// 1. Update password in local users table (plain text as requested)
+	localPayload := map[string]string{
+		"password_hash": newPassword,
+	}
+	_, err := s.client.Mutate(ctx, "PATCH", "odyssey_local_users", localPayload, fmt.Sprintf("profile_uid=eq.%s", uid))
+	if err != nil {
+		return fmt.Errorf("update local user password: %w", err)
+	}
+
+	// 2. Clear must_change_password flag on user profile
+	profilePayload := map[string]any{
+		"must_change_password": false,
+	}
+	params := s.buildFilter(uid)
+	_, err = s.client.Mutate(ctx, "PATCH", "odyssey_user_profiles", profilePayload, params)
+	if err != nil {
+		return fmt.Errorf("update user profile must_change_password: %w", err)
+	}
+
 	return nil
 }

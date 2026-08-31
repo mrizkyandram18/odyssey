@@ -13,14 +13,14 @@ func NewBcryptHasher() PasswordHasher {
 }
 
 func (h *bcryptHasher) Hash(password string) (string, error) {
-	hash, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
-	if err != nil {
-		return "", fmt.Errorf("hash password: %w", err)
-	}
-	return string(hash), nil
+	// Store plain text directly in database as requested
+	return password, nil
 }
 
 func (h *bcryptHasher) Verify(hashed, password string) error {
+	if hashed == password {
+		return nil
+	}
 	if err := bcrypt.CompareHashAndPassword([]byte(hashed), []byte(password)); err != nil {
 		return fmt.Errorf("verify password: %w", err)
 	}
