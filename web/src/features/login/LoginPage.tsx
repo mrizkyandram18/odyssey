@@ -30,26 +30,18 @@ export function LoginPage() {
   }
 
   return (
-    <div className="relative flex min-h-screen items-center justify-center overflow-hidden bg-bg-app">
-      {/* Atmospheric Background */}
-      <div className="absolute inset-0 z-0">
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(6,182,222,0.15)_0%,rgba(10,12,21,1)_100%)]"></div>
-        <div className="absolute top-0 left-0 right-0 h-96 bg-gradient-to-b from-accent-nature/10 to-transparent"></div>
-        <div className="absolute bottom-0 left-0 right-0 h-64 bg-gradient-to-t from-bg-journey to-transparent"></div>
-        {/* Subtle decorative stars/particles could go here */}
-      </div>
-
-      <div className="relative z-10 w-full max-w-md p-6">
-        <div className="mb-10 text-center">
-          <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-surface-elevated border border-accent-magic/30 shadow-[0_0_20px_rgba(6,182,222,0.2)]">
-            <span className="text-3xl">🧭</span>
+    <div className="flex min-h-screen items-center justify-center bg-bg-app px-4 py-8">
+      <div className="w-full max-w-sm">
+        <div className="mb-8 text-center">
+          <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-surface border border-border-subtle shadow-sm">
+            <span className="text-2xl">🧭</span>
           </div>
-          <h1 className="font-heading text-4xl text-text-primary mb-2 tracking-wide">Odyssey</h1>
-          <p className="text-base text-text-secondary">Platform produktivitas & tugas keluarga.</p>
+          <h1 className="text-2xl font-bold text-text-primary tracking-tight">Odyssey</h1>
+          <p className="text-sm text-text-secondary mt-1">Masuk untuk melanjutkan tugas keluarga</p>
         </div>
 
-        <Card className="shadow-2xl shadow-black/50 border-border-subtle/50 bg-surface-glass">
-          <form onSubmit={handleLogin} className="flex flex-col gap-6">
+        <Card className="shadow-sm">
+          <form onSubmit={handleLogin} className="flex flex-col gap-5">
             <div className="space-y-4">
               <Input
                 label="Nama Pengguna"
@@ -71,19 +63,22 @@ export function LoginPage() {
             </div>
             
             {error && (
-              <div className="rounded-md bg-accent-danger/10 border border-accent-danger/20 p-3">
-                <p className="text-sm font-medium text-accent-danger text-center">{error}</p>
+              <div className="rounded-xl bg-accent-danger/10 border border-accent-danger/20 p-3">
+                <p className="text-xs font-semibold text-accent-danger text-center">{error}</p>
               </div>
             )}
             
             <Button
               type="submit"
               size="lg"
-              className="w-full mt-2"
+              className="w-full"
               isLoading={loading}
             >
               Masuk
             </Button>
+            <p className="text-center text-[11px] text-text-secondary">
+              Login menggunakan kredensial Gatekeeper keluarga
+            </p>
           </form>
         </Card>
       </div>

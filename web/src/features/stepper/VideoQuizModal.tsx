@@ -1,7 +1,7 @@
 import React, { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import confetti from 'canvas-confetti'
-import { Play, CheckCircle2, XCircle, Award, Sparkles, ChevronRight, HelpCircle } from 'lucide-react'
+import { Play, CheckCircle2, XCircle, Award, Sparkles, ChevronRight, HelpCircle, X } from 'lucide-react'
 import type { TaskView, QuizQuestion } from '../../shared/types'
 import { tasksApi } from '../../shared/lib/api'
 
@@ -86,10 +86,10 @@ export const VideoQuizModal: React.FC<VideoQuizModalProps> = ({ task, onClose, o
         initial={{ scale: 0.95, opacity: 0, y: 20 }}
         animate={{ scale: 1, opacity: 1, y: 0 }}
         exit={{ scale: 0.95, opacity: 0, y: 20 }}
-        className="w-full max-w-lg bg-surface-elevated border border-border-subtle rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh]"
+        className="w-full max-w-lg bg-surface-elevated border border-border-subtle rounded-2xl shadow-xl overflow-hidden flex flex-col max-h-[90vh]"
       >
         {/* Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-border-subtle bg-surface-base">
+        <div className="flex items-center justify-between px-6 py-4 border-b border-border-subtle bg-surface">
           <div className="flex items-center gap-2">
             <span className="w-8 h-8 rounded-full bg-accent-magic/20 text-accent-magic flex items-center justify-center font-bold text-sm">
               #{task.step_order}
@@ -100,9 +100,10 @@ export const VideoQuizModal: React.FC<VideoQuizModalProps> = ({ task, onClose, o
           </div>
           <button
             onClick={onClose}
+            aria-label="Tutup"
             className="w-8 h-8 rounded-full bg-surface-elevated text-text-secondary hover:text-text-primary flex items-center justify-center transition-colors"
           >
-            ✕
+            <X className="w-4 h-4" />
           </button>
         </div>
 
@@ -134,13 +135,13 @@ export const VideoQuizModal: React.FC<VideoQuizModalProps> = ({ task, onClose, o
                     />
                   </div>
                 ) : (
-                  <div className="p-8 text-center text-text-secondary bg-surface-base rounded-2xl border border-dashed border-border-subtle">
+                  <div className="p-8 text-center text-text-secondary bg-surface rounded-2xl border border-dashed border-border-subtle">
                     Tidak ada tautan video. Kamu bisa langsung lanjut ke kuis.
                   </div>
                 )}
 
                 {task.description && (
-                  <p className="text-sm text-text-secondary leading-relaxed bg-surface-base p-4 rounded-xl">
+                  <p className="text-sm text-text-secondary leading-relaxed bg-surface p-4 rounded-xl">
                     {task.description}
                   </p>
                 )}
@@ -182,7 +183,7 @@ export const VideoQuizModal: React.FC<VideoQuizModalProps> = ({ task, onClose, o
                   questions.map((q, idx) => (
                     <div
                       key={q.id || idx}
-                      className="p-4 rounded-2xl bg-surface-base border border-border-subtle space-y-3"
+                      className="p-4 rounded-2xl bg-surface border border-border-subtle space-y-3"
                     >
                       <p className="font-heading font-bold text-text-primary text-sm md:text-base">
                         {idx + 1}. {q.question}

@@ -1,6 +1,6 @@
 import React, { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { FileEdit, CheckCircle2, Clock, Sparkles, AlertCircle, ArrowRight } from 'lucide-react'
+import { FileEdit, CheckCircle2, X, Clock, Sparkles, AlertCircle, ArrowRight } from 'lucide-react'
 import type { TaskView } from '../../shared/types'
 import { tasksApi } from '../../shared/lib/api'
 
@@ -61,10 +61,10 @@ export const TextResponseModal: React.FC<TextResponseModalProps> = ({ task, onCl
         initial={{ scale: 0.95, opacity: 0, y: 20 }}
         animate={{ scale: 1, opacity: 1, y: 0 }}
         exit={{ scale: 0.95, opacity: 0, y: 20 }}
-        className="w-full max-w-lg bg-surface-elevated border border-border-subtle rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh]"
+        className="w-full max-w-lg bg-surface-elevated border border-border-subtle rounded-2xl shadow-xl overflow-hidden flex flex-col max-h-[90vh]"
       >
         {/* Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-border-subtle bg-surface-base">
+        <div className="flex items-center justify-between px-6 py-4 border-b border-border-subtle bg-surface">
           <div className="flex items-center gap-2">
             <span className="w-8 h-8 rounded-full bg-accent-magic/20 text-accent-magic flex items-center justify-center font-bold text-sm">
               #{task.step_order}
@@ -75,9 +75,10 @@ export const TextResponseModal: React.FC<TextResponseModalProps> = ({ task, onCl
           </div>
           <button
             onClick={onClose}
+            aria-label="Tutup"
             className="w-8 h-8 rounded-full bg-surface-elevated text-text-secondary hover:text-text-primary flex items-center justify-center transition-colors"
           >
-            ✕
+            <X className="w-4 h-4" />
           </button>
         </div>
 
@@ -101,7 +102,7 @@ export const TextResponseModal: React.FC<TextResponseModalProps> = ({ task, onCl
                   </div>
                 </div>
 
-                <div className="p-4 rounded-2xl bg-surface-base border border-border-subtle space-y-2">
+                <div className="p-4 rounded-2xl bg-surface border border-border-subtle space-y-2">
                   <div className="flex items-center gap-2 text-accent-magic font-bold text-xs">
                     <FileEdit className="w-4 h-4" />
                     <span>Petunjuk Tugas:</span>
@@ -127,7 +128,7 @@ export const TextResponseModal: React.FC<TextResponseModalProps> = ({ task, onCl
                       setErrorMessage(null)
                     }}
                     placeholder="Tuliskan respon kamu di sini dengan jelas..."
-                    className="w-full p-4 rounded-2xl bg-surface-base border border-border-subtle text-sm text-text-primary placeholder:text-text-secondary/50 focus:outline-none focus:border-accent-magic resize-none leading-relaxed"
+                    className="w-full p-4 rounded-2xl bg-surface border border-border-subtle text-sm text-text-primary placeholder:text-text-secondary/50 focus:outline-none focus:border-accent-magic resize-none leading-relaxed"
                   />
                 </div>
 
@@ -173,7 +174,7 @@ export const TextResponseModal: React.FC<TextResponseModalProps> = ({ task, onCl
                   </p>
                 </div>
 
-                <div className="p-4 rounded-2xl bg-surface-base border border-border-subtle text-left flex items-start gap-3">
+                <div className="p-4 rounded-2xl bg-surface border border-border-subtle text-left flex items-start gap-3">
                   <CheckCircle2 className="w-5 h-5 text-status-success shrink-0 mt-0.5" />
                   <p className="text-xs text-text-secondary leading-relaxed">
                     <strong className="text-text-primary">Tugas berikutnya sudah terbuka!</strong> Kamu bisa langsung mengerjakan tugas berikutnya tanpa harus menunggu review.

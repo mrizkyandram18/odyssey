@@ -6,9 +6,11 @@
   /* Core Palette: Warm Off-White / Beige base */
   --bg-app: 250 248 245;       /* #FAF8F5 */
   --bg-realm: 243 239 234;     /* #F3EFEA */
+  --bg-journey: 237 232 225;   /* warm journey bg for gradients */
   --surface: 255 255 255;      /* #FFFFFF */
   --surface-elevated: 255 255 255;
   --surface-glass: 255 255 255 / 0.8;
+  --surface-ground: 44 39 36;  /* dark text on reward btn */
   --border-subtle: 229 223 213; /* #E5DFD5 */
 
   /* Typography */
@@ -21,6 +23,12 @@
   --accent-reward: 234 88 12;      /* Terracotta / Soft Orange */
   --accent-rare: 139 92 246;       /* Violet */
   --accent-danger: 239 68 68;      /* Warm red */
+  /* Extended tokens for legacy usages */
+  --accent-gold: 234 179 8;        /* amber-500 for coins */
+  --accent-cyan: 6 182 212;        /* cyan-500 */
+  --status-success: 22 163 74;     /* same as nature */
+  --status-error: 239 68 68;
+  --accent-gold-soft: 254 240 138;
   
   /* Fallbacks for existing variables used in legacy components */
   --color-primary: var(--accent-nature);
@@ -99,8 +107,9 @@ body {
 }
 
 h1, h2, h3, h4, h5, h6 {
-  font-family: 'Cinzel', serif;
-  font-weight: 600;
+  font-family: 'Nunito', sans-serif;
+  font-weight: 700;
+  letter-spacing: -0.01em;
 }
 
 input,

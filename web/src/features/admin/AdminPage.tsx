@@ -378,188 +378,144 @@ export const AdminPage: React.FC = () => {
   }
 
   return (
-    <div className="w-full max-w-4xl mx-auto min-h-[calc(100vh-80px)] pb-24 px-2 sm:px-4 pt-2 flex flex-col space-y-5">
-      {/* 1. Operations Header */}
-      <header className="flex flex-col sm:flex-row sm:items-center justify-between pb-4 border-b border-border-subtle gap-3">
+    <div className="w-full flex flex-col gap-4">
+      <header className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
-          <div className="flex items-center gap-2">
-            <ShieldCheck className="w-6 h-6 text-accent-magic" />
-            <h1 className="font-heading font-extrabold text-text-primary text-xl">
-              Panel Operasional Admin
-            </h1>
-            <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-accent-magic/15 text-accent-magic uppercase tracking-wider">
-              Control Panel
-            </span>
-          </div>
+          <h1 className="text-lg font-bold text-text-primary flex items-center gap-2">
+            <ShieldCheck className="w-5 h-5 text-accent-magic" />
+            <span>Panel Operasional Admin</span>
+            <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-accent-magic/10 text-accent-magic border border-accent-magic/20">GUIDE</span>
+          </h1>
           <p className="text-xs text-text-secondary mt-0.5">
-            Verifikasi tugas keluarga, kelola klaim pencairan, jadwalkan tugas, & atur periode penukaran.
+            Verifikasi tugas, kelola pencairan, jadwal tugas
           </p>
         </div>
-
         <button
           onClick={fetchData}
           disabled={isFetching}
-          className="self-start sm:self-auto px-3.5 py-2 rounded-xl bg-surface-elevated border border-border-subtle text-text-secondary hover:text-text-primary active:scale-95 transition-all shadow-sm flex items-center gap-2 text-xs font-bold"
+          className="self-start sm:self-auto px-3 py-2 rounded-xl bg-surface border border-border-subtle text-text-secondary hover:text-text-primary transition-colors flex items-center gap-2 text-xs font-bold shrink-0"
         >
           <RefreshCw className={`w-3.5 h-3.5 ${isFetching ? 'animate-spin' : ''}`} />
-          <span>Segarkan Data</span>
+          <span>Segarkan</span>
         </button>
       </header>
 
-      {/* 2. Top Metric Tiles */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-        {/* Metric 1: Submissions */}
-        <div
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+        <button
           onClick={() => setActiveTab('submissions')}
-          className={`p-3.5 rounded-2xl border cursor-pointer transition-all ${
+          className={`text-left p-3 rounded-2xl border transition-colors ${
             activeTab === 'submissions'
-              ? 'bg-accent-magic/10 border-accent-magic/50 shadow-sm'
-              : 'bg-surface-elevated border-border-subtle hover:border-border-subtle/80'
+              ? 'bg-accent-magic/10 border-accent-magic/30'
+              : 'bg-surface border-border-subtle hover:bg-surface-elevated'
           }`}
         >
           <span className="text-[11px] font-bold text-text-secondary flex items-center gap-1">
             <CheckCircle2 className="w-3.5 h-3.5 text-accent-magic" />
-            <span>Verifikasi Bukti</span>
+            Verifikasi
           </span>
-          <div className="flex items-baseline gap-1.5 mt-1">
-            <span className="text-2xl font-heading font-extrabold text-text-primary">
-              {submissions.length}
-            </span>
-            <span className="text-[10px] text-text-secondary">antrean</span>
-          </div>
-        </div>
+          <p className="mt-1 flex items-baseline gap-1">
+            <span className="text-xl font-bold text-text-primary">{submissions.length}</span>
+            <span className="text-[11px] text-text-secondary">antrean</span>
+          </p>
+        </button>
 
-        {/* Metric 2: Claims */}
-        <div
+        <button
           onClick={() => setActiveTab('claims')}
-          className={`p-3.5 rounded-2xl border cursor-pointer transition-all ${
+          className={`text-left p-3 rounded-2xl border transition-colors ${
             activeTab === 'claims'
-              ? 'bg-status-success/10 border-status-success/50 shadow-sm'
-              : 'bg-surface-elevated border-border-subtle hover:border-border-subtle/80'
+              ? 'bg-status-success/10 border-status-success/30'
+              : 'bg-surface border-border-subtle hover:bg-surface-elevated'
           }`}
         >
           <span className="text-[11px] font-bold text-text-secondary flex items-center gap-1">
             <Coins className="w-3.5 h-3.5 text-status-success" />
-            <span>Pencairan Pending</span>
+            Pencairan
           </span>
-          <div className="flex items-baseline gap-1.5 mt-1">
-            <span className="text-2xl font-heading font-extrabold text-text-primary">
-              {claims.length}
-            </span>
-            <span className="text-[10px] text-text-secondary">klaim</span>
-          </div>
-        </div>
+          <p className="mt-1 flex items-baseline gap-1">
+            <span className="text-xl font-bold text-text-primary">{claims.length}</span>
+            <span className="text-[11px] text-text-secondary">klaim</span>
+          </p>
+        </button>
 
-        {/* Metric 3: Active Tasks */}
-        <div
+        <button
           onClick={() => setActiveTab('tasks')}
-          className={`p-3.5 rounded-2xl border cursor-pointer transition-all ${
+          className={`text-left p-3 rounded-2xl border transition-colors ${
             activeTab === 'tasks'
-              ? 'bg-accent-cyan/10 border-accent-cyan/50 shadow-sm'
-              : 'bg-surface-elevated border-border-subtle hover:border-border-subtle/80'
+              ? 'bg-accent-cyan/10 border-accent-cyan/30'
+              : 'bg-surface border-border-subtle hover:bg-surface-elevated'
           }`}
         >
           <span className="text-[11px] font-bold text-text-secondary flex items-center gap-1">
             <Calendar className="w-3.5 h-3.5 text-accent-cyan" />
-            <span>Tugas Hari Ini</span>
+            Tugas Hari Ini
           </span>
-          <div className="flex items-baseline gap-1.5 mt-1">
-            <span className="text-2xl font-heading font-extrabold text-text-primary">
-              {tasks.length}
-            </span>
-            <span className="text-[10px] text-text-secondary">langkah</span>
-          </div>
-        </div>
+          <p className="mt-1 flex items-baseline gap-1">
+            <span className="text-xl font-bold text-text-primary">{tasks.length}</span>
+            <span className="text-[11px] text-text-secondary">item</span>
+          </p>
+        </button>
 
-        {/* Metric 4: Redemption Window */}
-        <div
+        <button
           onClick={() => setActiveTab('settings')}
-          className={`p-3.5 rounded-2xl border cursor-pointer transition-all ${
+          className={`text-left p-3 rounded-2xl border transition-colors ${
             activeTab === 'settings'
-              ? 'bg-accent-gold/10 border-accent-gold/50 shadow-sm'
-              : 'bg-surface-elevated border-border-subtle hover:border-border-subtle/80'
+              ? 'bg-accent-gold/10 border-accent-gold/30'
+              : 'bg-surface border-border-subtle hover:bg-surface-elevated'
           }`}
         >
           <span className="text-[11px] font-bold text-text-secondary flex items-center gap-1">
             <Sliders className="w-3.5 h-3.5 text-accent-gold" />
-            <span>Periode Penukaran</span>
+            Periode
           </span>
-          <div className="flex items-baseline gap-1.5 mt-1">
-            <span className="text-lg font-heading font-extrabold text-text-primary truncate">
-              {config ? `${config.redemption_start_day}–${config.redemption_end_day}` : '21–26'}
-            </span>
-            <span
-              className={`text-[10px] font-bold px-1.5 py-0.2 rounded-md ${
-                config?.is_open
-                  ? 'bg-status-success/20 text-status-success'
-                  : 'bg-surface-base text-text-secondary'
-              }`}
-            >
-              {config?.is_open ? 'Buka' : 'Tutup'}
-            </span>
-          </div>
-        </div>
+          <p className="mt-1 flex items-baseline gap-1">
+            <span className="text-lg font-bold text-text-primary">{config ? `${config.redemption_start_day}–${config.redemption_end_day}` : '21–26'}</span>
+            <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full ${config?.is_open ? 'bg-status-success/15 text-status-success' : 'bg-surface-elevated text-text-secondary border border-border-subtle'}`}>{config?.is_open ? 'Buka' : 'Tutup'}</span>
+          </p>
+        </button>
       </div>
 
-      {/* 3. Navigation Tabs Bar (Flexible & Collision-Proof) */}
-      <div className="flex flex-wrap gap-1.5 p-1 bg-surface-base rounded-2xl border border-border-subtle">
+      <div className="flex flex-wrap gap-1 p-1 bg-surface rounded-xl border border-border-subtle">
         <button
           data-testid="admin-tab-submissions"
           onClick={() => setActiveTab('submissions')}
-          className={`flex-1 min-w-[130px] py-2.5 px-3 rounded-xl font-heading font-bold text-xs flex items-center justify-center gap-1.5 transition-all text-center ${
-            activeTab === 'submissions'
-              ? 'bg-accent-magic text-white shadow-md shadow-accent-magic/30'
-              : 'text-text-secondary hover:text-text-primary'
+          className={`flex-1 min-w-[120px] py-2.5 px-3 rounded-lg font-bold text-xs flex items-center justify-center gap-1.5 transition-colors ${
+            activeTab === 'submissions' ? 'bg-accent-magic text-white shadow-sm' : 'text-text-secondary hover:text-text-primary'
           }`}
         >
-          <span>Verifikasi Bukti</span>
-          {submissions.length > 0 && (
-            <span className="px-1.5 py-0.2 rounded-full bg-accent-gold text-text-primary font-mono text-[10px]">
-              {submissions.length}
-            </span>
-          )}
+          Verifikasi
+          {submissions.length > 0 && <span className="px-1.5 py-0.5 rounded-full bg-white/20 text-white font-mono text-[10px]">{submissions.length}</span>}
         </button>
 
         <button
           data-testid="admin-tab-claims"
           onClick={() => setActiveTab('claims')}
-          className={`flex-1 min-w-[130px] py-2.5 px-3 rounded-xl font-heading font-bold text-xs flex items-center justify-center gap-1.5 transition-all text-center ${
-            activeTab === 'claims'
-              ? 'bg-accent-magic text-white shadow-md shadow-accent-magic/30'
-              : 'text-text-secondary hover:text-text-primary'
+          className={`flex-1 min-w-[120px] py-2.5 px-3 rounded-lg font-bold text-xs flex items-center justify-center gap-1.5 transition-colors ${
+            activeTab === 'claims' ? 'bg-accent-magic text-white shadow-sm' : 'text-text-secondary hover:text-text-primary'
           }`}
         >
-          <span>Pencairan Koin</span>
-          {claims.length > 0 && (
-            <span className="px-1.5 py-0.2 rounded-full bg-status-success text-white font-mono text-[10px]">
-              {claims.length}
-            </span>
-          )}
+          Pencairan
+          {claims.length > 0 && <span className="px-1.5 py-0.5 rounded-full bg-white/20 text-white font-mono text-[10px]">{claims.length}</span>}
         </button>
 
         <button
           data-testid="admin-tab-tasks"
           onClick={() => setActiveTab('tasks')}
-          className={`flex-1 min-w-[130px] py-2.5 px-3 rounded-xl font-heading font-bold text-xs flex items-center justify-center gap-1.5 transition-all text-center ${
-            activeTab === 'tasks'
-              ? 'bg-accent-magic text-white shadow-md shadow-accent-magic/30'
-              : 'text-text-secondary hover:text-text-primary'
+          className={`flex-1 min-w-[120px] py-2.5 px-3 rounded-lg font-bold text-xs flex items-center justify-center gap-1.5 transition-colors ${
+            activeTab === 'tasks' ? 'bg-accent-magic text-white shadow-sm' : 'text-text-secondary hover:text-text-primary'
           }`}
         >
-          <span>Jadwal Tugas</span>
+          Jadwal Tugas
         </button>
 
         <button
           data-testid="admin-tab-settings"
           onClick={() => setActiveTab('settings')}
-          className={`flex-1 min-w-[130px] py-2.5 px-3 rounded-xl font-heading font-bold text-xs flex items-center justify-center gap-1.5 transition-all text-center ${
-            activeTab === 'settings'
-              ? 'bg-accent-magic text-white shadow-md shadow-accent-magic/30'
-              : 'text-text-secondary hover:text-text-primary'
+          className={`flex-1 min-w-[120px] py-2.5 px-3 rounded-lg font-bold text-xs flex items-center justify-center gap-1.5 transition-colors ${
+            activeTab === 'settings' ? 'bg-accent-magic text-white shadow-sm' : 'text-text-secondary hover:text-text-primary'
           }`}
         >
           <Settings className="w-3.5 h-3.5" />
-          <span>Pengaturan Periode</span>
+          Periode
         </button>
       </div>
 
