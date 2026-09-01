@@ -128,18 +128,21 @@ func getEnvSlice(key string) []string {
 }
 
 type RedemptionConfig struct {
-	RedemptionStartDay int    `json:"redemption_start_day"`
-	RedemptionEndDay   int    `json:"redemption_end_day"`
-	PayoutDay          int    `json:"payout_day"`
-	EarningPeriodDays  int    `json:"earning_period_days"`
-	IsOpen             bool   `json:"is_open"`
-	IsPayoutDay        bool   `json:"is_payout_day"`
-	CurrentDay         int    `json:"current_day"`
-	ConversionRate     int    `json:"conversion_rate"`
-	PayoutTargetRupiah int    `json:"payout_target_rupiah"`
-	PayoutTargetCoins  int    `json:"payout_target_coins"`
-	MaxPayoutCoins     int    `json:"max_payout_coins"`
-	Timezone           string `json:"timezone"`
+	RedemptionStartDay       int    `json:"redemption_start_day"`
+	RedemptionEndDay         int    `json:"redemption_end_day"`
+	PayoutDay                int    `json:"payout_day"`
+	EarningPeriodDays        int    `json:"earning_period_days"`
+	IsOpen                   bool   `json:"is_open"`
+	IsPayoutDay              bool   `json:"is_payout_day"`
+	CurrentDay               int    `json:"current_day"`
+	ConversionRate           int    `json:"conversion_rate"`
+	PayoutTargetRupiah       int    `json:"payout_target_rupiah"`
+	PayoutTargetCoins        int    `json:"payout_target_coins"`
+	MaxPayoutCoins           int    `json:"max_payout_coins"`
+	Timezone                 string `json:"timezone"`
+	DefaultMonthlyCoinTarget int    `json:"default_monthly_coin_target"`
+	TargetEarningStartDay    int    `json:"target_earning_start_day"`
+	TargetEarningEndDay      int    `json:"target_earning_end_day"`
 }
 
 const DefaultRedemptionStartDay = 24
@@ -150,6 +153,9 @@ const DefaultCoinConversionRate = 100
 const DefaultPayoutTargetRupiah = 320000
 const DefaultPayoutTargetCoins = 3200
 const DefaultMaxPayoutCoins = 3200
+const DefaultMonthlyCoinTarget = 3200
+const DefaultTargetEarningStartDay = 1
+const DefaultTargetEarningEndDay = 24
 const DefaultTimezone = "Asia/Jakarta"
 
 func ResolveRedemptionConfig(startDay, endDay int, tzName string, now time.Time) RedemptionConfig {
@@ -238,18 +244,21 @@ func ResolveRedemptionConfigFull(p ResolveRedemptionConfigParams) RedemptionConf
 	isPayoutDay := curDay == p.PayoutDay
 
 	return RedemptionConfig{
-		RedemptionStartDay: p.StartDay,
-		RedemptionEndDay:   p.EndDay,
-		PayoutDay:          p.PayoutDay,
-		EarningPeriodDays:  p.EarningPeriodDays,
-		IsOpen:             isOpen,
-		IsPayoutDay:        isPayoutDay,
-		CurrentDay:         curDay,
-		ConversionRate:     p.ConversionRate,
-		PayoutTargetRupiah: p.PayoutTargetRupiah,
-		PayoutTargetCoins:  p.PayoutTargetCoins,
-		MaxPayoutCoins:     p.MaxPayoutCoins,
-		Timezone:           p.Timezone,
+		RedemptionStartDay:       p.StartDay,
+		RedemptionEndDay:         p.EndDay,
+		PayoutDay:                p.PayoutDay,
+		EarningPeriodDays:        p.EarningPeriodDays,
+		IsOpen:                   isOpen,
+		IsPayoutDay:              isPayoutDay,
+		CurrentDay:               curDay,
+		ConversionRate:           p.ConversionRate,
+		PayoutTargetRupiah:       p.PayoutTargetRupiah,
+		PayoutTargetCoins:        p.PayoutTargetCoins,
+		MaxPayoutCoins:           p.MaxPayoutCoins,
+		Timezone:                 p.Timezone,
+		DefaultMonthlyCoinTarget: DefaultMonthlyCoinTarget,
+		TargetEarningStartDay:    DefaultTargetEarningStartDay,
+		TargetEarningEndDay:      DefaultTargetEarningEndDay,
 	}
 }
 

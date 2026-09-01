@@ -148,6 +148,8 @@ export interface MemberView {
   level: number
   xp: number
   coins: number
+  monthly_coin_target?: number
+  earned_this_period?: number
   created_at: string
 }
 
@@ -156,6 +158,7 @@ export interface CreateMemberInput {
   password: string
   explorer_name: string
   role?: Role
+  monthly_coin_target?: number
 }
 
 export interface UpdateMemberInput {
@@ -164,6 +167,7 @@ export interface UpdateMemberInput {
   is_active?: boolean
   password?: string
   reset_device?: boolean
+  monthly_coin_target?: number
 }
 
 export interface TaskView {
@@ -211,6 +215,9 @@ export interface RedemptionConfig {
   payout_target_coins: number
   max_payout_coins: number
   timezone: string
+  default_monthly_coin_target?: number
+  target_earning_start_day?: number
+  target_earning_end_day?: number
 }
 
 export interface RewardCatalogItem {

@@ -63,7 +63,10 @@ func fetchRedemptionConfig(ctx context.Context, client db.SupabaseClient) shared
 	payoutTargetCoins := shared.DefaultPayoutTargetCoins
 	maxPayoutCoins := shared.DefaultMaxPayoutCoins
 	timezone := shared.DefaultTimezone
-	raw, err := client.Get(ctx, "odyssey_system_config", "key=in.(redemption_start_day,redemption_end_day,payout_day,earning_period_days,coin_conversion_rate,payout_target_rupiah,payout_target_coins,max_payout_coins,timezone)")
+	defaultTarget := shared.DefaultMonthlyCoinTarget
+	targetStartDay := shared.DefaultTargetEarningStartDay
+	targetEndDay := shared.DefaultTargetEarningEndDay
+	raw, err := client.Get(ctx, "odyssey_system_config", "key=in.(redemption_start_day,redemption_end_day,payout_day,earning_period_days,coin_conversion_rate,payout_target_rupiah,payout_target_coins,max_payout_coins,timezone,default_monthly_coin_target,target_earning_start_day,target_earning_end_day)")
 	if err == nil && len(raw) > 0 {
 		var rows []ConfigRow
 		if err := json.Unmarshal(raw, &rows); err == nil {
@@ -107,6 +110,18 @@ func fetchRedemptionConfig(ctx context.Context, client db.SupabaseClient) shared
 							timezone = v
 						}
 					}
+				case "default_monthly_coin_target":
+					if v, err := strconv.Atoi(r.Value); err == nil && v >= 1 && v <= 10000 {
+						defaultTarget = v
+					}
+				case "target_earning_start_day":
+					if v, err := strconv.Atoi(r.Value); err == nil && v >= 1 && v <= 31 {
+						targetStartDay = v
+					}
+				case "target_earning_end_day":
+					if v, err := strconv.Atoi(r.Value); err == nil && v >= 1 && v <= 31 {
+						targetEndDay = v
+					}
 				}
 			}
 		}
@@ -117,7 +132,7 @@ func fetchRedemptionConfig(ctx context.Context, client db.SupabaseClient) shared
 			timezone = envTZ
 		}
 	}
-	return shared.ResolveRedemptionConfigFull(shared.ResolveRedemptionConfigParams{
+	cfg := shared.ResolveRedemptionConfigFull(shared.ResolveRedemptionConfigParams{
 		StartDay:           startDay,
 		EndDay:             endDay,
 		PayoutDay:          payoutDay,
@@ -129,6 +144,10 @@ func fetchRedemptionConfig(ctx context.Context, client db.SupabaseClient) shared
 		PayoutTargetCoins:  payoutTargetCoins,
 		MaxPayoutCoins:     maxPayoutCoins,
 	})
+	cfg.DefaultMonthlyCoinTarget = defaultTarget
+	cfg.TargetEarningStartDay = targetStartDay
+	cfg.TargetEarningEndDay = targetEndDay
+	return cfg
 }
 
 func (a *API) HandleGetShopConfig(w http.ResponseWriter, r *http.Request) {

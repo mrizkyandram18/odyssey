@@ -130,10 +130,15 @@ export const MemberList: React.FC = () => {
                     </td>
 
                     <td className="py-3 px-3">
-                      <span className="font-bold text-accent-gold font-mono flex items-center gap-1">
-                        <Coins className="w-3 h-3" />
-                        {member.coins.toLocaleString('id-ID')}
-                      </span>
+                      <div className="flex flex-col gap-0.5">
+                        <span className="font-bold text-accent-gold font-mono flex items-center gap-1">
+                          <Coins className="w-3 h-3" />
+                          {member.coins.toLocaleString('id-ID')}
+                        </span>
+                        {member.monthly_coin_target !== undefined && (
+                          <span className="text-[11px] text-text-secondary font-mono">Target {member.monthly_coin_target}</span>
+                        )}
+                      </div>
                     </td>
 
                     <td className="py-3 px-3">
@@ -219,6 +224,9 @@ export const MemberList: React.FC = () => {
                     <span className="font-bold text-accent-gold flex items-center gap-1">
                       <Coins className="w-3 h-3" /> {member.coins.toLocaleString('id-ID')}
                     </span>
+                    {member.monthly_coin_target !== undefined && (
+                      <span className="text-[11px] font-mono">Target {member.monthly_coin_target}</span>
+                    )}
                     <span className="font-bold text-accent-magic">
                       Level {member.level}
                     </span>

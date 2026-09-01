@@ -1,6 +1,7 @@
 package admin_members
 
 import (
+	"context"
 	"crypto/rand"
 	"encoding/hex"
 	"encoding/json"
@@ -29,31 +30,35 @@ func NewAPI(client db.SupabaseClient) *API {
 }
 
 type MemberView struct {
-	UID          string    `json:"uid"`
-	FamilyID     string    `json:"family_id"`
-	ExplorerName string    `json:"explorer_name"`
-	Username     string    `json:"username"`
-	Role         string    `json:"role"`
-	IsActive     bool      `json:"is_active"`
-	Level        int       `json:"level"`
-	XP           int64     `json:"xp"`
-	Coins        int64     `json:"coins"`
-	CreatedAt    time.Time `json:"created_at"`
+	UID                string    `json:"uid"`
+	FamilyID           string    `json:"family_id"`
+	ExplorerName       string    `json:"explorer_name"`
+	Username           string    `json:"username"`
+	Role               string    `json:"role"`
+	IsActive           bool      `json:"is_active"`
+	Level              int       `json:"level"`
+	XP                 int64     `json:"xp"`
+	Coins              int64     `json:"coins"`
+	MonthlyCoinTarget  *int      `json:"monthly_coin_target,omitempty"`
+	EarnedThisPeriod   int       `json:"earned_this_period,omitempty"`
+	CreatedAt          time.Time `json:"created_at"`
 }
 
 type CreateMemberRequest struct {
-	Username     string `json:"username"`
-	Password     string `json:"password"`
-	ExplorerName string `json:"explorer_name"`
-	Role         string `json:"role,omitempty"`
+	Username          string `json:"username"`
+	Password          string `json:"password"`
+	ExplorerName      string `json:"explorer_name"`
+	Role              string `json:"role,omitempty"`
+	MonthlyCoinTarget *int   `json:"monthly_coin_target,omitempty"`
 }
 
 type UpdateMemberRequest struct {
-	ExplorerName *string `json:"explorer_name,omitempty"`
-	Role         *string `json:"role,omitempty"`
-	IsActive     *bool   `json:"is_active,omitempty"`
-	Password     *string `json:"password,omitempty"`
-	ResetDevice  *bool   `json:"reset_device,omitempty"`
+	ExplorerName      *string `json:"explorer_name,omitempty"`
+	Role              *string `json:"role,omitempty"`
+	IsActive          *bool   `json:"is_active,omitempty"`
+	Password          *string `json:"password,omitempty"`
+	ResetDevice       *bool   `json:"reset_device,omitempty"`
+	MonthlyCoinTarget *int    `json:"monthly_coin_target,omitempty"`
 }
 
 func (a *API) requireAdmin(w http.ResponseWriter, r *http.Request) (*auth.SessionClaims, bool) {
@@ -76,6 +81,77 @@ func generateID(prefix string) string {
 	b := make([]byte, 8)
 	_, _ = rand.Read(b)
 	return fmt.Sprintf("%s_%d_%s", prefix, time.Now().Unix(), hex.EncodeToString(b))
+}
+
+func getDefaultMonthlyTarget(ctx context.Context, client db.SupabaseClient) int {
+	raw, err := client.Get(ctx, "odyssey_system_config", "key=eq.default_monthly_coin_target&select=value")
+	if err == nil && len(raw) > 0 {
+		var rows []struct{ Value string `json:"value"` }
+		if err := json.Unmarshal(raw, &rows); err == nil && len(rows) > 0 {
+			var n int
+			if _, err := fmt.Sscanf(rows[0].Value, "%d", &n); err == nil && n >= 1 && n <= 10000 {
+				return n
+			}
+		}
+	}
+	return shared.DefaultMonthlyCoinTarget
+}
+
+func getEarnedThisPeriod(ctx context.Context, client db.SupabaseClient, uids []string) map[string]int {
+	if len(uids) == 0 {
+		return map[string]int{}
+	}
+	tz := shared.LoadConfig().Timezone
+	if tz == "" {
+		tz = shared.DefaultTimezone
+	}
+	if raw, err := client.Get(ctx, "odyssey_system_config", "key=eq.timezone&select=value"); err == nil && len(raw) > 0 {
+		var rows []struct{ Value string `json:"value"` }
+		if err := json.Unmarshal(raw, &rows); err == nil && len(rows) > 0 && strings.TrimSpace(rows[0].Value) != "" {
+			if _, err := time.LoadLocation(strings.TrimSpace(rows[0].Value)); err == nil {
+				tz = strings.TrimSpace(rows[0].Value)
+			}
+		}
+	}
+	loc, _ := time.LoadLocation(tz)
+	if loc == nil {
+		loc = time.FixedZone("WIB", 7*3600)
+	}
+	nowInTz := time.Now().In(loc)
+	startDay := 1
+	endDay := 24
+	if raw, err := client.Get(ctx, "odyssey_system_config", "key=in.(target_earning_start_day,target_earning_end_day)&select=key,value"); err == nil && len(raw) > 0 {
+		var rows []struct{ Key string `json:"key"`; Value string `json:"value"` }
+		if err := json.Unmarshal(raw, &rows); err == nil {
+			for _, r := range rows {
+				var n int
+				if _, err := fmt.Sscanf(r.Value, "%d", &n); err == nil {
+					if r.Key == "target_earning_start_day" && n >= 1 && n <= 31 {
+						startDay = n
+					}
+					if r.Key == "target_earning_end_day" && n >= 1 && n <= 31 {
+						endDay = n
+					}
+				}
+			}
+		}
+	}
+	periodStart := time.Date(nowInTz.Year(), nowInTz.Month(), startDay, 0, 0, 0, 0, loc).UTC().Format(time.RFC3339)
+	periodEnd := time.Date(nowInTz.Year(), nowInTz.Month(), endDay+1, 0, 0, 0, 0, loc).UTC().Format(time.RFC3339)
+	params := fmt.Sprintf("user_uid=in.(%s)&type=eq.TASK_REWARD&created_at=gte.%s&created_at=lt.%s&select=user_uid,amount", strings.Join(uids, ","), periodStart, periodEnd)
+	raw, err := client.Get(ctx, "odyssey_coin_transactions", params)
+	if err != nil || len(raw) == 0 {
+		return map[string]int{}
+	}
+	var rows []struct{ UserUID string `json:"user_uid"`; Amount int `json:"amount"` }
+	if err := json.Unmarshal(raw, &rows); err != nil {
+		return map[string]int{}
+	}
+	m := make(map[string]int, len(uids))
+	for _, r := range rows {
+		m[r.UserUID] += r.Amount
+	}
+	return m
 }
 
 func (a *API) HandleListMembers(w http.ResponseWriter, r *http.Request) {
@@ -102,15 +178,16 @@ func (a *API) HandleListMembers(w http.ResponseWriter, r *http.Request) {
 	}
 
 	type ProfRow struct {
-		UID          string    `json:"uid"`
-		FamilyID     string    `json:"family_id"`
-		ExplorerName string    `json:"explorer_name"`
-		Role         string    `json:"role"`
-		IsActive     bool      `json:"is_active"`
-		Level        int       `json:"level"`
-		XP           int64     `json:"xp"`
-		Coins        int64     `json:"coins"`
-		CreatedAt    time.Time `json:"created_at"`
+		UID               string    `json:"uid"`
+		FamilyID          string    `json:"family_id"`
+		ExplorerName      string    `json:"explorer_name"`
+		Role              string    `json:"role"`
+		IsActive          bool      `json:"is_active"`
+		Level             int       `json:"level"`
+		XP                int64     `json:"xp"`
+		Coins             int64     `json:"coins"`
+		MonthlyCoinTarget *int      `json:"monthly_coin_target"`
+		CreatedAt         time.Time `json:"created_at"`
 	}
 	var profs []ProfRow
 	_ = json.Unmarshal(profRaw, &profs)
@@ -147,23 +224,33 @@ func (a *API) HandleListMembers(w http.ResponseWriter, r *http.Request) {
 		userMap[l.ProfileUID] = l.Username
 	}
 
+	earnedMap := getEarnedThisPeriod(ctx, a.client, uids)
+	defaultTarget := getDefaultMonthlyTarget(ctx, a.client)
 	items := make([]MemberView, len(profs))
 	for i, p := range profs {
 		username := userMap[p.UID]
 		if username == "" {
 			username = p.UID
 		}
+		tgt := p.MonthlyCoinTarget
+		if tgt == nil {
+			q := defaultTarget
+			tgt = &q
+		}
+		earned := earnedMap[p.UID]
 		items[i] = MemberView{
-			UID:          p.UID,
-			FamilyID:     p.FamilyID,
-			ExplorerName: p.ExplorerName,
-			Username:     username,
-			Role:         p.Role,
-			IsActive:     p.IsActive,
-			Level:        p.Level,
-			XP:           p.XP,
-			Coins:        p.Coins,
-			CreatedAt:    p.CreatedAt,
+			UID:               p.UID,
+			FamilyID:          p.FamilyID,
+			ExplorerName:      p.ExplorerName,
+			Username:          username,
+			Role:              p.Role,
+			IsActive:          p.IsActive,
+			Level:             p.Level,
+			XP:                p.XP,
+			Coins:             p.Coins,
+			MonthlyCoinTarget: tgt,
+			EarnedThisPeriod:  earned,
+			CreatedAt:         p.CreatedAt,
 		}
 	}
 
@@ -219,6 +306,12 @@ func (a *API) HandleCreateMember(w http.ResponseWriter, r *http.Request) {
 	}
 
 	role := string(auth.NormalizeRole(req.Role))
+	if req.MonthlyCoinTarget != nil {
+		if *req.MonthlyCoinTarget < 1 || *req.MonthlyCoinTarget > 10000 {
+			shared.WriteJSONError(w, "target koin bulanan harus 1..10000", http.StatusBadRequest)
+			return
+		}
+	}
 
 	// 1. Check username uniqueness
 	existingRaw, err := a.client.Get(ctx, "odyssey_local_users", fmt.Sprintf("username=eq.%s", req.Username))
@@ -241,7 +334,18 @@ func (a *API) HandleCreateMember(w http.ResponseWriter, r *http.Request) {
 
 	uid := generateID("usr")
 
-	// 3. Insert user profile
+	// 3. Resolve target (explicit or global default)
+	target := getDefaultMonthlyTarget(ctx, a.client)
+	if req.MonthlyCoinTarget != nil {
+		target = *req.MonthlyCoinTarget
+	}
+	var targetVal *int
+	if role == "MEMBER" || role == "SEEKER" {
+		q := target
+		targetVal = &q
+	}
+
+	// 4. Insert user profile
 	now := time.Now().UTC()
 	profPayload := map[string]any{
 		"uid":                  uid,
@@ -257,6 +361,9 @@ func (a *API) HandleCreateMember(w http.ResponseWriter, r *http.Request) {
 		"created_at":           now.Format(time.RFC3339),
 		"updated_at":           now.Format(time.RFC3339),
 	}
+	if targetVal != nil {
+		profPayload["monthly_coin_target"] = *targetVal
+	}
 
 	_, err = a.client.MutateAtomic(ctx, http.MethodPost, "odyssey_user_profiles", profPayload, "", "return=representation")
 	if err != nil {
@@ -264,7 +371,7 @@ func (a *API) HandleCreateMember(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// 4. Insert local auth user
+	// 5. Insert local auth user
 	localID := generateID("loc")
 	localPayload := map[string]any{
 		"id":            localID,
@@ -283,17 +390,65 @@ func (a *API) HandleCreateMember(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// 6. Create current-period target history (best-effort)
+	if targetVal != nil {
+		tz := shared.LoadConfig().Timezone
+		if tz == "" {
+			tz = shared.DefaultTimezone
+		}
+		if raw, err := a.client.Get(ctx, "odyssey_system_config", "key=eq.timezone&select=value"); err == nil && len(raw) > 0 {
+			var rows []struct{ Value string `json:"value"` }
+			if err := json.Unmarshal(raw, &rows); err == nil && len(rows) > 0 && strings.TrimSpace(rows[0].Value) != "" {
+				if _, err := time.LoadLocation(strings.TrimSpace(rows[0].Value)); err == nil {
+					tz = strings.TrimSpace(rows[0].Value)
+				}
+			}
+		}
+		if loc, err := time.LoadLocation(tz); err == nil {
+			nowInTz := time.Now().In(loc)
+			startDay := 1
+			endDay := 24
+			if raw, err := a.client.Get(ctx, "odyssey_system_config", "key=in.(target_earning_start_day,target_earning_end_day)&select=key,value"); err == nil && len(raw) > 0 {
+				var rows []struct{ Key string `json:"key"`; Value string `json:"value"` }
+				if err := json.Unmarshal(raw, &rows); err == nil {
+					for _, r := range rows {
+						var n int
+						if _, err := fmt.Sscanf(r.Value, "%d", &n); err == nil {
+							if r.Key == "target_earning_start_day" && n >= 1 && n <= 31 {
+								startDay = n
+							}
+							if r.Key == "target_earning_end_day" && n >= 1 && n <= 31 {
+								endDay = n
+							}
+						}
+					}
+				}
+			}
+			ps := time.Date(nowInTz.Year(), nowInTz.Month(), startDay, 0, 0, 0, 0, loc).UTC().Format("2006-01-02")
+			pe := time.Date(nowInTz.Year(), nowInTz.Month(), endDay+1, 0, 0, 0, 0, loc).UTC().Format("2006-01-02")
+			_, _ = a.client.Mutate(ctx, http.MethodPost, "odyssey_member_monthly_targets", map[string]any{
+				"user_uid":     uid,
+				"period_start": ps,
+				"period_end":   pe,
+				"target":       *targetVal,
+				"created_at":   now.Format(time.RFC3339),
+			}, "")
+		}
+	}
+
 	shared.WriteJSON(w, http.StatusCreated, MemberView{
-		UID:          uid,
-		FamilyID:     familyID,
-		ExplorerName: req.ExplorerName,
-		Username:     req.Username,
-		Role:         role,
-		IsActive:     true,
-		Level:        1,
-		XP:           0,
-		Coins:        0,
-		CreatedAt:    now,
+		UID:               uid,
+		FamilyID:          familyID,
+		ExplorerName:      req.ExplorerName,
+		Username:          req.Username,
+		Role:              role,
+		IsActive:          true,
+		Level:             1,
+		XP:                0,
+		Coins:             0,
+		MonthlyCoinTarget: targetVal,
+		EarnedThisPeriod:  0,
+		CreatedAt:         now,
 	})
 }
 
@@ -328,6 +483,12 @@ func (a *API) HandleUpdateMember(w http.ResponseWriter, r *http.Request, targetU
 		return
 	}
 
+	if req.MonthlyCoinTarget != nil {
+		if *req.MonthlyCoinTarget < 1 || *req.MonthlyCoinTarget > 10000 {
+			shared.WriteJSONError(w, "target koin bulanan harus 1..10000", http.StatusBadRequest)
+			return
+		}
+	}
 	profPatch := map[string]any{}
 	if req.ExplorerName != nil {
 		name := strings.TrimSpace(*req.ExplorerName)
@@ -347,6 +508,9 @@ func (a *API) HandleUpdateMember(w http.ResponseWriter, r *http.Request, targetU
 	}
 	if req.IsActive != nil {
 		profPatch["is_active"] = *req.IsActive
+	}
+	if req.MonthlyCoinTarget != nil {
+		profPatch["monthly_coin_target"] = *req.MonthlyCoinTarget
 	}
 	if req.ResetDevice != nil && *req.ResetDevice {
 		profPatch["device_id"] = nil
@@ -388,6 +552,48 @@ func (a *API) HandleUpdateMember(w http.ResponseWriter, r *http.Request, targetU
 		}
 	}
 
+	if req.MonthlyCoinTarget != nil {
+		tz := shared.LoadConfig().Timezone
+		if tz == "" {
+			tz = shared.DefaultTimezone
+		}
+		if raw, err := a.client.Get(ctx, "odyssey_system_config", "key=eq.timezone&select=value"); err == nil && len(raw) > 0 {
+			var rows []struct{ Value string `json:"value"` }
+			if err := json.Unmarshal(raw, &rows); err == nil && len(rows) > 0 && strings.TrimSpace(rows[0].Value) != "" {
+				if _, err := time.LoadLocation(strings.TrimSpace(rows[0].Value)); err == nil {
+					tz = strings.TrimSpace(rows[0].Value)
+				}
+			}
+		}
+		if loc, err := time.LoadLocation(tz); err == nil {
+			now := time.Now().In(loc)
+			startDay := 1
+			endDay := 24
+			if raw, err := a.client.Get(ctx, "odyssey_system_config", "key=in.(target_earning_start_day,target_earning_end_day)&select=key,value"); err == nil && len(raw) > 0 {
+				var rows []struct{ Key string `json:"key"`; Value string `json:"value"` }
+				if err := json.Unmarshal(raw, &rows); err == nil {
+					for _, r := range rows {
+						var n int
+						if _, err := fmt.Sscanf(r.Value, "%d", &n); err == nil {
+							if r.Key == "target_earning_start_day" && n >= 1 && n <= 31 {
+								startDay = n
+							}
+							if r.Key == "target_earning_end_day" && n >= 1 && n <= 31 {
+								endDay = n
+							}
+						}
+					}
+				}
+			}
+			ps := time.Date(now.Year(), now.Month(), startDay, 0, 0, 0, 0, loc).UTC().Format("2006-01-02")
+			pe := time.Date(now.Year(), now.Month(), endDay+1, 0, 0, 0, 0, loc).UTC().Format("2006-01-02")
+			_, _ = a.client.Mutate(ctx, http.MethodPost, "odyssey_member_monthly_targets", map[string]any{
+				"user_uid": targetUID, "period_start": ps, "period_end": pe, "target": *req.MonthlyCoinTarget, "assigned_by": claims.UID, "created_at": time.Now().UTC().Format(time.RFC3339),
+			}, "")
+			_, _ = a.client.Mutate(ctx, http.MethodPatch, "odyssey_member_monthly_targets", map[string]any{"target": *req.MonthlyCoinTarget, "assigned_by": claims.UID}, fmt.Sprintf("user_uid=eq.%s&period_start=eq.%s", targetUID, ps))
+		}
+	}
+
 	// Return reloaded member view
 	updatedRaw, _ := a.client.Get(ctx, "odyssey_user_profiles", fmt.Sprintf("uid=eq.%s", targetUID))
 	var updatedProfs []db.UserProfile
@@ -407,17 +613,26 @@ func (a *API) HandleUpdateMember(w http.ResponseWriter, r *http.Request, targetU
 
 	if len(updatedProfs) > 0 {
 		up := updatedProfs[0]
+		defaultTarget := getDefaultMonthlyTarget(ctx, a.client)
+		tgt := up.MonthlyCoinTarget
+		if tgt == nil {
+			q := defaultTarget
+			tgt = &q
+		}
+		earnedMap := getEarnedThisPeriod(ctx, a.client, []string{targetUID})
 		shared.WriteJSON(w, http.StatusOK, MemberView{
-			UID:          up.UID,
-			FamilyID:     up.FamilyID,
-			ExplorerName: up.ExplorerName,
-			Username:     username,
-			Role:         up.Role,
-			IsActive:     up.IsActive,
-			Level:        up.Level,
-			XP:           up.XP,
-			Coins:        up.Coins,
-			CreatedAt:    up.CreatedAt,
+			UID:               up.UID,
+			FamilyID:          up.FamilyID,
+			ExplorerName:      up.ExplorerName,
+			Username:          username,
+			Role:              up.Role,
+			IsActive:          up.IsActive,
+			Level:             up.Level,
+			XP:                up.XP,
+			Coins:             up.Coins,
+			MonthlyCoinTarget: tgt,
+			EarnedThisPeriod:  earnedMap[targetUID],
+			CreatedAt:         up.CreatedAt,
 		})
 		return
 	}

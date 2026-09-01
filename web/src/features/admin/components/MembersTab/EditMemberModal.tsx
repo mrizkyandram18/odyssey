@@ -11,6 +11,7 @@ interface EditMemberModalProps {
     role: 'ADMIN' | 'MEMBER'
     is_active: boolean
     reset_device: boolean
+    monthly_coin_target: number
   }
   setForm: React.Dispatch<
     React.SetStateAction<{
@@ -18,6 +19,7 @@ interface EditMemberModalProps {
       role: 'ADMIN' | 'MEMBER'
       is_active: boolean
       reset_device: boolean
+      monthly_coin_target: number
     }>
   >
   isSaving: boolean
@@ -180,6 +182,24 @@ export const EditMemberModal: React.FC<EditMemberModalProps> = ({
                 <option value="inactive">○ Nonaktif (Akses Login Diblokir)</option>
               </select>
             </div>
+
+            {(member.role === 'MEMBER' || member.role === 'SEEKER') && (
+              <div className="space-y-2 p-3 rounded-xl bg-surface-elevated border border-border-subtle">
+                <label className="text-xs font-bold text-text-secondary">Target Koin Bulanan</label>
+                <input
+                  type="number"
+                  min={1}
+                  max={10000}
+                  value={form.monthly_coin_target}
+                  onChange={(e) => setForm({ ...form, monthly_coin_target: parseInt(e.target.value || '3200', 10) })}
+                  className="w-full p-2.5 rounded-xl bg-surface border border-border-subtle text-xs sm:text-sm text-text-primary focus:outline-none focus:border-accent-magic"
+                />
+                {member.monthly_coin_target !== undefined && (
+                  <p className="text-[11px] text-text-secondary">Target: {member.monthly_coin_target} • Terpakai bulan ini: {member.earned_this_period ?? 0}</p>
+                )}
+                <p className="text-[11px] text-text-secondary">Sistem akan menghitung pembagian koin otomatis berdasarkan target dan bobot task. Perubahan berlaku bulan ini.</p>
+              </div>
+            )}
 
             {/* Reset Password section - separate from device binding */}
             <div className="p-3.5 rounded-xl bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800/40 space-y-2.5">

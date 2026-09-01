@@ -16,6 +16,7 @@ export function useAdminMembers() {
     password: '',
     explorer_name: '',
     role: 'MEMBER' as 'ADMIN' | 'MEMBER',
+    monthly_coin_target: 3200,
   })
   const [isCreating, setIsCreating] = useState(false)
 
@@ -26,6 +27,7 @@ export function useAdminMembers() {
     role: 'MEMBER' as 'ADMIN' | 'MEMBER',
     is_active: true,
     reset_device: false,
+    monthly_coin_target: 3200,
   })
   const [isSavingEdit, setIsSavingEdit] = useState(false)
 
@@ -57,6 +59,7 @@ export function useAdminMembers() {
       password: '',
       explorer_name: '',
       role: 'MEMBER',
+      monthly_coin_target: 3200,
     })
     setIsCreateModalOpen(true)
   }
@@ -70,6 +73,10 @@ export function useAdminMembers() {
       alert('Semua field wajib diisi')
       return
     }
+    if (newMember.role === 'MEMBER' && (newMember.monthly_coin_target < 1 || newMember.monthly_coin_target > 10000)) {
+      alert('Target koin bulanan harus 1..10000')
+      return
+    }
     setIsCreating(true)
     try {
       await adminMembersApi.createMember({
@@ -77,6 +84,7 @@ export function useAdminMembers() {
         password: newMember.password.trim(),
         explorer_name: newMember.explorer_name.trim(),
         role: newMember.role,
+        monthly_coin_target: newMember.role === 'MEMBER' ? newMember.monthly_coin_target : undefined,
       })
       closeCreateModal()
       await fetchMembers(pagination.page)
@@ -94,6 +102,7 @@ export function useAdminMembers() {
       role: (member.role === 'ADMIN' || member.role === 'GUIDE' || member.role === 'BUILDER') ? 'ADMIN' : 'MEMBER',
       is_active: member.is_active,
       reset_device: false,
+      monthly_coin_target: member.monthly_coin_target ?? 3200,
     })
   }
 
@@ -107,6 +116,10 @@ export function useAdminMembers() {
       alert('Nama anggota tidak boleh kosong')
       return
     }
+    if (editMemberForm.monthly_coin_target < 1 || editMemberForm.monthly_coin_target > 10000) {
+      alert('Target koin bulanan harus 1..10000')
+      return
+    }
     setIsSavingEdit(true)
     try {
       await adminMembersApi.updateMember(selectedMember.uid, {
@@ -114,6 +127,7 @@ export function useAdminMembers() {
         role: editMemberForm.role,
         is_active: editMemberForm.is_active,
         reset_device: editMemberForm.reset_device ? true : undefined,
+        monthly_coin_target: editMemberForm.monthly_coin_target,
       })
       closeEditModal()
       await fetchMembers(pagination.page)

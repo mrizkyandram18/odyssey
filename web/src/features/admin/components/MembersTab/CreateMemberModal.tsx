@@ -9,6 +9,7 @@ interface CreateMemberModalProps {
     password: string
     explorer_name: string
     role: 'ADMIN' | 'MEMBER'
+    monthly_coin_target: number
   }
   setForm: React.Dispatch<
     React.SetStateAction<{
@@ -16,6 +17,7 @@ interface CreateMemberModalProps {
       password: string
       explorer_name: string
       role: 'ADMIN' | 'MEMBER'
+      monthly_coin_target: number
     }>
   >
   isCreating: boolean
@@ -128,6 +130,22 @@ export const CreateMemberModal: React.FC<CreateMemberModalProps> = ({
                 <option value="ADMIN">ADMIN (Administrator)</option>
               </select>
             </div>
+
+            {form.role === 'MEMBER' && (
+              <div className="space-y-1">
+                <label className="text-xs font-bold text-text-secondary">Target Koin Bulanan</label>
+                <input
+                  type="number"
+                  min={1}
+                  max={10000}
+                  required
+                  value={form.monthly_coin_target}
+                  onChange={(e) => setForm({ ...form, monthly_coin_target: parseInt(e.target.value || '3200', 10) })}
+                  className="w-full p-2.5 rounded-xl bg-surface border border-border-subtle text-xs sm:text-sm text-text-primary focus:outline-none focus:border-accent-magic"
+                />
+                <p className="text-[11px] text-text-secondary">Sistem akan menghitung pembagian koin otomatis berdasarkan target dan bobot task. Default 3200.</p>
+              </div>
+            )}
 
             {/* Sticky Footer */}
             <div className="sticky bottom-0 -mx-5 -mb-5 mt-4 px-5 py-3.5 border-t border-border-subtle bg-surface flex gap-3">
