@@ -1,8 +1,32 @@
 import React from 'react'
-import { Users, UserPlus, Coins, Edit3, ChevronLeft, ChevronRight, RefreshCw, Shield, Sparkles, Ban, CheckCircle } from 'lucide-react'
+import { Users, UserPlus, Coins, Edit3, ChevronLeft, ChevronRight, RefreshCw, Shield, Sparkles, Ban, CheckCircle, Calendar, Clock, Activity } from 'lucide-react'
 import { useAdminMembers } from '../../hooks/useAdminMembers'
 import { CreateMemberModal } from './CreateMemberModal'
 import { EditMemberModal } from './EditMemberModal'
+
+function formatCycle(start?: string, end?: string): string {
+  if (!start || !end) return '—'
+  try {
+    const s = new Date(start)
+    const e = new Date(end)
+    const opts: Intl.DateTimeFormatOptions = { day: 'numeric', month: 'short' }
+    return `${s.toLocaleDateString('id-ID', opts)} – ${e.toLocaleDateString('id-ID', opts)}`
+  } catch { return `${start} – ${end}` }
+}
+function formatInactive(member: any): string {
+  if (!member.is_active) return '—'
+  if (member.inactivity_status === 'NO_ACTIVITY_THIS_CYCLE') return 'Belum ada aktivitas di siklus ini'
+  if (member.inactive_days == null || member.inactive_days === undefined) return '—'
+  return `${member.inactive_days} hari`
+}
+function inactivityBadge(member: any): { label: string; className: string } {
+  if (!member.is_active || member.inactivity_status === 'BLOCKED') return { label: 'BLOKIR', className: 'bg-status-error/15 text-status-error' }
+  switch (member.inactivity_status) {
+    case 'INACTIVE': return { label: 'PERLU REVIEW', className: 'bg-amber-100 text-amber-700 border border-amber-200' }
+    case 'NO_ACTIVITY_THIS_CYCLE': return { label: 'NO ACTIVITY', className: 'bg-surface-elevated text-text-secondary border border-border-subtle' }
+    default: return { label: 'AKTIF', className: 'bg-status-success/15 text-status-success' }
+  }
+}
 
 export const MemberList: React.FC = () => {
   const {
@@ -53,7 +77,7 @@ export const MemberList: React.FC = () => {
             {isFetching && <RefreshCw className="w-3.5 h-3.5 animate-spin text-text-secondary" />}
           </h3>
           <p className="text-[11px] text-text-secondary mt-0.5">
-            Kelola status AKTIF/BLOKIR, blokir manual bersifat reversibel (tidak ada hapus pengguna).
+            Pelacakan inaktivitas siklus berjalan — admin memutuskan manual Block (otomatis diblokir dimatikan).
           </p>
         </div>
 
@@ -86,15 +110,18 @@ export const MemberList: React.FC = () => {
                 <tr className="border-b border-border-subtle bg-surface-elevated/50 text-[11px] font-bold text-text-secondary uppercase tracking-wider">
                   <th className="py-3 px-4">Anggota</th>
                   <th className="py-3 px-3">Role</th>
+                  <th className="py-3 px-3">Siklus</th>
+                  <th className="py-3 px-3">Last Task</th>
+                  <th className="py-3 px-3">Tidak Aktif</th>
                   <th className="py-3 px-3">Status</th>
                   <th className="py-3 px-3">Koin</th>
-                  <th className="py-3 px-3">Level</th>
-                  <th className="py-3 px-3">Bergabung</th>
                   <th className="py-3 px-4 text-right">Aksi</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-border-subtle">
-                {members.map((member) => (
+                {members.map((member) => {
+                  const badge = inactivityBadge(member)
+                  return (
                   <tr key={member.uid} className="hover:bg-surface-elevated/40 transition-colors">
                     <td className="py-3 px-4">
                       <div>
@@ -118,20 +145,38 @@ export const MemberList: React.FC = () => {
                       </span>
                     </td>
 
+                    <td className="py-3 px-3 text-[11px] font-mono">
+                      <span className="inline-flex items-center gap-1 text-text-secondary"><Calendar className="w-3 h-3" />{formatCycle(member.current_cycle_start, member.current_cycle_end)}</span>
+                    </td>
+
+                    <td className="py-3 px-3 text-[11px] font-mono">
+                      {member.last_completed_date ? (
+                        <span>{new Date(member.last_completed_date).toLocaleDateString('id-ID', { day: 'numeric', month: 'short' })}</span>
+                      ) : (
+                        <span className="text-text-secondary">—</span>
+                      )}
+                      {member.completed_tasks_current_cycle !== undefined && member.completed_tasks_current_cycle > 0 && (
+                        <span className="ml-1 text-[10px] text-text-secondary">({member.completed_tasks_current_cycle})</span>
+                      )}
+                    </td>
+
+                    <td className="py-3 px-3 text-[11px]">
+                      <span data-testid={`inactive-days-${member.uid}`} className="inline-flex items-center gap-1"><Clock className="w-3 h-3 text-text-secondary" />{formatInactive(member)}</span>
+                    </td>
+
                     <td className="py-3 px-3">
                       <span
                         data-testid={`member-status-${member.uid}`}
-                        className={`inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-md ${
-                          member.is_active
-                            ? 'bg-status-success/15 text-status-success'
-                            : 'bg-status-error/15 text-status-error'
-                        }`}
+                        className={`inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-md ${badge.className}`}
                       >
-                        <span className={`w-1.5 h-1.5 rounded-full ${member.is_active ? 'bg-status-success' : 'bg-status-error'}`} />
-                        {member.is_active ? 'AKTIF' : 'BLOKIR'}
+                        <Activity className="w-3 h-3" />
+                        {badge.label}
                       </span>
                       {!member.is_active && member.block_reason && (
                         <span className="block text-[10px] text-text-secondary mt-0.5 truncate max-w-[120px]" title={member.block_reason}>{member.block_reason}</span>
+                      )}
+                      {member.is_active && member.inactivity_status === 'INACTIVE' && (
+                        <span className="block text-[10px] text-amber-600 mt-0.5">≥5 hari</span>
                       )}
                     </td>
 
@@ -141,25 +186,11 @@ export const MemberList: React.FC = () => {
                           <Coins className="w-3 h-3" />
                           {member.coins.toLocaleString('id-ID')}
                         </span>
-                        {member.monthly_coin_target !== undefined && (
-                          <span className="text-[11px] text-text-secondary font-mono">Target {member.monthly_coin_target}</span>
-                        )}
+                        <span className="font-bold text-accent-magic font-mono flex items-center gap-1 text-[10px]">
+                          <Sparkles className="w-3 h-3" />
+                          Lvl {member.level}
+                        </span>
                       </div>
-                    </td>
-
-                    <td className="py-3 px-3">
-                      <span className="font-bold text-accent-magic font-mono flex items-center gap-1">
-                        <Sparkles className="w-3 h-3" />
-                        Lvl {member.level}
-                      </span>
-                    </td>
-
-                    <td className="py-3 px-3 text-[11px] text-text-secondary font-mono whitespace-nowrap">
-                      {new Date(member.created_at).toLocaleDateString('id-ID', {
-                        year: 'numeric',
-                        month: 'short',
-                        day: 'numeric',
-                      })}
                     </td>
 
                     <td className="py-3 px-4 text-right">
@@ -199,14 +230,16 @@ export const MemberList: React.FC = () => {
                       </div>
                     </td>
                   </tr>
-                ))}
+                )})}
               </tbody>
             </table>
           </div>
 
           {/* Mobile Card View */}
           <div className="sm:hidden space-y-2.5">
-            {members.map((member) => (
+            {members.map((member) => {
+              const badge = inactivityBadge(member)
+              return (
               <div
                 key={member.uid}
                 className="p-3.5 rounded-2xl bg-surface border border-border-subtle shadow-xs space-y-2.5"
@@ -226,17 +259,19 @@ export const MemberList: React.FC = () => {
                       </span>
                       <span
                         data-testid={`member-status-${member.uid}`}
-                        className={`text-[10px] font-bold px-1.5 py-0.2 rounded ${
-                          member.is_active
-                            ? 'bg-status-success/15 text-status-success'
-                            : 'bg-status-error/15 text-status-error'
-                        }`}
+                        className={`text-[10px] font-bold px-1.5 py-0.2 rounded ${badge.className}`}
                       >
-                        {member.is_active ? 'AKTIF' : 'BLOKIR'}
+                        {badge.label}
                       </span>
                     </div>
                     <p className="text-[11px] text-text-secondary font-mono mt-0.5">
                       @{member.username} • UID: {member.uid}
+                    </p>
+                    <p className="text-[11px] text-text-secondary mt-1 flex items-center gap-1">
+                      <Calendar className="w-3 h-3" /> Siklus {formatCycle(member.current_cycle_start, member.current_cycle_end)}
+                    </p>
+                    <p className="text-[11px] text-text-secondary flex items-center gap-1">
+                      <Clock className="w-3 h-3" /> Last: {member.last_completed_date ? new Date(member.last_completed_date).toLocaleDateString('id-ID', { day: 'numeric', month: 'short' }) : '—'} • {formatInactive(member)}
                     </p>
                   </div>
 
@@ -295,7 +330,7 @@ export const MemberList: React.FC = () => {
                   </span>
                 </div>
               </div>
-            ))}
+            )})}
           </div>
         </>
       )}
