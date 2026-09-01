@@ -12,6 +12,9 @@ ALTER TABLE odyssey_coin_transactions ADD CONSTRAINT odyssey_coin_transactions_t
     CHECK (type IN ('TASK_REWARD', 'CLAIM_REDEEM', 'CLAIM_REFUND', 'TASK_PENALTY'));
 
 -- 2. Harden RPC: odyssey_verify_submission
+-- Drop legacy 4-arg overload to avoid PostgREST PGRST203 ambiguity
+DROP FUNCTION IF EXISTS odyssey_verify_submission(BIGINT, TEXT, TEXT, TEXT);
+
 CREATE OR REPLACE FUNCTION odyssey_verify_submission(
     p_submission_id BIGINT,
     p_admin_uid TEXT,
