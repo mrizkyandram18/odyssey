@@ -315,6 +315,23 @@ func (a *API) HandleGetToday(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
+func isUserBlocked(ctx context.Context, client db.SupabaseClient, uid string) bool {
+	raw, err := client.Get(ctx, "odyssey_user_profiles", fmt.Sprintf("uid=eq.%s&select=is_active", uid))
+	if err != nil || len(raw) == 0 || len(raw) <= 2 {
+		return false
+	}
+	if !strings.Contains(string(raw), "is_active") {
+		return false
+	}
+	var rows []struct {
+		IsActive *bool `json:"is_active"`
+	}
+	if err := json.Unmarshal(raw, &rows); err != nil || len(rows) == 0 || rows[0].IsActive == nil {
+		return false
+	}
+	return !*rows[0].IsActive
+}
+
 func (a *API) HandleSubmit(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	claims, ok := auth.ClaimsFromContext(ctx)
@@ -323,6 +340,10 @@ func (a *API) HandleSubmit(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	uid := claims.UID
+	if isUserBlocked(ctx, a.client, uid) {
+		shared.WriteJSONError(w, "akun Anda diblokir, tidak dapat mengerjakan tugas", http.StatusForbidden)
+		return
+	}
 
 	// Extract Task ID from path: /api/tasks/{id}/submit
 	path := strings.TrimPrefix(r.URL.Path, "/api/tasks/")
@@ -473,6 +494,10 @@ func (a *API) HandleUploadProof(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	uid := claims.UID
+	if isUserBlocked(ctx, a.client, uid) {
+		shared.WriteJSONError(w, "akun Anda diblokir", http.StatusForbidden)
+		return
+	}
 	familyID := claims.FamilyID
 	if familyID == "" {
 		familyID = "family_default"

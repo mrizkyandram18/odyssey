@@ -187,11 +187,14 @@ export const adminMembersApi = {
   createMember: (data: CreateMemberInput) => apiClient.post<MemberView>('/api/admin/members', data),
   updateMember: (uid: string, patch: UpdateMemberInput) => apiClient.patch<MemberView>(`/api/admin/members/${uid}`, patch),
   resetPassword: (uid: string) => apiClient.post<{ temporary_password: string }>(`/api/admin/members/${uid}/reset-password`, {}),
+  blockMember: (uid: string, reason?: string) => apiClient.post<{ success: boolean; uid: string; is_active: boolean; already_blocked?: boolean }>(`/api/admin/members/${uid}/block`, reason ? { reason } : {}),
+  unblockMember: (uid: string) => apiClient.post<{ success: boolean; uid: string; is_active: boolean }>(`/api/admin/members/${uid}/unblock`, {}),
+  autoBlock: () => apiClient.post<{ success: boolean; blocked_count: number; threshold: number }>(`/api/admin/members/auto-block`, {}),
 }
 
 export const adminTasksApi = {
   getConfig: () => apiClient.get<RedemptionConfig>('/api/admin/config'),
-  updateConfig: (data: { start_day?: number; end_day?: number; payout_day?: number; earning_period_days?: number; conversion_rate?: number; payout_target_rupiah?: number; payout_target_coins?: number; max_payout_coins?: number; timezone?: string }) =>
+  updateConfig: (data: { start_day?: number; end_day?: number; payout_day?: number; earning_period_days?: number; conversion_rate?: number; payout_target_rupiah?: number; payout_target_coins?: number; max_payout_coins?: number; timezone?: string; auto_block_inactivity_days?: number }) =>
     apiClient.post<RedemptionConfig>('/api/admin/config', data),
   getTasks: (date?: string) => apiClient.get<TaskView[]>(`/api/admin/tasks${date ? '?date=' + date : ''}`),
   createTask: (data: any) => apiClient.post<TaskView>('/api/admin/tasks', data),

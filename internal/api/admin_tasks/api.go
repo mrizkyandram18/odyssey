@@ -797,7 +797,8 @@ func (a *API) HandleGetAdminConfig(w http.ResponseWriter, r *http.Request) {
 	payoutTargetCoins := shared.DefaultPayoutTargetCoins
 	maxPayoutCoins := shared.DefaultMaxPayoutCoins
 	timezone := shared.DefaultTimezone
-	raw, err := a.client.Get(ctx, "odyssey_system_config", "key=in.(redemption_start_day,redemption_end_day,payout_day,earning_period_days,coin_conversion_rate,payout_target_rupiah,payout_target_coins,max_payout_coins,timezone)")
+	autoBlockDays := shared.DefaultAutoBlockInactivityDays
+	raw, err := a.client.Get(ctx, "odyssey_system_config", "key=in.(redemption_start_day,redemption_end_day,payout_day,earning_period_days,coin_conversion_rate,payout_target_rupiah,payout_target_coins,max_payout_coins,timezone,auto_block_inactivity_days,AUTO_BLOCK_INACTIVITY_DAYS)")
 	if err == nil && len(raw) > 0 {
 		type ConfigRow struct {
 			Key   string `json:"key"`
@@ -845,6 +846,13 @@ func (a *API) HandleGetAdminConfig(w http.ResponseWriter, r *http.Request) {
 							timezone = v
 						}
 					}
+				case "auto_block_inactivity_days", "AUTO_BLOCK_INACTIVITY_DAYS":
+					if v, err := strconv.Atoi(strings.TrimSpace(row.Value)); err == nil && v >= 0 && v <= 365 {
+						autoBlockDays = v
+						if v == 0 {
+							autoBlockDays = 0
+						}
+					}
 				}
 			}
 		}
@@ -855,16 +863,17 @@ func (a *API) HandleGetAdminConfig(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 	cfg := shared.ResolveRedemptionConfigFull(shared.ResolveRedemptionConfigParams{
-		StartDay:           startDay,
-		EndDay:             endDay,
-		PayoutDay:          payoutDay,
-		EarningPeriodDays:  earningPeriodDays,
-		Timezone:           timezone,
-		Now:                time.Now(),
-		ConversionRate:     conversionRate,
-		PayoutTargetRupiah: payoutTargetRupiah,
-		PayoutTargetCoins:  payoutTargetCoins,
-		MaxPayoutCoins:     maxPayoutCoins,
+		StartDay:                startDay,
+		EndDay:                  endDay,
+		PayoutDay:               payoutDay,
+		EarningPeriodDays:       earningPeriodDays,
+		Timezone:                timezone,
+		Now:                     time.Now(),
+		ConversionRate:          conversionRate,
+		PayoutTargetRupiah:      payoutTargetRupiah,
+		PayoutTargetCoins:       payoutTargetCoins,
+		MaxPayoutCoins:          maxPayoutCoins,
+		AutoBlockInactivityDays: autoBlockDays,
 	})
 	shared.WriteJSON(w, http.StatusOK, cfg)
 }
@@ -877,15 +886,16 @@ func (a *API) HandleUpdateAdminConfig(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 
 	var req struct {
-		StartDay           *int    `json:"start_day"`
-		EndDay             *int    `json:"end_day"`
-		PayoutDay          *int    `json:"payout_day"`
-		EarningPeriodDays  *int    `json:"earning_period_days"`
-		ConversionRate     *int    `json:"conversion_rate"`
-		PayoutTargetRupiah *int    `json:"payout_target_rupiah"`
-		PayoutTargetCoins  *int    `json:"payout_target_coins"`
-		MaxPayoutCoins     *int    `json:"max_payout_coins"`
-		Timezone           *string `json:"timezone"`
+		StartDay                *int    `json:"start_day"`
+		EndDay                  *int    `json:"end_day"`
+		PayoutDay               *int    `json:"payout_day"`
+		EarningPeriodDays       *int    `json:"earning_period_days"`
+		ConversionRate          *int    `json:"conversion_rate"`
+		PayoutTargetRupiah      *int    `json:"payout_target_rupiah"`
+		PayoutTargetCoins       *int    `json:"payout_target_coins"`
+		MaxPayoutCoins          *int    `json:"max_payout_coins"`
+		Timezone                *string `json:"timezone"`
+		AutoBlockInactivityDays *int    `json:"auto_block_inactivity_days"`
 	}
 	if err := shared.ReadJSON(r, &req); err != nil {
 		shared.WriteJSONError(w, "invalid request payload: "+err.Error(), http.StatusBadRequest)
@@ -1024,6 +1034,14 @@ func (a *API) HandleUpdateAdminConfig(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		upsert("timezone", *req.Timezone)
+	}
+	if req.AutoBlockInactivityDays != nil {
+		if *req.AutoBlockInactivityDays < 0 || *req.AutoBlockInactivityDays > 365 {
+			shared.WriteJSONError(w, "auto_block_inactivity_days must be 0..365 (0 = disabled)", http.StatusBadRequest)
+			return
+		}
+		upsert("auto_block_inactivity_days", strconv.Itoa(*req.AutoBlockInactivityDays))
+		upsert("AUTO_BLOCK_INACTIVITY_DAYS", strconv.Itoa(*req.AutoBlockInactivityDays))
 	}
 
 	// Return updated config

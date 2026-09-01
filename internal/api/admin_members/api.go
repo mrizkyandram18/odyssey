@@ -30,18 +30,21 @@ func NewAPI(client db.SupabaseClient) *API {
 }
 
 type MemberView struct {
-	UID                string    `json:"uid"`
-	FamilyID           string    `json:"family_id"`
-	ExplorerName       string    `json:"explorer_name"`
-	Username           string    `json:"username"`
-	Role               string    `json:"role"`
-	IsActive           bool      `json:"is_active"`
-	Level              int       `json:"level"`
-	XP                 int64     `json:"xp"`
-	Coins              int64     `json:"coins"`
-	MonthlyCoinTarget  *int      `json:"monthly_coin_target,omitempty"`
-	EarnedThisPeriod   int       `json:"earned_this_period,omitempty"`
-	CreatedAt          time.Time `json:"created_at"`
+	UID               string     `json:"uid"`
+	FamilyID          string     `json:"family_id"`
+	ExplorerName      string     `json:"explorer_name"`
+	Username          string     `json:"username"`
+	Role              string     `json:"role"`
+	IsActive          bool       `json:"is_active"`
+	Level             int        `json:"level"`
+	XP                int64      `json:"xp"`
+	Coins             int64      `json:"coins"`
+	MonthlyCoinTarget *int       `json:"monthly_coin_target,omitempty"`
+	EarnedThisPeriod  int        `json:"earned_this_period,omitempty"`
+	BlockedAt         *time.Time `json:"blocked_at,omitempty"`
+	BlockedBy         *string    `json:"blocked_by,omitempty"`
+	BlockReason       *string    `json:"block_reason,omitempty"`
+	CreatedAt         time.Time  `json:"created_at"`
 }
 
 type CreateMemberRequest struct {
@@ -86,7 +89,9 @@ func generateID(prefix string) string {
 func getDefaultMonthlyTarget(ctx context.Context, client db.SupabaseClient) int {
 	raw, err := client.Get(ctx, "odyssey_system_config", "key=eq.default_monthly_coin_target&select=value")
 	if err == nil && len(raw) > 0 {
-		var rows []struct{ Value string `json:"value"` }
+		var rows []struct {
+			Value string `json:"value"`
+		}
 		if err := json.Unmarshal(raw, &rows); err == nil && len(rows) > 0 {
 			var n int
 			if _, err := fmt.Sscanf(rows[0].Value, "%d", &n); err == nil && n >= 1 && n <= 10000 {
@@ -95,6 +100,33 @@ func getDefaultMonthlyTarget(ctx context.Context, client db.SupabaseClient) int 
 		}
 	}
 	return shared.DefaultMonthlyCoinTarget
+}
+
+func getAutoBlockThreshold(ctx context.Context, client db.SupabaseClient) int {
+	for _, key := range []string{"auto_block_inactivity_days", "AUTO_BLOCK_INACTIVITY_DAYS"} {
+		raw, err := client.Get(ctx, "odyssey_system_config", fmt.Sprintf("key=eq.%s&select=value", key))
+		if err == nil && len(raw) > 0 {
+			var rows []struct {
+				Value string `json:"value"`
+			}
+			if err := json.Unmarshal(raw, &rows); err == nil && len(rows) > 0 {
+				v := strings.TrimSpace(rows[0].Value)
+				if v != "" {
+					var n int
+					if _, err := fmt.Sscanf(v, "%d", &n); err == nil {
+						if n <= 0 {
+							return 0
+						}
+						if n > 365 {
+							return shared.DefaultAutoBlockInactivityDays
+						}
+						return n
+					}
+				}
+			}
+		}
+	}
+	return shared.DefaultAutoBlockInactivityDays
 }
 
 func getEarnedThisPeriod(ctx context.Context, client db.SupabaseClient, uids []string) map[string]int {
@@ -106,7 +138,9 @@ func getEarnedThisPeriod(ctx context.Context, client db.SupabaseClient, uids []s
 		tz = shared.DefaultTimezone
 	}
 	if raw, err := client.Get(ctx, "odyssey_system_config", "key=eq.timezone&select=value"); err == nil && len(raw) > 0 {
-		var rows []struct{ Value string `json:"value"` }
+		var rows []struct {
+			Value string `json:"value"`
+		}
 		if err := json.Unmarshal(raw, &rows); err == nil && len(rows) > 0 && strings.TrimSpace(rows[0].Value) != "" {
 			if _, err := time.LoadLocation(strings.TrimSpace(rows[0].Value)); err == nil {
 				tz = strings.TrimSpace(rows[0].Value)
@@ -121,7 +155,10 @@ func getEarnedThisPeriod(ctx context.Context, client db.SupabaseClient, uids []s
 	startDay := 1
 	endDay := 24
 	if raw, err := client.Get(ctx, "odyssey_system_config", "key=in.(target_earning_start_day,target_earning_end_day)&select=key,value"); err == nil && len(raw) > 0 {
-		var rows []struct{ Key string `json:"key"`; Value string `json:"value"` }
+		var rows []struct {
+			Key   string `json:"key"`
+			Value string `json:"value"`
+		}
 		if err := json.Unmarshal(raw, &rows); err == nil {
 			for _, r := range rows {
 				var n int
@@ -143,7 +180,10 @@ func getEarnedThisPeriod(ctx context.Context, client db.SupabaseClient, uids []s
 	if err != nil || len(raw) == 0 {
 		return map[string]int{}
 	}
-	var rows []struct{ UserUID string `json:"user_uid"`; Amount int `json:"amount"` }
+	var rows []struct {
+		UserUID string `json:"user_uid"`
+		Amount  int    `json:"amount"`
+	}
 	if err := json.Unmarshal(raw, &rows); err != nil {
 		return map[string]int{}
 	}
@@ -178,16 +218,19 @@ func (a *API) HandleListMembers(w http.ResponseWriter, r *http.Request) {
 	}
 
 	type ProfRow struct {
-		UID               string    `json:"uid"`
-		FamilyID          string    `json:"family_id"`
-		ExplorerName      string    `json:"explorer_name"`
-		Role              string    `json:"role"`
-		IsActive          bool      `json:"is_active"`
-		Level             int       `json:"level"`
-		XP                int64     `json:"xp"`
-		Coins             int64     `json:"coins"`
-		MonthlyCoinTarget *int      `json:"monthly_coin_target"`
-		CreatedAt         time.Time `json:"created_at"`
+		UID               string     `json:"uid"`
+		FamilyID          string     `json:"family_id"`
+		ExplorerName      string     `json:"explorer_name"`
+		Role              string     `json:"role"`
+		IsActive          bool       `json:"is_active"`
+		Level             int        `json:"level"`
+		XP                int64      `json:"xp"`
+		Coins             int64      `json:"coins"`
+		MonthlyCoinTarget *int       `json:"monthly_coin_target"`
+		BlockedAt         *time.Time `json:"blocked_at"`
+		BlockedBy         *string    `json:"blocked_by"`
+		BlockReason       *string    `json:"block_reason"`
+		CreatedAt         time.Time  `json:"created_at"`
 	}
 	var profs []ProfRow
 	_ = json.Unmarshal(profRaw, &profs)
@@ -250,6 +293,9 @@ func (a *API) HandleListMembers(w http.ResponseWriter, r *http.Request) {
 			Coins:             p.Coins,
 			MonthlyCoinTarget: tgt,
 			EarnedThisPeriod:  earned,
+			BlockedAt:         p.BlockedAt,
+			BlockedBy:         p.BlockedBy,
+			BlockReason:       p.BlockReason,
 			CreatedAt:         p.CreatedAt,
 		}
 	}
@@ -397,7 +443,9 @@ func (a *API) HandleCreateMember(w http.ResponseWriter, r *http.Request) {
 			tz = shared.DefaultTimezone
 		}
 		if raw, err := a.client.Get(ctx, "odyssey_system_config", "key=eq.timezone&select=value"); err == nil && len(raw) > 0 {
-			var rows []struct{ Value string `json:"value"` }
+			var rows []struct {
+				Value string `json:"value"`
+			}
 			if err := json.Unmarshal(raw, &rows); err == nil && len(rows) > 0 && strings.TrimSpace(rows[0].Value) != "" {
 				if _, err := time.LoadLocation(strings.TrimSpace(rows[0].Value)); err == nil {
 					tz = strings.TrimSpace(rows[0].Value)
@@ -409,7 +457,10 @@ func (a *API) HandleCreateMember(w http.ResponseWriter, r *http.Request) {
 			startDay := 1
 			endDay := 24
 			if raw, err := a.client.Get(ctx, "odyssey_system_config", "key=in.(target_earning_start_day,target_earning_end_day)&select=key,value"); err == nil && len(raw) > 0 {
-				var rows []struct{ Key string `json:"key"`; Value string `json:"value"` }
+				var rows []struct {
+					Key   string `json:"key"`
+					Value string `json:"value"`
+				}
 				if err := json.Unmarshal(raw, &rows); err == nil {
 					for _, r := range rows {
 						var n int
@@ -508,6 +559,16 @@ func (a *API) HandleUpdateMember(w http.ResponseWriter, r *http.Request, targetU
 	}
 	if req.IsActive != nil {
 		profPatch["is_active"] = *req.IsActive
+		if !*req.IsActive {
+			// Blocking via is_active toggle: set audit fields atomically if not already blocked
+			profPatch["blocked_at"] = time.Now().UTC().Format(time.RFC3339)
+			profPatch["blocked_by"] = claims.UID
+			profPatch["block_reason"] = "manual block via admin"
+		} else {
+			profPatch["blocked_at"] = nil
+			profPatch["blocked_by"] = nil
+			profPatch["block_reason"] = nil
+		}
 	}
 	if req.MonthlyCoinTarget != nil {
 		profPatch["monthly_coin_target"] = *req.MonthlyCoinTarget
@@ -558,7 +619,9 @@ func (a *API) HandleUpdateMember(w http.ResponseWriter, r *http.Request, targetU
 			tz = shared.DefaultTimezone
 		}
 		if raw, err := a.client.Get(ctx, "odyssey_system_config", "key=eq.timezone&select=value"); err == nil && len(raw) > 0 {
-			var rows []struct{ Value string `json:"value"` }
+			var rows []struct {
+				Value string `json:"value"`
+			}
 			if err := json.Unmarshal(raw, &rows); err == nil && len(rows) > 0 && strings.TrimSpace(rows[0].Value) != "" {
 				if _, err := time.LoadLocation(strings.TrimSpace(rows[0].Value)); err == nil {
 					tz = strings.TrimSpace(rows[0].Value)
@@ -570,7 +633,10 @@ func (a *API) HandleUpdateMember(w http.ResponseWriter, r *http.Request, targetU
 			startDay := 1
 			endDay := 24
 			if raw, err := a.client.Get(ctx, "odyssey_system_config", "key=in.(target_earning_start_day,target_earning_end_day)&select=key,value"); err == nil && len(raw) > 0 {
-				var rows []struct{ Key string `json:"key"`; Value string `json:"value"` }
+				var rows []struct {
+					Key   string `json:"key"`
+					Value string `json:"value"`
+				}
 				if err := json.Unmarshal(raw, &rows); err == nil {
 					for _, r := range rows {
 						var n int
@@ -632,12 +698,142 @@ func (a *API) HandleUpdateMember(w http.ResponseWriter, r *http.Request, targetU
 			Coins:             up.Coins,
 			MonthlyCoinTarget: tgt,
 			EarnedThisPeriod:  earnedMap[targetUID],
+			BlockedAt:         up.BlockedAt,
+			BlockedBy:         up.BlockedBy,
+			BlockReason:       up.BlockReason,
 			CreatedAt:         up.CreatedAt,
 		})
 		return
 	}
 
 	shared.WriteJSON(w, http.StatusOK, map[string]string{"status": "updated"})
+}
+
+func (a *API) HandleBlockMember(w http.ResponseWriter, r *http.Request, targetUID string) {
+	claims, ok := a.requireAdmin(w, r)
+	if !ok {
+		return
+	}
+	ctx := r.Context()
+	targetRaw, err := a.client.Get(ctx, "odyssey_user_profiles", fmt.Sprintf("uid=eq.%s", targetUID))
+	if err != nil || len(targetRaw) == 0 || strings.TrimSpace(string(targetRaw)) == "[]" {
+		shared.WriteJSONError(w, "anggota tidak ditemukan", http.StatusNotFound)
+		return
+	}
+	var checks []struct {
+		UID      string `json:"uid"`
+		FamilyID string `json:"family_id"`
+		Role     string `json:"role"`
+		IsActive bool   `json:"is_active"`
+	}
+	_ = json.Unmarshal(targetRaw, &checks)
+	if len(checks) == 0 {
+		shared.WriteJSONError(w, "anggota tidak ditemukan", http.StatusNotFound)
+		return
+	}
+	if claims.FamilyID != "" && checks[0].FamilyID != "" && checks[0].FamilyID != claims.FamilyID {
+		shared.WriteJSONError(w, "akses ditolak: anggota bukan bagian dari keluarga Anda", http.StatusForbidden)
+		return
+	}
+	if checks[0].Role == "ADMIN" || checks[0].Role == "GUIDE" || checks[0].Role == "BUILDER" {
+		shared.WriteJSONError(w, "akun admin tidak dapat diblokir", http.StatusBadRequest)
+		return
+	}
+	if !checks[0].IsActive {
+		shared.WriteJSON(w, http.StatusOK, map[string]any{"success": true, "uid": targetUID, "already_blocked": true, "is_active": false})
+		return
+	}
+	var req struct {
+		Reason *string `json:"reason"`
+	}
+	_ = shared.ReadJSON(r, &req)
+	reason := "manual block via admin"
+	if req.Reason != nil && strings.TrimSpace(*req.Reason) != "" {
+		reason = strings.TrimSpace(*req.Reason)
+	}
+	// Try RPC first for atomic audit
+	if _, err := a.client.RPC(ctx, "odyssey_block_user", map[string]any{"p_target_uid": targetUID, "p_admin_uid": claims.UID, "p_reason": reason}); err == nil {
+		shared.WriteJSON(w, http.StatusOK, map[string]any{"success": true, "uid": targetUID, "is_active": false})
+		return
+	}
+	// Fallback direct patch with conditional check is_active=true to avoid race
+	patch := map[string]any{
+		"is_active":    false,
+		"blocked_at":   time.Now().UTC().Format(time.RFC3339),
+		"blocked_by":   claims.UID,
+		"block_reason": reason,
+		"updated_at":   time.Now().UTC().Format(time.RFC3339),
+	}
+	if _, err := a.client.Mutate(ctx, http.MethodPatch, "odyssey_user_profiles", patch, fmt.Sprintf("uid=eq.%s&is_active=eq.true", targetUID)); err != nil {
+		shared.WriteJSONError(w, "gagal memblokir anggota: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+	shared.WriteJSON(w, http.StatusOK, map[string]any{"success": true, "uid": targetUID, "is_active": false})
+}
+
+func (a *API) HandleUnblockMember(w http.ResponseWriter, r *http.Request, targetUID string) {
+	claims, ok := a.requireAdmin(w, r)
+	if !ok {
+		return
+	}
+	ctx := r.Context()
+	targetRaw, err := a.client.Get(ctx, "odyssey_user_profiles", fmt.Sprintf("uid=eq.%s", targetUID))
+	if err != nil || len(targetRaw) == 0 || strings.TrimSpace(string(targetRaw)) == "[]" {
+		shared.WriteJSONError(w, "anggota tidak ditemukan", http.StatusNotFound)
+		return
+	}
+	var checks []struct {
+		UID      string `json:"uid"`
+		FamilyID string `json:"family_id"`
+		IsActive bool   `json:"is_active"`
+	}
+	_ = json.Unmarshal(targetRaw, &checks)
+	if len(checks) == 0 {
+		shared.WriteJSONError(w, "anggota tidak ditemukan", http.StatusNotFound)
+		return
+	}
+	if claims.FamilyID != "" && checks[0].FamilyID != "" && checks[0].FamilyID != claims.FamilyID {
+		shared.WriteJSONError(w, "akses ditolak: anggota bukan bagian dari keluarga Anda", http.StatusForbidden)
+		return
+	}
+	if checks[0].IsActive {
+		shared.WriteJSON(w, http.StatusOK, map[string]any{"success": true, "uid": targetUID, "already_active": true, "is_active": true})
+		return
+	}
+	if _, err := a.client.RPC(ctx, "odyssey_unblock_user", map[string]any{"p_target_uid": targetUID, "p_admin_uid": claims.UID}); err == nil {
+		shared.WriteJSON(w, http.StatusOK, map[string]any{"success": true, "uid": targetUID, "is_active": true})
+		return
+	}
+	patch := map[string]any{
+		"is_active":    true,
+		"blocked_at":   nil,
+		"blocked_by":   nil,
+		"block_reason": nil,
+		"updated_at":   time.Now().UTC().Format(time.RFC3339),
+	}
+	if _, err := a.client.Mutate(ctx, http.MethodPatch, "odyssey_user_profiles", patch, fmt.Sprintf("uid=eq.%s&is_active=eq.false", targetUID)); err != nil {
+		shared.WriteJSONError(w, "gagal membuka blokir: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+	shared.WriteJSON(w, http.StatusOK, map[string]any{"success": true, "uid": targetUID, "is_active": true})
+}
+
+func (a *API) HandleAutoBlock(w http.ResponseWriter, r *http.Request) {
+	claims, ok := a.requireAdmin(w, r)
+	if !ok {
+		return
+	}
+	ctx := r.Context()
+	// Prefer RPC atomic operation
+	if raw, err := a.client.RPC(ctx, "odyssey_auto_block_inactive_users", map[string]any{}); err == nil {
+		var res map[string]any
+		_ = json.Unmarshal(raw, &res)
+		shared.WriteJSON(w, http.StatusOK, res)
+		return
+	}
+	// Fallback: no RPC, indicate threshold
+	threshold := getAutoBlockThreshold(ctx, a.client)
+	shared.WriteJSON(w, http.StatusOK, map[string]any{"success": true, "blocked_count": 0, "threshold": threshold, "fallback": true, "admin": claims.UID})
 }
 
 func generateTemporaryPassword() (string, error) {
@@ -739,6 +935,10 @@ func (a *API) Handler(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 	}
+	if path == "/api/admin/members/auto-block" && r.Method == http.MethodPost {
+		a.HandleAutoBlock(w, r)
+		return
+	}
 
 	if strings.HasPrefix(path, "/api/admin/members/") {
 		trimmed := strings.TrimPrefix(path, "/api/admin/members/")
@@ -748,6 +948,23 @@ func (a *API) Handler(w http.ResponseWriter, r *http.Request) {
 			targetUID = strings.TrimSuffix(targetUID, "/")
 			if targetUID != "" {
 				a.HandleResetPassword(w, r, targetUID)
+				return
+			}
+		}
+		// block / unblock sub-routes
+		if strings.HasSuffix(trimmed, "/block") {
+			targetUID := strings.TrimSuffix(trimmed, "/block")
+			targetUID = strings.TrimSuffix(targetUID, "/")
+			if targetUID != "" && r.Method == http.MethodPost {
+				a.HandleBlockMember(w, r, targetUID)
+				return
+			}
+		}
+		if strings.HasSuffix(trimmed, "/unblock") {
+			targetUID := strings.TrimSuffix(trimmed, "/unblock")
+			targetUID = strings.TrimSuffix(targetUID, "/")
+			if targetUID != "" && r.Method == http.MethodPost {
+				a.HandleUnblockMember(w, r, targetUID)
 				return
 			}
 		}

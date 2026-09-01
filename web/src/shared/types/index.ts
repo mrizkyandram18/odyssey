@@ -150,6 +150,9 @@ export interface MemberView {
   coins: number
   monthly_coin_target?: number
   earned_this_period?: number
+  blocked_at?: string | null
+  blocked_by?: string | null
+  block_reason?: string | null
   created_at: string
 }
 
@@ -218,6 +221,7 @@ export interface RedemptionConfig {
   default_monthly_coin_target?: number
   target_earning_start_day?: number
   target_earning_end_day?: number
+  auto_block_inactivity_days?: number
 }
 
 export interface RewardCatalogItem {

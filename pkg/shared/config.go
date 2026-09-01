@@ -143,6 +143,7 @@ type RedemptionConfig struct {
 	DefaultMonthlyCoinTarget int    `json:"default_monthly_coin_target"`
 	TargetEarningStartDay    int    `json:"target_earning_start_day"`
 	TargetEarningEndDay      int    `json:"target_earning_end_day"`
+	AutoBlockInactivityDays  int    `json:"auto_block_inactivity_days"`
 }
 
 const DefaultRedemptionStartDay = 24
@@ -157,6 +158,7 @@ const DefaultMonthlyCoinTarget = 3200
 const DefaultTargetEarningStartDay = 1
 const DefaultTargetEarningEndDay = 24
 const DefaultTimezone = "Asia/Jakarta"
+const DefaultAutoBlockInactivityDays = 5
 
 func ResolveRedemptionConfig(startDay, endDay int, tzName string, now time.Time) RedemptionConfig {
 	return ResolveRedemptionConfigFull(ResolveRedemptionConfigParams{
@@ -174,16 +176,17 @@ func ResolveRedemptionConfig(startDay, endDay int, tzName string, now time.Time)
 }
 
 type ResolveRedemptionConfigParams struct {
-	StartDay           int
-	EndDay             int
-	Timezone           string
-	Now                time.Time
-	ConversionRate     int
-	PayoutTargetRupiah int
-	PayoutTargetCoins  int
-	MaxPayoutCoins     int
-	PayoutDay          int
-	EarningPeriodDays  int
+	StartDay                int
+	EndDay                  int
+	Timezone                string
+	Now                     time.Time
+	ConversionRate          int
+	PayoutTargetRupiah      int
+	PayoutTargetCoins       int
+	MaxPayoutCoins          int
+	PayoutDay               int
+	EarningPeriodDays       int
+	AutoBlockInactivityDays int
 }
 
 func ResolveRedemptionConfigWithRate(startDay, endDay int, tzName string, now time.Time, conversionRate int, maxPayoutCoins int) RedemptionConfig {
@@ -223,6 +226,15 @@ func ResolveRedemptionConfigFull(p ResolveRedemptionConfigParams) RedemptionConf
 	if p.MaxPayoutCoins <= 0 {
 		p.MaxPayoutCoins = DefaultMaxPayoutCoins
 	}
+	if p.AutoBlockInactivityDays < 0 {
+		p.AutoBlockInactivityDays = DefaultAutoBlockInactivityDays
+	}
+	if p.AutoBlockInactivityDays == 0 {
+		// 0 means disabled; keep as 0, do not fallback to default
+	}
+	if p.AutoBlockInactivityDays > 365 {
+		p.AutoBlockInactivityDays = DefaultAutoBlockInactivityDays
+	}
 	if p.Timezone == "" {
 		p.Timezone = DefaultTimezone
 	}
@@ -259,6 +271,7 @@ func ResolveRedemptionConfigFull(p ResolveRedemptionConfigParams) RedemptionConf
 		DefaultMonthlyCoinTarget: DefaultMonthlyCoinTarget,
 		TargetEarningStartDay:    DefaultTargetEarningStartDay,
 		TargetEarningEndDay:      DefaultTargetEarningEndDay,
+		AutoBlockInactivityDays:  p.AutoBlockInactivityDays,
 	}
 }
 

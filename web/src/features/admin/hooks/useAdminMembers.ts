@@ -152,6 +152,44 @@ export function useAdminMembers() {
     }
   }
 
+  const handleBlock = async (member: MemberView, reason?: string) => {
+    setProcessingId(member.uid)
+    try {
+      await adminMembersApi.blockMember(member.uid, reason)
+      await fetchMembers(pagination.page)
+    } catch (err: any) {
+      alert(`Gagal memblokir anggota: ${err?.message || 'Terjadi kesalahan'}`)
+    } finally {
+      setProcessingId(null)
+    }
+  }
+
+  const handleUnblock = async (member: MemberView) => {
+    setProcessingId(member.uid)
+    try {
+      await adminMembersApi.unblockMember(member.uid)
+      await fetchMembers(pagination.page)
+    } catch (err: any) {
+      alert(`Gagal membuka blokir: ${err?.message || 'Terjadi kesalahan'}`)
+    } finally {
+      setProcessingId(null)
+    }
+  }
+
+  const handleAutoBlock = async () => {
+    setIsFetching(true)
+    try {
+      const res = await adminMembersApi.autoBlock()
+      await fetchMembers(pagination.page)
+      return res
+    } catch (err: any) {
+      alert(`Gagal auto-block: ${err?.message || 'Terjadi kesalahan'}`)
+      throw err
+    } finally {
+      setIsFetching(false)
+    }
+  }
+
   return {
     members,
     pagination,
@@ -174,5 +212,8 @@ export function useAdminMembers() {
     closeEditModal,
     handleSaveEditMember,
     handleToggleActive,
+    handleBlock,
+    handleUnblock,
+    handleAutoBlock,
   }
 }
