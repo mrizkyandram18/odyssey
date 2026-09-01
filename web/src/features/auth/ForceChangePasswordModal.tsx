@@ -4,6 +4,7 @@ import { useSessionContext } from '../../app/SessionProvider'
 
 export function ForceChangePasswordModal() {
   const { profile, refreshProfile } = useSessionContext()
+  const [currentPassword, setCurrentPassword] = useState('')
   const [newPassword, setNewPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
   const [loading, setLoading] = useState(false)
@@ -26,10 +27,20 @@ export function ForceChangePasswordModal() {
       setError('Konfirmasi kata sandi tidak cocok')
       return
     }
+    if (currentPassword && currentPassword === newPassword) {
+      setError('Kata sandi baru tidak boleh sama dengan kata sandi saat ini')
+      return
+    }
 
     try {
       setLoading(true)
-      await profileApi.changePassword(newPassword)
+      // For forced change, currentPassword is optional but if provided it will be verified server-side.
+      // We send it only if user filled it, to support both strict and legacy flows.
+      await profileApi.changePasswordFull({
+        new_password: newPassword,
+        confirm_password: confirmPassword,
+        ...(currentPassword ? { current_password: currentPassword } : {}),
+      })
       await refreshProfile()
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : 'Gagal mengubah kata sandi'
@@ -58,6 +69,20 @@ export function ForceChangePasswordModal() {
         <form onSubmit={handleSubmit} className="flex flex-col gap-4">
           <div className="flex flex-col gap-1">
             <label className="text-xs font-semibold text-text-secondary uppercase tracking-wide">
+              Kata Sandi Saat Ini (opsional jika lupa, hubungi admin)
+            </label>
+            <input
+              type="password"
+              value={currentPassword}
+              onChange={e => setCurrentPassword(e.target.value)}
+              placeholder="Kosongkan jika tidak ingat (admin akan reset)"
+              disabled={loading}
+              className="w-full px-4 py-3 rounded-xl border border-border-subtle bg-bg-app text-text-primary placeholder:text-text-tertiary focus:outline-none focus:ring-2 focus:ring-primary/40 focus:border-primary transition"
+            />
+          </div>
+
+          <div className="flex flex-col gap-1">
+            <label className="text-xs font-semibold text-text-secondary uppercase tracking-wide">
               Kata Sandi Baru
             </label>
             <input
@@ -65,7 +90,7 @@ export function ForceChangePasswordModal() {
               value={newPassword}
               onChange={e => setNewPassword(e.target.value)}
               placeholder="Minimal 6 karakter"
-              autoFocus
+              autoFocus={!currentPassword}
               required
               disabled={loading}
               className="w-full px-4 py-3 rounded-xl border border-border-subtle bg-bg-app text-text-primary placeholder:text-text-tertiary focus:outline-none focus:ring-2 focus:ring-primary/40 focus:border-primary transition"

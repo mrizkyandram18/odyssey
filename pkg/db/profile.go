@@ -55,10 +55,10 @@ func (s *supabaseProfileStore) GetUserProfile(ctx context.Context, uid string) (
 
 func (s *supabaseProfileStore) GetPasswordHash(ctx context.Context, uid string) (string, error) {
 	v := url.Values{}
-	v.Set("uid", "eq."+uid)
+	v.Set("profile_uid", "eq."+uid)
 	v.Set("select", "password_hash")
 	params := v.Encode()
-	raw, err := s.client.Get(ctx, "odyssey_user_profiles", params)
+	raw, err := s.client.Get(ctx, "odyssey_local_users", params)
 	if err != nil {
 		return "", fmt.Errorf("get password hash: %w", err)
 	}
@@ -172,11 +172,17 @@ func (s *supabaseProfileStore) UpdateAvatar(ctx context.Context, uid string, sty
 }
 
 func (s *supabaseProfileStore) ChangePassword(ctx context.Context, uid string, newPassword string) error {
-	// 1. Update password in local users table (plain text as requested)
-	localPayload := map[string]string{
-		"password_hash": newPassword,
+	// Hash password with bcrypt before storage.
+	hash, err := auth.NewBcryptHasher().Hash(newPassword)
+	if err != nil {
+		return fmt.Errorf("hash password: %w", err)
 	}
-	_, err := s.client.Mutate(ctx, "PATCH", "odyssey_local_users", localPayload, fmt.Sprintf("profile_uid=eq.%s", uid))
+
+	// 1. Update password in local users table (bcrypt hashed)
+	localPayload := map[string]string{
+		"password_hash": hash,
+	}
+	_, err = s.client.Mutate(ctx, "PATCH", "odyssey_local_users", localPayload, fmt.Sprintf("profile_uid=eq.%s", uid))
 	if err != nil {
 		return fmt.Errorf("update local user password: %w", err)
 	}

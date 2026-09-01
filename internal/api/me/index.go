@@ -47,7 +47,9 @@ func Handler(w http.ResponseWriter, r *http.Request) {
 		}
 
 		var req struct {
-			NewPassword string `json:"new_password"`
+			CurrentPassword string `json:"current_password"`
+			NewPassword     string `json:"new_password"`
+			ConfirmPassword string `json:"confirm_password"`
 		}
 		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 			shared.WriteJSONError(w, "invalid request body", http.StatusBadRequest)
@@ -57,6 +59,53 @@ func Handler(w http.ResponseWriter, r *http.Request) {
 		if len(req.NewPassword) < 6 {
 			shared.WriteJSONError(w, "kata sandi baru minimal 6 karakter", http.StatusBadRequest)
 			return
+		}
+		if req.ConfirmPassword != "" && req.NewPassword != req.ConfirmPassword {
+			shared.WriteJSONError(w, "konfirmasi kata sandi tidak cocok", http.StatusBadRequest)
+			return
+		}
+
+		// For manual change (non-forced), current_password is required.
+		// For forced first-login (must_change_password=true) we allow missing current for backward compat,
+		// but if provided we verify it. For security, when current is provided we always verify.
+		needsCurrentCheck := req.CurrentPassword != ""
+		// Also enforce current check when user is not in forced state, to satisfy spec D.
+		if !needsCurrentCheck {
+			// Peek profile to see if forced change; if not forced, require current
+			if prof, err := profiles.GetUserProfile(r.Context(), claims.UID); err == nil && prof != nil && !prof.MustChangePassword {
+				shared.WriteJSONError(w, "kata sandi saat ini wajib diisi", http.StatusBadRequest)
+				return
+			}
+		}
+		if needsCurrentCheck {
+			hash, err := profiles.GetPasswordHash(r.Context(), claims.UID)
+			if err != nil {
+				shared.WriteJSONError(w, "gagal memverifikasi kata sandi: "+err.Error(), http.StatusInternalServerError)
+				return
+			}
+			if hash == "" {
+				shared.WriteJSONError(w, "kredensial tidak ditemukan", http.StatusNotFound)
+				return
+			}
+			hasher := auth.NewBcryptHasher()
+			if err := hasher.Verify(hash, req.CurrentPassword); err != nil {
+				shared.WriteJSONError(w, "kata sandi saat ini tidak valid", http.StatusUnauthorized)
+				return
+			}
+			if req.CurrentPassword == req.NewPassword {
+				shared.WriteJSONError(w, "kata sandi baru tidak boleh sama dengan kata sandi saat ini", http.StatusBadRequest)
+				return
+			}
+		} else {
+			// Even without current, prevent reuse if we can fetch hash to compare (best effort)
+			// Skip if hash fetch fails
+			if hash, err := profiles.GetPasswordHash(r.Context(), claims.UID); err == nil && hash != "" {
+				hasher := auth.NewBcryptHasher()
+				if err := hasher.Verify(hash, req.NewPassword); err == nil {
+					shared.WriteJSONError(w, "kata sandi baru tidak boleh sama dengan kata sandi saat ini", http.StatusBadRequest)
+					return
+				}
+			}
 		}
 
 		if err := profiles.ChangePassword(r.Context(), claims.UID, req.NewPassword); err != nil {

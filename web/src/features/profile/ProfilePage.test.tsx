@@ -104,4 +104,65 @@ describe('ProfilePage', () => {
       }))
     })
   })
+
+  it('renders change password form in settings and submits successfully', async () => {
+    vi.mocked(apiClient.post).mockResolvedValueOnce({
+      status: 'success',
+      message: 'Kata sandi berhasil diubah',
+    })
+
+    render(
+      <MemoryRouter>
+        <ProfilePage />
+      </MemoryRouter>
+    )
+
+    // Go to settings
+    fireEvent.click(screen.getByText('Pengaturan'))
+    expect(screen.getByText('Ubah Kata Sandi')).toBeInTheDocument()
+
+    const currentPassInput = screen.getByPlaceholderText('Masukkan kata sandi saat ini')
+    const newPassInput = screen.getByPlaceholderText('Minimal 6 karakter')
+    const confirmInput = screen.getByPlaceholderText('Ulangi kata sandi baru')
+    const submitBtn = screen.getByText('Simpan Kata Sandi Baru')
+
+    fireEvent.change(currentPassInput, { target: { value: 'oldPass123' } })
+    fireEvent.change(newPassInput, { target: { value: 'newPass456' } })
+    fireEvent.change(confirmInput, { target: { value: 'newPass456' } })
+    fireEvent.click(submitBtn)
+
+    await waitFor(() => {
+      expect(apiClient.post).toHaveBeenCalledWith('/api/me/change-password', {
+        current_password: 'oldPass123',
+        new_password: 'newPass456',
+        confirm_password: 'newPass456',
+      })
+      expect(screen.getByText('Kata sandi berhasil diubah')).toBeInTheDocument()
+    })
+  })
+
+  it('validates password mismatch and current == new in profile settings', async () => {
+    render(
+      <MemoryRouter>
+        <ProfilePage />
+      </MemoryRouter>
+    )
+
+    fireEvent.click(screen.getByText('Pengaturan'))
+
+    const currentPassInput = screen.getByPlaceholderText('Masukkan kata sandi saat ini')
+    const newPassInput = screen.getByPlaceholderText('Minimal 6 karakter')
+    const confirmInput = screen.getByPlaceholderText('Ulangi kata sandi baru')
+    const submitBtn = screen.getByText('Simpan Kata Sandi Baru')
+
+    // Same current and new
+    fireEvent.change(currentPassInput, { target: { value: 'samePass123' } })
+    fireEvent.change(newPassInput, { target: { value: 'samePass123' } })
+    fireEvent.change(confirmInput, { target: { value: 'samePass123' } })
+    fireEvent.click(submitBtn)
+
+    expect(await screen.findByText('Kata sandi baru tidak boleh sama dengan kata sandi saat ini')).toBeInTheDocument()
+    expect(apiClient.post).not.toHaveBeenCalled()
+  })
 })
+

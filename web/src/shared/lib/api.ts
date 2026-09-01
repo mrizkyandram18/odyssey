@@ -150,7 +150,14 @@ export const pushApi = {
 export const profileApi = {
   getProfile: () => apiClient.get<Explorer>('/api/me'),
   updateAvatar: (data: { avatar_style: string; avatar_seed: string }) => apiClient.patch<{ status: string }>('/api/me/avatar', data),
-  changePassword: (newPassword: string) => apiClient.post<{ status: string; message: string }>('/api/me/change-password', { new_password: newPassword }),
+  changePassword: (newPassword: string, currentPassword?: string, confirmPassword?: string) =>
+    apiClient.post<{ status: string; message: string }>('/api/me/change-password', {
+      new_password: newPassword,
+      ...(currentPassword !== undefined ? { current_password: currentPassword } : {}),
+      ...(confirmPassword !== undefined ? { confirm_password: confirmPassword } : {}),
+    }),
+  changePasswordFull: (data: { current_password?: string; new_password: string; confirm_password?: string }) =>
+    apiClient.post<{ status: string; message: string }>('/api/me/change-password', data),
 }
 
 export const tasksApi = {

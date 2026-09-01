@@ -13,6 +13,12 @@ export function ProfilePage() {
   const { profile, loading, error, refreshProfile, logout } = useSession()
   const [activeView, setActiveView] = useState<'overview' | 'settings'>('overview')
   const [randomizing, setRandomizing] = useState(false)
+  const [currentPassword, setCurrentPassword] = useState('')
+  const [newPassword, setNewPassword] = useState('')
+  const [confirmPassword, setConfirmPassword] = useState('')
+  const [changing, setChanging] = useState(false)
+  const [changeError, setChangeError] = useState<string | null>(null)
+  const [changeSuccess, setChangeSuccess] = useState<string | null>(null)
 
   const handleRandomizeAvatar = async () => {
     setRandomizing(true)
@@ -27,6 +33,45 @@ export function ProfilePage() {
       console.error('failed to update avatar', e)
     } finally {
       setRandomizing(false)
+    }
+  }
+
+  const handleChangePassword = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setChangeError(null)
+    setChangeSuccess(null)
+    if (!currentPassword) {
+      setChangeError('Kata sandi saat ini wajib diisi')
+      return
+    }
+    if (newPassword.length < 6) {
+      setChangeError('Kata sandi baru minimal 6 karakter')
+      return
+    }
+    if (newPassword !== confirmPassword) {
+      setChangeError('Konfirmasi kata sandi tidak cocok')
+      return
+    }
+    if (currentPassword === newPassword) {
+      setChangeError('Kata sandi baru tidak boleh sama dengan kata sandi saat ini')
+      return
+    }
+    setChanging(true)
+    try {
+      await apiClient.post('/api/me/change-password', {
+        current_password: currentPassword,
+        new_password: newPassword,
+        confirm_password: confirmPassword,
+      })
+      setChangeSuccess('Kata sandi berhasil diubah')
+      setCurrentPassword('')
+      setNewPassword('')
+      setConfirmPassword('')
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Gagal mengubah kata sandi'
+      setChangeError(msg)
+    } finally {
+      setChanging(false)
     }
   }
 
@@ -184,6 +229,59 @@ export function ProfilePage() {
             <div className="py-2">
               <PushNotificationToggle />
             </div>
+          </Card>
+
+          <Card className="p-5 flex flex-col gap-4">
+            <h3 className="font-bold text-text-primary text-sm flex items-center gap-2">
+              <span>🔒</span> Ubah Kata Sandi
+            </h3>
+            <form onSubmit={handleChangePassword} className="flex flex-col gap-3">
+              <div className="flex flex-col gap-1">
+                <label className="text-xs font-semibold text-text-secondary">Kata Sandi Saat Ini</label>
+                <input
+                  type="password"
+                  value={currentPassword}
+                  onChange={e => setCurrentPassword(e.target.value)}
+                  placeholder="Masukkan kata sandi saat ini"
+                  required
+                  disabled={changing}
+                  className="w-full px-4 py-2.5 rounded-xl border border-border-subtle bg-bg-app text-text-primary placeholder:text-text-tertiary focus:outline-none focus:ring-2 focus:ring-primary/40 focus:border-primary transition text-sm"
+                />
+              </div>
+              <div className="flex flex-col gap-1">
+                <label className="text-xs font-semibold text-text-secondary">Kata Sandi Baru</label>
+                <input
+                  type="password"
+                  value={newPassword}
+                  onChange={e => setNewPassword(e.target.value)}
+                  placeholder="Minimal 6 karakter"
+                  required
+                  disabled={changing}
+                  className="w-full px-4 py-2.5 rounded-xl border border-border-subtle bg-bg-app text-text-primary placeholder:text-text-tertiary focus:outline-none focus:ring-2 focus:ring-primary/40 focus:border-primary transition text-sm"
+                />
+              </div>
+              <div className="flex flex-col gap-1">
+                <label className="text-xs font-semibold text-text-secondary">Konfirmasi Kata Sandi Baru</label>
+                <input
+                  type="password"
+                  value={confirmPassword}
+                  onChange={e => setConfirmPassword(e.target.value)}
+                  placeholder="Ulangi kata sandi baru"
+                  required
+                  disabled={changing}
+                  className="w-full px-4 py-2.5 rounded-xl border border-border-subtle bg-bg-app text-text-primary placeholder:text-text-tertiary focus:outline-none focus:ring-2 focus:ring-primary/40 focus:border-primary transition text-sm"
+                />
+              </div>
+              {changeError && (
+                <div className="px-3 py-2 rounded-xl bg-red-500/10 border border-red-500/20 text-red-500 text-xs">{changeError}</div>
+              )}
+              {changeSuccess && (
+                <div className="px-3 py-2 rounded-xl bg-green-500/10 border border-green-500/20 text-green-600 text-xs">{changeSuccess}</div>
+              )}
+              <Button type="submit" variant="primary" size="sm" disabled={changing} className="w-full">
+                {changing ? 'Menyimpan...' : 'Simpan Kata Sandi Baru'}
+              </Button>
+            </form>
           </Card>
 
           <Button variant="danger" onClick={logout} className="w-full shadow-md flex items-center justify-center gap-2">
