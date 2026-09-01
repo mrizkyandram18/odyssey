@@ -170,17 +170,19 @@ export const EditMemberModal: React.FC<EditMemberModalProps> = ({
             </div>
 
             <div className="space-y-1">
-              <label className="text-xs font-bold text-text-secondary">Status Akun</label>
+              <label className="text-xs font-bold text-text-secondary">Status Akun (Reversibel — tidak ada hapus pengguna)</label>
               <select
+                data-testid="member-status-select"
                 value={form.is_active ? 'active' : 'inactive'}
                 onChange={(e) =>
                   setForm({ ...form, is_active: e.target.value === 'active' })
                 }
                 className="w-full p-2.5 rounded-xl bg-surface border border-border-subtle text-xs sm:text-sm font-bold text-text-primary focus:outline-none focus:border-accent-magic"
               >
-                <option value="active">● Aktif (Bisa Login & Mengerjakan Tugas)</option>
-                <option value="inactive">○ Nonaktif (Akses Login Diblokir)</option>
+                <option value="active">● AKTIF (Bisa Login & Mengerjakan Tugas)</option>
+                <option value="inactive">○ BLOKIR (Akses diblokir, riwayat tetap ada)</option>
               </select>
+              <p className="text-[11px] text-text-secondary">Blokir bersifat reversibel; histori tugas, koin, dan klaim tetap auditable.</p>
             </div>
 
             {(member.role === 'MEMBER' || member.role === 'SEEKER') && (

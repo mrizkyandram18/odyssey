@@ -1,5 +1,5 @@
 import React from 'react'
-import { Users, UserPlus, Coins, Edit3, ChevronLeft, ChevronRight, RefreshCw, Shield, Sparkles } from 'lucide-react'
+import { Users, UserPlus, Coins, Edit3, ChevronLeft, ChevronRight, RefreshCw, Shield, Sparkles, Ban, CheckCircle } from 'lucide-react'
 import { useAdminMembers } from '../../hooks/useAdminMembers'
 import { CreateMemberModal } from './CreateMemberModal'
 import { EditMemberModal } from './EditMemberModal'
@@ -25,6 +25,8 @@ export const MemberList: React.FC = () => {
     openEditModal,
     closeEditModal,
     handleSaveEditMember,
+    handleBlock,
+    handleUnblock,
   } = useAdminMembers()
 
   return (
@@ -51,7 +53,7 @@ export const MemberList: React.FC = () => {
             {isFetching && <RefreshCw className="w-3.5 h-3.5 animate-spin text-text-secondary" />}
           </h3>
           <p className="text-[11px] text-text-secondary mt-0.5">
-            Kelola data akun, role, status aktif, koin, dan reset binding perangkat.
+            Kelola status AKTIF/BLOKIR, blokir manual bersifat reversibel (tidak ada hapus pengguna).
           </p>
         </div>
 
@@ -118,6 +120,7 @@ export const MemberList: React.FC = () => {
 
                     <td className="py-3 px-3">
                       <span
+                        data-testid={`member-status-${member.uid}`}
                         className={`inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-md ${
                           member.is_active
                             ? 'bg-status-success/15 text-status-success'
@@ -125,8 +128,11 @@ export const MemberList: React.FC = () => {
                         }`}
                       >
                         <span className={`w-1.5 h-1.5 rounded-full ${member.is_active ? 'bg-status-success' : 'bg-status-error'}`} />
-                        {member.is_active ? 'Aktif' : 'Nonaktif'}
+                        {member.is_active ? 'AKTIF' : 'BLOKIR'}
                       </span>
+                      {!member.is_active && member.block_reason && (
+                        <span className="block text-[10px] text-text-secondary mt-0.5 truncate max-w-[120px]" title={member.block_reason}>{member.block_reason}</span>
+                      )}
                     </td>
 
                     <td className="py-3 px-3">
@@ -157,15 +163,40 @@ export const MemberList: React.FC = () => {
                     </td>
 
                     <td className="py-3 px-4 text-right">
-                      <button
-                        type="button"
-                        onClick={() => openEditModal(member)}
-                        className="p-1.5 rounded-lg bg-surface border border-border-subtle text-text-secondary hover:text-text-primary hover:bg-surface-elevated transition-all cursor-pointer inline-flex items-center justify-center"
-                        title={`Edit ${member.explorer_name}`}
-                        aria-label={`Edit ${member.explorer_name}`}
-                      >
-                        <Edit3 className="w-3.5 h-3.5" />
-                      </button>
+                      <div className="inline-flex items-center gap-1">
+                        <button
+                          type="button"
+                          onClick={() => openEditModal(member)}
+                          className="p-1.5 rounded-lg bg-surface border border-border-subtle text-text-secondary hover:text-text-primary hover:bg-surface-elevated transition-all cursor-pointer inline-flex items-center justify-center"
+                          title={`Edit ${member.explorer_name}`}
+                          aria-label={`Edit ${member.explorer_name}`}
+                        >
+                          <Edit3 className="w-3.5 h-3.5" />
+                        </button>
+                        {member.is_active ? (
+                          <button
+                            type="button"
+                            data-testid={`block-button-${member.uid}`}
+                            onClick={() => handleBlock(member)}
+                            className="p-1.5 rounded-lg bg-status-error/10 border border-status-error/20 text-status-error hover:bg-status-error/20 transition-all cursor-pointer inline-flex items-center justify-center"
+                            title="Blokir anggota"
+                            aria-label={`Block ${member.explorer_name}`}
+                          >
+                            <Ban className="w-3.5 h-3.5" />
+                          </button>
+                        ) : (
+                          <button
+                            type="button"
+                            data-testid={`unblock-button-${member.uid}`}
+                            onClick={() => handleUnblock(member)}
+                            className="p-1.5 rounded-lg bg-status-success/10 border border-status-success/20 text-status-success hover:bg-status-success/20 transition-all cursor-pointer inline-flex items-center justify-center"
+                            title="Buka blokir"
+                            aria-label={`Unblock ${member.explorer_name}`}
+                          >
+                            <CheckCircle className="w-3.5 h-3.5" />
+                          </button>
+                        )}
+                      </div>
                     </td>
                   </tr>
                 ))}
@@ -194,13 +225,14 @@ export const MemberList: React.FC = () => {
                         {member.role}
                       </span>
                       <span
+                        data-testid={`member-status-${member.uid}`}
                         className={`text-[10px] font-bold px-1.5 py-0.2 rounded ${
                           member.is_active
                             ? 'bg-status-success/15 text-status-success'
                             : 'bg-status-error/15 text-status-error'
                         }`}
                       >
-                        {member.is_active ? 'Aktif' : 'Nonaktif'}
+                        {member.is_active ? 'AKTIF' : 'BLOKIR'}
                       </span>
                     </div>
                     <p className="text-[11px] text-text-secondary font-mono mt-0.5">
@@ -208,15 +240,38 @@ export const MemberList: React.FC = () => {
                     </p>
                   </div>
 
-                  <button
-                    type="button"
-                    onClick={() => openEditModal(member)}
-                    className="p-2 rounded-xl bg-surface-elevated border border-border-subtle text-text-secondary hover:text-text-primary shrink-0 cursor-pointer"
-                    title="Edit Anggota"
-                    aria-label={`Edit ${member.explorer_name}`}
-                  >
-                    <Edit3 className="w-3.5 h-3.5" />
-                  </button>
+                  <div className="flex items-center gap-1 shrink-0">
+                    <button
+                      type="button"
+                      onClick={() => openEditModal(member)}
+                      className="p-2 rounded-xl bg-surface-elevated border border-border-subtle text-text-secondary hover:text-text-primary cursor-pointer"
+                      title="Edit Anggota"
+                      aria-label={`Edit ${member.explorer_name}`}
+                    >
+                      <Edit3 className="w-3.5 h-3.5" />
+                    </button>
+                    {member.is_active ? (
+                      <button
+                        type="button"
+                        data-testid={`block-button-${member.uid}`}
+                        onClick={() => handleBlock(member)}
+                        className="p-2 rounded-xl bg-status-error/10 border border-status-error/20 text-status-error cursor-pointer"
+                        aria-label={`Block ${member.explorer_name}`}
+                      >
+                        <Ban className="w-3.5 h-3.5" />
+                      </button>
+                    ) : (
+                      <button
+                        type="button"
+                        data-testid={`unblock-button-${member.uid}`}
+                        onClick={() => handleUnblock(member)}
+                        className="p-2 rounded-xl bg-status-success/10 border border-status-success/20 text-status-success cursor-pointer"
+                        aria-label={`Unblock ${member.explorer_name}`}
+                      >
+                        <CheckCircle className="w-3.5 h-3.5" />
+                      </button>
+                    )}
+                  </div>
                 </div>
 
                 <div className="flex items-center justify-between text-xs pt-1 border-t border-border-subtle/60 text-text-secondary">

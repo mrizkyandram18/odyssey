@@ -180,6 +180,10 @@ func (m *mockAdversarialDB) Get(ctx context.Context, table string, params string
 				continue
 			}
 			prof := *p
+			// Default IsActive to true for test-seeded profiles where omission means active (zero value false would incorrectly block)
+			if !prof.IsActive && prof.BlockedAt == nil && prof.CreatedAt.IsZero() {
+				prof.IsActive = true
+			}
 			list = append(list, prof)
 		}
 		return json.Marshal(list)
