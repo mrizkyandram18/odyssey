@@ -186,6 +186,7 @@ export const adminMembersApi = {
   },
   createMember: (data: CreateMemberInput) => apiClient.post<MemberView>('/api/admin/members', data),
   updateMember: (uid: string, patch: UpdateMemberInput) => apiClient.patch<MemberView>(`/api/admin/members/${uid}`, patch),
+  resetPassword: (uid: string) => apiClient.post<{ temporary_password: string }>(`/api/admin/members/${uid}/reset-password`, {}),
 }
 
 export const adminTasksApi = {

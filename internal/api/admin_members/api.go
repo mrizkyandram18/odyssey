@@ -5,6 +5,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"math/big"
 	"net/http"
 	"regexp"
 	"strings"
@@ -424,6 +425,92 @@ func (a *API) HandleUpdateMember(w http.ResponseWriter, r *http.Request, targetU
 	shared.WriteJSON(w, http.StatusOK, map[string]string{"status": "updated"})
 }
 
+func generateTemporaryPassword() (string, error) {
+	const charset = "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789!@#$%*"
+	const length = 14
+	result := make([]byte, length)
+	for i := 0; i < length; i++ {
+		n, err := rand.Int(rand.Reader, big.NewInt(int64(len(charset))))
+		if err != nil {
+			return "", fmt.Errorf("generate temporary password: %w", err)
+		}
+		result[i] = charset[n.Int64()]
+	}
+	return string(result), nil
+}
+
+func (a *API) HandleResetPassword(w http.ResponseWriter, r *http.Request, targetUID string) {
+	claims, ok := a.requireAdmin(w, r)
+	if !ok {
+		return
+	}
+	if r.Method != http.MethodPost {
+		shared.WriteJSONError(w, "method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+	ctx := r.Context()
+
+	// Tenant check: target profile must belong to admin's family
+	targetRaw, err := a.client.Get(ctx, "odyssey_user_profiles", fmt.Sprintf("uid=eq.%s", targetUID))
+	if err != nil || len(targetRaw) == 0 || strings.TrimSpace(string(targetRaw)) == "[]" {
+		shared.WriteJSONError(w, "anggota tidak ditemukan", http.StatusNotFound)
+		return
+	}
+	type ProfileCheck struct {
+		UID      string `json:"uid"`
+		FamilyID string `json:"family_id"`
+	}
+	var checks []ProfileCheck
+	_ = json.Unmarshal(targetRaw, &checks)
+	if len(checks) == 0 {
+		shared.WriteJSONError(w, "anggota tidak ditemukan", http.StatusNotFound)
+		return
+	}
+	if claims.FamilyID != "" && checks[0].FamilyID != "" && checks[0].FamilyID != claims.FamilyID {
+		shared.WriteJSONError(w, "anggota tidak ditemukan", http.StatusNotFound)
+		return
+	}
+
+	// Generate cryptographically secure temporary password
+	tempPassword, err := generateTemporaryPassword()
+	if err != nil {
+		shared.WriteJSONError(w, "gagal membuat temporary password", http.StatusInternalServerError)
+		return
+	}
+
+	hash, err := a.hasher.Hash(tempPassword)
+	if err != nil {
+		shared.WriteJSONError(w, "gagal memproses password", http.StatusInternalServerError)
+		return
+	}
+
+	// Update password hash in local users table
+	localPatch := map[string]any{
+		"password_hash": hash,
+		"updated_at":    time.Now().UTC().Format(time.RFC3339),
+	}
+	_, err = a.client.Mutate(ctx, http.MethodPatch, "odyssey_local_users", localPatch, fmt.Sprintf("profile_uid=eq.%s", targetUID))
+	if err != nil {
+		shared.WriteJSONError(w, "gagal reset password anggota: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	// Set force change flag on profile
+	profPatch := map[string]any{
+		"must_change_password": true,
+		"updated_at":           time.Now().UTC().Format(time.RFC3339),
+	}
+	_, err = a.client.Mutate(ctx, http.MethodPatch, "odyssey_user_profiles", profPatch, fmt.Sprintf("uid=eq.%s", targetUID))
+	if err != nil {
+		shared.WriteJSONError(w, "gagal memperbarui flag password: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	shared.WriteJSON(w, http.StatusOK, map[string]string{
+		"temporary_password": tempPassword,
+	})
+}
+
 func (a *API) Handler(w http.ResponseWriter, r *http.Request) {
 	path := strings.TrimSuffix(r.URL.Path, "/")
 
@@ -439,8 +526,18 @@ func (a *API) Handler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if strings.HasPrefix(path, "/api/admin/members/") {
-		targetUID := strings.TrimPrefix(path, "/api/admin/members/")
-		if targetUID != "" && r.Method == http.MethodPatch {
+		trimmed := strings.TrimPrefix(path, "/api/admin/members/")
+		// Handle reset-password sub-route: /api/admin/members/{uid}/reset-password
+		if strings.HasSuffix(trimmed, "/reset-password") {
+			targetUID := strings.TrimSuffix(trimmed, "/reset-password")
+			targetUID = strings.TrimSuffix(targetUID, "/")
+			if targetUID != "" {
+				a.HandleResetPassword(w, r, targetUID)
+				return
+			}
+		}
+		targetUID := trimmed
+		if targetUID != "" && !strings.Contains(targetUID, "/") && r.Method == http.MethodPatch {
 			a.HandleUpdateMember(w, r, targetUID)
 			return
 		}

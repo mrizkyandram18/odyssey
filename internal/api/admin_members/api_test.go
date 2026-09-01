@@ -356,3 +356,252 @@ func TestHandleListMembers_Pagination(t *testing.T) {
 		t.Errorf("expected 2 items, got %d", len(res.Items))
 	}
 }
+
+// --- Admin Reset Password Tests ---
+
+func adminClaims(familyID string) *auth.SessionClaims {
+	return &auth.SessionClaims{UID: "admin_1", Role: "ADMIN", FamilyID: familyID}
+}
+
+func memberClaims(familyID string) *auth.SessionClaims {
+	return &auth.SessionClaims{UID: "member_1", Role: "MEMBER", FamilyID: familyID}
+}
+
+func profileJSON(uid, familyID string) []byte {
+	p := []db.UserProfile{{UID: uid, FamilyID: familyID, ExplorerName: "Test Member", Role: "MEMBER", IsActive: true}}
+	b, _ := json.Marshal(p)
+	return b
+}
+
+func TestAdminResetPassword_Success(t *testing.T) {
+	var capturedLocalHash string
+	var capturedMustChange interface{}
+	mockClient := &mockSupabaseClient{
+		getFunc: func(ctx context.Context, table string, params string) ([]byte, error) {
+			if table == "odyssey_user_profiles" {
+				return profileJSON("usr_target", "fam_1"), nil
+			}
+			return []byte("[]"), nil
+		},
+		mutateFunc: func(ctx context.Context, method string, table string, payload any, params string) ([]byte, error) {
+			m, ok := payload.(map[string]any)
+			if ok {
+				if table == "odyssey_local_users" {
+					if v, exists := m["password_hash"]; exists {
+						capturedLocalHash, _ = v.(string)
+					}
+				}
+				if table == "odyssey_user_profiles" {
+					capturedMustChange = m["must_change_password"]
+				}
+			}
+			return []byte("{}"), nil
+		},
+	}
+	api := NewAPI(mockClient)
+	req := httptest.NewRequest(http.MethodPost, "/api/admin/members/usr_target/reset-password", bytes.NewReader([]byte("{}")))
+	req = req.WithContext(auth.ContextWithClaims(req.Context(), adminClaims("fam_1")))
+	w := httptest.NewRecorder()
+	api.Handler(w, req)
+	if w.Code != http.StatusOK {
+		t.Fatalf("expected 200 OK, got %d body %s", w.Code, w.Body.String())
+	}
+	var res map[string]string
+	if err := json.Unmarshal(w.Body.Bytes(), &res); err != nil {
+		t.Fatalf("decode: %v", err)
+	}
+	tmp := res["temporary_password"]
+	if len(tmp) < 12 {
+		t.Fatalf("expected temporary_password >=12 chars, got %q len %d", tmp, len(tmp))
+	}
+	if capturedLocalHash == "" {
+		t.Fatal("expected password_hash to be stored")
+	}
+	if capturedMustChange != true {
+		t.Fatalf("expected must_change_password true, got %v", capturedMustChange)
+	}
+	// Ensure response does not contain hash
+	bodyStr := w.Body.String()
+	if strings.Contains(bodyStr, "password_hash") {
+		t.Fatal("response must not expose password_hash")
+	}
+}
+
+func TestAdminResetPassword_Unauthorized(t *testing.T) {
+	mockClient := &mockSupabaseClient{}
+	api := NewAPI(mockClient)
+	req := httptest.NewRequest(http.MethodPost, "/api/admin/members/usr_target/reset-password", bytes.NewReader([]byte("{}")))
+	// no claims
+	w := httptest.NewRecorder()
+	api.Handler(w, req)
+	if w.Code != http.StatusUnauthorized {
+		t.Fatalf("expected 401 Unauthorized, got %d", w.Code)
+	}
+}
+
+func TestAdminResetPassword_NonAdmin(t *testing.T) {
+	mockClient := &mockSupabaseClient{}
+	api := NewAPI(mockClient)
+	req := httptest.NewRequest(http.MethodPost, "/api/admin/members/usr_target/reset-password", bytes.NewReader([]byte("{}")))
+	req = req.WithContext(auth.ContextWithClaims(req.Context(), memberClaims("fam_1")))
+	w := httptest.NewRecorder()
+	api.Handler(w, req)
+	if w.Code != http.StatusForbidden {
+		t.Fatalf("expected 403 Forbidden for non-admin, got %d", w.Code)
+	}
+}
+
+func TestAdminResetPassword_CrossTenantDenied(t *testing.T) {
+	mockClient := &mockSupabaseClient{
+		getFunc: func(ctx context.Context, table string, params string) ([]byte, error) {
+			return profileJSON("usr_target", "fam_other"), nil
+		},
+	}
+	api := NewAPI(mockClient)
+	req := httptest.NewRequest(http.MethodPost, "/api/admin/members/usr_target/reset-password", bytes.NewReader([]byte("{}")))
+	req = req.WithContext(auth.ContextWithClaims(req.Context(), adminClaims("fam_1")))
+	w := httptest.NewRecorder()
+	api.Handler(w, req)
+	if w.Code != http.StatusNotFound && w.Code != http.StatusForbidden {
+		t.Fatalf("expected 404 or 403 for cross-tenant, got %d", w.Code)
+	}
+	// Ensure we don't leak whether UID exists via different message
+	body := w.Body.String()
+	if strings.Contains(body, "password") {
+		t.Fatalf("error response must not leak password info, got %s", body)
+	}
+}
+
+func TestAdminResetPassword_UnknownMember(t *testing.T) {
+	mockClient := &mockSupabaseClient{
+		getFunc: func(ctx context.Context, table string, params string) ([]byte, error) {
+			return []byte("[]"), nil
+		},
+	}
+	api := NewAPI(mockClient)
+	req := httptest.NewRequest(http.MethodPost, "/api/admin/members/unknown_uid/reset-password", bytes.NewReader([]byte("{}")))
+	req = req.WithContext(auth.ContextWithClaims(req.Context(), adminClaims("fam_1")))
+	w := httptest.NewRecorder()
+	api.Handler(w, req)
+	if w.Code != http.StatusNotFound {
+		t.Fatalf("expected 404 for unknown member, got %d", w.Code)
+	}
+}
+
+func TestAdminResetPassword_ForcesPasswordChange(t *testing.T) {
+	var mustChangeSeen bool
+	mockClient := &mockSupabaseClient{
+		getFunc: func(ctx context.Context, table string, params string) ([]byte, error) {
+			return profileJSON("usr_target", "fam_1"), nil
+		},
+		mutateFunc: func(ctx context.Context, method string, table string, payload any, params string) ([]byte, error) {
+			if table == "odyssey_user_profiles" {
+				if m, ok := payload.(map[string]any); ok {
+					if v, exists := m["must_change_password"]; exists && v == true {
+						mustChangeSeen = true
+					}
+				}
+			}
+			return []byte("{}"), nil
+		},
+	}
+	api := NewAPI(mockClient)
+	req := httptest.NewRequest(http.MethodPost, "/api/admin/members/usr_target/reset-password", bytes.NewReader([]byte("{}")))
+	req = req.WithContext(auth.ContextWithClaims(req.Context(), adminClaims("fam_1")))
+	w := httptest.NewRecorder()
+	api.Handler(w, req)
+	if w.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d", w.Code)
+	}
+	if !mustChangeSeen {
+		t.Fatal("expected must_change_password=true to be set")
+	}
+}
+
+func TestAdminResetPassword_PasswordIsNotStoredPlaintext(t *testing.T) {
+	var storedHash string
+	var tmpPassword string
+	mockClient := &mockSupabaseClient{
+		getFunc: func(ctx context.Context, table string, params string) ([]byte, error) {
+			return profileJSON("usr_target", "fam_1"), nil
+		},
+		mutateFunc: func(ctx context.Context, method string, table string, payload any, params string) ([]byte, error) {
+			if table == "odyssey_local_users" {
+				if m, ok := payload.(map[string]any); ok {
+					if v, exists := m["password_hash"]; exists {
+						storedHash, _ = v.(string)
+					}
+				}
+			}
+			return []byte("{}"), nil
+		},
+	}
+	api := NewAPI(mockClient)
+	req := httptest.NewRequest(http.MethodPost, "/api/admin/members/usr_target/reset-password", bytes.NewReader([]byte("{}")))
+	req = req.WithContext(auth.ContextWithClaims(req.Context(), adminClaims("fam_1")))
+	w := httptest.NewRecorder()
+	api.Handler(w, req)
+	if w.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d", w.Code)
+	}
+	var res map[string]string
+	_ = json.Unmarshal(w.Body.Bytes(), &res)
+	tmpPassword = res["temporary_password"]
+	if tmpPassword == "" {
+		t.Fatal("temporary_password missing")
+	}
+	if storedHash == "" {
+		t.Fatal("stored hash missing")
+	}
+	if storedHash == tmpPassword {
+		t.Fatal("password is stored as plaintext")
+	}
+	// bcrypt hashes start with $2a$
+	if !strings.HasPrefix(storedHash, "$2a$") && !strings.HasPrefix(storedHash, "$2b$") {
+		t.Fatalf("expected bcrypt hash, got %q", storedHash)
+	}
+	// Verify hash matches temp password via hasher
+	h := auth.NewBcryptHasher()
+	if err := h.Verify(storedHash, tmpPassword); err != nil {
+		t.Fatalf("stored hash does not verify against temporary password: %v", err)
+	}
+}
+
+func TestAdminResetPassword_TemporaryPasswordIsRandom(t *testing.T) {
+	seen := make(map[string]bool)
+	for i := 0; i < 5; i++ {
+		mockClient := &mockSupabaseClient{
+			getFunc: func(ctx context.Context, table string, params string) ([]byte, error) {
+				return profileJSON("usr_target", "fam_1"), nil
+			},
+			mutateFunc: func(ctx context.Context, method string, table string, payload any, params string) ([]byte, error) {
+				return []byte("{}"), nil
+			},
+		}
+		api := NewAPI(mockClient)
+		req := httptest.NewRequest(http.MethodPost, "/api/admin/members/usr_target/reset-password", bytes.NewReader([]byte("{}")))
+		req = req.WithContext(auth.ContextWithClaims(req.Context(), adminClaims("fam_1")))
+		w := httptest.NewRecorder()
+		api.Handler(w, req)
+		if w.Code != http.StatusOK {
+			t.Fatalf("iter %d expected 200, got %d", i, w.Code)
+		}
+		var res map[string]string
+		_ = json.Unmarshal(w.Body.Bytes(), &res)
+		tmp := res["temporary_password"]
+		if len(tmp) < 12 {
+			t.Fatalf("expected len >=12, got %d", len(tmp))
+		}
+		if seen[tmp] {
+			t.Fatalf("temporary password repeated: %q - not random", tmp)
+		}
+		seen[tmp] = true
+		// Ensure not predictable like uid/username/timestamp/simple
+		if tmp == "usr_target" || tmp == "123456" || strings.Contains(tmp, "usr_target") {
+			t.Fatalf("temporary password is predictable: %q", tmp)
+		}
+	}
+	if len(seen) != 5 {
+		t.Fatalf("expected 5 unique passwords, got %d", len(seen))
+	}
+}
