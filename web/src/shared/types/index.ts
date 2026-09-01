@@ -153,6 +153,14 @@ export interface MemberView {
   blocked_at?: string | null
   blocked_by?: string | null
   block_reason?: string | null
+  current_cycle_start?: string
+  current_cycle_end?: string
+  last_completed_at?: string | null
+  last_completed_date?: string | null
+  completed_tasks_current_cycle?: number
+  inactive_days?: number | null
+  has_current_cycle_activity?: boolean
+  inactivity_status?: 'ACTIVE' | 'NO_ACTIVITY_THIS_CYCLE' | 'INACTIVE' | 'BLOCKED'
   created_at: string
 }
 

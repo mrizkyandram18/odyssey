@@ -124,25 +124,106 @@ func TestHandleUnblockMember_AlreadyActive(t *testing.T) {
 	}
 }
 
-func TestHandleAutoBlock_Success(t *testing.T) {
-	mockClient := &mockSupabaseClient{
-		getFunc: func(ctx context.Context, table string, params string) ([]byte, error) {
-			return []byte("[]"), nil
-		},
-	}
-	// Mock RPC success via mutating?
-	// Use custom client that overrides RPC
-	type rpcClient struct {
-		mockSupabaseClient
-	}
-	// Instead just test via Handler that fallback works if RPC not available
+func TestAutoBlockEndpointRemoved(t *testing.T) {
+	mockClient := &mockSupabaseClient{}
 	api := NewAPI(mockClient)
 	req := httptest.NewRequest(http.MethodPost, "/api/admin/members/auto-block", nil)
 	req = req.WithContext(auth.ContextWithClaims(req.Context(), adminClaims("fam_1")))
 	w := httptest.NewRecorder()
 	api.Handler(w, req)
+	if w.Code != http.StatusNotFound {
+		t.Fatalf("expected 404 for removed auto-block endpoint, got %d body %s", w.Code, w.Body.String())
+	}
+}
+
+func TestInactivityTrackingCycleAware(t *testing.T) {
+	// Mock current cycle: use actual time.Now() cycle, but ensure submissions are within cycle
+	// Create a member with one APPROVED submission today
+	mockClient := &mockSupabaseClient{
+		getFunc: func(ctx context.Context, table string, params string) ([]byte, error) {
+			if strings.Contains(params, "odyssey_system_config") {
+				return []byte("[]"), nil
+			}
+			if table == "odyssey_user_profiles" {
+				// Return one active member
+				return json.Marshal([]map[string]any{
+					{"uid": "usr1", "family_id": "fam_1", "explorer_name": "User1", "role": "MEMBER", "is_active": true, "level": 1, "xp": 0, "coins": 0, "created_at": "2026-10-25T00:00:00Z"},
+				})
+			}
+			if table == "odyssey_local_users" {
+				return json.Marshal([]map[string]any{{"username": "user1", "profile_uid": "usr1"}})
+			}
+			if table == "odyssey_coin_transactions" {
+				return []byte("[]"), nil
+			}
+			if table == "odyssey_task_submissions" {
+				// No submissions -> NO_ACTIVITY
+				return []byte("[]"), nil
+			}
+			return []byte("[]"), nil
+		},
+	}
+	api := NewAPI(mockClient)
+	req := httptest.NewRequest(http.MethodGet, "/api/admin/members", nil)
+	req = req.WithContext(auth.ContextWithClaims(req.Context(), adminClaims("fam_1")))
+	w := httptest.NewRecorder()
+	api.Handler(w, req)
 	if w.Code != http.StatusOK {
 		t.Fatalf("expected 200 got %d %s", w.Code, w.Body.String())
+	}
+	var res struct {
+		Items []MemberView `json:"items"`
+	}
+	_ = json.Unmarshal(w.Body.Bytes(), &res)
+	if len(res.Items) != 1 {
+		t.Fatalf("expected 1 item got %d", len(res.Items))
+	}
+	it := res.Items[0]
+	if it.InactivityStatus != "NO_ACTIVITY_THIS_CYCLE" {
+		t.Fatalf("expected NO_ACTIVITY_THIS_CYCLE for no submissions, got %s", it.InactivityStatus)
+	}
+	if it.HasCurrentCycleActivity {
+		t.Fatalf("expected has_activity false")
+	}
+	if it.InactiveDays != nil {
+		t.Fatalf("expected inactive_days nil for no activity, got %v", *it.InactiveDays)
+	}
+	// Ensure is_active not mutated (still true)
+	if !it.IsActive {
+		t.Fatalf("tracking should not mutate is_active")
+	}
+	// Verify current_cycle fields populated
+	if it.CurrentCycleStart == "" || it.CurrentCycleEnd == "" {
+		t.Fatalf("expected current_cycle start/end populated, got %q %q", it.CurrentCycleStart, it.CurrentCycleEnd)
+	}
+}
+
+func TestInactivityTrackingDoesNotMutateIsActive(t *testing.T) {
+	// Ensure tracking endpoint is read-only
+	mockClient := &mockSupabaseClient{
+		getFunc: func(ctx context.Context, table string, params string) ([]byte, error) {
+			if table == "odyssey_user_profiles" {
+				return json.Marshal([]map[string]any{
+					{"uid": "usr1", "family_id": "fam_1", "explorer_name": "U1", "role": "MEMBER", "is_active": true, "level": 1, "xp": 0, "coins": 0, "created_at": "2026-11-01T00:00:00Z"},
+				})
+			}
+			if table == "odyssey_local_users" {
+				return json.Marshal([]map[string]any{{"username": "u1", "profile_uid": "usr1"}})
+			}
+			return []byte("[]"), nil
+		},
+		mutateFunc: func(ctx context.Context, method string, table string, payload any, params string) ([]byte, error) {
+			t.Fatalf("tracking should not mutate %s %s", method, table)
+			return nil, nil
+		},
+	}
+	api := NewAPI(mockClient)
+	req := httptest.NewRequest(http.MethodGet, "/api/admin/members", nil)
+	req = req.WithContext(auth.ContextWithClaims(req.Context(), adminClaims("fam_1")))
+	w := httptest.NewRecorder()
+	api.Handler(w, req)
+	if w.Code != http.StatusOK {
+		t.Fatalf("expected 200 got %d", w.Code)
 	}
 }
 
@@ -204,43 +285,5 @@ func TestBlockedUserHistoryIntact(t *testing.T) {
 	}
 	if !foundBlocked {
 		t.Fatalf("blocked user not found in list")
-	}
-}
-
-func TestAutoBlockIdempotency(t *testing.T) {
-	callCount := 0
-	mockClient := &mockSupabaseClient{
-		getFunc: func(ctx context.Context, table string, params string) ([]byte, error) {
-			return []byte("[]"), nil
-		},
-	}
-	// Override RPC to simulate idempotent behavior
-	origRPC := func(ctx context.Context, fn string, payload any) ([]byte, error) {
-		callCount++
-		if callCount == 1 {
-			return json.Marshal(map[string]any{"success": true, "blocked_count": 2, "threshold": 5})
-		}
-		return json.Marshal(map[string]any{"success": true, "blocked_count": 0, "threshold": 5})
-	}
-	// Use dynamic client for RPC
-	type rpcMock struct {
-		mockSupabaseClient
-		rpcFn func(context.Context, string, any) ([]byte, error)
-	}
-	_ = origRPC
-	_ = rpcMock{}
-	// Test via direct handler fallback (still 200)
-	api := NewAPI(mockClient)
-	for i := 0; i < 2; i++ {
-		req := httptest.NewRequest(http.MethodPost, "/api/admin/members/auto-block", nil)
-		req = req.WithContext(auth.ContextWithClaims(req.Context(), adminClaims("fam_1")))
-		w := httptest.NewRecorder()
-		api.Handler(w, req)
-		if w.Code != http.StatusOK {
-			t.Fatalf("iteration %d expected 200 got %d", i, w.Code)
-		}
-	}
-	if callCount != 0 {
-		// fallback path does not call RPC in mock, but we verified handler is idempotent via not mutating state
 	}
 }

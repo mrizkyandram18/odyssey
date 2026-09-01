@@ -3,7 +3,6 @@ package admin_members
 import (
 	"context"
 	"crypto/rand"
-	"crypto/subtle"
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
@@ -31,21 +30,29 @@ func NewAPI(client db.SupabaseClient) *API {
 }
 
 type MemberView struct {
-	UID               string     `json:"uid"`
-	FamilyID          string     `json:"family_id"`
-	ExplorerName      string     `json:"explorer_name"`
-	Username          string     `json:"username"`
-	Role              string     `json:"role"`
-	IsActive          bool       `json:"is_active"`
-	Level             int        `json:"level"`
-	XP                int64      `json:"xp"`
-	Coins             int64      `json:"coins"`
-	MonthlyCoinTarget *int       `json:"monthly_coin_target,omitempty"`
-	EarnedThisPeriod  int        `json:"earned_this_period,omitempty"`
-	BlockedAt         *time.Time `json:"blocked_at,omitempty"`
-	BlockedBy         *string    `json:"blocked_by,omitempty"`
-	BlockReason       *string    `json:"block_reason,omitempty"`
-	CreatedAt         time.Time  `json:"created_at"`
+	UID                        string     `json:"uid"`
+	FamilyID                   string     `json:"family_id"`
+	ExplorerName               string     `json:"explorer_name"`
+	Username                   string     `json:"username"`
+	Role                       string     `json:"role"`
+	IsActive                   bool       `json:"is_active"`
+	Level                      int        `json:"level"`
+	XP                         int64      `json:"xp"`
+	Coins                      int64      `json:"coins"`
+	MonthlyCoinTarget          *int       `json:"monthly_coin_target,omitempty"`
+	EarnedThisPeriod           int        `json:"earned_this_period,omitempty"`
+	BlockedAt                  *time.Time `json:"blocked_at,omitempty"`
+	BlockedBy                  *string    `json:"blocked_by,omitempty"`
+	BlockReason                *string    `json:"block_reason,omitempty"`
+	CurrentCycleStart          string     `json:"current_cycle_start,omitempty"`
+	CurrentCycleEnd            string     `json:"current_cycle_end,omitempty"`
+	LastCompletedAt            *time.Time `json:"last_completed_at,omitempty"`
+	LastCompletedDate          *string    `json:"last_completed_date,omitempty"`
+	CompletedTasksCurrentCycle int        `json:"completed_tasks_current_cycle"`
+	InactiveDays               *int       `json:"inactive_days,omitempty"`
+	HasCurrentCycleActivity    bool       `json:"has_current_cycle_activity"`
+	InactivityStatus           string     `json:"inactivity_status"`
+	CreatedAt                  time.Time  `json:"created_at"`
 }
 
 type CreateMemberRequest struct {
@@ -195,6 +202,185 @@ func getEarnedThisPeriod(ctx context.Context, client db.SupabaseClient, uids []s
 	return m
 }
 
+func getCurrentCycleBounds(ctx context.Context, client db.SupabaseClient) (periodStart time.Time, periodEnd time.Time, loc *time.Location, today time.Time, periodStartStr, periodEndStr string) {
+	tz := shared.LoadConfig().Timezone
+	if tz == "" {
+		tz = shared.DefaultTimezone
+	}
+	if raw, err := client.Get(ctx, "odyssey_system_config", "key=eq.timezone&select=value"); err == nil && len(raw) > 0 {
+		var rows []struct {
+			Value string `json:"value"`
+		}
+		if err := json.Unmarshal(raw, &rows); err == nil && len(rows) > 0 && strings.TrimSpace(rows[0].Value) != "" {
+			if _, err := time.LoadLocation(strings.TrimSpace(rows[0].Value)); err == nil {
+				tz = strings.TrimSpace(rows[0].Value)
+			}
+		}
+	}
+	loc, _ = time.LoadLocation(tz)
+	if loc == nil {
+		loc = time.FixedZone("WIB", 7*3600)
+		tz = shared.DefaultTimezone
+	}
+	today = time.Now().In(loc)
+	nowInTz := today
+	startDay, endDay := 1, 24
+	if raw, err := client.Get(ctx, "odyssey_system_config", "key=in.(target_earning_start_day,target_earning_end_day)&select=key,value"); err == nil && len(raw) > 0 {
+		var rows []struct {
+			Key   string `json:"key"`
+			Value string `json:"value"`
+		}
+		if err := json.Unmarshal(raw, &rows); err == nil {
+			for _, r := range rows {
+				var n int
+				if _, err := fmt.Sscanf(r.Value, "%d", &n); err == nil {
+					if r.Key == "target_earning_start_day" && n >= 1 && n <= 31 {
+						startDay = n
+					}
+					if r.Key == "target_earning_end_day" && n >= 1 && n <= 31 {
+						endDay = n
+					}
+				}
+			}
+		}
+	}
+	periodStart = time.Date(nowInTz.Year(), nowInTz.Month(), startDay, 0, 0, 0, 0, loc)
+	periodEnd = time.Date(nowInTz.Year(), nowInTz.Month(), endDay+1, 0, 0, 0, 0, loc)
+	periodStartStr = periodStart.Format("2006-01-02")
+	// periodEnd is exclusive, display inclusive end as periodEnd-1day
+	periodEndStr = periodEnd.AddDate(0, 0, -1).Format("2006-01-02")
+	return
+}
+
+type inactivityInfo struct {
+	LastCompletedAt   *time.Time
+	LastCompletedDate *string
+	Count             int
+	InactiveDays      *int
+	HasActivity       bool
+	Status            string
+	CurrentCycleStart string
+	CurrentCycleEnd   string
+}
+
+func getInactivityTracking(ctx context.Context, client db.SupabaseClient, uids []string, isActiveMap map[string]bool) map[string]inactivityInfo {
+	result := make(map[string]inactivityInfo, len(uids))
+	if len(uids) == 0 {
+		return result
+	}
+	periodStart, periodEnd, loc, today, periodStartStr, periodEndStr := getCurrentCycleBounds(ctx, client)
+	threshold := getAutoBlockThreshold(ctx, client)
+	// 0 = disabled for display (never INACTIVE); keep as is, no fallback to 5
+	if threshold < 0 {
+		threshold = shared.DefaultAutoBlockInactivityDays
+	}
+	// Default for all uids
+	for _, uid := range uids {
+		result[uid] = inactivityInfo{
+			CurrentCycleStart: periodStartStr,
+			CurrentCycleEnd:   periodEndStr,
+		}
+	}
+	// Fetch APPROVED submissions for these users
+	params := fmt.Sprintf("user_uid=in.(%s)&status=eq.APPROVED&select=user_uid,created_at,reviewed_at", strings.Join(uids, ","))
+	raw, err := client.Get(ctx, "odyssey_task_submissions", params)
+	if err != nil || len(raw) == 0 || string(raw) == "[]" {
+		// No completions in current cycle for anyone -> mark NO_ACTIVITY
+		for uid, info := range result {
+			if !isActiveMap[uid] {
+				info.Status = "BLOCKED"
+			} else {
+				info.Status = "NO_ACTIVITY_THIS_CYCLE"
+			}
+			result[uid] = info
+		}
+		return result
+	}
+	var rows []struct {
+		UserUID    string  `json:"user_uid"`
+		CreatedAt  string  `json:"created_at"`
+		ReviewedAt *string `json:"reviewed_at"`
+	}
+	_ = json.Unmarshal(raw, &rows)
+	// Group by user, filter to current cycle
+	tmp := make(map[string][]time.Time)
+	countMap := make(map[string]int)
+	lastMap := make(map[string]time.Time)
+	for _, r := range rows {
+		tsStr := r.CreatedAt
+		if r.ReviewedAt != nil && strings.TrimSpace(*r.ReviewedAt) != "" {
+			tsStr = *r.ReviewedAt
+		}
+		// Parse time (supabase returns UTC)
+		var t time.Time
+		var err error
+		// Try RFC3339
+		t, err = time.Parse(time.RFC3339, tsStr)
+		if err != nil {
+			t, err = time.Parse("2006-01-02T15:04:05", tsStr)
+			if err != nil {
+				continue
+			}
+		}
+		// Convert to loc date for cycle check
+		localDateStr := t.In(loc).Format("2006-01-02")
+		localDate, _ := time.ParseInLocation("2006-01-02", localDateStr, loc)
+		psStr := periodStart.Format("2006-01-02")
+		peStr := periodEnd.Format("2006-01-02")
+		ps, _ := time.ParseInLocation("2006-01-02", psStr, loc)
+		pe, _ := time.ParseInLocation("2006-01-02", peStr, loc)
+		if localDate.Before(ps) || !localDate.Before(pe) {
+			continue // outside current cycle
+		}
+		tmp[r.UserUID] = append(tmp[r.UserUID], t)
+		countMap[r.UserUID]++
+		if existing, ok := lastMap[r.UserUID]; !ok || t.After(existing) {
+			lastMap[r.UserUID] = t
+		}
+	}
+	todayDateStr := today.Format("2006-01-02")
+	todayDate, _ := time.ParseInLocation("2006-01-02", todayDateStr, loc)
+	for uid, info := range result {
+		if !isActiveMap[uid] {
+			info.Status = "BLOCKED"
+			result[uid] = info
+			continue
+		}
+		last, ok := lastMap[uid]
+		if !ok {
+			info.Status = "NO_ACTIVITY_THIS_CYCLE"
+			info.HasActivity = false
+			info.Count = 0
+			result[uid] = info
+			continue
+		}
+		// Has activity
+		info.HasActivity = true
+		info.Count = countMap[uid]
+		// LastCompletedAt in UTC, LastCompletedDate in loc
+		cpy := last
+		info.LastCompletedAt = &cpy
+		ldStr := last.In(loc).Format("2006-01-02")
+		info.LastCompletedDate = &ldStr
+		// Inactive days
+		lastDateStr := last.In(loc).Format("2006-01-02")
+		lastDate, _ := time.ParseInLocation("2006-01-02", lastDateStr, loc)
+		days := int(todayDate.Sub(lastDate) / (24 * time.Hour))
+		if days < 0 {
+			days = 0
+		}
+		d := days
+		info.InactiveDays = &d
+		if threshold != 0 && days >= threshold {
+			info.Status = "INACTIVE"
+		} else {
+			info.Status = "ACTIVE"
+		}
+		result[uid] = info
+	}
+	return result
+}
+
 func (a *API) HandleListMembers(w http.ResponseWriter, r *http.Request) {
 	claims, ok := a.requireAdmin(w, r)
 	if !ok {
@@ -270,6 +456,12 @@ func (a *API) HandleListMembers(w http.ResponseWriter, r *http.Request) {
 
 	earnedMap := getEarnedThisPeriod(ctx, a.client, uids)
 	defaultTarget := getDefaultMonthlyTarget(ctx, a.client)
+	// Inactivity tracking (read-only, cycle-aware)
+	isActiveMap := make(map[string]bool, len(profs))
+	for _, p := range profs {
+		isActiveMap[p.UID] = p.IsActive
+	}
+	trackingMap := getInactivityTracking(ctx, a.client, uids, isActiveMap)
 	items := make([]MemberView, len(profs))
 	for i, p := range profs {
 		username := userMap[p.UID]
@@ -282,22 +474,31 @@ func (a *API) HandleListMembers(w http.ResponseWriter, r *http.Request) {
 			tgt = &q
 		}
 		earned := earnedMap[p.UID]
+		tr := trackingMap[p.UID]
 		items[i] = MemberView{
-			UID:               p.UID,
-			FamilyID:          p.FamilyID,
-			ExplorerName:      p.ExplorerName,
-			Username:          username,
-			Role:              p.Role,
-			IsActive:          p.IsActive,
-			Level:             p.Level,
-			XP:                p.XP,
-			Coins:             p.Coins,
-			MonthlyCoinTarget: tgt,
-			EarnedThisPeriod:  earned,
-			BlockedAt:         p.BlockedAt,
-			BlockedBy:         p.BlockedBy,
-			BlockReason:       p.BlockReason,
-			CreatedAt:         p.CreatedAt,
+			UID:                        p.UID,
+			FamilyID:                   p.FamilyID,
+			ExplorerName:               p.ExplorerName,
+			Username:                   username,
+			Role:                       p.Role,
+			IsActive:                   p.IsActive,
+			Level:                      p.Level,
+			XP:                         p.XP,
+			Coins:                      p.Coins,
+			MonthlyCoinTarget:          tgt,
+			EarnedThisPeriod:           earned,
+			BlockedAt:                  p.BlockedAt,
+			BlockedBy:                  p.BlockedBy,
+			BlockReason:                p.BlockReason,
+			CurrentCycleStart:          tr.CurrentCycleStart,
+			CurrentCycleEnd:            tr.CurrentCycleEnd,
+			LastCompletedAt:            tr.LastCompletedAt,
+			LastCompletedDate:          tr.LastCompletedDate,
+			CompletedTasksCurrentCycle: tr.Count,
+			InactiveDays:               tr.InactiveDays,
+			HasCurrentCycleActivity:    tr.HasActivity,
+			InactivityStatus:           tr.Status,
+			CreatedAt:                  p.CreatedAt,
 		}
 	}
 
@@ -819,62 +1020,6 @@ func (a *API) HandleUnblockMember(w http.ResponseWriter, r *http.Request, target
 	shared.WriteJSON(w, http.StatusOK, map[string]any{"success": true, "uid": targetUID, "is_active": true})
 }
 
-func (a *API) HandleAutoBlock(w http.ResponseWriter, r *http.Request) {
-	// Machine-to-machine auth via internal token (preferred for scheduler)
-	// Reuses existing secret mechanism: ODYSSEY_AUTO_BLOCK_TOKEN or fallback ODYSSEY_INTERNAL_METRICS_TOKEN
-	cfg := shared.LoadConfig()
-	autoToken := cfg.AutoBlockToken
-	if autoToken == "" {
-		autoToken = cfg.InternalMetricsToken
-	}
-	if autoToken != "" {
-		provided := r.Header.Get("X-Auto-Block-Token")
-		if provided == "" {
-			provided = r.Header.Get("X-Internal-Token")
-		}
-		if provided == "" {
-			provided = r.Header.Get("Authorization")
-			if strings.HasPrefix(provided, "Bearer ") {
-				provided = strings.TrimPrefix(provided, "Bearer ")
-			} else if provided != "" && !strings.Contains(provided, " ") {
-				// keep as is if not Bearer
-			} else {
-				provided = ""
-			}
-		}
-		if provided == "" {
-			provided = r.URL.Query().Get("token")
-		}
-		if provided != "" && subtle.ConstantTimeCompare([]byte(provided), []byte(autoToken)) == 1 {
-			ctx := r.Context()
-			if raw, err := a.client.RPC(ctx, "odyssey_auto_block_inactive_users", map[string]any{}); err == nil {
-				var res map[string]any
-				_ = json.Unmarshal(raw, &res)
-				shared.WriteJSON(w, http.StatusOK, res)
-				return
-			}
-			threshold := getAutoBlockThreshold(ctx, a.client)
-			shared.WriteJSON(w, http.StatusOK, map[string]any{"success": true, "blocked_count": 0, "threshold": threshold, "fallback": true, "auth": "internal_token"})
-			return
-		}
-	}
-	claims, ok := a.requireAdmin(w, r)
-	if !ok {
-		return
-	}
-	ctx := r.Context()
-	// Prefer RPC atomic operation
-	if raw, err := a.client.RPC(ctx, "odyssey_auto_block_inactive_users", map[string]any{}); err == nil {
-		var res map[string]any
-		_ = json.Unmarshal(raw, &res)
-		shared.WriteJSON(w, http.StatusOK, res)
-		return
-	}
-	// Fallback: no RPC, indicate threshold
-	threshold := getAutoBlockThreshold(ctx, a.client)
-	shared.WriteJSON(w, http.StatusOK, map[string]any{"success": true, "blocked_count": 0, "threshold": threshold, "fallback": true, "admin": claims.UID})
-}
-
 func generateTemporaryPassword() (string, error) {
 	const charset = "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789!@#$%*"
 	const length = 14
@@ -974,11 +1119,6 @@ func (a *API) Handler(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 	}
-	if path == "/api/admin/members/auto-block" && r.Method == http.MethodPost {
-		a.HandleAutoBlock(w, r)
-		return
-	}
-
 	if strings.HasPrefix(path, "/api/admin/members/") {
 		trimmed := strings.TrimPrefix(path, "/api/admin/members/")
 		// Handle reset-password sub-route: /api/admin/members/{uid}/reset-password

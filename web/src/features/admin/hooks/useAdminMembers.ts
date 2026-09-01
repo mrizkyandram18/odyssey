@@ -176,20 +176,6 @@ export function useAdminMembers() {
     }
   }
 
-  const handleAutoBlock = async () => {
-    setIsFetching(true)
-    try {
-      const res = await adminMembersApi.autoBlock()
-      await fetchMembers(pagination.page)
-      return res
-    } catch (err: any) {
-      alert(`Gagal auto-block: ${err?.message || 'Terjadi kesalahan'}`)
-      throw err
-    } finally {
-      setIsFetching(false)
-    }
-  }
-
   return {
     members,
     pagination,
@@ -214,6 +200,5 @@ export function useAdminMembers() {
     handleToggleActive,
     handleBlock,
     handleUnblock,
-    handleAutoBlock,
   }
 }

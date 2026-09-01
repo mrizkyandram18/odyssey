@@ -189,7 +189,6 @@ export const adminMembersApi = {
   resetPassword: (uid: string) => apiClient.post<{ temporary_password: string }>(`/api/admin/members/${uid}/reset-password`, {}),
   blockMember: (uid: string, reason?: string) => apiClient.post<{ success: boolean; uid: string; is_active: boolean; already_blocked?: boolean }>(`/api/admin/members/${uid}/block`, reason ? { reason } : {}),
   unblockMember: (uid: string) => apiClient.post<{ success: boolean; uid: string; is_active: boolean }>(`/api/admin/members/${uid}/unblock`, {}),
-  autoBlock: () => apiClient.post<{ success: boolean; blocked_count: number; threshold: number }>(`/api/admin/members/auto-block`, {}),
 }
 
 export const adminTasksApi = {
