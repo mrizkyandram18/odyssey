@@ -207,4 +207,61 @@ describe('AdminPage Component', () => {
       expect(screen.getByDisplayValue('Jawaban salah')).toBeInTheDocument()
     })
   })
+
+  it('hides XP inputs and badges from Admin UI while preserving default reward_xp', async () => {
+    vi.mocked(useSession).mockReturnValue({
+      session: { uid: '1', family_id: '1', role: 'ADMIN', kind: 'user', expires: 9999999999, token: 'abc' },
+      profile: { uid: '1', role: 'ADMIN' },
+      loading: false,
+    } as any)
+
+    vi.mocked(adminTasksApi.getTasks).mockResolvedValue([
+      { id: 1, title: 'Tugas Harian 1', step_order: 1, reward_coins: 50, reward_xp: 250, task_type: 'VIDEO', is_locked: false, status: 'UNLOCKED', config: {}, coins_earned: 0, xp_earned: 0 },
+    ])
+
+    render(
+      <MemoryRouter>
+        <AdminPage />
+      </MemoryRouter>
+    )
+
+    // Check verification subtitle does not contain "& EXP"
+    await waitFor(() => {
+      expect(screen.getByText('Antrean Verifikasi Bukti Tugas (0 Menunggu / 0 Total)')).toBeInTheDocument()
+      expect(screen.getByText(/Approve memberi koin otomatis/i)).toBeInTheDocument()
+      expect(screen.queryByText(/Approve memberi koin & EXP otomatis/i)).toBeNull()
+    })
+
+    // Navigate to tasks tab
+    const tasksTabBtn = screen.getByTestId('admin-tab-tasks')
+    fireEvent.click(tasksTabBtn)
+
+    await waitFor(() => {
+      expect(screen.getByText('Tugas Harian 1')).toBeInTheDocument()
+      expect(screen.getByText('+50 🪙')).toBeInTheDocument()
+      // XP badge should not be in the task card
+      expect(screen.queryByText('+250 XP')).toBeNull()
+    })
+
+    // Open Edit Task modal
+    const editTaskBtn = screen.getByRole('button', { name: /Edit tugas Tugas Harian 1/i })
+    fireEvent.click(editTaskBtn)
+
+    await waitFor(() => {
+      expect(screen.getByText('Edit Tugas')).toBeInTheDocument()
+      // XP input should not exist in the modal
+      expect(screen.queryByText(/XP ✨/i)).toBeNull()
+    })
+
+    // Save Edit Task and verify reward_xp is preserved
+    const saveTaskBtn = screen.getByRole('button', { name: /Simpan Perubahan/i })
+    fireEvent.click(saveTaskBtn)
+
+    await waitFor(() => {
+      expect(adminTasksApi.updateTask).toHaveBeenCalledWith(1, expect.objectContaining({
+        reward_coins: 50,
+        reward_xp: 250,
+      }))
+    })
+  })
 })

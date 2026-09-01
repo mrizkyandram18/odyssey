@@ -270,7 +270,7 @@ export const AdminPage: React.FC = () => {
       description: task.description || '',
       youtube_url: task.config?.youtube_url || '',
       reward_coins: task.reward_coins || 0,
-      reward_xp: task.reward_xp || 0,
+      reward_xp: task.reward_xp !== undefined && task.reward_xp !== null ? task.reward_xp : 100,
     })
   }
 
@@ -797,7 +797,7 @@ export const AdminPage: React.FC = () => {
                 <h3 className="font-bold text-text-primary text-sm">
                   Antrean Verifikasi Bukti Tugas ({pendingCount} Menunggu / {submissions.length} Total)
                 </h3>
-                <span className="text-xs text-text-secondary">Approve memberi koin & EXP otomatis. Submission otomatis kuis langsung tercatat di sini.</span>
+                <span className="text-xs text-text-secondary">Approve memberi koin otomatis. Submission otomatis kuis langsung tercatat di sini.</span>
               </div>
 
               {/* Status filter pills */}
@@ -928,7 +928,6 @@ export const AdminPage: React.FC = () => {
                         <span className="text-xs font-bold text-accent-gold">
                           +{sub.coins_earned || sub.reward_coins} 🪙
                         </span>
-                        <p className="text-[10px] text-text-secondary">+{sub.xp_earned || sub.reward_xp} XP</p>
                       </div>
                     </div>
 
@@ -1335,9 +1334,6 @@ export const AdminPage: React.FC = () => {
                       <span className="text-[10px] font-bold text-accent-gold">
                         +{task.reward_coins} 🪙
                       </span>
-                      <span className="text-[10px] font-bold text-accent-magic">
-                        +{task.reward_xp} XP
-                      </span>
                     </div>
                   </div>
                 </div>
@@ -1448,7 +1444,7 @@ export const AdminPage: React.FC = () => {
                         <Coins className="w-3.5 h-3.5" /> {member.coins} Koin
                       </span>
                       <span className="font-bold text-accent-magic">
-                        Level {member.level} ({member.xp} XP)
+                        Level {member.level}
                       </span>
                     </div>
 
@@ -1745,27 +1741,15 @@ export const AdminPage: React.FC = () => {
               </div>
 
               {/* Rewards */}
-              <div className="grid grid-cols-2 gap-3">
-                <div className="space-y-1">
-                  <label className="text-xs font-semibold text-text-secondary uppercase tracking-wide">Koin 🪙</label>
-                  <input
-                    type="number"
-                    min={0}
-                    value={editTaskForm.reward_coins}
-                    onChange={e => setEditTaskForm({ ...editTaskForm, reward_coins: Number(e.target.value) })}
-                    className="w-full p-3 rounded-xl bg-surface-elevated border border-border-subtle text-sm text-text-primary focus:outline-none focus:border-accent-magic"
-                  />
-                </div>
-                <div className="space-y-1">
-                  <label className="text-xs font-semibold text-text-secondary uppercase tracking-wide">XP ✨</label>
-                  <input
-                    type="number"
-                    min={0}
-                    value={editTaskForm.reward_xp}
-                    onChange={e => setEditTaskForm({ ...editTaskForm, reward_xp: Number(e.target.value) })}
-                    className="w-full p-3 rounded-xl bg-surface-elevated border border-border-subtle text-sm text-text-primary focus:outline-none focus:border-accent-magic"
-                  />
-                </div>
+              <div className="space-y-1">
+                <label className="text-xs font-semibold text-text-secondary uppercase tracking-wide">Koin 🪙</label>
+                <input
+                  type="number"
+                  min={0}
+                  value={editTaskForm.reward_coins}
+                  onChange={e => setEditTaskForm({ ...editTaskForm, reward_coins: Number(e.target.value) })}
+                  className="w-full p-3 rounded-xl bg-surface-elevated border border-border-subtle text-sm text-text-primary focus:outline-none focus:border-accent-magic"
+                />
               </div>
 
               {/* Actions */}
@@ -1936,29 +1920,16 @@ export const AdminPage: React.FC = () => {
               {/* 3 — Hadiah */}
               <div className="space-y-3">
                 <h4 className="text-xs font-bold tracking-wide uppercase text-text-secondary">3 — Hadiah</h4>
-                <div className="grid grid-cols-2 gap-3">
-                  <div className="space-y-1">
-                    <label htmlFor="task-coins" className="text-xs font-bold text-text-secondary">Koin (🪙)</label>
-                    <input
-                      id="task-coins"
-                      type="number"
-                      min={1}
-                      value={newTask.reward_coins}
-                      onChange={(e) => setNewTask({ ...newTask, reward_coins: Number(e.target.value) })}
-                      className="w-full p-3 rounded-xl bg-surface border border-border-subtle text-sm text-text-primary focus:outline-none focus:border-accent-magic focus:ring-1 focus:ring-accent-magic"
-                    />
-                  </div>
-                  <div className="space-y-1">
-                    <label htmlFor="task-xp" className="text-xs font-bold text-text-secondary">EXP</label>
-                    <input
-                      id="task-xp"
-                      type="number"
-                      min={1}
-                      value={newTask.reward_xp}
-                      onChange={(e) => setNewTask({ ...newTask, reward_xp: Number(e.target.value) })}
-                      className="w-full p-3 rounded-xl bg-surface border border-border-subtle text-sm text-text-primary focus:outline-none focus:border-accent-magic focus:ring-1 focus:ring-accent-magic"
-                    />
-                  </div>
+                <div className="space-y-1">
+                  <label htmlFor="task-coins" className="text-xs font-bold text-text-secondary">Koin (🪙)</label>
+                  <input
+                    id="task-coins"
+                    type="number"
+                    min={1}
+                    value={newTask.reward_coins}
+                    onChange={(e) => setNewTask({ ...newTask, reward_coins: Number(e.target.value) })}
+                    className="w-full p-3 rounded-xl bg-surface border border-border-subtle text-sm text-text-primary focus:outline-none focus:border-accent-magic focus:ring-1 focus:ring-accent-magic"
+                  />
                 </div>
               </div>
 
