@@ -6,7 +6,7 @@ import { Card } from '../../shared/components/atoms/Card'
 import { useSession } from '../../shared/hooks/useSession'
 import { apiClient } from '../../shared/lib/api'
 import { Avatar } from '../../shared/components/atoms/Avatar'
-import { Shuffle, ArrowLeft, LogOut, Banknote, Flame } from 'lucide-react'
+import { Shuffle, ArrowLeft, LogOut, Banknote, Flame, ShieldCheck } from 'lucide-react'
 import { PushNotificationToggle } from '../../shared/components/molecules/PushNotificationToggle'
 
 export function ProfilePage() {
@@ -106,12 +106,164 @@ export function ProfilePage() {
     )
   }
 
-  const roleLabel = profile.role === 'ADMIN' || profile.role === 'GUIDE' ? 'Administrator' : 'Anggota'
+  const isAdmin = profile.role === 'ADMIN' || profile.role === 'GUIDE' || profile.role === 'BUILDER'
+  const roleLabel = isAdmin ? 'Administrator' : 'Anggota'
   const xpPercent = Math.min(100, (profile.xp ?? 0) % 100)
   const streakDays = profile.streak_days ?? 0
 
+  // Shared Change Password Card
+  const changePasswordForm = (
+    <Card className="p-5 flex flex-col gap-4">
+      <h3 className="font-bold text-text-primary text-sm flex items-center gap-2">
+        <span>🔒</span> Ubah Kata Sandi
+      </h3>
+      <form onSubmit={handleChangePassword} className="flex flex-col gap-3">
+        <div className="flex flex-col gap-1">
+          <label className="text-xs font-semibold text-text-secondary">Kata Sandi Saat Ini</label>
+          <input
+            type="password"
+            value={currentPassword}
+            onChange={e => setCurrentPassword(e.target.value)}
+            placeholder="Masukkan kata sandi saat ini"
+            required
+            disabled={changing}
+            className="w-full px-4 py-2.5 rounded-xl border border-border-subtle bg-bg-app text-text-primary placeholder:text-text-tertiary focus:outline-none focus:ring-2 focus:ring-primary/40 focus:border-primary transition text-sm"
+          />
+        </div>
+        <div className="flex flex-col gap-1">
+          <label className="text-xs font-semibold text-text-secondary">Kata Sandi Baru</label>
+          <input
+            type="password"
+            value={newPassword}
+            onChange={e => setNewPassword(e.target.value)}
+            placeholder="Minimal 6 karakter"
+            required
+            disabled={changing}
+            className="w-full px-4 py-2.5 rounded-xl border border-border-subtle bg-bg-app text-text-primary placeholder:text-text-tertiary focus:outline-none focus:ring-2 focus:ring-primary/40 focus:border-primary transition text-sm"
+          />
+        </div>
+        <div className="flex flex-col gap-1">
+          <label className="text-xs font-semibold text-text-secondary">Konfirmasi Kata Sandi Baru</label>
+          <input
+            type="password"
+            value={confirmPassword}
+            onChange={e => setConfirmPassword(e.target.value)}
+            placeholder="Ulangi kata sandi baru"
+            required
+            disabled={changing}
+            className="w-full px-4 py-2.5 rounded-xl border border-border-subtle bg-bg-app text-text-primary placeholder:text-text-tertiary focus:outline-none focus:ring-2 focus:ring-primary/40 focus:border-primary transition text-sm"
+          />
+        </div>
+        {changeError && (
+          <div className="px-3 py-2 rounded-xl bg-red-500/10 border border-red-500/20 text-red-500 text-xs">{changeError}</div>
+        )}
+        {changeSuccess && (
+          <div className="px-3 py-2 rounded-xl bg-green-500/10 border border-green-500/20 text-green-600 text-xs">{changeSuccess}</div>
+        )}
+        <Button type="submit" variant="primary" size="sm" disabled={changing} className="w-full">
+          {changing ? 'Menyimpan...' : 'Simpan Kata Sandi Baru'}
+        </Button>
+      </form>
+    </Card>
+  )
+
+  // -------------------------------------------------------------------------
+  // 1. ADMIN / GUIDE / BUILDER PROFILE VIEW (Clean, No Gamification, No /shop)
+  // -------------------------------------------------------------------------
+  if (isAdmin) {
+    return (
+      <div className="flex flex-col gap-4 max-w-2xl mx-auto">
+        <header className="flex items-center gap-2">
+          <Link
+            to="/admin"
+            className="p-2 -ml-2 rounded-xl hover:bg-surface text-text-secondary hover:text-text-primary transition-colors"
+            aria-label="Kembali ke Admin Panel"
+          >
+            <ArrowLeft size={18} />
+          </Link>
+          <h1 className="text-lg font-bold text-text-primary">Akun Administrator</h1>
+        </header>
+
+        {/* Admin Identity Card */}
+        <Card className="p-5">
+          <div className="flex flex-col items-center text-center gap-3">
+            <div className="relative">
+              <Avatar
+                seed={profile.avatar_seed || profile.uid}
+                style={profile.avatar_style || 'adventurer'}
+                size="xl"
+              />
+              <button
+                onClick={handleRandomizeAvatar}
+                disabled={randomizing}
+                aria-label="Acak avatar"
+                className="absolute -bottom-1 -right-1 p-2 bg-accent-magic text-white rounded-full shadow-sm hover:brightness-110 transition-all active:scale-95 disabled:opacity-50"
+              >
+                <Shuffle size={12} className={randomizing ? 'animate-spin' : ''} />
+              </button>
+            </div>
+            <div>
+              <h2 className="text-xl font-bold text-text-primary">{profile.explorer_name}</h2>
+              <div className="flex items-center justify-center gap-2 mt-1.5 flex-wrap">
+                <span className="text-[11px] font-bold px-2.5 py-1 rounded-full bg-accent-magic/10 text-accent-magic border border-accent-magic/20 inline-flex items-center gap-1">
+                  <ShieldCheck size={12} />
+                  <span>{roleLabel} ({profile.role})</span>
+                </span>
+              </div>
+            </div>
+          </div>
+        </Card>
+
+        {/* Account Information & Push Notification */}
+        <Card className="p-5 flex flex-col gap-4">
+          <h3 className="font-bold text-text-primary text-sm flex items-center gap-2">
+            <span>👤</span> Informasi Akun
+          </h3>
+
+          <div className="flex items-center justify-between border-b border-border-subtle/50 pb-4">
+            <div>
+              <p className="text-sm font-bold text-text-primary">Foto Profil</p>
+              <p className="text-xs text-text-secondary">Ubah gaya avatar secara acak</p>
+            </div>
+            <Button
+              variant="secondary"
+              size="sm"
+              className="flex items-center gap-2"
+              onClick={handleRandomizeAvatar}
+              disabled={randomizing}
+            >
+              <Shuffle size={14} className={randomizing ? 'animate-spin' : ''} /> Acak Avatar
+            </Button>
+          </div>
+
+          <div className="flex items-center justify-between border-b border-border-subtle/50 pb-4">
+            <div>
+              <p className="text-sm font-bold text-text-primary">ID Pengguna (UID)</p>
+              <p className="text-xs text-text-secondary font-mono">{profile.uid}</p>
+            </div>
+          </div>
+
+          <div className="py-2">
+            <PushNotificationToggle />
+          </div>
+        </Card>
+
+        {/* Change Password Form */}
+        {changePasswordForm}
+
+        {/* Sign Out Button */}
+        <Button variant="danger" onClick={logout} className="w-full shadow-md flex items-center justify-center gap-2">
+          <LogOut size={16} /> Keluar (Sign Out)
+        </Button>
+      </div>
+    )
+  }
+
+  // -------------------------------------------------------------------------
+  // 2. MEMBER / SEEKER PROFILE VIEW (Full Gamification & Settings)
+  // -------------------------------------------------------------------------
   return (
-    <div className="flex flex-col gap-4">
+    <div className="flex flex-col gap-4 max-w-2xl mx-auto">
       <header className="flex items-center gap-2">
         {activeView === 'overview' ? (
           <Link to="/" className="p-2 -ml-2 rounded-xl hover:bg-surface text-text-secondary hover:text-text-primary transition-colors" aria-label="Kembali">
@@ -231,58 +383,8 @@ export function ProfilePage() {
             </div>
           </Card>
 
-          <Card className="p-5 flex flex-col gap-4">
-            <h3 className="font-bold text-text-primary text-sm flex items-center gap-2">
-              <span>🔒</span> Ubah Kata Sandi
-            </h3>
-            <form onSubmit={handleChangePassword} className="flex flex-col gap-3">
-              <div className="flex flex-col gap-1">
-                <label className="text-xs font-semibold text-text-secondary">Kata Sandi Saat Ini</label>
-                <input
-                  type="password"
-                  value={currentPassword}
-                  onChange={e => setCurrentPassword(e.target.value)}
-                  placeholder="Masukkan kata sandi saat ini"
-                  required
-                  disabled={changing}
-                  className="w-full px-4 py-2.5 rounded-xl border border-border-subtle bg-bg-app text-text-primary placeholder:text-text-tertiary focus:outline-none focus:ring-2 focus:ring-primary/40 focus:border-primary transition text-sm"
-                />
-              </div>
-              <div className="flex flex-col gap-1">
-                <label className="text-xs font-semibold text-text-secondary">Kata Sandi Baru</label>
-                <input
-                  type="password"
-                  value={newPassword}
-                  onChange={e => setNewPassword(e.target.value)}
-                  placeholder="Minimal 6 karakter"
-                  required
-                  disabled={changing}
-                  className="w-full px-4 py-2.5 rounded-xl border border-border-subtle bg-bg-app text-text-primary placeholder:text-text-tertiary focus:outline-none focus:ring-2 focus:ring-primary/40 focus:border-primary transition text-sm"
-                />
-              </div>
-              <div className="flex flex-col gap-1">
-                <label className="text-xs font-semibold text-text-secondary">Konfirmasi Kata Sandi Baru</label>
-                <input
-                  type="password"
-                  value={confirmPassword}
-                  onChange={e => setConfirmPassword(e.target.value)}
-                  placeholder="Ulangi kata sandi baru"
-                  required
-                  disabled={changing}
-                  className="w-full px-4 py-2.5 rounded-xl border border-border-subtle bg-bg-app text-text-primary placeholder:text-text-tertiary focus:outline-none focus:ring-2 focus:ring-primary/40 focus:border-primary transition text-sm"
-                />
-              </div>
-              {changeError && (
-                <div className="px-3 py-2 rounded-xl bg-red-500/10 border border-red-500/20 text-red-500 text-xs">{changeError}</div>
-              )}
-              {changeSuccess && (
-                <div className="px-3 py-2 rounded-xl bg-green-500/10 border border-green-500/20 text-green-600 text-xs">{changeSuccess}</div>
-              )}
-              <Button type="submit" variant="primary" size="sm" disabled={changing} className="w-full">
-                {changing ? 'Menyimpan...' : 'Simpan Kata Sandi Baru'}
-              </Button>
-            </form>
-          </Card>
+          {/* Change Password Form */}
+          {changePasswordForm}
 
           <Button variant="danger" onClick={logout} className="w-full shadow-md flex items-center justify-center gap-2">
             <LogOut size={16} /> Keluar (Sign Out)
