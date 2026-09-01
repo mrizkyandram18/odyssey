@@ -331,7 +331,14 @@ export const LinearPath: React.FC = () => {
 
       {/* Modals — preserve existing, camera-only for new task */}
       {activeModalTask && (() => {
-        const cfg = activeModalTask.config || {}
+        let cfg: any = activeModalTask.config || {}
+        if (typeof cfg === 'string') {
+          try {
+            cfg = JSON.parse(cfg)
+          } catch {
+            cfg = {}
+          }
+        }
         const isLiveCamera = Boolean(cfg.camera_only) || activeModalTask.title === 'Foto Langsung Kesiapan Profil CV (Rapi & Profesional)'
         const isDoc = activeModalTask.task_type === 'DOCUMENT_UPLOAD' || Boolean(cfg.attachment_url)
         const isPhoto = activeModalTask.task_type === 'PHOTO_UPLOAD' || activeModalTask.task_type === 'PHOTO_PROOF'
