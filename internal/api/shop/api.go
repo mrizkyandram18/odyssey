@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"log"
 	"net/http"
 	"strconv"
 	"strings"
@@ -147,6 +148,18 @@ func (a *API) HandleGetCatalog(w http.ResponseWriter, r *http.Request) {
 	w.Write(raw)
 }
 
+func formatThousand(n int) string {
+	in := strconv.Itoa(n)
+	out := ""
+	for i, c := range in {
+		if i > 0 && (len(in)-i)%3 == 0 {
+			out += "."
+		}
+		out += string(c)
+	}
+	return out
+}
+
 func (a *API) HandleRedeem(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	claims, ok := auth.ClaimsFromContext(ctx)
@@ -201,6 +214,55 @@ func (a *API) HandleRedeem(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		shared.WriteJSONError(w, "gagal mengajukan penukaran: "+err.Error(), http.StatusBadRequest)
 		return
+	}
+
+	// Fetch Explorer Name for audit and notification
+	userName := uid
+	var profRows []struct {
+		ExplorerName string `json:"explorer_name"`
+	}
+	if profRaw, err := a.client.Get(ctx, "odyssey_user_profiles", fmt.Sprintf("uid=eq.%s&select=explorer_name", uid)); err == nil {
+		if err := json.Unmarshal(profRaw, &profRows); err == nil && len(profRows) > 0 && strings.TrimSpace(profRows[0].ExplorerName) != "" {
+			userName = strings.TrimSpace(profRows[0].ExplorerName)
+		}
+	}
+
+	var claimRes struct {
+		Success    bool  `json:"success"`
+		ClaimID    int64 `json:"claim_id"`
+		NewBalance int   `json:"new_balance"`
+	}
+	_ = json.Unmarshal(rpcRes, &claimRes)
+
+	cashNominal := req.Coins * cfg.ConversionRate
+	loc, locErr := time.LoadLocation("Asia/Jakarta")
+	if locErr != nil {
+		loc = time.FixedZone("WIB", 7*3600)
+	}
+	timestamp := time.Now().In(loc).Format("2006-01-02 15:04:05 WIB")
+
+	telegramMsg := fmt.Sprintf(`<b>[ODYSSEY WITHDRAWAL REQUEST]</b>
+
+<b>ID:</b> #%d
+<b>User:</b> %s (%s)
+<b>Nominal:</b> %s Koin (Rp %s)
+<b>Metode:</b> %s
+<b>Tujuan:</b> %s
+<b>Status:</b> PENDING
+<b>User Confirmation:</b> CONFIRMED (Pengguna telah mengonfirmasi data tujuan)
+<b>Waktu:</b> %s`,
+		claimRes.ClaimID,
+		shared.EscapeTelegramHTML(userName),
+		shared.EscapeTelegramHTML(uid),
+		formatThousand(req.Coins),
+		formatThousand(cashNominal),
+		shared.EscapeTelegramHTML(req.TargetType),
+		shared.EscapeTelegramHTML(req.TargetValue),
+		timestamp,
+	)
+
+	if _, tgErr := shared.SendTelegramMessage(telegramMsg, nil); tgErr != nil {
+		log.Printf("Telegram Notice: Withdrawal notification not sent (id=%d): %v", claimRes.ClaimID, tgErr)
 	}
 
 	w.Header().Set("Content-Type", "application/json")

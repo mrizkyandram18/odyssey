@@ -1,6 +1,6 @@
-import React, { useState } from 'react'
+﻿import React, { useState } from 'react'
 import { motion } from 'framer-motion'
-import { Coins, Wallet, Building2, AlertCircle, CheckCircle2, Banknote, X } from 'lucide-react'
+import { Coins, Wallet, Building2, AlertCircle, CheckCircle2, Banknote, X, ArrowLeft, ArrowRight, ShieldAlert } from 'lucide-react'
 import { shopApi } from '../../shared/lib/api'
 
 interface RedeemModalProps {
@@ -10,39 +10,88 @@ interface RedeemModalProps {
   onSuccess: () => void
 }
 
+const MANDATORY_WARNING_TEXT =
+  'Pastikan data tujuan pencairan sudah benar. Kesalahan nomor HP/rekening atau data tujuan menjadi tanggung jawab pengguna dan dana yang sudah dikirim tidak dapat dikembalikan.'
+
+function maskDestinationNumber(val: string): string {
+  const clean = val.trim()
+  if (clean.length <= 6) return clean
+  const start = clean.slice(0, 4)
+  const end = clean.slice(-4)
+  const stars = '*'.repeat(Math.min(6, Math.max(3, clean.length - 8)))
+  return `${start}${stars}${end}`
+}
+
 export const RedeemModal: React.FC<RedeemModalProps> = ({
   userCoins,
   conversionRate,
   onClose,
   onSuccess,
 }) => {
-  const [targetType, setTargetType] = useState<'EWALLET' | 'BANK' | 'PHONE'>('EWALLET')
+  const [step, setStep] = useState<'form' | 'confirm' | 'success'>('form')
+  const [targetType, setTargetType] = useState<'EWALLET' | 'BANK'>('EWALLET')
   const [provider, setProvider] = useState('GoPay')
   const [accountNumber, setAccountNumber] = useState('')
   const [accountName, setAccountName] = useState('')
   const [coinsToRedeem, setCoinsToRedeem] = useState<number>(userCoins)
   const [submitting, setSubmitting] = useState(false)
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
-  const [success, setSuccess] = useState(false)
 
   const calculatedCash = (coinsToRedeem || 0) * conversionRate
   const isValidAmount = coinsToRedeem > 0 && coinsToRedeem <= userCoins
 
-  const handleTypeChange = (type: 'EWALLET' | 'BANK' | 'PHONE') => {
+  const handleTypeChange = (type: 'EWALLET' | 'BANK') => {
     setTargetType(type)
     if (type === 'EWALLET') setProvider('GoPay')
-    else if (type === 'BANK') setProvider('BCA')
-    else setProvider('Telkomsel')
+    else setProvider('BCA')
+    setErrorMessage(null)
   }
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    if (!accountNumber.trim()) {
-      setErrorMessage('Nomor rekening / nomor HP tujuan wajib diisi')
-      return
+  const validateInput = (): boolean => {
+    const rawNumber = accountNumber.trim()
+    if (!rawNumber) {
+      setErrorMessage(
+        targetType === 'BANK'
+          ? 'Nomor rekening bank tujuan wajib diisi'
+          : 'Nomor HP / akun e-wallet tujuan wajib diisi'
+      )
+      return false
     }
+
+    const digitsOnly = rawNumber.replace(/\D/g, '')
+    if (digitsOnly.length < 5) {
+      setErrorMessage(
+        targetType === 'BANK'
+          ? 'Nomor rekening minimal 5 digit angka'
+          : 'Nomor HP / akun e-wallet minimal 9 digit angka'
+      )
+      return false
+    }
+
+    if (targetType === 'EWALLET' && (digitsOnly.length < 9 || digitsOnly.length > 15)) {
+      setErrorMessage('Format nomor HP / e-wallet harus antara 9 hingga 15 digit')
+      return false
+    }
+
     if (!isValidAmount) {
       setErrorMessage('Jumlah koin yang ditukarkan tidak valid')
+      return false
+    }
+
+    setErrorMessage(null)
+    return true
+  }
+
+  const handleProceedToConfirm = (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!validateInput()) return
+    setStep('confirm')
+  }
+
+  const handleFinalSubmit = async () => {
+    if (submitting) return
+    if (!validateInput()) {
+      setStep('form')
       return
     }
 
@@ -50,9 +99,11 @@ export const RedeemModal: React.FC<RedeemModalProps> = ({
     setErrorMessage(null)
 
     try {
-      const fullTarget = accountName.trim()
-        ? `${provider} - ${accountNumber.trim()} (a.n ${accountName.trim()})`
-        : `${provider} - ${accountNumber.trim()}`
+      const trimmedNumber = accountNumber.trim()
+      const trimmedName = accountName.trim()
+      const fullTarget = trimmedName
+        ? `${provider} - ${trimmedNumber} (a.n ${trimmedName})`
+        : `${provider} - ${trimmedNumber}`
 
       const res = await shopApi.redeem({
         coins: Number(coinsToRedeem),
@@ -61,12 +112,14 @@ export const RedeemModal: React.FC<RedeemModalProps> = ({
       })
 
       if (res.success) {
-        setSuccess(true)
+        setStep('success')
       } else {
         setErrorMessage('Gagal mengajukan penukaran koin')
+        setStep('form')
       }
     } catch (err: any) {
       setErrorMessage(err.message || 'Gagal mengajukan klaim penukaran.')
+      setStep('form')
     } finally {
       setSubmitting(false)
     }
@@ -83,14 +136,30 @@ export const RedeemModal: React.FC<RedeemModalProps> = ({
         {/* Header */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-border-subtle bg-surface">
           <div className="flex items-center gap-2">
-            <Banknote className="w-5 h-5 text-status-success" />
+            {step === 'confirm' ? (
+              <button
+                type="button"
+                onClick={() => setStep('form')}
+                className="w-7 h-7 -ml-1.5 rounded-full hover:bg-surface-elevated text-text-secondary hover:text-text-primary flex items-center justify-center transition-colors"
+                aria-label="Kembali ke formulir"
+              >
+                <ArrowLeft className="w-4 h-4" />
+              </button>
+            ) : (
+              <Banknote className="w-5 h-5 text-status-success" />
+            )}
             <h3 className="font-heading font-bold text-text-primary text-base">
-              Pencairan Koin ke Cash
+              {step === 'confirm'
+                ? 'Konfirmasi Pencairan Dana'
+                : step === 'success'
+                ? 'Pengajuan Berhasil'
+                : 'Pencairan Koin ke Cash'}
             </h3>
           </div>
           <button
             onClick={onClose}
             className="w-8 h-8 rounded-full bg-surface-elevated text-text-secondary hover:text-text-primary flex items-center justify-center transition-colors"
+            aria-label="Tutup modal"
           >
             <X className="w-4 h-4" />
           </button>
@@ -98,8 +167,12 @@ export const RedeemModal: React.FC<RedeemModalProps> = ({
 
         {/* Content */}
         <div className="p-6 overflow-y-auto space-y-4">
-          {!success ? (
-            <form onSubmit={handleSubmit} className="space-y-4">
+          {step === 'form' && (
+            <form
+              noValidate
+              onSubmit={handleProceedToConfirm}
+              className="space-y-4"
+            >
               {/* Method Selector */}
               <div className="space-y-1.5">
                 <label className="text-xs font-bold text-text-secondary">
@@ -108,6 +181,7 @@ export const RedeemModal: React.FC<RedeemModalProps> = ({
                 <div className="grid grid-cols-2 gap-2">
                   <button
                     type="button"
+                    data-testid="method-ewallet"
                     onClick={() => handleTypeChange('EWALLET')}
                     className={`p-3 rounded-2xl border text-xs font-heading font-bold flex flex-col items-center gap-1.5 transition-all ${
                       targetType === 'EWALLET'
@@ -116,11 +190,12 @@ export const RedeemModal: React.FC<RedeemModalProps> = ({
                     }`}
                   >
                     <Wallet className="w-4 h-4" />
-                    <span>Dompet Digital</span>
+                    <span>E-Wallet</span>
                   </button>
 
                   <button
                     type="button"
+                    data-testid="method-bank"
                     onClick={() => handleTypeChange('BANK')}
                     className={`p-3 rounded-2xl border text-xs font-heading font-bold flex flex-col items-center gap-1.5 transition-all ${
                       targetType === 'BANK'
@@ -137,10 +212,11 @@ export const RedeemModal: React.FC<RedeemModalProps> = ({
               {/* Provider Selection */}
               <div className="space-y-1.5">
                 <label className="text-xs font-bold text-text-secondary">
-                  {targetType === 'EWALLET' ? 'Pilihan Dompet Digital:' : 'Pilihan Bank:'}
+                  {targetType === 'EWALLET' ? 'Pilihan E-Wallet:' : 'Pilihan Bank:'}
                 </label>
                 <select
                   value={provider}
+                  data-testid="provider-select"
                   onChange={(e) => setProvider(e.target.value)}
                   className="w-full p-3 rounded-xl bg-surface border border-border-subtle text-sm text-text-primary focus:outline-none focus:border-accent-magic font-medium"
                 >
@@ -167,11 +243,11 @@ export const RedeemModal: React.FC<RedeemModalProps> = ({
               {/* Target Number */}
               <div className="space-y-1.5">
                 <label className="text-xs font-bold text-text-secondary">
-                  {targetType === 'BANK' ? 'Nomor Rekening:' : 'Nomor Akun Tujuan:'}
+                  {targetType === 'BANK' ? 'Nomor Rekening:' : 'Nomor HP / Nomor E-Wallet:'}
                 </label>
                 <input
                   type="text"
-                  required
+                  data-testid="account-number-input"
                   value={accountNumber}
                   onChange={(e) => setAccountNumber(e.target.value)}
                   placeholder={
@@ -190,6 +266,7 @@ export const RedeemModal: React.FC<RedeemModalProps> = ({
                 </label>
                 <input
                   type="text"
+                  data-testid="account-name-input"
                   value={accountName}
                   onChange={(e) => setAccountName(e.target.value)}
                   placeholder="Contoh: Budi Santoso"
@@ -212,6 +289,7 @@ export const RedeemModal: React.FC<RedeemModalProps> = ({
                     type="number"
                     min={1}
                     max={userCoins}
+                    data-testid="coins-input"
                     value={coinsToRedeem}
                     onChange={(e) => setCoinsToRedeem(Number(e.target.value))}
                     className="w-full p-3.5 rounded-xl bg-surface border border-border-subtle text-base font-bold text-text-primary focus:outline-none focus:border-accent-magic font-mono"
@@ -258,6 +336,15 @@ export const RedeemModal: React.FC<RedeemModalProps> = ({
                 </div>
               </div>
 
+              {/* Mandatory Warning Banner */}
+              <div className="p-3.5 rounded-xl bg-accent-gold/10 border border-accent-gold/30 text-text-primary text-xs flex items-start gap-2.5">
+                <ShieldAlert className="w-4 h-4 text-accent-gold shrink-0 mt-0.5" />
+                <p className="leading-relaxed text-[11px] text-text-secondary">
+                  <strong className="text-text-primary font-semibold">Peringatan: </strong>
+                  {MANDATORY_WARNING_TEXT}
+                </p>
+              </div>
+
               {errorMessage && (
                 <div className="p-3 rounded-xl bg-status-error/15 border border-status-error/30 text-status-error text-xs flex items-center gap-2">
                   <AlertCircle className="w-4 h-4 shrink-0" />
@@ -267,20 +354,126 @@ export const RedeemModal: React.FC<RedeemModalProps> = ({
 
               <button
                 type="submit"
-                disabled={!isValidAmount || submitting}
-                className="w-full py-4 rounded-2xl bg-status-success hover:brightness-110 active:scale-[0.98] text-white font-heading font-bold text-sm shadow-lg shadow-status-success/30 transition-all flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                data-testid="proceed-confirm-btn"
+                disabled={!isValidAmount}
+                className="w-full py-4 rounded-2xl bg-accent-magic hover:brightness-110 active:scale-[0.98] text-white font-heading font-bold text-sm shadow-lg shadow-accent-magic/30 transition-all flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                {submitting ? (
-                  <span>Mengirim Pengajuan...</span>
-                ) : (
-                  <>
-                    <CheckCircle2 className="w-4 h-4" />
-                    <span>Konfirmasi Cairkan Rp {calculatedCash.toLocaleString('id-ID')}</span>
-                  </>
-                )}
+                <span>Lanjut ke Konfirmasi</span>
+                <ArrowRight className="w-4 h-4" />
               </button>
             </form>
-          ) : (
+          )}
+
+          {step === 'confirm' && (
+            <div className="space-y-4">
+              {/* Review Card */}
+              <div className="p-4 rounded-2xl bg-surface border border-border-subtle space-y-3">
+                <h4 className="text-xs font-bold text-text-secondary uppercase tracking-wider">
+                  Ringkasan Pencairan
+                </h4>
+
+                <div className="space-y-2.5 text-xs">
+                  <div className="flex items-center justify-between pb-2 border-b border-border-subtle">
+                    <span className="text-text-secondary">Metode Pencairan</span>
+                    <span className="font-bold text-text-primary">
+                      {targetType === 'EWALLET' ? 'E-Wallet' : 'Transfer Bank'}
+                    </span>
+                  </div>
+
+                  <div className="flex items-center justify-between pb-2 border-b border-border-subtle">
+                    <span className="text-text-secondary">
+                      {targetType === 'EWALLET' ? 'Provider E-Wallet' : 'Bank Tujuan'}
+                    </span>
+                    <span className="font-bold text-text-primary">{provider}</span>
+                  </div>
+
+                  <div className="flex items-center justify-between pb-2 border-b border-border-subtle">
+                    <span className="text-text-secondary">
+                      {targetType === 'BANK' ? 'Nomor Rekening' : 'Nomor HP / Akun'}
+                    </span>
+                    <div className="text-right">
+                      <span className="font-bold font-mono text-text-primary block">
+                        {maskDestinationNumber(accountNumber)}
+                      </span>
+                      <span className="text-[10px] text-text-secondary font-mono">
+                        ({accountNumber.trim()})
+                      </span>
+                    </div>
+                  </div>
+
+                  {accountName.trim() && (
+                    <div className="flex items-center justify-between pb-2 border-b border-border-subtle">
+                      <span className="text-text-secondary">Atas Nama</span>
+                      <span className="font-bold text-text-primary">{accountName.trim()}</span>
+                    </div>
+                  )}
+
+                  <div className="flex items-center justify-between pb-2 border-b border-border-subtle">
+                    <span className="text-text-secondary">Jumlah Koin Ditukar</span>
+                    <span className="font-bold text-accent-gold">
+                      {coinsToRedeem.toLocaleString('id-ID')} Koin
+                    </span>
+                  </div>
+
+                  <div className="flex items-center justify-between pt-1">
+                    <span className="text-text-secondary font-semibold">Total Dana Diterima</span>
+                    <span className="text-base font-extrabold text-status-success">
+                      Rp {calculatedCash.toLocaleString('id-ID')}
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Mandatory Warning Alert (Explicit & Clear) */}
+              <div className="p-4 rounded-2xl bg-accent-gold/15 border-2 border-accent-gold/40 text-text-primary space-y-1.5">
+                <div className="flex items-center gap-2 text-accent-gold font-bold text-xs">
+                  <ShieldAlert className="w-4 h-4 shrink-0" />
+                  <span>PENTING — BACA SEBELUM KONFIRMASI</span>
+                </div>
+                <p className="text-xs leading-relaxed text-text-secondary">
+                  {MANDATORY_WARNING_TEXT}
+                </p>
+              </div>
+
+              {errorMessage && (
+                <div className="p-3 rounded-xl bg-status-error/15 border border-status-error/30 text-status-error text-xs flex items-center gap-2">
+                  <AlertCircle className="w-4 h-4 shrink-0" />
+                  <span>{errorMessage}</span>
+                </div>
+              )}
+
+              {/* Action Buttons */}
+              <div className="flex gap-2.5 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setStep('form')}
+                  disabled={submitting}
+                  className="flex-1 py-3.5 rounded-2xl bg-surface border border-border-subtle hover:bg-surface-elevated text-text-secondary hover:text-text-primary font-heading font-bold text-xs transition-all disabled:opacity-50"
+                >
+                  Ubah Data
+                </button>
+
+                <button
+                  type="button"
+                  data-testid="final-confirm-btn"
+                  onClick={handleFinalSubmit}
+                  disabled={submitting}
+                  className="flex-[2] py-3.5 rounded-2xl bg-status-success hover:brightness-110 active:scale-[0.98] text-white font-heading font-bold text-xs shadow-lg shadow-status-success/30 transition-all flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {submitting ? (
+                    <span>Memproses...</span>
+                  ) : (
+                    <>
+                      <CheckCircle2 className="w-4 h-4" />
+                      <span>Konfirmasi & Cairkan</span>
+                    </>
+                  )}
+                </button>
+              </div>
+            </div>
+          )}
+
+          {step === 'success' && (
             <div className="py-6 text-center space-y-4">
               <div className="w-16 h-16 mx-auto rounded-full bg-status-success/20 text-status-success flex items-center justify-center shadow-inner">
                 <CheckCircle2 className="w-10 h-10" />
@@ -290,11 +483,13 @@ export const RedeemModal: React.FC<RedeemModalProps> = ({
                   Pengajuan Berhasil Dikirim! 🎉
                 </h4>
                 <p className="text-xs text-text-secondary max-w-xs mx-auto leading-relaxed">
-                  Koinmu telah berhasil dipotong dan dicatat dalam riwayat penukaran. Admin akan segera memproses transfer dana pencairan.
+                  Koinmu telah dipotong dan dicatat. Notifikasi telah diteruskan ke tim untuk verifikasi dan transfer dana.
                 </p>
               </div>
 
               <button
+                type="button"
+                data-testid="success-close-btn"
                 onClick={() => {
                   onSuccess()
                   onClose()
