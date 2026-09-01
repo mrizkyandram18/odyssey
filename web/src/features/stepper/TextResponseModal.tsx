@@ -58,34 +58,34 @@ export const TextResponseModal: React.FC<TextResponseModalProps> = ({ task, onCl
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fadeIn">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/60 backdrop-blur-sm animate-fadeIn">
       <motion.div
-        initial={{ scale: 0.95, opacity: 0, y: 20 }}
+        initial={{ scale: 0.97, opacity: 0, y: 12 }}
         animate={{ scale: 1, opacity: 1, y: 0 }}
-        exit={{ scale: 0.95, opacity: 0, y: 20 }}
-        className="w-full max-w-lg bg-surface-elevated border border-border-subtle rounded-2xl shadow-xl overflow-hidden flex flex-col max-h-[90vh]"
+        exit={{ scale: 0.97, opacity: 0, y: 12 }}
+        className="w-full max-w-lg bg-surface-elevated border border-border-subtle rounded-2xl shadow-xl overflow-hidden flex flex-col max-h-[92vh] sm:max-h-[90vh]"
       >
-        {/* Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-border-subtle bg-surface">
-          <div className="flex items-center gap-2">
-            <span className="w-8 h-8 rounded-full bg-accent-magic/20 text-accent-magic flex items-center justify-center font-bold text-sm">
+        {/* Header — compact, unified */}
+        <div className="flex items-center justify-between px-5 py-3.5 border-b border-border-subtle bg-surface shrink-0">
+          <div className="flex items-center gap-2 min-w-0">
+            <span className="w-7 h-7 rounded-full bg-accent-magic/12 text-accent-magic flex items-center justify-center font-bold text-xs shrink-0">
               #{task.step_order}
             </span>
-            <h3 className="font-heading font-bold text-text-primary text-base md:text-lg line-clamp-1">
+            <h3 className="font-bold text-text-primary text-[14px] line-clamp-1">
               {task.title}
             </h3>
           </div>
           <button
             onClick={onClose}
             aria-label="Tutup"
-            className="w-8 h-8 rounded-full bg-surface-elevated text-text-secondary hover:text-text-primary flex items-center justify-center transition-colors"
+            className="w-8 h-8 rounded-full bg-surface-elevated text-text-secondary hover:text-text-primary flex items-center justify-center transition-colors shrink-0"
           >
             <X className="w-4 h-4" />
           </button>
         </div>
 
         {/* Content Body */}
-        <div className="flex-1 overflow-y-auto p-6 space-y-6">
+        <div className="flex-1 overflow-y-auto p-5 space-y-5">
           <AnimatePresence mode="wait">
             {!submitted ? (
               <motion.div
@@ -104,10 +104,10 @@ export const TextResponseModal: React.FC<TextResponseModalProps> = ({ task, onCl
                   </div>
                 </div>
 
-                <div className="p-4 rounded-2xl bg-surface border border-border-subtle space-y-2">
-                  <div className="flex items-center gap-2 text-accent-magic font-bold text-xs">
-                    <FileEdit className="w-4 h-4" />
-                    <span>Petunjuk Tugas:</span>
+                <div className="rounded-xl bg-surface border border-border-subtle p-3.5 space-y-1.5">
+                  <div className="flex items-center gap-1.5 text-accent-magic font-bold text-xs">
+                    <FileEdit className="w-3.5 h-3.5" />
+                    <span>Petunjuk</span>
                   </div>
                   <p className="text-sm text-text-primary leading-relaxed font-medium">
                     {prompt}
@@ -123,14 +123,14 @@ export const TextResponseModal: React.FC<TextResponseModalProps> = ({ task, onCl
                   </div>
 
                   <textarea
-                    rows={6}
+                    rows={5}
                     value={response}
                     onChange={(e) => {
                       setResponse(e.target.value)
                       setErrorMessage(null)
                     }}
                     placeholder="Tuliskan respon kamu di sini dengan jelas..."
-                    className="w-full p-4 rounded-2xl bg-surface border border-border-subtle text-sm text-text-primary placeholder:text-text-secondary/50 focus:outline-none focus:border-accent-magic resize-none leading-relaxed"
+                    className="w-full p-3.5 rounded-xl bg-surface border border-border-subtle text-sm text-text-primary placeholder:text-text-secondary/50 focus:outline-none focus:border-accent-magic resize-none leading-relaxed"
                   />
                 </div>
 
@@ -145,7 +145,7 @@ export const TextResponseModal: React.FC<TextResponseModalProps> = ({ task, onCl
                   type="button"
                   disabled={!isValidLength || submitting}
                   onClick={handleSubmit}
-                  className="w-full py-4 rounded-2xl bg-accent-magic text-white font-heading font-bold shadow-lg shadow-accent-magic/30 hover:brightness-110 disabled:opacity-50 disabled:cursor-not-allowed active:scale-[0.98] transition-all flex items-center justify-center gap-2"
+                  className="w-full py-3.5 rounded-xl bg-accent-magic text-white font-bold shadow-sm hover:brightness-110 disabled:opacity-50 disabled:cursor-not-allowed active:scale-[0.98] transition-all flex items-center justify-center gap-2 min-h-[44px]"
                 >
                   {submitting ? (
                     <span>Mengirim Jawaban...</span>
@@ -194,7 +194,7 @@ export const TextResponseModal: React.FC<TextResponseModalProps> = ({ task, onCl
                       onClose()
                     }
                   }}
-                  className="w-full py-4 rounded-2xl bg-accent-magic text-white font-heading font-bold shadow-lg shadow-accent-magic/30 hover:brightness-110 active:scale-[0.98] transition-all flex items-center justify-center gap-2"
+                  className="w-full py-3.5 rounded-xl bg-accent-magic text-white font-bold shadow-sm hover:brightness-110 active:scale-[0.98] transition-all flex items-center justify-center gap-2 min-h-[44px]"
                 >
                   <span>Lanjut Tugas Berikutnya</span>
                   <ArrowRight className="w-5 h-5" />

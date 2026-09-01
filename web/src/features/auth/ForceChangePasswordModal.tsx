@@ -51,18 +51,18 @@ export function ForceChangePasswordModal() {
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm px-4">
-      <div className="w-full max-w-sm bg-surface-elevated rounded-2xl shadow-2xl p-6 border border-border-subtle">
-        {/* Header */}
-        <div className="text-center mb-6">
-          <div className="inline-flex items-center justify-center w-14 h-14 rounded-full bg-amber-500/15 mb-3">
-            <svg className="w-7 h-7 text-amber-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-3 sm:p-4">
+      <div className="w-full max-w-sm bg-surface-elevated rounded-2xl shadow-xl p-5 border border-border-subtle max-h-[92vh] overflow-y-auto">
+        {/* Header — compact */}
+        <div className="text-center mb-5">
+          <div className="inline-flex items-center justify-center w-11 h-11 rounded-full bg-accent-gold/12 border border-accent-gold/15 mb-3">
+            <svg className="w-6 h-6 text-accent-gold" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
             </svg>
           </div>
-          <h2 className="text-lg font-bold text-text-primary">Ubah Kata Sandi</h2>
-          <p className="text-sm text-text-secondary mt-1">
-            Untuk keamanan akun, harap ubah kata sandi kamu sekarang sebelum melanjutkan.
+          <h2 className="text-[16px] font-extrabold text-text-primary">Ubah Kata Sandi</h2>
+          <p className="text-xs text-text-secondary mt-1 leading-relaxed">
+            Untuk keamanan akun, harap ubah kata sandi sebelum melanjutkan.
           </p>
         </div>
 
@@ -121,7 +121,7 @@ export function ForceChangePasswordModal() {
           <button
             type="submit"
             disabled={loading}
-            className="w-full py-3 rounded-xl bg-primary text-white font-semibold text-sm transition hover:bg-primary/90 active:scale-95 disabled:opacity-60 disabled:cursor-not-allowed"
+            className="w-full py-3 rounded-xl bg-accent-magic text-white font-bold text-sm transition hover:brightness-110 active:scale-95 disabled:opacity-60 disabled:cursor-not-allowed min-h-[44px]"
           >
             {loading ? 'Menyimpan...' : 'Simpan Kata Sandi'}
           </button>

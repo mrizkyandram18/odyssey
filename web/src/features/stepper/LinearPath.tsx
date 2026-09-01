@@ -112,26 +112,26 @@ export const LinearPath: React.FC = () => {
 
   return (
     <div className="w-full flex flex-col gap-4">
-      {/* 1. Greeting — compact, human */}
+      {/* 1. Greeting — compact, hierarchy: greeting > name > date */}
       <div className="px-1 pt-1">
-        <p className="text-sm text-text-secondary">{getGreeting()} 👋</p>
-        <h1 className="text-xl font-bold text-text-primary leading-tight mt-0.5">
+        <p className="text-[11px] font-bold tracking-widest uppercase text-text-secondary">{getGreeting()} 👋</p>
+        <h1 className="text-[22px] font-extrabold text-text-primary leading-tight mt-1 tracking-tight">
           {explorerName ? `Halo, ${explorerName}` : 'Yuk lanjutkan aktivitasmu'}
         </h1>
-        <p className="text-xs text-text-secondary mt-1 flex items-center gap-1.5">
-          <Calendar className="w-3.5 h-3.5" />
+        <p className="text-xs text-text-secondary/80 mt-1.5 flex items-center gap-1.5">
+          <Calendar className="w-3.5 h-3.5 shrink-0" />
           <span>{new Date().toLocaleDateString('id-ID', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}</span>
         </p>
       </div>
 
-      {/* 2. Primary Action — state aware */}
+      {/* 2. Primary Action — unified hierarchy */}
       {loading && tasks.length === 0 ? (
         <Card className="p-5">
           <div className="animate-pulse space-y-3">
-            <div className="h-4 w-32 bg-surface border border-border-subtle rounded-full" />
-            <div className="h-6 w-48 bg-surface border border-border-subtle rounded-lg" />
-            <div className="h-3 w-full bg-surface border border-border-subtle rounded-full" />
-            <div className="h-11 w-full bg-surface border border-border-subtle rounded-xl" />
+            <div className="h-3 w-24 bg-surface-elevated rounded-full" />
+            <div className="h-5 w-48 bg-surface-elevated rounded-lg" />
+            <div className="h-2 w-full bg-surface-elevated rounded-full" />
+            <div className="h-11 w-full bg-surface-elevated rounded-xl" />
           </div>
         </Card>
       ) : error ? (
@@ -140,22 +140,20 @@ export const LinearPath: React.FC = () => {
             <AlertTriangle className="w-5 h-5" />
           </div>
           <h2 className="text-sm font-bold text-text-primary mt-3">Data belum bisa dimuat</h2>
-          <p className="text-xs text-text-secondary mt-1">Periksa koneksi internetmu dan coba lagi.</p>
+          <p className="text-xs text-text-secondary mt-1 leading-relaxed">Periksa koneksi internetmu dan coba lagi.</p>
           <Button onClick={loadTasks} variant="secondary" size="md" className="w-full mt-4">
             <RefreshCw className="w-4 h-4 mr-2" /> Coba Lagi
           </Button>
           {error && <p className="text-[11px] text-text-secondary mt-2 break-words">{error}</p>}
         </Card>
       ) : tasks.length === 0 ? (
-        <Card className="p-6 text-center">
-          <div className="w-12 h-12 mx-auto rounded-full bg-accent-magic/10 flex items-center justify-center text-xl">
-            🌟
-          </div>
+        <div className="rounded-2xl border border-dashed border-border-subtle bg-surface/60 p-6 text-center">
+          <div className="w-11 h-11 mx-auto rounded-full bg-accent-magic/10 flex items-center justify-center text-lg">🌟</div>
           <h2 className="text-sm font-bold text-text-primary mt-3">Belum ada tugas hari ini</h2>
           <p className="text-xs text-text-secondary mt-1 leading-relaxed max-w-[30ch] mx-auto">
             Admin belum menambahkan tugas. Kamu akan mendapat notifikasi saat tugas baru tersedia.
           </p>
-        </Card>
+        </div>
       ) : stats.isAllDone ? (
         <Card className="p-5">
           <div className="flex items-start gap-3">
@@ -163,49 +161,46 @@ export const LinearPath: React.FC = () => {
               <CheckCircle2 className="w-5 h-5" />
             </div>
             <div className="flex-1 min-w-0">
-              <h2 className="text-base font-bold text-text-primary">Semua tugas hari ini selesai 🎉</h2>
+              <h2 className="text-[15px] font-extrabold text-text-primary leading-tight">Semua tugas hari ini selesai 🎉</h2>
               <p className="text-xs text-text-secondary mt-1 leading-relaxed">
-                Kerja bagus! Kamu telah menyelesaikan {stats.total} dari {stats.total} tugas. Koin sudah masuk ke saldomu.
+                Kerja bagus! {stats.total} dari {stats.total} tugas selesai. Koin sudah masuk ke saldomu.
               </p>
             </div>
           </div>
           <div className="grid grid-cols-2 gap-2 mt-4">
-            <Link to="/shop" className="inline-flex items-center justify-center gap-1.5 py-3 rounded-xl bg-accent-magic text-white font-bold text-sm shadow-sm hover:brightness-110 transition-colors">
+            <Link to="/shop" className="inline-flex items-center justify-center gap-1.5 py-3 rounded-xl bg-accent-magic text-white font-bold text-sm shadow-sm hover:brightness-110 transition-colors min-h-[44px]">
               <Coins className="w-4 h-4" /> Tukar Koin
             </Link>
-            <Link to="/profile" className="inline-flex items-center justify-center gap-1.5 py-3 rounded-xl bg-surface-elevated border border-border-subtle text-text-primary font-bold text-sm hover:bg-surface transition-colors">
+            <Link to="/profile" className="inline-flex items-center justify-center gap-1.5 py-3 rounded-xl bg-surface-elevated border border-border-subtle text-text-primary font-bold text-sm hover:bg-surface transition-colors min-h-[44px]">
               <Trophy className="w-4 h-4" /> Perkembangan
             </Link>
           </div>
         </Card>
       ) : stats.nextTask ? (
         <Card className="p-5">
-          <div className="flex items-start justify-between gap-3">
-            <div className="flex-1 min-w-0">
-              <p className="text-[11px] font-bold tracking-wide uppercase text-text-secondary">Tugas Harian</p>
-              <h2 className="text-base font-bold text-text-primary mt-1 leading-tight">
-                {stats.completed === 0 ? 'Mulai tugas pertamamu' : 'Lanjutkan tugas berikutnya'}
-              </h2>
-              <p className="text-xs text-text-secondary mt-1 leading-relaxed">
-                {stats.completed === 0
-                  ? 'Selesaikan tugas untuk mendapatkan koin dan melanjutkan ke langkah berikutnya.'
-                  : `Masih ada ${stats.total - stats.completed} tugas lagi. Ayo selesaikan!`}
-              </p>
-              <div className="mt-3 flex items-center gap-2 text-xs">
-                <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-accent-magic/10 text-accent-magic border border-accent-magic/20 font-bold">
-                  {getTaskIcon(stats.nextTask.task_type)} {stats.nextTask.title}
-                </span>
-              </div>
-              <p className="text-[11px] text-text-secondary mt-2">
-                Hadiah: <span className="font-bold text-accent-gold">+{stats.nextTask.reward_coins} koin</span> • +{stats.nextTask.reward_xp} XP • Langkah {stats.nextTask.step_order} dari {stats.total}
-              </p>
-            </div>
+          <p className="text-[11px] font-bold tracking-widest uppercase text-text-secondary">Tugas Harian • Langkah {stats.nextTask.step_order} dari {stats.total}</p>
+          <span className="sr-only">Tugas Harian</span>
+          <h2 className="text-[15px] font-extrabold text-text-primary mt-1.5 leading-tight">
+            {stats.completed === 0 ? 'Mulai tugas pertamamu' : 'Lanjutkan tugas berikutnya'}
+          </h2>
+          <p className="text-xs text-text-secondary mt-1.5 leading-relaxed">
+            {stats.completed === 0
+              ? 'Selesaikan tugas untuk mendapatkan koin dan membuka langkah berikutnya.'
+              : `Masih ada ${stats.total - stats.completed} tugas lagi. Ayo selesaikan!`}
+          </p>
+          <div className="mt-3 flex items-center gap-2 flex-wrap">
+            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-accent-magic/10 text-accent-magic border border-accent-magic/15 font-bold text-xs">
+              {getTaskIcon(stats.nextTask.task_type)} {stats.nextTask.title}
+            </span>
+            <span className="text-[11px] font-semibold text-text-secondary whitespace-nowrap">
+              <span className="text-accent-gold font-bold">+{stats.nextTask.reward_coins} koin</span> • +{stats.nextTask.reward_xp} XP
+            </span>
           </div>
           <Button onClick={() => handleTaskClick(stats.nextTask!)} size="lg" className="w-full mt-4">
             {stats.completed === 0 ? 'Mulai Tugas' : 'Lanjutkan Tugas'} <ArrowRight className="w-4 h-4 ml-2" />
           </Button>
           {stats.rejected > 0 && (
-            <p className="text-xs text-status-error text-center mt-2 font-medium">Ada {stats.rejected} tugas perlu revisi — cek daftar di bawah.</p>
+            <p className="text-xs text-status-error text-center mt-2.5 font-medium">Ada {stats.rejected} tugas perlu revisi — cek daftar di bawah.</p>
           )}
         </Card>
       ) : (
@@ -214,41 +209,38 @@ export const LinearPath: React.FC = () => {
             <Clock className="w-5 h-5" />
           </div>
           <h2 className="text-sm font-bold text-text-primary mt-3">Menunggu verifikasi</h2>
-          <p className="text-xs text-text-secondary mt-1">Semua tugas sudah dikumpulkan. Koin akan masuk setelah admin memeriksa.</p>
+          <p className="text-xs text-text-secondary mt-1 leading-relaxed">Semua tugas sudah dikumpulkan. Koin akan masuk setelah admin memeriksa.</p>
         </Card>
       )}
 
-      {/* 3. Progress — simple, non-technical */}
+      {/* 3. Progress — compact, single hierarchy */}
       {tasks.length > 0 && !loading && !error && (
-        <Card className="p-4">
-          <div className="flex items-center justify-between">
+        <div className="rounded-2xl bg-surface border border-border-subtle px-4 py-3.5">
+          <div className="flex items-center justify-between gap-2">
             <h3 className="text-xs font-bold text-text-primary">Perkembangan hari ini</h3>
-            <span className="text-xs font-bold text-text-secondary">{stats.completed} dari {stats.total} selesai</span>
+            <span className="text-[11px] font-bold px-2 py-0.5 rounded-full bg-accent-magic/10 text-accent-magic border border-accent-magic/15">{stats.completed}/{stats.total} selesai • {stats.progressPercent}%</span>
           </div>
-          <div className="mt-3">
+          <div className="mt-2.5">
             <ProgressBar progress={stats.progressPercent} colorClass="bg-accent-magic" />
           </div>
-          <div className="mt-3 flex items-center justify-between text-xs">
+          <div className="mt-2.5 flex items-center justify-between text-[11px] gap-2">
             <span className="inline-flex items-center gap-1.5 text-text-secondary">
-              <Trophy className="w-3.5 h-3.5 text-accent-magic" />
-              <span className="font-semibold">Lv. {userLevel}</span>
-              <span className="text-text-secondary">• {xpInCurrentLevel}/{xpRequiredForLevel} XP</span>
+              <Trophy className="w-3.5 h-3.5 text-accent-magic shrink-0" />
+              <span className="font-bold text-text-primary">Lv. {userLevel}</span>
+              <span>{xpInCurrentLevel}/{xpRequiredForLevel} XP</span>
             </span>
-            <span className="inline-flex items-center gap-1 text-text-secondary">
+            <span className="inline-flex items-center gap-1 text-text-secondary shrink-0">
               <Flame className="w-3.5 h-3.5 text-accent-danger" /> <span className="font-bold">{userStreak} Hari</span>
             </span>
           </div>
-          {/* secondary XP bar kept faint for low-tech secondary */}
-          <div className="mt-2 flex items-center gap-2 opacity-60">
-            <div className="flex-1 h-1 bg-surface border border-border-subtle rounded-full overflow-hidden">
-              <div className="h-full bg-accent-magic/50 rounded-full" style={{ width: `${xpProgressPercent}%` }} />
-            </div>
+          <div className="mt-2 h-1 bg-surface-elevated rounded-full overflow-hidden">
+            <div className="h-full bg-accent-magic/35 rounded-full transition-all" style={{ width: `${xpProgressPercent}%` }} />
           </div>
-        </Card>
+        </div>
       )}
 
-      {/* 4. Coins / Reward — supporting, not dominant */}
-      <Card className="p-4">
+      {/* 4. Coins — supporting, grouped, no card heaviness */}
+      <div className="rounded-2xl bg-surface border border-border-subtle px-4 py-3.5">
         {(() => {
           if (!shopConfig) {
             return (
@@ -267,49 +259,45 @@ export const LinearPath: React.FC = () => {
           return (
             <>
               <div className="flex items-center justify-between gap-3">
-                <div className="flex items-center gap-3 min-w-0">
-                  <span className="text-xl p-2 rounded-xl bg-accent-gold/15 border border-accent-gold/20 shrink-0">🪙</span>
+                <div className="flex items-center gap-2.5 min-w-0">
+                  <span className="w-9 h-9 rounded-xl bg-accent-gold/12 border border-accent-gold/15 flex items-center justify-center text-base shrink-0">🪙</span>
                   <div className="min-w-0">
-                    <p className="text-xs font-bold text-text-secondary uppercase tracking-wide">Saldo Koin</p>
-                    <p className="text-lg font-bold text-text-primary leading-none mt-0.5">
+                    <p className="text-[11px] font-bold tracking-widest uppercase text-text-secondary">Saldo Koin</p>
+                    <p className="text-[17px] font-extrabold text-text-primary leading-none mt-1">
                       {userCoins.toLocaleString('id-ID')} <span className="text-xs font-semibold text-text-secondary">Koin</span>
                     </p>
                     <p className="text-[11px] text-text-secondary mt-1">
-                      Estimasi Rp {estCash.toLocaleString('id-ID')} • Maks Rp {maxCash.toLocaleString('id-ID')}
+                      ≈ Rp {estCash.toLocaleString('id-ID')} • Maks Rp {maxCash.toLocaleString('id-ID')}
                     </p>
-                    <p className="text-[11px] text-text-secondary">Koin bisa ditukarkan • EXP hanya untuk Level</p>
                   </div>
                 </div>
-                <Link to="/shop" className="shrink-0 inline-flex items-center gap-1.5 px-3.5 py-2.5 rounded-xl bg-surface-elevated border border-border-subtle text-text-primary font-bold text-xs hover:bg-surface transition-colors">
-                  Tukar Koin <ArrowRight className="w-3.5 h-3.5" />
+                <Link to="/shop" className="shrink-0 inline-flex items-center gap-1 px-3 py-2.5 rounded-xl bg-accent-magic text-white font-bold text-xs shadow-sm hover:brightness-110 transition-colors min-h-[38px]">
+                  Tukar <ArrowRight className="w-3.5 h-3.5" />
                 </Link>
               </div>
               {isPayoutDay && userCoins > 0 && (
-                <div className="mt-3 p-3 rounded-xl bg-status-success/10 border border-status-success/20 flex items-start gap-2">
+                <div className="mt-3 p-2.5 rounded-xl bg-status-success/10 border border-status-success/15 flex items-start gap-2">
                   <Banknote className="w-4 h-4 text-status-success shrink-0 mt-0.5" />
-                  <div>
-                    <p className="text-xs font-bold text-status-success">🎉 Saatnya Tukarkan Koinmu!</p>
-                    <p className="text-[11px] text-text-secondary mt-0.5">
-                      Kamu mengumpulkan {userCoins.toLocaleString('id-ID')} Koin = Rp {estCash.toLocaleString('id-ID')} (Target Rp {targetCash.toLocaleString('id-ID')} • Maks Rp {maxCash.toLocaleString('id-ID')}). Tukarkan di Halaman Penukaran tanggal {shopConfig.redemption_start_day}–{shopConfig.redemption_end_day}.
-                    </p>
-                  </div>
+                  <p className="text-xs leading-relaxed text-text-secondary">
+                    <span className="font-bold text-status-success">Saatnya tukarkan!</span> {userCoins.toLocaleString('id-ID')} Koin = Rp {estCash.toLocaleString('id-ID')} (target Rp {targetCash.toLocaleString('id-ID')}). Periode tgl {shopConfig.redemption_start_day}–{shopConfig.redemption_end_day}.
+                  </p>
                 </div>
               )}
             </>
           )
         })()}
-      </Card>
+      </div>
 
-      {/* 5. Task list — readable, no bubble navigation */}
+      {/* 5. Task list — compact, clean rows */}
       {tasks.length > 0 && !error && (
         <div className="flex flex-col gap-2">
           <div className="flex items-center justify-between px-1">
-            <h3 className="text-sm font-bold text-text-primary">Daftar tugas hari ini</h3>
-            <button onClick={loadTasks} aria-label="Muat ulang tugas" disabled={loading} className="p-1.5 rounded-lg bg-surface border border-border-subtle text-text-secondary hover:text-text-primary disabled:opacity-50">
+            <h3 className="text-xs font-bold tracking-widest uppercase text-text-secondary">Daftar tugas • {stats.completed}/{stats.total}</h3>
+            <button onClick={loadTasks} aria-label="Muat ulang tugas" disabled={loading} className="w-7 h-7 rounded-full bg-surface border border-border-subtle text-text-secondary hover:text-text-primary disabled:opacity-50 flex items-center justify-center">
               <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
             </button>
           </div>
-          <div className="flex flex-col gap-2">
+          <div className="flex flex-col gap-1.5">
             {tasks.map((task) => {
               const isApproved = task.status === 'APPROVED'
               const isPending = task.status === 'PENDING'
@@ -321,16 +309,16 @@ export const LinearPath: React.FC = () => {
                   key={task.id}
                   onClick={() => handleTaskClick(task)}
                   disabled={isLocked}
-                  className={`w-full text-left p-3 rounded-2xl border flex items-center gap-3 transition-colors ${isApproved ? 'bg-status-success/5 border-status-success/20' : isPending ? 'bg-accent-gold/5 border-accent-gold/20' : isUnlocked ? 'bg-surface border-border-subtle hover:border-accent-magic/30 hover:bg-surface-elevated shadow-sm' : isRejected ? 'bg-status-error/5 border-status-error/20' : 'bg-surface border-border-subtle opacity-60'}`}
+                  className={`w-full text-left px-3 py-2.5 rounded-xl border flex items-center gap-2.5 transition-colors min-h-[56px] ${isApproved ? 'bg-status-success/[0.04] border-status-success/15' : isPending ? 'bg-accent-gold/[0.04] border-accent-gold/15' : isUnlocked ? 'bg-surface border-border-subtle hover:border-accent-magic/25 hover:bg-surface-elevated' : isRejected ? 'bg-status-error/[0.04] border-status-error/15' : 'bg-surface border-border-subtle opacity-60'}`}
                 >
-                  <span className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 border ${isApproved ? 'bg-status-success text-white border-status-success' : isPending ? 'bg-accent-gold text-white border-accent-gold' : isUnlocked ? 'bg-accent-magic text-white border-accent-magic' : isRejected ? 'bg-status-error text-white border-status-error' : 'bg-surface-elevated text-text-secondary border-border-subtle'}`}>
-                    {isApproved ? <CheckCircle2 className="w-4 h-4" /> : isPending ? <Clock className="w-4 h-4" /> : isLocked ? <Lock className="w-4 h-4" /> : isRejected ? <AlertTriangle className="w-4 h-4" /> : getTaskIcon(task.task_type)}
+                  <span className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 ${isApproved ? 'bg-status-success text-white' : isPending ? 'bg-accent-gold text-white' : isUnlocked ? 'bg-accent-magic text-white' : isRejected ? 'bg-status-error text-white' : 'bg-surface-elevated text-text-secondary border border-border-subtle'}`}>
+                    {isApproved ? <CheckCircle2 className="w-4 h-4" /> : isPending ? <Clock className="w-4 h-4" /> : isLocked ? <Lock className="w-3.5 h-3.5" /> : isRejected ? <AlertTriangle className="w-3.5 h-3.5" /> : getTaskIcon(task.task_type)}
                   </span>
                   <span className="flex-1 min-w-0">
-                    <span className={`text-sm font-bold leading-tight block truncate ${isLocked ? 'text-text-secondary' : 'text-text-primary'}`}>{task.title}</span>
-                    <span className="text-xs text-text-secondary line-clamp-1">{task.description || (isLocked ? 'Selesaikan tugas sebelumnya untuk membuka' : `Langkah ${task.step_order} • +${task.reward_coins} koin`)}</span>
+                    <span className={`text-[13px] font-bold leading-tight block truncate ${isLocked ? 'text-text-secondary' : 'text-text-primary'}`}>{task.title}</span>
+                    <span className="text-[11px] text-text-secondary line-clamp-1 leading-snug">{task.description || (isLocked ? 'Selesaikan tugas sebelumnya untuk membuka' : `Langkah ${task.step_order} • +${task.reward_coins} koin`)}</span>
                   </span>
-                  <span className={`text-[11px] font-bold px-2 py-1 rounded-full border shrink-0 ${isApproved ? 'bg-status-success text-white border-status-success' : isPending ? 'bg-accent-gold/15 text-accent-gold border-accent-gold/20' : isUnlocked ? 'bg-accent-magic text-white border-accent-magic' : isRejected ? 'bg-status-error/15 text-status-error border-status-error/20' : 'bg-surface-elevated text-text-secondary border-border-subtle'}`}>
+                  <span className={`text-[10px] font-bold px-2 py-1 rounded-full shrink-0 whitespace-nowrap ${isApproved ? 'bg-status-success text-white' : isPending ? 'bg-accent-gold/12 text-accent-gold border border-accent-gold/15' : isUnlocked ? 'bg-accent-magic text-white' : isRejected ? 'bg-status-error/10 text-status-error border border-status-error/15' : 'bg-surface-elevated text-text-secondary border border-border-subtle'}`}>
                     {isApproved ? 'Selesai' : isPending ? 'Menunggu' : isUnlocked ? 'Kerjakan' : isRejected ? 'Revisi' : 'Terkunci'}
                   </span>
                 </button>

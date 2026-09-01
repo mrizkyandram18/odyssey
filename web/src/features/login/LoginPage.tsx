@@ -34,15 +34,15 @@ export function LoginPage() {
   return (
     <div className="flex min-h-screen items-center justify-center bg-bg-app px-4 py-8">
       <div className="w-full max-w-sm">
-        <div className="mb-8 text-center">
-          <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-surface border border-border-subtle shadow-sm">
-            <span className="text-2xl">🧭</span>
+        <div className="mb-6 text-center">
+          <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-2xl bg-surface border border-border-subtle shadow-sm">
+            <span className="text-xl">🧭</span>
           </div>
-          <h1 className="text-2xl font-bold text-text-primary tracking-tight">Odyssey</h1>
-          <p className="text-sm text-text-secondary mt-1">Masuk untuk melanjutkan aktivitas belajar</p>
+          <h1 className="text-[22px] font-extrabold text-text-primary tracking-tight">Odyssey</h1>
+          <p className="text-xs text-text-secondary mt-1.5">Masuk untuk melanjutkan aktivitas</p>
         </div>
 
-        <Card className="shadow-sm">
+        <Card className="shadow-sm p-5">
           <form onSubmit={handleLogin} className="flex flex-col gap-5">
             <div className="space-y-4">
               <Input

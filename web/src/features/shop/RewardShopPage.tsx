@@ -105,59 +105,54 @@ export const RewardShopPage: React.FC = () => {
         </button>
       </header>
 
-      {/* 2. Hero Balance Card */}
-      <div className="p-4 rounded-2xl bg-surface border border-border-subtle shadow-sm">
-        <div className="flex items-center justify-between gap-4">
-          <div>
-            <p className="text-[11px] font-bold uppercase tracking-wide text-text-secondary">Saldo Koin</p>
-            <p className="mt-1 flex items-baseline gap-1.5">
-              <span className="text-2xl font-bold text-accent-gold">{userCoins.toLocaleString('id-ID')}</span>
+      {/* 2. Hero Balance — grouped, tighter hierarchy */}
+      <div className="rounded-2xl bg-surface border border-border-subtle p-4">
+        <div className="flex items-start justify-between gap-3">
+          <div className="min-w-0">
+            <p className="text-[11px] font-bold tracking-widest uppercase text-text-secondary">Saldo Koin</p>
+            <p className="mt-1 flex items-baseline gap-1.5 flex-wrap">
+              <span className="text-[22px] font-extrabold text-accent-gold leading-none">{userCoins.toLocaleString('id-ID')}</span>
               <span className="text-xs font-semibold text-text-secondary">Koin</span>
             </p>
-            <p className="text-[11px] text-text-secondary mt-1">Koin bisa ditukarkan menjadi uang</p>
+            <p className="text-[11px] text-text-secondary mt-1">≈ Rp {estimatedCash.toLocaleString('id-ID')} • 1 Koin = Rp {conversionRate.toLocaleString('id-ID')}</p>
           </div>
-          <div className="text-right">
-            <p className="text-[11px] font-bold uppercase tracking-wide text-text-secondary">Estimasi Tunai</p>
-            <p className="mt-1 flex items-center justify-end gap-1 text-status-success font-bold">
-              <Banknote className="w-4 h-4" />
-              <span className="text-lg">Rp {estimatedCash.toLocaleString('id-ID')}</span>
+          <div className="text-right shrink-0">
+            <p className="text-[11px] font-bold tracking-widest uppercase text-text-secondary">Estimasi</p>
+            <p className="mt-1 flex items-center justify-end gap-1 text-status-success font-extrabold">
+              <Banknote className="w-4 h-4 shrink-0" />
+              <span className="text-[15px]">Rp {estimatedCash.toLocaleString('id-ID')}</span>
             </p>
-            <p className="text-[11px] text-text-secondary">1 Koin = Rp {conversionRate.toLocaleString('id-ID')}</p>
           </div>
         </div>
-        {/* Max payout progress - config driven */}
-        <div className="mt-4 space-y-2">
-          <div className="flex items-center justify-between text-[11px] font-bold">
+        <div className="mt-3.5 space-y-2">
+          <div className="flex items-center justify-between text-[11px] font-bold gap-2">
             <span className="text-text-secondary">Progress pencairan</span>
-            <span className={isMaxReached ? 'text-status-success' : 'text-text-primary'}>
-              {isMaxReached ? 'Maximum tercapai' : `Rp ${estimatedCash.toLocaleString('id-ID')} / Rp ${payoutTargetRupiah.toLocaleString('id-ID')}`}
+            <span className={isMaxReached ? 'text-status-success' : 'text-text-primary truncate'}>
+              {isMaxReached ? 'Maksimum tercapai' : `Rp ${estimatedCash.toLocaleString('id-ID')} / Rp ${payoutTargetRupiah.toLocaleString('id-ID')}`}
             </span>
           </div>
-          <div className="h-2 rounded-full bg-surface-elevated border border-border-subtle overflow-hidden">
+          <div className="h-1.5 rounded-full bg-surface-elevated overflow-hidden">
             <div
               className={`h-full rounded-full transition-all ${isMaxReached ? 'bg-status-success' : 'bg-accent-gold'}`}
               style={{ width: `${Math.min(100, Math.round(((userCoins + usedPayoutCoins) / payoutTargetCoins) * 100))}%` }}
             />
           </div>
-          <div className="flex items-center justify-between text-[11px] text-text-secondary">
-            <span>
-              Target: <strong className="text-text-primary">{payoutTargetCoins.toLocaleString('id-ID')} Koin</strong> = Rp {payoutTargetRupiah.toLocaleString('id-ID')} • Maks {maxPayoutCoins.toLocaleString('id-ID')} Koin
-            </span>
-            <span>Sisa kuota: {remainingCoins.toLocaleString('id-ID')} Koin</span>
+          <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1 text-[11px] text-text-secondary">
+            <span>Target {payoutTargetCoins.toLocaleString('id-ID')} Koin = Rp {payoutTargetRupiah.toLocaleString('id-ID')}</span>
+            <span className="font-semibold text-text-primary">Sisa kuota {remainingCoins.toLocaleString('id-ID')}</span>
           </div>
-          <p className="text-[11px] text-text-secondary">Periode {config?.earning_period_days ?? 30} hari • Gajian tgl {config?.payout_day ?? 24} • {conversionRate.toLocaleString('id-ID')} /koin</p>
-          <p className="text-[11px] text-text-secondary bg-surface-elevated border border-border-subtle rounded-lg p-2">
-            <strong className="text-text-primary">Koin</strong> bisa ditukarkan menjadi uang. <strong className="text-text-primary">EXP</strong> hanya untuk Level dan tidak dapat ditukarkan.
+          <p className="text-[11px] text-text-secondary leading-relaxed">
+            Periode {config?.earning_period_days ?? 30} hari • Gajian tgl {config?.payout_day ?? 24} • <span className="font-semibold text-text-primary">Koin</span> bisa ditukar, <span className="font-semibold text-text-primary">EXP</span> untuk Level.
           </p>
         </div>
       </div>
 
-      {/* 3. Tabs */}
+      {/* 3. Tabs — compact, accessible */}
       <div className="flex p-1 bg-surface rounded-xl border border-border-subtle gap-1">
         <button
           data-testid="tab-redeem"
           onClick={() => setActiveTab('redeem')}
-          className={`flex-1 py-2.5 px-3 rounded-lg font-bold text-xs flex items-center justify-center gap-1.5 transition-colors ${
+          className={`flex-1 py-2.5 px-3 rounded-lg font-bold text-xs flex items-center justify-center gap-1.5 transition-colors min-h-[40px] ${
             activeTab === 'redeem'
               ? 'bg-accent-magic text-white shadow-sm'
               : 'text-text-secondary hover:text-text-primary'
@@ -169,7 +164,7 @@ export const RewardShopPage: React.FC = () => {
         <button
           data-testid="tab-history"
           onClick={() => setActiveTab('history')}
-          className={`flex-1 py-2.5 px-3 rounded-lg font-bold text-xs flex items-center justify-center gap-1.5 transition-colors ${
+          className={`flex-1 py-2.5 px-3 rounded-lg font-bold text-xs flex items-center justify-center gap-1.5 transition-colors min-h-[40px] ${
             activeTab === 'history'
               ? 'bg-accent-magic text-white shadow-sm'
               : 'text-text-secondary hover:text-text-primary'
@@ -178,7 +173,7 @@ export const RewardShopPage: React.FC = () => {
           <Clock className="w-4 h-4 shrink-0" />
           <span>Riwayat</span>
           {claims.length > 0 && (
-            <span className="px-1.5 py-0.5 rounded-full bg-white/20 text-white font-mono text-[10px] shrink-0">
+            <span className={`px-1.5 py-0.5 rounded-full font-mono text-[10px] shrink-0 ${activeTab === 'history' ? 'bg-white/20 text-white' : 'bg-accent-magic/10 text-accent-magic border border-accent-magic/15'}`}>
               {claims.length}
             </span>
           )}
@@ -204,30 +199,30 @@ export const RewardShopPage: React.FC = () => {
         </div>
       ) : activeTab === 'redeem' ? (
         <div className="space-y-4">
-          {/* Status Period Card */}
+          {/* Status Period — clearer CTAs */}
           <div
             className={`p-4 rounded-2xl border ${
               isOpen
-                ? 'bg-status-success/10 border-status-success/20'
+                ? 'bg-status-success/[0.06] border-status-success/15'
                 : 'bg-surface border-border-subtle'
             }`}
           >
             <span
-              className={`inline-flex text-[11px] font-bold px-2.5 py-1 rounded-full ${
+              className={`inline-flex text-[11px] font-bold px-2.5 py-1 rounded-full border ${
                 isOpen
-                  ? 'bg-status-success text-white'
-                  : 'bg-surface-elevated text-text-secondary border border-border-subtle'
+                  ? 'bg-status-success text-white border-status-success'
+                  : 'bg-surface-elevated text-text-secondary border-border-subtle'
               }`}
             >
               {isOpen ? '● Penukaran Dibuka' : '○ Penukaran Ditutup'}
             </span>
-            <h3 className="font-bold text-text-primary text-sm mt-2">
-              {isOpen ? 'Periode Penukaran Sedang Aktif' : 'Penukaran Koin Belum Dibuka'}
+            <h3 className="font-bold text-text-primary text-[13px] mt-2.5 leading-tight">
+              {isOpen ? 'Periode penukaran aktif' : 'Penukaran belum dibuka'}
             </h3>
             <p className="text-xs text-text-secondary leading-relaxed mt-1">
               {isOpen
-                ? `Ajukan penukaran koin menjadi cash pada tanggal ${startDay}–${endDay} bulan ini.`
-                : `Penukaran dibuka setiap tanggal ${startDay}–${endDay} setiap bulan.`}
+                ? `Ajukan penukaran pada tanggal ${startDay}–${endDay} bulan ini.`
+                : `Dibuka setiap tanggal ${startDay}–${endDay} setiap bulan.`}
             </p>
 
             <div className="mt-4">
@@ -235,9 +230,9 @@ export const RewardShopPage: React.FC = () => {
                 <button
                   onClick={() => setIsRedeemModalOpen(true)}
                   disabled={userCoins <= 0 || pendingClaims.length > 0}
-                  className="w-full py-3 px-4 rounded-xl bg-accent-magic hover:brightness-110 text-white font-bold text-sm shadow-sm transition-all flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="w-full py-3.5 px-4 rounded-xl bg-accent-magic hover:brightness-110 text-white font-bold text-sm shadow-sm transition-all flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed min-h-[44px]"
                 >
-                  <Banknote className="w-4 h-4" />
+                  <Banknote className="w-4 h-4 shrink-0" />
                   <span>
                     {pendingClaims.length > 0
                       ? 'Menunggu verifikasi admin'
@@ -250,7 +245,7 @@ export const RewardShopPage: React.FC = () => {
                 <div className="flex items-start gap-2 text-xs text-text-secondary p-3 rounded-xl bg-surface-elevated border border-border-subtle">
                   <Info className="w-4 h-4 shrink-0 text-accent-magic mt-0.5" />
                   <span>
-                    Penukaran aktif otomatis pada tanggal <strong>{startDay}–{endDay}</strong>.
+                    Aktif otomatis tanggal <strong className="text-text-primary">{startDay}–{endDay}</strong>.
                   </span>
                 </div>
               )}
@@ -281,15 +276,15 @@ export const RewardShopPage: React.FC = () => {
             </div>
           )}
 
-          <div className="p-4 rounded-2xl bg-surface border border-border-subtle space-y-3">
+          <div className="rounded-2xl bg-surface border border-border-subtle p-4">
             <h4 className="font-bold text-text-primary text-xs flex items-center gap-1.5">
-              <Info className="w-4 h-4 text-accent-magic" />
+              <Info className="w-3.5 h-3.5 text-accent-magic" />
               <span>Cara kerja</span>
             </h4>
-            <ol className="space-y-2 text-xs text-text-secondary list-decimal list-inside leading-relaxed">
+            <ol className="mt-2.5 space-y-1.5 text-xs text-text-secondary list-decimal list-inside leading-relaxed">
               <li>Selesaikan tugas harian untuk kumpulkan koin</li>
-              <li>Tunggu periode penukaran tanggal <strong>{startDay}–{endDay}</strong></li>
-              <li>Tukarkan ke Bank, E-Wallet, atau tunai</li>
+              <li>Tunggu periode penukaran tanggal <strong className="text-text-primary">{startDay}–{endDay}</strong></li>
+              <li>Tukarkan ke Bank atau E-Wallet</li>
             </ol>
           </div>
         </div>
@@ -309,7 +304,7 @@ export const RewardShopPage: React.FC = () => {
               return (
                 <div
                   key={claim.id}
-                  className="p-4 rounded-2xl bg-surface border border-border-subtle shadow-sm space-y-3"
+                  className="p-4 rounded-2xl bg-surface border border-border-subtle space-y-3"
                 >
                   <div className="flex items-start justify-between gap-2">
                     <div>
@@ -379,7 +374,7 @@ export const RewardShopPage: React.FC = () => {
                   </div>
 
                   {claim.admin_notes && (
-                    <div className="text-[11px] p-2.5 rounded-xl bg-surface-base border border-border-subtle text-text-secondary">
+                    <div className="text-[11px] p-2.5 rounded-xl bg-surface-elevated border border-border-subtle text-text-secondary">
                       <strong className="text-text-primary">Catatan Admin:</strong>{' '}
                       {claim.admin_notes}
                     </div>
