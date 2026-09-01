@@ -3,6 +3,7 @@ package admin_members
 import (
 	"context"
 	"crypto/rand"
+	"crypto/subtle"
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
@@ -819,6 +820,44 @@ func (a *API) HandleUnblockMember(w http.ResponseWriter, r *http.Request, target
 }
 
 func (a *API) HandleAutoBlock(w http.ResponseWriter, r *http.Request) {
+	// Machine-to-machine auth via internal token (preferred for scheduler)
+	// Reuses existing secret mechanism: ODYSSEY_AUTO_BLOCK_TOKEN or fallback ODYSSEY_INTERNAL_METRICS_TOKEN
+	cfg := shared.LoadConfig()
+	autoToken := cfg.AutoBlockToken
+	if autoToken == "" {
+		autoToken = cfg.InternalMetricsToken
+	}
+	if autoToken != "" {
+		provided := r.Header.Get("X-Auto-Block-Token")
+		if provided == "" {
+			provided = r.Header.Get("X-Internal-Token")
+		}
+		if provided == "" {
+			provided = r.Header.Get("Authorization")
+			if strings.HasPrefix(provided, "Bearer ") {
+				provided = strings.TrimPrefix(provided, "Bearer ")
+			} else if provided != "" && !strings.Contains(provided, " ") {
+				// keep as is if not Bearer
+			} else {
+				provided = ""
+			}
+		}
+		if provided == "" {
+			provided = r.URL.Query().Get("token")
+		}
+		if provided != "" && subtle.ConstantTimeCompare([]byte(provided), []byte(autoToken)) == 1 {
+			ctx := r.Context()
+			if raw, err := a.client.RPC(ctx, "odyssey_auto_block_inactive_users", map[string]any{}); err == nil {
+				var res map[string]any
+				_ = json.Unmarshal(raw, &res)
+				shared.WriteJSON(w, http.StatusOK, res)
+				return
+			}
+			threshold := getAutoBlockThreshold(ctx, a.client)
+			shared.WriteJSON(w, http.StatusOK, map[string]any{"success": true, "blocked_count": 0, "threshold": threshold, "fallback": true, "auth": "internal_token"})
+			return
+		}
+	}
 	claims, ok := a.requireAdmin(w, r)
 	if !ok {
 		return

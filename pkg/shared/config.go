@@ -23,6 +23,7 @@ type Config struct {
 	LoginRateLimitMax    int
 	AdminRateLimitMax    int
 	InternalMetricsToken string
+	AutoBlockToken       string
 	VAPIDPublicKey       string
 	VAPIDPrivateKey      string
 	VAPIDSubject         string
@@ -45,6 +46,7 @@ func LoadConfig() Config {
 		LoginRateLimitMax:    int(getEnvIntDefault("ODYSSEY_LOGIN_RATE_LIMIT_MAX", 5)),
 		AdminRateLimitMax:    int(getEnvIntDefault("ODYSSEY_ADMIN_RATE_LIMIT_MAX", 30)),
 		InternalMetricsToken: os.Getenv("ODYSSEY_INTERNAL_METRICS_TOKEN"),
+		AutoBlockToken:       os.Getenv("ODYSSEY_AUTO_BLOCK_TOKEN"),
 		VAPIDPublicKey:       os.Getenv("VAPID_PUBLIC_KEY"),
 		VAPIDPrivateKey:      os.Getenv("VAPID_PRIVATE_KEY"),
 		VAPIDSubject:         getEnvDefault("VAPID_SUBJECT", "mailto:admin@odyssey.example.com"),
