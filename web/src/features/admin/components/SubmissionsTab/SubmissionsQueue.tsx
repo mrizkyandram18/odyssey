@@ -36,39 +36,40 @@ export const SubmissionsQueue: React.FC = () => {
   const pendingCount = submissions.filter((s) => s.status === 'PENDING').length
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-3.5">
       {error && (
-        <div className="p-4 rounded-2xl bg-status-error/10 border border-status-error/20 text-status-error text-xs flex items-center justify-between">
+        <div className="p-3.5 rounded-2xl bg-status-error/10 border border-status-error/20 text-status-error text-xs flex items-center justify-between">
           <span>{error}</span>
           <button
             type="button"
             onClick={() => fetchSubmissions(filter, pagination.page)}
-            className="font-bold underline ml-2"
+            className="font-bold underline ml-2 cursor-pointer"
           >
             Coba lagi
           </button>
         </div>
       )}
 
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+      {/* Toolbar & Filter */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 p-3 rounded-2xl bg-surface border border-border-subtle shadow-xs">
         <div>
-          <h3 className="font-bold text-text-primary text-sm flex items-center gap-2">
+          <h3 className="font-bold text-text-primary text-xs flex items-center gap-2">
             <span>Antrean Verifikasi Bukti Tugas ({pendingCount} Menunggu / {submissions.length} Total)</span>
             {isFetching && <RefreshCw className="w-3.5 h-3.5 animate-spin text-text-secondary" />}
           </h3>
-          <span className="text-xs text-text-secondary">
+          <p className="text-[11px] text-text-secondary mt-0.5">
             Approve memberi koin otomatis. Submission otomatis kuis langsung tercatat di sini.
-          </span>
+          </p>
         </div>
 
         {/* Status filter pills */}
-        <div className="flex items-center gap-1 p-1 bg-surface rounded-xl border border-border-subtle text-xs overflow-x-auto">
+        <div className="flex items-center gap-1 p-1 bg-surface-elevated rounded-xl border border-border-subtle text-xs overflow-x-auto shrink-0">
           <button
             type="button"
             onClick={() => setFilter('ALL')}
-            className={`px-3 py-1 rounded-lg font-bold transition-colors whitespace-nowrap ${
+            className={`px-3 py-1 rounded-lg font-bold text-xs transition-colors whitespace-nowrap cursor-pointer ${
               filter === 'ALL'
-                ? 'bg-accent-magic text-white shadow-sm'
+                ? 'bg-accent-magic text-white shadow-xs'
                 : 'text-text-secondary hover:text-text-primary'
             }`}
           >
@@ -77,9 +78,9 @@ export const SubmissionsQueue: React.FC = () => {
           <button
             type="button"
             onClick={() => setFilter('PENDING')}
-            className={`px-3 py-1 rounded-lg font-bold transition-colors whitespace-nowrap ${
+            className={`px-3 py-1 rounded-lg font-bold text-xs transition-colors whitespace-nowrap cursor-pointer ${
               filter === 'PENDING'
-                ? 'bg-accent-gold text-white shadow-sm'
+                ? 'bg-accent-gold text-white shadow-xs'
                 : 'text-text-secondary hover:text-text-primary'
             }`}
           >
@@ -88,9 +89,9 @@ export const SubmissionsQueue: React.FC = () => {
           <button
             type="button"
             onClick={() => setFilter('APPROVED')}
-            className={`px-3 py-1 rounded-lg font-bold transition-colors whitespace-nowrap ${
+            className={`px-3 py-1 rounded-lg font-bold text-xs transition-colors whitespace-nowrap cursor-pointer ${
               filter === 'APPROVED'
-                ? 'bg-status-success text-white shadow-sm'
+                ? 'bg-status-success text-white shadow-xs'
                 : 'text-text-secondary hover:text-text-primary'
             }`}
           >
@@ -99,9 +100,9 @@ export const SubmissionsQueue: React.FC = () => {
           <button
             type="button"
             onClick={() => setFilter('REJECTED')}
-            className={`px-3 py-1 rounded-lg font-bold transition-colors whitespace-nowrap ${
+            className={`px-3 py-1 rounded-lg font-bold text-xs transition-colors whitespace-nowrap cursor-pointer ${
               filter === 'REJECTED'
-                ? 'bg-status-error text-white shadow-sm'
+                ? 'bg-status-error text-white shadow-xs'
                 : 'text-text-secondary hover:text-text-primary'
             }`}
           >
@@ -110,6 +111,7 @@ export const SubmissionsQueue: React.FC = () => {
         </div>
       </div>
 
+      {/* Queue items */}
       {submissions.length === 0 && !isFetching ? (
         <div className="py-12 text-center bg-surface rounded-2xl border border-border-subtle space-y-2 p-6">
           <div className="w-10 h-10 mx-auto rounded-xl bg-accent-magic/10 text-accent-magic flex items-center justify-center">
@@ -148,13 +150,13 @@ export const SubmissionsQueue: React.FC = () => {
             type="button"
             disabled={pagination.page <= 1 || isFetching}
             onClick={() => fetchSubmissions(filter, pagination.page - 1)}
-            className="px-3 py-1.5 rounded-xl bg-surface-elevated border border-border-subtle text-xs font-bold text-text-primary hover:bg-surface disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-1"
+            className="px-3 py-1.5 rounded-xl bg-surface-elevated border border-border-subtle text-xs font-bold text-text-primary hover:bg-surface disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-1 cursor-pointer"
           >
             <ChevronLeft className="w-3.5 h-3.5" />
             <span>Sebelumnya</span>
           </button>
 
-          <span className="text-xs font-bold text-text-secondary">
+          <span className="text-xs font-bold text-text-secondary font-mono">
             Halaman {pagination.page}
           </span>
 
@@ -162,7 +164,7 @@ export const SubmissionsQueue: React.FC = () => {
             type="button"
             disabled={!pagination.has_next || isFetching}
             onClick={() => fetchSubmissions(filter, pagination.page + 1)}
-            className="px-3 py-1.5 rounded-xl bg-surface-elevated border border-border-subtle text-xs font-bold text-text-primary hover:bg-surface disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-1"
+            className="px-3 py-1.5 rounded-xl bg-surface-elevated border border-border-subtle text-xs font-bold text-text-primary hover:bg-surface disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-1 cursor-pointer"
           >
             <span>Selanjutnya</span>
             <ChevronRight className="w-3.5 h-3.5" />

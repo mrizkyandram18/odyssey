@@ -1,9 +1,8 @@
 import React, { useState } from 'react'
 import { Navigate } from 'react-router-dom'
-import { ShieldCheck, Users } from 'lucide-react'
+import { ShieldCheck, CheckCircle2, Coins, Calendar, Users, Sliders } from 'lucide-react'
 import { useSession } from '../../shared/hooks/useSession'
 import { useAdminConfig } from './hooks/useAdminConfig'
-import { AdminMetricsBar } from './components/AdminMetricsBar'
 import { SubmissionsQueue } from './components/SubmissionsTab/SubmissionsQueue'
 import { ClaimsQueue } from './components/ClaimsTab/ClaimsQueue'
 import { TaskScheduleList } from './components/TasksTab/TaskScheduleList'
@@ -32,77 +31,112 @@ export const AdminPage: React.FC = () => {
     return <Navigate to="/home" replace />
   }
 
+  const periodRange = config
+    ? `${config.redemption_start_day}–${config.redemption_end_day}`
+    : '21–26'
+  const isOpen = config?.is_open ?? false
+
   return (
     <div className="w-full flex flex-col gap-4">
-      {/* Header */}
-      <header className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-        <div>
-          <h1 className="text-lg font-bold text-text-primary flex items-center gap-2">
-            <ShieldCheck className="w-5 h-5 text-accent-magic" />
-            <span>Panel Operasional Admin</span>
-            <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-accent-magic/10 text-accent-magic border border-accent-magic/20">
-              ADMIN
+      {/* Unified Admin Header */}
+      <header className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 pb-1 border-b border-border-subtle/60">
+        <div className="flex items-center gap-2">
+          <div className="w-8 h-8 rounded-xl bg-accent-magic/10 text-accent-magic flex items-center justify-center">
+            <ShieldCheck className="w-4 h-4" />
+          </div>
+          <div>
+            <div className="flex items-center gap-2">
+              <h1 className="text-base font-bold text-text-primary tracking-tight">
+                Panel Operasional Admin
+              </h1>
+              <span className="text-[10px] font-extrabold px-2 py-0.5 rounded-full bg-accent-magic/15 text-accent-magic border border-accent-magic/20 tracking-wider">
+                ADMIN
+              </span>
+            </div>
+            <p className="text-[11px] text-text-secondary">
+              Pusat kendali operasional, verifikasi, jadwal tugas, dan anggota
+            </p>
+          </div>
+        </div>
+
+        {/* Live Period Status Tag */}
+        <div className="flex items-center gap-2 self-start sm:self-auto">
+          <div className="flex items-center gap-1.5 px-3 py-1 rounded-xl bg-surface border border-border-subtle text-xs">
+            <span className="text-[11px] text-text-secondary font-medium">Periode Penukaran:</span>
+            <span className="font-bold text-text-primary font-mono">{periodRange}</span>
+            <span
+              className={`inline-flex items-center gap-1 text-[10px] font-bold px-1.5 py-0.5 rounded-full ${
+                isOpen
+                  ? 'bg-status-success/15 text-status-success'
+                  : 'bg-surface-elevated text-text-secondary border border-border-subtle'
+              }`}
+            >
+              <span className={`w-1.5 h-1.5 rounded-full ${isOpen ? 'bg-status-success' : 'bg-text-secondary'}`} />
+              {isOpen ? 'Buka' : 'Tutup'}
             </span>
-          </h1>
+          </div>
         </div>
       </header>
 
-      {/* Metrics Bar */}
-      <AdminMetricsBar
-        activeTab={activeTab}
-        onSelectTab={setActiveTab}
-        config={config}
-      />
-
-      {/* Tab Navigation */}
-      <div className="flex flex-wrap gap-1 p-1 bg-surface rounded-xl border border-border-subtle">
+      {/* Single Primary Tab Navigation */}
+      <nav
+        aria-label="Admin Navigation"
+        className="grid grid-cols-2 sm:grid-cols-5 gap-1.5 p-1 bg-surface rounded-2xl border border-border-subtle shadow-xs"
+      >
         <button
           type="button"
           data-testid="admin-tab-submissions"
           onClick={() => setActiveTab('submissions')}
-          className={`flex-1 min-w-[100px] py-2.5 px-3 rounded-lg font-bold text-xs flex items-center justify-center gap-1.5 transition-colors ${
+          aria-current={activeTab === 'submissions' ? 'page' : undefined}
+          className={`py-2 px-3 rounded-xl font-bold text-xs flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
             activeTab === 'submissions'
               ? 'bg-accent-magic text-white shadow-sm'
-              : 'text-text-secondary hover:text-text-primary'
+              : 'text-text-secondary hover:text-text-primary hover:bg-surface-elevated'
           }`}
         >
-          Verifikasi
+          <CheckCircle2 className="w-3.5 h-3.5" />
+          <span>Verifikasi</span>
         </button>
 
         <button
           type="button"
           data-testid="admin-tab-claims"
           onClick={() => setActiveTab('claims')}
-          className={`flex-1 min-w-[100px] py-2.5 px-3 rounded-lg font-bold text-xs flex items-center justify-center gap-1.5 transition-colors ${
+          aria-current={activeTab === 'claims' ? 'page' : undefined}
+          className={`py-2 px-3 rounded-xl font-bold text-xs flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
             activeTab === 'claims'
               ? 'bg-accent-magic text-white shadow-sm'
-              : 'text-text-secondary hover:text-text-primary'
+              : 'text-text-secondary hover:text-text-primary hover:bg-surface-elevated'
           }`}
         >
-          Pencairan
+          <Coins className="w-3.5 h-3.5" />
+          <span>Pencairan</span>
         </button>
 
         <button
           type="button"
           data-testid="admin-tab-tasks"
           onClick={() => setActiveTab('tasks')}
-          className={`flex-1 min-w-[100px] py-2.5 px-3 rounded-lg font-bold text-xs flex items-center justify-center gap-1.5 transition-colors ${
+          aria-current={activeTab === 'tasks' ? 'page' : undefined}
+          className={`py-2 px-3 rounded-xl font-bold text-xs flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
             activeTab === 'tasks'
               ? 'bg-accent-magic text-white shadow-sm'
-              : 'text-text-secondary hover:text-text-primary'
+              : 'text-text-secondary hover:text-text-primary hover:bg-surface-elevated'
           }`}
         >
-          Tugas
+          <Calendar className="w-3.5 h-3.5" />
+          <span>Tugas</span>
         </button>
 
         <button
           type="button"
           data-testid="admin-tab-members"
           onClick={() => setActiveTab('members')}
-          className={`flex-1 min-w-[100px] py-2.5 px-3 rounded-lg font-bold text-xs flex items-center justify-center gap-1.5 transition-colors ${
+          aria-current={activeTab === 'members' ? 'page' : undefined}
+          className={`py-2 px-3 rounded-xl font-bold text-xs flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
             activeTab === 'members'
               ? 'bg-accent-magic text-white shadow-sm'
-              : 'text-text-secondary hover:text-text-primary'
+              : 'text-text-secondary hover:text-text-primary hover:bg-surface-elevated'
           }`}
         >
           <Users className="w-3.5 h-3.5" />
@@ -113,17 +147,19 @@ export const AdminPage: React.FC = () => {
           type="button"
           data-testid="admin-tab-settings"
           onClick={() => setActiveTab('settings')}
-          className={`flex-1 min-w-[100px] py-2.5 px-3 rounded-lg font-bold text-xs flex items-center justify-center gap-1.5 transition-colors ${
+          aria-current={activeTab === 'settings' ? 'page' : undefined}
+          className={`col-span-2 sm:col-span-1 py-2 px-3 rounded-xl font-bold text-xs flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
             activeTab === 'settings'
               ? 'bg-accent-magic text-white shadow-sm'
-              : 'text-text-secondary hover:text-text-primary'
+              : 'text-text-secondary hover:text-text-primary hover:bg-surface-elevated'
           }`}
         >
-          Periode
+          <Sliders className="w-3.5 h-3.5" />
+          <span>Periode</span>
         </button>
-      </div>
+      </nav>
 
-      {/* Tab Content (Lazy Render per Tab) */}
+      {/* Tab Content */}
       <main className="w-full">
         {activeTab === 'submissions' && <SubmissionsQueue />}
         {activeTab === 'claims' && <ClaimsQueue />}
