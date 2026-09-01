@@ -100,7 +100,7 @@ func (s *supabaseProfileStore) BindOrVerifyDevice(ctx context.Context, uid, devi
 		return false, auth.ErrDeviceRequired
 	}
 	raw, err := s.client.RPC(ctx, "odyssey_bind_or_verify_device", map[string]any{
-		"p_user_uid":   uid,
+		"p_user_uid":  uid,
 		"p_device_id": deviceID,
 	})
 	if err != nil {
