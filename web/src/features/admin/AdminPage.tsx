@@ -76,7 +76,12 @@ export const AdminPage: React.FC = () => {
   const [selectedMember, setSelectedMember] = useState<MemberView | null>(null)
   const [previewImage, setPreviewImage] = useState<string | null>(null)
   const [actionNotes, setActionNotes] = useState<Record<number, string>>({})
+  const [actionPenalties, setActionPenalties] = useState<Record<number, number>>({})
   const [processingId, setProcessingId] = useState<number | null>(null)
+  const [editingSubmission, setEditingSubmission] = useState<PendingSubmissionView | null>(null)
+  const [editPayloadForm, setEditPayloadForm] = useState<Record<string, any>>({})
+  const [editSubmissionNotes, setEditSubmissionNotes] = useState<string>('')
+  const [isSavingSubmission, setIsSavingSubmission] = useState(false)
 
   // Member form states
   const [newMember, setNewMember] = useState({
@@ -195,13 +200,33 @@ export const AdminPage: React.FC = () => {
     setProcessingId(subId)
     try {
       const notes = actionNotes[subId] || ''
-      await adminTasksApi.verifySubmission(subId, status, notes)
-      setSubmissions((prev) => prev.filter((s) => s.id !== subId))
+      const penalty = status === 'REJECTED' ? (actionPenalties[subId] || 0) : 0
+      await adminTasksApi.verifySubmission(subId, status, notes, penalty)
       fetchData()
     } catch (err: any) {
       alert('Gagal memproses verifikasi: ' + err.message)
     } finally {
       setProcessingId(null)
+    }
+  }
+
+  const handleOpenEditSubmission = (sub: PendingSubmissionView) => {
+    setEditingSubmission(sub)
+    setEditPayloadForm(sub.payload ? JSON.parse(JSON.stringify(sub.payload)) : {})
+    setEditSubmissionNotes(sub.admin_notes || '')
+  }
+
+  const handleSaveEditSubmission = async () => {
+    if (!editingSubmission) return
+    setIsSavingSubmission(true)
+    try {
+      await adminTasksApi.editSubmission(editingSubmission.id, editPayloadForm, editSubmissionNotes)
+      setEditingSubmission(null)
+      fetchData()
+    } catch (err: any) {
+      alert('Gagal menyimpan perubahan submission: ' + err.message)
+    } finally {
+      setIsSavingSubmission(false)
     }
   }
 
@@ -1019,19 +1044,54 @@ export const AdminPage: React.FC = () => {
                     {/* Pending Actions */}
                     {isSubPending && (
                       <>
-                        <label htmlFor={`note-${sub.id}`} className="text-[11px] font-bold text-text-secondary">Catatan untuk anggota (opsional, wajib jika menolak)</label>
-                        <input
-                          id={`note-${sub.id}`}
-                          type="text"
-                          placeholder="Contoh: Foto kurang jelas, ulangi dari sudut lain"
-                          value={actionNotes[sub.id] || ''}
-                          onChange={(e) =>
-                            setActionNotes((prev) => ({ ...prev, [sub.id]: e.target.value }))
-                          }
-                          className="w-full p-2.5 rounded-xl bg-surface border border-border-subtle text-xs text-text-primary placeholder:text-text-secondary/50 focus:outline-none focus:border-accent-magic focus:ring-1 focus:ring-accent-magic"
-                        />
+                        <div className="space-y-1.5 pt-1">
+                          <label htmlFor={`note-${sub.id}`} className="text-[11px] font-bold text-text-secondary">
+                            Catatan untuk anggota (opsional, wajib jika menolak)
+                          </label>
+                          <input
+                            id={`note-${sub.id}`}
+                            type="text"
+                            placeholder="Contoh: Foto kurang jelas, ulangi dari sudut lain"
+                            value={actionNotes[sub.id] || ''}
+                            onChange={(e) =>
+                              setActionNotes((prev) => ({ ...prev, [sub.id]: e.target.value }))
+                            }
+                            className="w-full p-2.5 rounded-xl bg-surface border border-border-subtle text-xs text-text-primary placeholder:text-text-secondary/50 focus:outline-none focus:border-accent-magic focus:ring-1 focus:ring-accent-magic"
+                          />
 
-                        <div className="flex gap-2 pt-1">
+                          <div className="flex items-center gap-2 pt-1">
+                            <label htmlFor={`penalty-${sub.id}`} className="text-[11px] font-bold text-status-error whitespace-nowrap">
+                              Penalti Koin jika Ditolak:
+                            </label>
+                            <input
+                              id={`penalty-${sub.id}`}
+                              type="number"
+                              min="0"
+                              max="10000"
+                              placeholder="0 (tanpa penalti)"
+                              value={actionPenalties[sub.id] || ''}
+                              onChange={(e) =>
+                                setActionPenalties((prev) => ({
+                                  ...prev,
+                                  [sub.id]: Math.max(0, parseInt(e.target.value, 10) || 0),
+                                }))
+                              }
+                              className="w-28 p-1.5 rounded-lg bg-surface border border-border-subtle text-xs font-bold text-status-error focus:outline-none focus:border-status-error"
+                            />
+                            <span className="text-[10px] text-text-secondary">🪙 dipotong jika tolak</span>
+                          </div>
+                        </div>
+
+                        <div className="flex gap-2 pt-2">
+                          <button
+                            type="button"
+                            onClick={() => handleOpenEditSubmission(sub)}
+                            className="px-3 py-2.5 rounded-xl bg-surface-elevated border border-border-subtle hover:border-accent-magic/50 text-text-primary font-bold text-xs flex items-center justify-center gap-1 transition-colors"
+                          >
+                            <Edit3 className="w-3.5 h-3.5 text-accent-magic" />
+                            <span>Edit Jawaban</span>
+                          </button>
+
                           <button
                             type="button"
                             aria-label={`Tolak verifikasi ${sub.task_title}`}
@@ -1040,7 +1100,13 @@ export const AdminPage: React.FC = () => {
                             className="flex-1 py-2.5 rounded-xl bg-surface border border-status-error/20 text-status-error hover:bg-status-error/10 font-bold text-xs flex items-center justify-center gap-1.5 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                           >
                             <XCircle className="w-4 h-4" />
-                            <span>{processingId === sub.id ? 'Memproses...' : 'Tolak'}</span>
+                            <span>
+                              {processingId === sub.id
+                                ? 'Memproses...'
+                                : actionPenalties[sub.id] && actionPenalties[sub.id] > 0
+                                ? `Tolak (-${actionPenalties[sub.id]}🪙)`
+                                : 'Tolak'}
+                            </span>
                           </button>
 
                           <button
@@ -1071,9 +1137,19 @@ export const AdminPage: React.FC = () => {
 
                     {/* Rejected Banner */}
                     {isSubRejected && (
-                      <div className="p-3 rounded-xl bg-status-error/10 border border-status-error/20 text-xs text-status-error font-bold flex items-center gap-1.5">
-                        <XCircle className="w-4 h-4" />
-                        <span>Submission telah ditolak</span>
+                      <div className="p-3 rounded-xl bg-status-error/10 border border-status-error/20 text-xs text-status-error font-bold flex items-center justify-between">
+                        <span className="flex items-center gap-1.5">
+                          <XCircle className="w-4 h-4" />
+                          <span>Submission telah ditolak {sub.coins_earned && sub.coins_earned < 0 ? `(Penalti: ${sub.coins_earned} 🪙)` : ''}</span>
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => handleOpenEditSubmission(sub)}
+                          className="px-2.5 py-1 rounded-lg bg-surface border border-status-error/30 text-text-primary hover:bg-surface-elevated font-bold text-[11px] flex items-center gap-1 transition-colors"
+                        >
+                          <Edit3 className="w-3 h-3 text-accent-magic" />
+                          <span>Edit Jawaban</span>
+                        </button>
                       </div>
                     )}
                   </div>
@@ -2358,6 +2434,162 @@ export const AdminPage: React.FC = () => {
                   className="flex-1 py-3 rounded-xl bg-accent-magic text-white font-bold text-sm shadow-md hover:brightness-110"
                 >
                   Simpan Perubahan
+                </button>
+              </div>
+            </form>
+          </motion.div>
+        </div>
+      )}
+
+      {/* 5. EDIT SUBMISSION MODAL */}
+      {editingSubmission && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="w-full max-w-lg bg-surface-elevated rounded-3xl border border-border-subtle shadow-2xl overflow-hidden max-h-[90vh] flex flex-col"
+          >
+            <div className="p-5 border-b border-border-subtle flex items-center justify-between">
+              <div className="flex items-center gap-2.5">
+                <div className="p-2 rounded-xl bg-accent-magic/10 text-accent-magic">
+                  <Edit3 className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="font-bold text-text-primary text-base">Edit Jawaban Submission</h3>
+                  <p className="text-xs text-text-secondary">
+                    {editingSubmission.task_title} • Oleh: {editingSubmission.user_name}
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setEditingSubmission(null)}
+                className="p-2 rounded-xl bg-surface border border-border-subtle text-text-secondary hover:text-text-primary"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <form
+              onSubmit={(e) => {
+                e.preventDefault()
+                handleSaveEditSubmission()
+              }}
+              className="p-5 space-y-4 overflow-y-auto"
+            >
+              {/* Text Response editor */}
+              {(editingSubmission.task_type === 'TEXT_RESPONSE' || editPayloadForm.text !== undefined) && (
+                <div className="space-y-1">
+                  <label className="text-xs font-bold text-text-secondary">Teks Jawaban / Respon</label>
+                  <textarea
+                    rows={4}
+                    value={editPayloadForm.text || ''}
+                    onChange={(e) => setEditPayloadForm({ ...editPayloadForm, text: e.target.value })}
+                    className="w-full p-3 rounded-xl bg-surface border border-border-subtle text-xs text-text-primary focus:outline-none focus:border-accent-magic leading-relaxed"
+                    placeholder="Masukkan teks jawaban..."
+                  />
+                </div>
+              )}
+
+              {/* Mini Game editor */}
+              {(editingSubmission.task_type === 'MINI_GAME' || editPayloadForm.score !== undefined) && (
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-1">
+                    <label className="text-xs font-bold text-text-secondary">Skor Game</label>
+                    <input
+                      type="number"
+                      min="0"
+                      max="1000000"
+                      value={editPayloadForm.score !== undefined ? editPayloadForm.score : 0}
+                      onChange={(e) =>
+                        setEditPayloadForm({ ...editPayloadForm, score: parseInt(e.target.value, 10) || 0 })
+                      }
+                      className="w-full p-3 rounded-xl bg-surface border border-border-subtle text-sm font-bold text-text-primary focus:outline-none focus:border-accent-magic"
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-xs font-bold text-text-secondary">Jumlah Langkah (Moves)</label>
+                    <input
+                      type="number"
+                      min="0"
+                      value={editPayloadForm.moves !== undefined ? editPayloadForm.moves : 0}
+                      onChange={(e) =>
+                        setEditPayloadForm({ ...editPayloadForm, moves: parseInt(e.target.value, 10) || 0 })
+                      }
+                      className="w-full p-3 rounded-xl bg-surface border border-border-subtle text-sm font-bold text-text-primary focus:outline-none focus:border-accent-magic"
+                    />
+                  </div>
+                </div>
+              )}
+
+              {/* Quiz / Auto Quiz Answers editor */}
+              {editPayloadForm.answers && typeof editPayloadForm.answers === 'object' && (
+                <div className="space-y-2">
+                  <label className="text-xs font-bold text-text-secondary">Jawaban Kuis per Soal</label>
+                  <div className="space-y-2">
+                    {Object.entries(editPayloadForm.answers).map(([qKey, qAns]) => (
+                      <div key={qKey} className="flex items-center gap-2">
+                        <span className="w-16 px-2 py-1.5 rounded-lg bg-surface border border-border-subtle text-xs font-mono font-bold text-text-secondary uppercase text-center shrink-0">
+                          {qKey}
+                        </span>
+                        <input
+                          type="text"
+                          value={String(qAns || '')}
+                          onChange={(e) =>
+                            setEditPayloadForm({
+                              ...editPayloadForm,
+                              answers: {
+                                ...editPayloadForm.answers,
+                                [qKey]: e.target.value,
+                              },
+                            })
+                          }
+                          className="flex-1 p-2 rounded-xl bg-surface border border-border-subtle text-xs text-text-primary focus:outline-none focus:border-accent-magic"
+                        />
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Attachment / File note editor */}
+              <div className="space-y-1">
+                <label className="text-xs font-bold text-text-secondary">Catatan Bukti / Note Pengguna</label>
+                <input
+                  type="text"
+                  value={editPayloadForm.note || ''}
+                  onChange={(e) => setEditPayloadForm({ ...editPayloadForm, note: e.target.value })}
+                  placeholder="Catatan pengguna..."
+                  className="w-full p-3 rounded-xl bg-surface border border-border-subtle text-xs text-text-primary focus:outline-none focus:border-accent-magic"
+                />
+              </div>
+
+              {/* Admin Note editor */}
+              <div className="space-y-1">
+                <label className="text-xs font-bold text-text-secondary">Catatan Admin</label>
+                <input
+                  type="text"
+                  value={editSubmissionNotes}
+                  onChange={(e) => setEditSubmissionNotes(e.target.value)}
+                  placeholder="Catatan review admin..."
+                  className="w-full p-3 rounded-xl bg-surface border border-border-subtle text-xs text-text-primary focus:outline-none focus:border-accent-magic"
+                />
+              </div>
+
+              <div className="pt-2 flex gap-3">
+                <button
+                  type="button"
+                  onClick={() => setEditingSubmission(null)}
+                  className="flex-1 py-3 rounded-xl bg-surface-elevated border border-border-subtle text-text-primary font-bold text-sm"
+                >
+                  Batal
+                </button>
+                <button
+                  type="submit"
+                  disabled={isSavingSubmission}
+                  className="flex-1 py-3 rounded-xl bg-accent-magic text-white font-bold text-sm shadow-md hover:brightness-110 disabled:opacity-50"
+                >
+                  {isSavingSubmission ? 'Menyimpan...' : 'Simpan Perubahan'}
                 </button>
               </div>
             </form>

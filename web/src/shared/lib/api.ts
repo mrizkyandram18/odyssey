@@ -187,8 +187,16 @@ export const adminTasksApi = {
     apiClient.get<PendingSubmissionView[]>(`/api/admin/submissions${status ? '?status=' + status : ''}`),
   getPendingSubmissions: (status?: string) =>
     apiClient.get<PendingSubmissionView[]>(`/api/admin/submissions${status ? '?status=' + status : ''}`),
-  verifySubmission: (id: number, status: 'APPROVED' | 'REJECTED', notes?: string) =>
-    apiClient.post<{ success: boolean; status: string }>(`/api/admin/submissions/${id}/verify`, { status, notes }),
+  verifySubmission: (id: number, status: 'APPROVED' | 'REJECTED', notes?: string, penaltyCoins?: number) =>
+    apiClient.post<{ success: boolean; status: string; coins_earned?: number; coins_deducted?: number }>(
+      `/api/admin/submissions/${id}/verify`,
+      { status, notes, penalty_coins: penaltyCoins }
+    ),
+  editSubmission: (id: number, payload: Record<string, any>, notes?: string) =>
+    apiClient.patch<{ success: boolean; submission_id: number; status: string; payload: Record<string, any> }>(
+      `/api/admin/submissions/${id}`,
+      { payload, notes }
+    ),
   getClaims: (status?: string) => apiClient.get<ClaimView[]>(`/api/admin/claims${status ? '?status=' + status : ''}`),
   processClaim: (id: number, status: 'APPROVED' | 'REJECTED', notes?: string) =>
     apiClient.post<{ success: boolean; status: string }>(`/api/admin/claims/${id}/process`, { status, notes }),

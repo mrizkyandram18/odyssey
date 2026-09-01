@@ -514,8 +514,9 @@ func (a *API) HandleVerifySubmission(w http.ResponseWriter, r *http.Request, sub
 	ctx := r.Context()
 
 	var req struct {
-		Status string `json:"status"` // "APPROVED" or "REJECTED"
-		Notes  string `json:"notes"`
+		Status       string `json:"status"` // "APPROVED" or "REJECTED"
+		Notes        string `json:"notes"`
+		PenaltyCoins int    `json:"penalty_coins,omitempty"`
 	}
 	if err := shared.ReadJSON(r, &req); err != nil {
 		shared.WriteJSONError(w, "invalid json payload", http.StatusBadRequest)
@@ -526,12 +527,21 @@ func (a *API) HandleVerifySubmission(w http.ResponseWriter, r *http.Request, sub
 		shared.WriteJSONError(w, "status must be APPROVED or REJECTED", http.StatusBadRequest)
 		return
 	}
+	if req.PenaltyCoins < 0 {
+		shared.WriteJSONError(w, "penalty_coins must be non-negative", http.StatusBadRequest)
+		return
+	}
+	if req.Status == "APPROVED" && req.PenaltyCoins > 0 {
+		shared.WriteJSONError(w, "penalty_coins cannot be applied to approved submissions", http.StatusBadRequest)
+		return
+	}
 
 	rpcRes, err := a.client.RPC(ctx, "odyssey_verify_submission", map[string]any{
 		"p_submission_id": subID,
 		"p_admin_uid":     claims.UID,
 		"p_status":        req.Status,
 		"p_admin_notes":   req.Notes,
+		"p_penalty_coins": req.PenaltyCoins,
 	})
 	if err != nil {
 		shared.WriteJSONError(w, "gagal verifikasi submission: "+err.Error(), http.StatusBadRequest)
@@ -542,10 +552,65 @@ func (a *API) HandleVerifySubmission(w http.ResponseWriter, r *http.Request, sub
 	w.Write(rpcRes)
 }
 
+func (a *API) HandleEditSubmission(w http.ResponseWriter, r *http.Request, subID int64) {
+	claims, ok := a.requireAdmin(w, r)
+	if !ok {
+		return
+	}
+	ctx := r.Context()
+
+	var req struct {
+		Payload map[string]any `json:"payload"`
+		Notes   *string        `json:"notes,omitempty"`
+	}
+	if err := shared.ReadJSON(r, &req); err != nil {
+		shared.WriteJSONError(w, "invalid json payload", http.StatusBadRequest)
+		return
+	}
+
+	if req.Payload == nil {
+		shared.WriteJSONError(w, "payload is required", http.StatusBadRequest)
+		return
+	}
+
+	// Sanitize / validate known payload fields
+	if textVal, ok := req.Payload["text"].(string); ok {
+		if len(textVal) > 10000 {
+			shared.WriteJSONError(w, "text payload exceeds maximum character limit (10000)", http.StatusBadRequest)
+			return
+		}
+	}
+	if scoreVal, ok := req.Payload["score"].(float64); ok {
+		if scoreVal < 0 || scoreVal > 1000000 {
+			shared.WriteJSONError(w, "score must be between 0 and 1,000,000", http.StatusBadRequest)
+			return
+		}
+	}
+
+	var notesParam any
+	if req.Notes != nil {
+		notesParam = *req.Notes
+	}
+
+	rpcRes, err := a.client.RPC(ctx, "odyssey_admin_edit_submission", map[string]any{
+		"p_submission_id": subID,
+		"p_admin_uid":     claims.UID,
+		"p_payload":       req.Payload,
+		"p_admin_notes":   notesParam,
+	})
+	if err != nil {
+		shared.WriteJSONError(w, "gagal mengedit submission: "+err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.Write(rpcRes)
+}
+
 func (a *API) Handler(w http.ResponseWriter, r *http.Request) {
 	path := strings.TrimSuffix(r.URL.Path, "/")
 
-	// Submissions queue & verify
+	// Submissions queue & verify & edit
 	if r.Method == http.MethodGet && (path == "/api/admin/submissions/pending" || path == "/api/admin/submissions") {
 		a.HandleListPendingSubmissions(w, r)
 		return
@@ -556,6 +621,16 @@ func (a *API) Handler(w http.ResponseWriter, r *http.Request) {
 			subID, err := strconv.ParseInt(parts[4], 10, 64)
 			if err == nil {
 				a.HandleVerifySubmission(w, r, subID)
+				return
+			}
+		}
+	}
+	if r.Method == http.MethodPatch && strings.HasPrefix(path, "/api/admin/submissions/") {
+		parts := strings.Split(path, "/")
+		if len(parts) == 5 {
+			subID, err := strconv.ParseInt(parts[4], 10, 64)
+			if err == nil {
+				a.HandleEditSubmission(w, r, subID)
 				return
 			}
 		}

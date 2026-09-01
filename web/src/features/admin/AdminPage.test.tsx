@@ -23,13 +23,20 @@ vi.mock('../../shared/lib/api', () => ({
     getConfig: vi.fn(),
     updateConfig: vi.fn(),
     getTasks: vi.fn(),
+    getSubmissions: vi.fn(),
     getPendingSubmissions: vi.fn(),
     getClaims: vi.fn(),
     verifySubmission: vi.fn(),
+    editSubmission: vi.fn(),
     processClaim: vi.fn(),
     createTask: vi.fn(),
     updateTask: vi.fn(),
     deleteTask: vi.fn(),
+  },
+  adminMembersApi: {
+    getMembers: vi.fn().mockResolvedValue([]),
+    createMember: vi.fn(),
+    updateMember: vi.fn(),
   },
   tasksApi: {
     getToday: vi.fn(),
@@ -62,6 +69,7 @@ describe('AdminPage Component', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     vi.mocked(adminTasksApi.getTasks).mockResolvedValue([])
+    vi.mocked(adminTasksApi.getSubmissions).mockResolvedValue([])
     vi.mocked(adminTasksApi.getPendingSubmissions).mockResolvedValue([])
     vi.mocked(adminTasksApi.getClaims).mockResolvedValue([])
     vi.mocked(adminTasksApi.getConfig).mockResolvedValue(mockConfig)
@@ -149,6 +157,54 @@ describe('AdminPage Component', () => {
 
     await waitFor(() => {
       expect(adminTasksApi.updateConfig).toHaveBeenCalled()
+    })
+  })
+
+  it('renders pending submission with edit and reject with penalty buttons', async () => {
+    vi.mocked(useSession).mockReturnValue({
+      session: { uid: '1', family_id: '1', role: 'ADMIN', kind: 'user', expires: 9999999999, token: 'abc' },
+      profile: { uid: '1', role: 'ADMIN' },
+      loading: false,
+    } as any)
+
+    const mockPendingSub = [
+      {
+        id: 10,
+        task_id: 100,
+        task_title: 'Tugas Menulis',
+        task_type: 'TEXT_RESPONSE',
+        user_uid: 'user-1',
+        user_name: 'Budi',
+        submission_type: 'MANUAL_VERIFY',
+        status: 'PENDING',
+        payload: { text: 'Jawaban salah' },
+        created_at: new Date().toISOString(),
+        reward_coins: 50,
+        reward_xp: 100,
+      } as any,
+    ]
+    vi.mocked(adminTasksApi.getSubmissions).mockResolvedValue(mockPendingSub)
+    vi.mocked(adminTasksApi.getPendingSubmissions).mockResolvedValue(mockPendingSub)
+
+    render(
+      <MemoryRouter>
+        <AdminPage />
+      </MemoryRouter>
+    )
+
+    await waitFor(() => {
+      expect(screen.getByText('Tugas Menulis')).toBeInTheDocument()
+      expect(screen.getByText('Edit Jawaban')).toBeInTheDocument()
+      expect(screen.getByText(/Penalti Koin jika Ditolak/i)).toBeInTheDocument()
+    })
+
+    // Click Edit Jawaban button
+    const editBtn = screen.getByText('Edit Jawaban')
+    fireEvent.click(editBtn)
+
+    await waitFor(() => {
+      expect(screen.getByText('Edit Jawaban Submission')).toBeInTheDocument()
+      expect(screen.getByDisplayValue('Jawaban salah')).toBeInTheDocument()
     })
   })
 })

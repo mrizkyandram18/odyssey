@@ -433,3 +433,104 @@ func TestAdminDuplicateTask_FamilyMismatchForbidden(t *testing.T) {
 		t.Errorf("expected 403 Forbidden on duplicating cross-family task, got %d", rec.Code)
 	}
 }
+
+func TestAdminVerifySubmission_RejectWithPenalty(t *testing.T) {
+	client := &mockSupabaseClient{
+		rpcResp: []byte(`{"success":true,"status":"REJECTED","coins_deducted":20,"new_balance":80}`),
+	}
+	api := NewAPI(client)
+
+	req := httptest.NewRequest(http.MethodPost, "/api/admin/submissions/1/verify", strings.NewReader(`{"status":"REJECTED","notes":"Salah jawaban","penalty_coins":20}`))
+	req.Header.Set("Content-Type", "application/json")
+	adminClaims := &auth.SessionClaims{UID: "admin-1", FamilyID: "fam-1", Role: "ADMIN"}
+	req = req.WithContext(auth.ContextWithClaims(req.Context(), adminClaims))
+
+	rec := httptest.NewRecorder()
+	api.Handler(rec, req)
+
+	if rec.Code != http.StatusOK {
+		t.Fatalf("expected 200 OK, got %d: %s", rec.Code, rec.Body.String())
+	}
+}
+
+func TestAdminVerifySubmission_ValidationErrors(t *testing.T) {
+	client := &mockSupabaseClient{}
+	api := NewAPI(client)
+	adminClaims := &auth.SessionClaims{UID: "admin-1", FamilyID: "fam-1", Role: "ADMIN"}
+
+	// 1. Negative penalty
+	req1 := httptest.NewRequest(http.MethodPost, "/api/admin/submissions/1/verify", strings.NewReader(`{"status":"REJECTED","penalty_coins":-5}`))
+	req1.Header.Set("Content-Type", "application/json")
+	req1 = req1.WithContext(auth.ContextWithClaims(req1.Context(), adminClaims))
+	rec1 := httptest.NewRecorder()
+	api.Handler(rec1, req1)
+	if rec1.Code != http.StatusBadRequest {
+		t.Errorf("expected 400 Bad Request for negative penalty, got %d", rec1.Code)
+	}
+
+	// 2. Penalty on APPROVED
+	req2 := httptest.NewRequest(http.MethodPost, "/api/admin/submissions/1/verify", strings.NewReader(`{"status":"APPROVED","penalty_coins":10}`))
+	req2.Header.Set("Content-Type", "application/json")
+	req2 = req2.WithContext(auth.ContextWithClaims(req2.Context(), adminClaims))
+	rec2 := httptest.NewRecorder()
+	api.Handler(rec2, req2)
+	if rec2.Code != http.StatusBadRequest {
+		t.Errorf("expected 400 Bad Request for penalty on approved, got %d", rec2.Code)
+	}
+}
+
+func TestAdminEditSubmission_Success(t *testing.T) {
+	client := &mockSupabaseClient{
+		rpcResp: []byte(`{"success":true,"submission_id":1,"status":"PENDING","payload":{"text":"Jawaban yang sudah diperbaiki"}}`),
+	}
+	api := NewAPI(client)
+	adminClaims := &auth.SessionClaims{UID: "admin-1", FamilyID: "fam-1", Role: "ADMIN"}
+
+	req := httptest.NewRequest(http.MethodPatch, "/api/admin/submissions/1", strings.NewReader(`{"payload":{"text":"Jawaban yang sudah diperbaiki"},"notes":"Koreksi ejaan oleh admin"}`))
+	req.Header.Set("Content-Type", "application/json")
+	req = req.WithContext(auth.ContextWithClaims(req.Context(), adminClaims))
+
+	rec := httptest.NewRecorder()
+	api.Handler(rec, req)
+
+	if rec.Code != http.StatusOK {
+		t.Fatalf("expected 200 OK, got %d: %s", rec.Code, rec.Body.String())
+	}
+}
+
+func TestAdminEditSubmission_Validation(t *testing.T) {
+	client := &mockSupabaseClient{}
+	api := NewAPI(client)
+	adminClaims := &auth.SessionClaims{UID: "admin-1", FamilyID: "fam-1", Role: "ADMIN"}
+
+	// 1. Missing payload
+	req1 := httptest.NewRequest(http.MethodPatch, "/api/admin/submissions/1", strings.NewReader(`{"notes":"no payload"}`))
+	req1.Header.Set("Content-Type", "application/json")
+	req1 = req1.WithContext(auth.ContextWithClaims(req1.Context(), adminClaims))
+	rec1 := httptest.NewRecorder()
+	api.Handler(rec1, req1)
+	if rec1.Code != http.StatusBadRequest {
+		t.Errorf("expected 400 for missing payload, got %d", rec1.Code)
+	}
+
+	// 2. Score out of range
+	req2 := httptest.NewRequest(http.MethodPatch, "/api/admin/submissions/1", strings.NewReader(`{"payload":{"score":-10}}`))
+	req2.Header.Set("Content-Type", "application/json")
+	req2 = req2.WithContext(auth.ContextWithClaims(req2.Context(), adminClaims))
+	rec2 := httptest.NewRecorder()
+	api.Handler(rec2, req2)
+	if rec2.Code != http.StatusBadRequest {
+		t.Errorf("expected 400 for negative score, got %d", rec2.Code)
+	}
+
+	// 3. Non-admin forbidden
+	seekerClaims := &auth.SessionClaims{UID: "seeker-1", FamilyID: "fam-1", Role: "MEMBER"}
+	req3 := httptest.NewRequest(http.MethodPatch, "/api/admin/submissions/1", strings.NewReader(`{"payload":{"text":"test"}}`))
+	req3.Header.Set("Content-Type", "application/json")
+	req3 = req3.WithContext(auth.ContextWithClaims(req3.Context(), seekerClaims))
+	rec3 := httptest.NewRecorder()
+	api.Handler(rec3, req3)
+	if rec3.Code != http.StatusForbidden {
+		t.Errorf("expected 403 Forbidden for non-admin edit, got %d", rec3.Code)
+	}
+}

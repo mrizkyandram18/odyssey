@@ -511,8 +511,21 @@ func (m *mockAdversarialDB) RPC(ctx context.Context, fnName string, payload any)
 		})
 
 	case "odyssey_verify_submission":
-		subID := int64(params["p_submission_id"].(float64))
+		var subID int64
+		if idFloat, ok := params["p_submission_id"].(float64); ok {
+			subID = int64(idFloat)
+		} else if idInt, ok := params["p_submission_id"].(int64); ok {
+			subID = idInt
+		} else if idInt, ok := params["p_submission_id"].(int); ok {
+			subID = int64(idInt)
+		}
 		status := params["p_status"].(string)
+		penaltyCoins := 0
+		if pVal, ok := params["p_penalty_coins"].(float64); ok {
+			penaltyCoins = int(pVal)
+		} else if pVal, ok := params["p_penalty_coins"].(int); ok {
+			penaltyCoins = pVal
+		}
 
 		var targetSub map[string]any
 		var targetKey string
@@ -528,8 +541,8 @@ func (m *mockAdversarialDB) RPC(ctx context.Context, fnName string, payload any)
 			return nil, fmt.Errorf("P0002: Submission tidak ditemukan")
 		}
 
-		if targetSub["status"] == "APPROVED" {
-			return nil, fmt.Errorf("P0004: Submission ini sudah disetujui sebelumnya")
+		if targetSub["status"] != "PENDING" {
+			return nil, fmt.Errorf("P0004: Submission sudah diproses sebelumnya (status saat ini: %s)", targetSub["status"])
 		}
 
 		taskID := targetSub["task_id"].(int64)
@@ -538,6 +551,9 @@ func (m *mockAdversarialDB) RPC(ctx context.Context, fnName string, payload any)
 		prof := m.profiles[uid]
 
 		if status == "APPROVED" {
+			if penaltyCoins > 0 {
+				return nil, fmt.Errorf("P0005: Penalti poin tidak dapat diterapkan pada submission yang disetujui")
+			}
 			targetSub["status"] = "APPROVED"
 			rewardCoins := 50
 			rewardXP := 100
@@ -570,11 +586,71 @@ func (m *mockAdversarialDB) RPC(ctx context.Context, fnName string, payload any)
 				"new_balance":  prof.Coins,
 			})
 		} else if status == "REJECTED" {
+			actualPenalty := 0
+			if penaltyCoins > 0 {
+				actualPenalty = penaltyCoins
+				if int64(actualPenalty) > prof.Coins {
+					actualPenalty = int(prof.Coins)
+				}
+				if actualPenalty > 0 {
+					m.transactions = append(m.transactions, map[string]any{
+						"user_uid":     uid,
+						"amount":       -actualPenalty,
+						"type":         "TASK_PENALTY",
+						"reference_id": fmt.Sprintf("%d", subID),
+					})
+					prof.Coins -= int64(actualPenalty)
+				}
+			}
+
 			targetSub["status"] = "REJECTED"
+			targetSub["coins_earned"] = -actualPenalty
 			m.submissions[targetKey] = targetSub
-			return json.Marshal(map[string]any{"success": true, "status": "REJECTED"})
+			return json.Marshal(map[string]any{
+				"success":        true,
+				"status":         "REJECTED",
+				"coins_deducted": actualPenalty,
+				"new_balance":    prof.Coins,
+			})
 		}
 		return nil, fmt.Errorf("P0005: Status tidak valid")
+
+	case "odyssey_admin_edit_submission":
+		var subID int64
+		if idFloat, ok := params["p_submission_id"].(float64); ok {
+			subID = int64(idFloat)
+		} else if idInt, ok := params["p_submission_id"].(int64); ok {
+			subID = idInt
+		}
+		payload, _ := params["p_payload"].(map[string]any)
+
+		var targetSub map[string]any
+		var targetKey string
+		for k, s := range m.submissions {
+			if id, ok := s["id"].(int64); ok && id == subID {
+				targetSub = s
+				targetKey = k
+				break
+			}
+		}
+
+		if targetSub == nil {
+			return nil, fmt.Errorf("P0002: Submission tidak ditemukan")
+		}
+
+		if targetSub["status"] == "APPROVED" {
+			return nil, fmt.Errorf("P0004: Submission yang sudah disetujui tidak dapat diedit")
+		}
+
+		targetSub["payload"] = payload
+		m.submissions[targetKey] = targetSub
+
+		return json.Marshal(map[string]any{
+			"success":       true,
+			"submission_id": subID,
+			"status":        targetSub["status"],
+			"payload":       payload,
+		})
 
 	case "odyssey_create_claim":
 		uid := params["p_user_uid"].(string)
@@ -2401,4 +2477,124 @@ func TestAdversarial_Phase11_TenantIsolationAndLegacyRejection(t *testing.T) {
 			t.Errorf("BUILDER should normalize to ADMIN")
 		}
 	})
+}
+
+func TestAdversarial_VerificationAuthorizationAndPenaltyScoring(t *testing.T) {
+	dbMock := newMockDB()
+	adminTasksAPI := apiAdminTasks.NewAPI(dbMock)
+	familyTasksAPI := apiFamilyTasks.NewAPI(dbMock)
+
+	// Set up user profile with 30 coins
+	dbMock.profiles["scorer-1"] = &db.UserProfile{
+		UID:      "scorer-1",
+		FamilyID: "fam-scoring",
+		Role:     "MEMBER",
+		Coins:    30,
+		XP:       100,
+	}
+	dbMock.profiles["admin-scorer"] = &db.UserProfile{
+		UID:      "admin-scorer",
+		FamilyID: "fam-scoring",
+		Role:     "ADMIN",
+	}
+
+	// Set up task
+	dbMock.tasks[100] = map[string]any{
+		"id":           int64(100),
+		"family_id":    "fam-scoring",
+		"title":        "Writing Task",
+		"task_type":    "TEXT_RESPONSE",
+		"reward_coins": 50,
+		"reward_xp":    100,
+		"is_active":    true,
+	}
+
+	adminClaims := &auth.SessionClaims{UID: "admin-scorer", FamilyID: "fam-scoring", Role: "ADMIN"}
+	memberClaims := &auth.SessionClaims{UID: "scorer-1", FamilyID: "fam-scoring", Role: "MEMBER"}
+
+	// 1. Member submits manual task -> status PENDING
+	submitReq := httptest.NewRequest(http.MethodPost, "/api/tasks/100/submit", bytes.NewBufferString(`{"payload":{"text":"Jawaban pertama yang salah"}}`))
+	submitReq.Header.Set("Content-Type", "application/json")
+	wSubmit := httptest.NewRecorder()
+	familyTasksAPI.HandleSubmit(wSubmit, submitReq.WithContext(auth.ContextWithClaims(submitReq.Context(), memberClaims)))
+
+	if wSubmit.Code != http.StatusOK {
+		t.Fatalf("failed to submit task: %d %s", wSubmit.Code, wSubmit.Body.String())
+	}
+
+	var submitRes map[string]any
+	_ = json.Unmarshal(wSubmit.Body.Bytes(), &submitRes)
+	subID := int64(submitRes["submission_id"].(float64))
+
+	// 2. Admin edits submission payload while PENDING
+	editReq := httptest.NewRequest(http.MethodPatch, fmt.Sprintf("/api/admin/submissions/%d", subID), bytes.NewBufferString(`{"payload":{"text":"Jawaban yang sudah dikoreksi admin"}}`))
+	editReq.Header.Set("Content-Type", "application/json")
+	wEdit := httptest.NewRecorder()
+	adminTasksAPI.HandleEditSubmission(wEdit, editReq.WithContext(auth.ContextWithClaims(editReq.Context(), adminClaims)), subID)
+
+	if wEdit.Code != http.StatusOK {
+		t.Fatalf("admin failed to edit pending submission: %d %s", wEdit.Code, wEdit.Body.String())
+	}
+
+	// 3. Admin rejects with penalty of 50 coins (User only has 30 coins -> should clamp to 30, balance -> 0)
+	rejReq := httptest.NewRequest(http.MethodPost, fmt.Sprintf("/api/admin/submissions/%d/verify", subID), bytes.NewBufferString(`{"status":"REJECTED","notes":"Jawaban salah, dikenakan penalti","penalty_coins":50}`))
+	rejReq.Header.Set("Content-Type", "application/json")
+	wRej := httptest.NewRecorder()
+	adminTasksAPI.HandleVerifySubmission(wRej, rejReq.WithContext(auth.ContextWithClaims(rejReq.Context(), adminClaims)), subID)
+
+	if wRej.Code != http.StatusOK {
+		t.Fatalf("admin failed to reject with penalty: %d %s", wRej.Code, wRej.Body.String())
+	}
+
+	if dbMock.profiles["scorer-1"].Coins != 0 {
+		t.Fatalf("expected coins balance to clamp at 0, got %d", dbMock.profiles["scorer-1"].Coins)
+	}
+
+	// 4. Repeated reject on already REJECTED submission -> MUST FAIL (P0004) to prevent double deduction
+	rejReq2 := httptest.NewRequest(http.MethodPost, fmt.Sprintf("/api/admin/submissions/%d/verify", subID), bytes.NewBufferString(`{"status":"REJECTED","penalty_coins":20}`))
+	rejReq2.Header.Set("Content-Type", "application/json")
+	wRej2 := httptest.NewRecorder()
+	adminTasksAPI.HandleVerifySubmission(wRej2, rejReq2.WithContext(auth.ContextWithClaims(rejReq2.Context(), adminClaims)), subID)
+
+	if wRej2.Code != http.StatusBadRequest {
+		t.Fatalf("expected repeated verify to fail with 400, got %d: %s", wRej2.Code, wRej2.Body.String())
+	}
+
+	// 5. Member resubmits -> transitions to PENDING
+	submitReq2 := httptest.NewRequest(http.MethodPost, "/api/tasks/100/submit", bytes.NewBufferString(`{"payload":{"text":"Jawaban kedua yang benar"}}`))
+	submitReq2.Header.Set("Content-Type", "application/json")
+	wSubmit2 := httptest.NewRecorder()
+	familyTasksAPI.HandleSubmit(wSubmit2, submitReq2.WithContext(auth.ContextWithClaims(submitReq2.Context(), memberClaims)))
+
+	if wSubmit2.Code != http.StatusOK {
+		t.Fatalf("failed to resubmit task: %d %s", wSubmit2.Code, wSubmit2.Body.String())
+	}
+
+	var submitRes2 map[string]any
+	_ = json.Unmarshal(wSubmit2.Body.Bytes(), &submitRes2)
+	newSubID := int64(submitRes2["submission_id"].(float64))
+
+	// 6. Admin approves -> status APPROVED, reward credited (+50 coins)
+	appReq := httptest.NewRequest(http.MethodPost, fmt.Sprintf("/api/admin/submissions/%d/verify", newSubID), bytes.NewBufferString(`{"status":"APPROVED","notes":"Bagus sekali!"}`))
+	appReq.Header.Set("Content-Type", "application/json")
+	wApp := httptest.NewRecorder()
+	adminTasksAPI.HandleVerifySubmission(wApp, appReq.WithContext(auth.ContextWithClaims(appReq.Context(), adminClaims)), newSubID)
+
+	if wApp.Code != http.StatusOK {
+		t.Fatalf("admin failed to approve submission: %d %s", wApp.Code, wApp.Body.String())
+	}
+
+	if dbMock.profiles["scorer-1"].Coins != 50 {
+		t.Fatalf("expected coins balance to be 50 after approval, got %d", dbMock.profiles["scorer-1"].Coins)
+	}
+
+	// 7. Editing APPROVED submission MUST FAIL
+	editAppReq := httptest.NewRequest(http.MethodPatch, fmt.Sprintf("/api/admin/submissions/%d", newSubID), bytes.NewBufferString(`{"payload":{"text":"Ubah setelah disetujui"}}`))
+	editAppReq.Header.Set("Content-Type", "application/json")
+	wEditApp := httptest.NewRecorder()
+	adminTasksAPI.HandleEditSubmission(wEditApp, editAppReq.WithContext(auth.ContextWithClaims(editAppReq.Context(), adminClaims)), newSubID)
+
+	if wEditApp.Code != http.StatusBadRequest {
+		t.Fatalf("expected editing approved submission to fail with 400, got %d: %s", wEditApp.Code, wEditApp.Body.String())
+	}
 }
