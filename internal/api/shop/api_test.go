@@ -325,3 +325,84 @@ func TestAdminProcessClaim_Success(t *testing.T) {
 		t.Fatalf("expected 200 OK, got %d: %s", rec.Code, rec.Body.String())
 	}
 }
+
+func TestAdminListClaims_TenantIsolationAndPagination(t *testing.T) {
+	var requestedProfileParams string
+	var requestedClaimParams string
+	var requestedCatParams string
+
+	clientGet := func(ctx context.Context, table string, params string) ([]byte, error) {
+		if table == "odyssey_user_profiles" {
+			requestedProfileParams = params
+			profiles := []map[string]any{
+				{"uid": "usr_claim_1", "explorer_name": "Claim User"},
+			}
+			return json.Marshal(profiles)
+		}
+		if table == "odyssey_claims" {
+			requestedClaimParams = params
+			rewardID := int64(1)
+			claims := []map[string]any{
+				{
+					"id":             int64(77),
+					"user_uid":       "usr_claim_1",
+					"reward_id":      &rewardID,
+					"coins_redeemed": 100,
+					"target_type":    "EWALLET",
+					"target_value":   "GoPay 08123",
+					"status":         "PENDING",
+					"created_at":     "2026-09-01T12:00:00Z",
+				},
+			}
+			return json.Marshal(claims)
+		}
+		if table == "odyssey_reward_catalog" {
+			requestedCatParams = params
+			cats := []map[string]any{
+				{"id": int64(1), "title": "Pulsa 10k"},
+			}
+			return json.Marshal(cats)
+		}
+		return []byte("[]"), nil
+	}
+
+	api := NewAPI(&mockSupabaseClientDynamic{GetFn: clientGet})
+
+	req := httptest.NewRequest(http.MethodGet, "/api/admin/claims?status=PENDING&page=1&limit=25", nil)
+	adminClaims := &auth.SessionClaims{
+		UID:      "admin-1",
+		FamilyID: "fam-charlie",
+		Role:     "ADMIN",
+	}
+	req = req.WithContext(auth.ContextWithClaims(req.Context(), adminClaims))
+
+	rec := httptest.NewRecorder()
+	api.Handler(rec, req)
+
+	if rec.Code != http.StatusOK {
+		t.Fatalf("expected 200 OK, got %d: %s", rec.Code, rec.Body.String())
+	}
+
+	if !strings.Contains(requestedProfileParams, "family_id=eq.fam-charlie") {
+		t.Errorf("expected profile query scoped to fam-charlie, got %s", requestedProfileParams)
+	}
+	if !strings.Contains(requestedClaimParams, "user_uid=in.(usr_claim_1)") {
+		t.Errorf("expected claims scoped to family member UIDs, got %s", requestedClaimParams)
+	}
+	if !strings.Contains(requestedClaimParams, "limit=25&offset=0") {
+		t.Errorf("expected pagination limit=25 offset=0, got %s", requestedClaimParams)
+	}
+	if !strings.Contains(requestedCatParams, "id=in.(1)") {
+		t.Errorf("expected catalog scoped to id=in.(1), got %s", requestedCatParams)
+	}
+
+	var res struct {
+		Items []ClaimView `json:"items"`
+	}
+	if err := json.Unmarshal(rec.Body.Bytes(), &res); err != nil {
+		t.Fatalf("failed to decode response envelope: %v", err)
+	}
+	if len(res.Items) != 1 || res.Items[0].RewardTitle != "Pulsa 10k" {
+		t.Errorf("expected enriched claim view, got %+v", res.Items)
+	}
+}

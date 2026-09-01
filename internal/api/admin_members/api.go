@@ -84,11 +84,15 @@ func (a *API) HandleListMembers(w http.ResponseWriter, r *http.Request) {
 	}
 	ctx := r.Context()
 
-	// 1. Fetch user profiles for admin's family
-	profParams := "order=created_at.desc"
-	if claims.FamilyID != "" {
-		profParams = fmt.Sprintf("family_id=eq.%s&order=created_at.desc", claims.FamilyID)
+	page, limit, offset := shared.ParsePagination(r, 50, 100)
+
+	familyID := claims.FamilyID
+	if familyID == "" {
+		familyID = "family_default"
 	}
+
+	// 1. Fetch user profiles strictly scoped to admin's family with deterministic pagination
+	profParams := fmt.Sprintf("family_id=eq.%s&order=created_at.desc,uid.desc&limit=%d&offset=%d", familyID, limit, offset)
 
 	profRaw, err := a.client.Get(ctx, "odyssey_user_profiles", profParams)
 	if err != nil {
@@ -111,12 +115,25 @@ func (a *API) HandleListMembers(w http.ResponseWriter, r *http.Request) {
 	_ = json.Unmarshal(profRaw, &profs)
 
 	if len(profs) == 0 {
-		shared.WriteJSON(w, http.StatusOK, []MemberView{})
+		shared.WriteJSON(w, http.StatusOK, shared.PaginatedResponse[MemberView]{
+			Items: []MemberView{},
+			Pagination: shared.PaginationMeta{
+				Page:    page,
+				Limit:   limit,
+				Total:   0,
+				HasNext: false,
+			},
+		})
 		return
 	}
 
-	// 2. Fetch local user credentials to map usernames
-	localRaw, _ := a.client.Get(ctx, "odyssey_local_users", "select=username,profile_uid")
+	// 2. Fetch local user credentials ONLY for the retrieved profile UIDs (strictly targeted, no global dump)
+	uids := make([]string, len(profs))
+	for i, p := range profs {
+		uids[i] = p.UID
+	}
+	localParams := fmt.Sprintf("profile_uid=in.(%s)&select=username,profile_uid", strings.Join(uids, ","))
+	localRaw, _ := a.client.Get(ctx, "odyssey_local_users", localParams)
 	type LocalRow struct {
 		Username   string `json:"username"`
 		ProfileUID string `json:"profile_uid"`
@@ -124,18 +141,18 @@ func (a *API) HandleListMembers(w http.ResponseWriter, r *http.Request) {
 	var locals []LocalRow
 	_ = json.Unmarshal(localRaw, &locals)
 
-	userMap := make(map[string]string)
+	userMap := make(map[string]string, len(locals))
 	for _, l := range locals {
 		userMap[l.ProfileUID] = l.Username
 	}
 
-	res := make([]MemberView, len(profs))
+	items := make([]MemberView, len(profs))
 	for i, p := range profs {
 		username := userMap[p.UID]
 		if username == "" {
 			username = p.UID
 		}
-		res[i] = MemberView{
+		items[i] = MemberView{
 			UID:          p.UID,
 			FamilyID:     p.FamilyID,
 			ExplorerName: p.ExplorerName,
@@ -149,7 +166,21 @@ func (a *API) HandleListMembers(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	shared.WriteJSON(w, http.StatusOK, res)
+	hasNext := len(profs) == limit
+	total := offset + len(items)
+	if hasNext {
+		total += 1 // indicate there are more records beyond current page
+	}
+
+	shared.WriteJSON(w, http.StatusOK, shared.PaginatedResponse[MemberView]{
+		Items: items,
+		Pagination: shared.PaginationMeta{
+			Page:    page,
+			Limit:   limit,
+			Total:   total,
+			HasNext: hasNext,
+		},
+	})
 }
 
 func (a *API) HandleCreateMember(w http.ResponseWriter, r *http.Request) {

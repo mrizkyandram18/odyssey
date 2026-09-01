@@ -268,3 +268,15 @@ export interface PendingSubmissionView {
   admin_notes?: string
   reviewed_at?: string
 }
+
+export interface PaginationMeta {
+  page: number
+  limit: number
+  total: number
+  has_next: boolean
+}
+
+export interface PaginatedResponse<T> {
+  items: T[]
+  pagination: PaginationMeta
+}

@@ -295,13 +295,54 @@ func (a *API) HandleAdminListClaims(w http.ResponseWriter, r *http.Request) {
 	}
 	ctx := r.Context()
 
-	statusFilter := r.URL.Query().Get("status")
-	params := "order=created_at.desc"
-	if statusFilter != "" {
-		params = fmt.Sprintf("status=eq.%s&order=created_at.desc", statusFilter)
+	page, limit, offset := shared.ParsePagination(r, 50, 100)
+
+	familyID := claims.FamilyID
+	if familyID == "" {
+		familyID = "family_default"
 	}
 
-	raw, err := a.client.Get(ctx, "odyssey_claims", params)
+	// 1. Fetch user names scoped strictly to admin's family
+	profParams := fmt.Sprintf("family_id=eq.%s&select=uid,explorer_name", familyID)
+	profRaw, _ := a.client.Get(ctx, "odyssey_user_profiles", profParams)
+	type ProfRow struct {
+		UID          string `json:"uid"`
+		ExplorerName string `json:"explorer_name"`
+	}
+	var profs []ProfRow
+	_ = json.Unmarshal(profRaw, &profs)
+
+	if len(profs) == 0 {
+		shared.WriteJSON(w, http.StatusOK, shared.PaginatedResponse[ClaimView]{
+			Items: []ClaimView{},
+			Pagination: shared.PaginationMeta{
+				Page:    page,
+				Limit:   limit,
+				Total:   0,
+				HasNext: false,
+			},
+		})
+		return
+	}
+
+	profMap := make(map[string]string, len(profs))
+	uids := make([]string, len(profs))
+	for i, p := range profs {
+		profMap[p.UID] = p.ExplorerName
+		uids[i] = p.UID
+	}
+
+	// 2. Determine status filter
+	statusFilter := strings.ToUpper(strings.TrimSpace(r.URL.Query().Get("status")))
+	statusClause := ""
+	if statusFilter == "PENDING" || statusFilter == "APPROVED" || statusFilter == "REJECTED" {
+		statusClause = fmt.Sprintf("&status=eq.%s", statusFilter)
+	}
+
+	// 3. Fetch claims strictly scoped to family member UIDs with deterministic pagination
+	claimParams := fmt.Sprintf("user_uid=in.(%s)%s&order=created_at.desc,id.desc&limit=%d&offset=%d", strings.Join(uids, ","), statusClause, limit, offset)
+
+	raw, err := a.client.Get(ctx, "odyssey_claims", claimParams)
 	if err != nil {
 		shared.WriteJSONError(w, "failed to get claims: "+err.Error(), http.StatusInternalServerError)
 		return
@@ -322,49 +363,47 @@ func (a *API) HandleAdminListClaims(w http.ResponseWriter, r *http.Request) {
 	var claimList []RawClaim
 	_ = json.Unmarshal(raw, &claimList)
 
-	// Fetch user names scoped to admin's family
-	profParams := "select=uid,explorer_name,family_id"
-	if claims.FamilyID != "" {
-		profParams = fmt.Sprintf("family_id=eq.%s&select=uid,explorer_name,family_id", claims.FamilyID)
-	}
-	profRaw, _ := a.client.Get(ctx, "odyssey_user_profiles", profParams)
-	type ProfRow struct {
-		UID          string `json:"uid"`
-		ExplorerName string `json:"explorer_name"`
-		FamilyID     string `json:"family_id"`
-	}
-	var profs []ProfRow
-	_ = json.Unmarshal(profRaw, &profs)
-	profMap := make(map[string]string)
-	familyMemberUIDs := make(map[string]bool)
-	for _, p := range profs {
-		profMap[p.UID] = p.ExplorerName
-		familyMemberUIDs[p.UID] = true
+	if len(claimList) == 0 {
+		shared.WriteJSON(w, http.StatusOK, shared.PaginatedResponse[ClaimView]{
+			Items: []ClaimView{},
+			Pagination: shared.PaginationMeta{
+				Page:    page,
+				Limit:   limit,
+				Total:   0,
+				HasNext: false,
+			},
+		})
+		return
 	}
 
-	// Filter claims by admin's family
-	filteredClaims := make([]RawClaim, 0, len(claimList))
+	// 4. Fetch catalog titles ONLY for reward IDs present on current page
+	rewardIDSet := make(map[int64]bool)
+	var rewardIDStrs []string
 	for _, c := range claimList {
-		if claims.FamilyID == "" || familyMemberUIDs[c.UserUID] {
-			filteredClaims = append(filteredClaims, c)
+		if c.RewardID != nil && !rewardIDSet[*c.RewardID] {
+			rewardIDSet[*c.RewardID] = true
+			rewardIDStrs = append(rewardIDStrs, strconv.FormatInt(*c.RewardID, 10))
 		}
 	}
 
-	// Fetch catalog titles
-	catRaw, _ := a.client.Get(ctx, "odyssey_reward_catalog", "select=id,title")
 	type CatRow struct {
 		ID    int64  `json:"id"`
 		Title string `json:"title"`
 	}
-	var cats []CatRow
-	_ = json.Unmarshal(catRaw, &cats)
 	catMap := make(map[int64]string)
-	for _, c := range cats {
-		catMap[c.ID] = c.Title
+	if len(rewardIDStrs) > 0 {
+		catParams := fmt.Sprintf("id=in.(%s)&select=id,title", strings.Join(rewardIDStrs, ","))
+		catRaw, _ := a.client.Get(ctx, "odyssey_reward_catalog", catParams)
+		var cats []CatRow
+		_ = json.Unmarshal(catRaw, &cats)
+		for _, c := range cats {
+			catMap[c.ID] = c.Title
+		}
 	}
 
-	views := make([]ClaimView, len(filteredClaims))
-	for i, c := range filteredClaims {
+	// 5. Build enriched response
+	items := make([]ClaimView, len(claimList))
+	for i, c := range claimList {
 		name := profMap[c.UserUID]
 		if name == "" {
 			name = c.UserUID
@@ -373,7 +412,7 @@ func (a *API) HandleAdminListClaims(w http.ResponseWriter, r *http.Request) {
 		if c.RewardID != nil {
 			title = catMap[*c.RewardID]
 		}
-		views[i] = ClaimView{
+		items[i] = ClaimView{
 			ID:            c.ID,
 			UserUID:       c.UserUID,
 			UserName:      name,
@@ -389,7 +428,21 @@ func (a *API) HandleAdminListClaims(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	shared.WriteJSON(w, http.StatusOK, views)
+	hasNext := len(claimList) == limit
+	total := offset + len(items)
+	if hasNext {
+		total += 1
+	}
+
+	shared.WriteJSON(w, http.StatusOK, shared.PaginatedResponse[ClaimView]{
+		Items: items,
+		Pagination: shared.PaginationMeta{
+			Page:    page,
+			Limit:   limit,
+			Total:   total,
+			HasNext: hasNext,
+		},
+	})
 }
 
 func (a *API) HandleAdminProcessClaim(w http.ResponseWriter, r *http.Request, claimID int64) {

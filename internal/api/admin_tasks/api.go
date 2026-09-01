@@ -381,40 +381,55 @@ func (a *API) HandleListPendingSubmissions(w http.ResponseWriter, r *http.Reques
 	}
 	ctx := r.Context()
 
-	// 1. Fetch profiles for admin's family
-	profParams := "select=uid,explorer_name,family_id"
-	if claims.FamilyID != "" {
-		profParams = fmt.Sprintf("family_id=eq.%s&select=uid,explorer_name,family_id", claims.FamilyID)
+	page, limit, offset := shared.ParsePagination(r, 50, 100)
+
+	familyID := claims.FamilyID
+	if familyID == "" {
+		familyID = "family_default"
 	}
+
+	// 1. Fetch profiles strictly scoped to admin's family
+	profParams := fmt.Sprintf("family_id=eq.%s&select=uid,explorer_name", familyID)
 	profRaw, _ := a.client.Get(ctx, "odyssey_user_profiles", profParams)
 	type ProfRow struct {
 		UID          string `json:"uid"`
 		ExplorerName string `json:"explorer_name"`
-		FamilyID     string `json:"family_id"`
 	}
 	var profs []ProfRow
 	_ = json.Unmarshal(profRaw, &profs)
-	profMap := make(map[string]string)
-	familyMemberUIDs := make(map[string]bool)
-	for _, p := range profs {
+
+	if len(profs) == 0 {
+		shared.WriteJSON(w, http.StatusOK, shared.PaginatedResponse[PendingSubmissionView]{
+			Items: []PendingSubmissionView{},
+			Pagination: shared.PaginationMeta{
+				Page:    page,
+				Limit:   limit,
+				Total:   0,
+				HasNext: false,
+			},
+		})
+		return
+	}
+
+	profMap := make(map[string]string, len(profs))
+	uids := make([]string, len(profs))
+	for i, p := range profs {
 		profMap[p.UID] = p.ExplorerName
-		familyMemberUIDs[p.UID] = true
+		uids[i] = p.UID
 	}
 
 	// 2. Determine status filter
 	statusParam := strings.ToUpper(strings.TrimSpace(r.URL.Query().Get("status")))
-	subParams := "order=created_at.desc"
-	if statusParam == "PENDING" {
-		subParams = "status=eq.PENDING&order=created_at.desc"
-	} else if statusParam == "APPROVED" {
-		subParams = "status=eq.APPROVED&order=created_at.desc"
-	} else if statusParam == "REJECTED" {
-		subParams = "status=eq.REJECTED&order=created_at.desc"
+	statusClause := ""
+	if statusParam == "PENDING" || statusParam == "APPROVED" || statusParam == "REJECTED" {
+		statusClause = fmt.Sprintf("&status=eq.%s", statusParam)
 	} else if statusParam == "" && strings.HasSuffix(r.URL.Path, "/pending") {
-		subParams = "status=eq.PENDING&order=created_at.desc"
+		statusClause = "&status=eq.PENDING"
 	}
 
-	// Fetch submissions
+	// 3. Fetch submissions strictly scoped to family member UIDs with deterministic pagination
+	subParams := fmt.Sprintf("user_uid=in.(%s)%s&order=created_at.desc,id.desc&limit=%d&offset=%d", strings.Join(uids, ","), statusClause, limit, offset)
+
 	subRaw, err := a.client.Get(ctx, "odyssey_task_submissions", subParams)
 	if err != nil {
 		shared.WriteJSONError(w, "gagal mengambil submission: "+err.Error(), http.StatusInternalServerError)
@@ -437,21 +452,29 @@ func (a *API) HandleListPendingSubmissions(w http.ResponseWriter, r *http.Reques
 	var subs []SubRow
 	_ = json.Unmarshal(subRaw, &subs)
 
-	// Filter by family members
-	filteredSubs := make([]SubRow, 0, len(subs))
-	for _, s := range subs {
-		if claims.FamilyID == "" || familyMemberUIDs[s.UserUID] {
-			filteredSubs = append(filteredSubs, s)
-		}
-	}
-
-	if len(filteredSubs) == 0 {
-		shared.WriteJSON(w, http.StatusOK, []PendingSubmissionView{})
+	if len(subs) == 0 {
+		shared.WriteJSON(w, http.StatusOK, shared.PaginatedResponse[PendingSubmissionView]{
+			Items: []PendingSubmissionView{},
+			Pagination: shared.PaginationMeta{
+				Page:    page,
+				Limit:   limit,
+				Total:   0,
+				HasNext: false,
+			},
+		})
 		return
 	}
 
-	// 3. Fetch Tasks for enrichment
-	taskRaw, _ := a.client.Get(ctx, "odyssey_tasks", "select=id,title,task_type,reward_coins,reward_xp")
+	// 4. Fetch Tasks ONLY for task IDs in the current paginated page (targeted id=in.(...))
+	taskIDSet := make(map[int64]bool)
+	var taskIDStrs []string
+	for _, s := range subs {
+		if !taskIDSet[s.TaskID] {
+			taskIDSet[s.TaskID] = true
+			taskIDStrs = append(taskIDStrs, strconv.FormatInt(s.TaskID, 10))
+		}
+	}
+
 	type TaskRow struct {
 		ID          int64  `json:"id"`
 		Title       string `json:"title"`
@@ -459,16 +482,20 @@ func (a *API) HandleListPendingSubmissions(w http.ResponseWriter, r *http.Reques
 		RewardCoins int    `json:"reward_coins"`
 		RewardXP    int    `json:"reward_xp"`
 	}
-	var tasks []TaskRow
-	_ = json.Unmarshal(taskRaw, &tasks)
 	taskMap := make(map[int64]TaskRow)
-	for _, t := range tasks {
-		taskMap[t.ID] = t
+	if len(taskIDStrs) > 0 {
+		taskParams := fmt.Sprintf("id=in.(%s)&select=id,title,task_type,reward_coins,reward_xp", strings.Join(taskIDStrs, ","))
+		taskRaw, _ := a.client.Get(ctx, "odyssey_tasks", taskParams)
+		var tasksList []TaskRow
+		_ = json.Unmarshal(taskRaw, &tasksList)
+		for _, t := range tasksList {
+			taskMap[t.ID] = t
+		}
 	}
 
-	// 4. Build enriched response
-	res := make([]PendingSubmissionView, len(filteredSubs))
-	for i, s := range filteredSubs {
+	// 5. Build enriched response
+	items := make([]PendingSubmissionView, len(subs))
+	for i, s := range subs {
 		t := taskMap[s.TaskID]
 		name := profMap[s.UserUID]
 		if name == "" {
@@ -483,7 +510,7 @@ func (a *API) HandleListPendingSubmissions(w http.ResponseWriter, r *http.Reques
 			rewardXP = s.XPEarned
 		}
 
-		res[i] = PendingSubmissionView{
+		items[i] = PendingSubmissionView{
 			ID:             s.ID,
 			TaskID:         s.TaskID,
 			TaskTitle:      t.Title,
@@ -503,7 +530,21 @@ func (a *API) HandleListPendingSubmissions(w http.ResponseWriter, r *http.Reques
 		}
 	}
 
-	shared.WriteJSON(w, http.StatusOK, res)
+	hasNext := len(subs) == limit
+	total := offset + len(items)
+	if hasNext {
+		total += 1
+	}
+
+	shared.WriteJSON(w, http.StatusOK, shared.PaginatedResponse[PendingSubmissionView]{
+		Items: items,
+		Pagination: shared.PaginationMeta{
+			Page:    page,
+			Limit:   limit,
+			Total:   total,
+			HasNext: hasNext,
+		},
+	})
 }
 
 func (a *API) HandleVerifySubmission(w http.ResponseWriter, r *http.Request, subID int64) {

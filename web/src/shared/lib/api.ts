@@ -11,6 +11,7 @@ import type {
   MemberView,
   CreateMemberInput,
   UpdateMemberInput,
+  PaginatedResponse,
 } from '../types'
 import { getSession, isSessionExpired } from './session'
 
@@ -176,7 +177,13 @@ export const shopApi = {
 }
 
 export const adminMembersApi = {
-  getMembers: () => apiClient.get<MemberView[]>('/api/admin/members'),
+  getMembers: (params?: { page?: number; limit?: number }) => {
+    const q = new URLSearchParams()
+    if (params?.page) q.append('page', String(params.page))
+    if (params?.limit) q.append('limit', String(params.limit))
+    const qs = q.toString()
+    return apiClient.get<PaginatedResponse<MemberView>>(`/api/admin/members${qs ? '?' + qs : ''}`)
+  },
   createMember: (data: CreateMemberInput) => apiClient.post<MemberView>('/api/admin/members', data),
   updateMember: (uid: string, patch: UpdateMemberInput) => apiClient.patch<MemberView>(`/api/admin/members/${uid}`, patch),
 }
@@ -190,10 +197,30 @@ export const adminTasksApi = {
   updateTask: (id: number, patch: any) => apiClient.patch<any>(`/api/admin/tasks/${id}`, patch),
   duplicateTask: (id: number) => apiClient.post<TaskView>(`/api/admin/tasks/${id}/duplicate`, {}),
   deleteTask: (id: number) => apiClient.delete<{ status: string }>(`/api/admin/tasks/${id}`),
-  getSubmissions: (status?: string) =>
-    apiClient.get<PendingSubmissionView[]>(`/api/admin/submissions${status ? '?status=' + status : ''}`),
-  getPendingSubmissions: (status?: string) =>
-    apiClient.get<PendingSubmissionView[]>(`/api/admin/submissions${status ? '?status=' + status : ''}`),
+  getSubmissions: (params?: string | { status?: string; page?: number; limit?: number }) => {
+    const q = new URLSearchParams()
+    if (typeof params === 'string') {
+      if (params) q.append('status', params)
+    } else if (params) {
+      if (params.status) q.append('status', params.status)
+      if (params.page) q.append('page', String(params.page))
+      if (params.limit) q.append('limit', String(params.limit))
+    }
+    const qs = q.toString()
+    return apiClient.get<PaginatedResponse<PendingSubmissionView>>(`/api/admin/submissions${qs ? '?' + qs : ''}`)
+  },
+  getPendingSubmissions: (params?: string | { status?: string; page?: number; limit?: number }) => {
+    const q = new URLSearchParams()
+    if (typeof params === 'string') {
+      if (params) q.append('status', params)
+    } else if (params) {
+      if (params.status) q.append('status', params.status)
+      if (params.page) q.append('page', String(params.page))
+      if (params.limit) q.append('limit', String(params.limit))
+    }
+    const qs = q.toString()
+    return apiClient.get<PaginatedResponse<PendingSubmissionView>>(`/api/admin/submissions${qs ? '?' + qs : ''}`)
+  },
   verifySubmission: (id: number, status: 'APPROVED' | 'REJECTED', notes?: string, penaltyCoins?: number) =>
     apiClient.post<{ success: boolean; status: string; coins_earned?: number; coins_deducted?: number }>(
       `/api/admin/submissions/${id}/verify`,
@@ -204,7 +231,18 @@ export const adminTasksApi = {
       `/api/admin/submissions/${id}`,
       { payload, notes }
     ),
-  getClaims: (status?: string) => apiClient.get<ClaimView[]>(`/api/admin/claims${status ? '?status=' + status : ''}`),
+  getClaims: (params?: string | { status?: string; page?: number; limit?: number }) => {
+    const q = new URLSearchParams()
+    if (typeof params === 'string') {
+      if (params) q.append('status', params)
+    } else if (params) {
+      if (params.status) q.append('status', params.status)
+      if (params.page) q.append('page', String(params.page))
+      if (params.limit) q.append('limit', String(params.limit))
+    }
+    const qs = q.toString()
+    return apiClient.get<PaginatedResponse<ClaimView>>(`/api/admin/claims${qs ? '?' + qs : ''}`)
+  },
   processClaim: (id: number, status: 'APPROVED' | 'REJECTED', notes?: string) =>
     apiClient.post<{ success: boolean; status: string }>(`/api/admin/claims/${id}/process`, { status, notes }),
 }

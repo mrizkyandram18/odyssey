@@ -115,8 +115,11 @@ func TestRealUserSmokeTest(t *testing.T) {
 		membersReq = membersReq.WithContext(auth.ContextWithClaims(membersReq.Context(), adminClaims))
 		membersW := httptest.NewRecorder()
 		adminMembersAPI.HandleListMembers(membersW, membersReq)
-		var members []apiAdminMembers.MemberView
-		_ = json.Unmarshal(membersW.Body.Bytes(), &members)
+		var membersRes struct {
+			Items []apiAdminMembers.MemberView `json:"items"`
+		}
+		_ = json.Unmarshal(membersW.Body.Bytes(), &membersRes)
+		members := membersRes.Items
 
 		var andiUID, budiUID string
 		for _, m := range members {

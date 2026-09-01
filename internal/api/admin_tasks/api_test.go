@@ -534,3 +534,112 @@ func TestAdminEditSubmission_Validation(t *testing.T) {
 		t.Errorf("expected 403 Forbidden for non-admin edit, got %d", rec3.Code)
 	}
 }
+
+type mockDynamicClient struct {
+	getFn func(ctx context.Context, table string, params string) ([]byte, error)
+}
+
+func (m *mockDynamicClient) Get(ctx context.Context, table string, params string) ([]byte, error) {
+	if m.getFn != nil {
+		return m.getFn(ctx, table, params)
+	}
+	return []byte("[]"), nil
+}
+func (m *mockDynamicClient) Mutate(ctx context.Context, method, table string, payload any, params string) ([]byte, error) {
+	return []byte("{}"), nil
+}
+func (m *mockDynamicClient) MutateAtomic(ctx context.Context, method, table string, payload any, params string, prefer string) ([]byte, error) {
+	return []byte("{}"), nil
+}
+func (m *mockDynamicClient) RPC(ctx context.Context, fnName string, payload any) ([]byte, error) {
+	return []byte("{}"), nil
+}
+func (m *mockDynamicClient) UploadStorage(ctx context.Context, bucket, path, contentType string, data []byte) (string, error) {
+	return "", nil
+}
+
+func TestHandleListPendingSubmissions_TenantIsolationAndPagination(t *testing.T) {
+	var requestedProfileParams string
+	var requestedSubmissionParams string
+	var requestedTaskParams string
+
+	client := &mockDynamicClient{
+		getFn: func(ctx context.Context, table string, params string) ([]byte, error) {
+			if table == "odyssey_user_profiles" {
+				requestedProfileParams = params
+				profiles := []map[string]any{
+					{"uid": "usr_alpha_1", "explorer_name": "Alpha One"},
+					{"uid": "usr_alpha_2", "explorer_name": "Alpha Two"},
+				}
+				return json.Marshal(profiles)
+			}
+			if table == "odyssey_task_submissions" {
+				requestedSubmissionParams = params
+				subs := []map[string]any{
+					{
+						"id":              int64(101),
+						"task_id":         int64(55),
+						"user_uid":        "usr_alpha_1",
+						"submission_type": "MANUAL_VERIFY",
+						"status":          "PENDING",
+						"created_at":      "2026-09-01T12:00:00Z",
+					},
+				}
+				return json.Marshal(subs)
+			}
+			if table == "odyssey_tasks" {
+				requestedTaskParams = params
+				tasks := []map[string]any{
+					{
+						"id":           int64(55),
+						"title":        "Target Task 55",
+						"task_type":    "PHOTO_UPLOAD",
+						"reward_coins": 50,
+						"reward_xp":    100,
+					},
+				}
+				return json.Marshal(tasks)
+			}
+			return []byte("[]"), nil
+		},
+	}
+	api := NewAPI(client)
+
+	req := httptest.NewRequest(http.MethodGet, "/api/admin/submissions?status=PENDING&page=1&limit=10", nil)
+	adminClaims := &auth.SessionClaims{
+		UID:      "admin-1",
+		FamilyID: "fam-alpha",
+		Role:     "ADMIN",
+	}
+	req = req.WithContext(auth.ContextWithClaims(req.Context(), adminClaims))
+
+	rec := httptest.NewRecorder()
+	api.Handler(rec, req)
+
+	if rec.Code != http.StatusOK {
+		t.Fatalf("expected 200 OK, got %d: %s", rec.Code, rec.Body.String())
+	}
+
+	if !strings.Contains(requestedProfileParams, "family_id=eq.fam-alpha") {
+		t.Errorf("expected profile query scoped to fam-alpha, got %s", requestedProfileParams)
+	}
+	if !strings.Contains(requestedSubmissionParams, "user_uid=in.(usr_alpha_1,usr_alpha_2)") {
+		t.Errorf("expected submissions scoped to family members, got %s", requestedSubmissionParams)
+	}
+	if !strings.Contains(requestedSubmissionParams, "limit=10&offset=0") {
+		t.Errorf("expected pagination limit=10 offset=0, got %s", requestedSubmissionParams)
+	}
+	if !strings.Contains(requestedTaskParams, "id=in.(55)") {
+		t.Errorf("expected tasks scoped strictly to id=in.(55), got %s", requestedTaskParams)
+	}
+
+	var res struct {
+		Items []PendingSubmissionView `json:"items"`
+	}
+	if err := json.Unmarshal(rec.Body.Bytes(), &res); err != nil {
+		t.Fatalf("failed to decode response envelope: %v", err)
+	}
+	if len(res.Items) != 1 || res.Items[0].TaskTitle != "Target Task 55" {
+		t.Errorf("expected enriched item with task title, got %+v", res.Items)
+	}
+}
