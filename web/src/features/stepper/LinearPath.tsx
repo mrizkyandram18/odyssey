@@ -10,6 +10,7 @@ import { ProgressBar } from '../../shared/components/atoms/ProgressBar'
 import { VideoQuizModal } from './VideoQuizModal'
 import { DocUploadModal } from './DocUploadModal'
 import { CameraCaptureModal } from './CameraCaptureModal'
+import { LiveCameraCaptureModal } from './LiveCameraCaptureModal'
 import { TextResponseModal } from './TextResponseModal'
 import { MiniGameModal } from './MiniGameModal'
 
@@ -328,13 +329,15 @@ export const LinearPath: React.FC = () => {
         </div>
       )}
 
-      {/* Modals — preserved */}
+      {/* Modals — preserve existing, camera-only for new task */}
       {activeModalTask && (() => {
         const cfg = activeModalTask.config || {}
+        const isLiveCamera = Boolean(cfg.camera_only) || activeModalTask.title === 'Foto Langsung Kesiapan Profil CV (Rapi & Profesional)'
         const isDoc = activeModalTask.task_type === 'DOCUMENT_UPLOAD' || Boolean(cfg.attachment_url)
         const isPhoto = activeModalTask.task_type === 'PHOTO_UPLOAD' || activeModalTask.task_type === 'PHOTO_PROOF'
         const isGame = activeModalTask.task_type === 'MINI_GAME' || Boolean(cfg.game)
         const isText = activeModalTask.task_type === 'TEXT_RESPONSE' || (!isDoc && !isPhoto && Boolean(cfg.minimum_characters || cfg.prompt))
+        if (isLiveCamera && isPhoto) return <LiveCameraCaptureModal task={activeModalTask} onClose={() => setActiveModalTask(null)} onSuccess={handleModalSuccess} onNextTask={() => handleNextTask(activeModalTask)} />
         if (isDoc) return <DocUploadModal task={activeModalTask} onClose={() => setActiveModalTask(null)} onSuccess={handleModalSuccess} onNextTask={() => handleNextTask(activeModalTask)} />
         if (isPhoto) return <CameraCaptureModal task={activeModalTask} onClose={() => setActiveModalTask(null)} onSuccess={handleModalSuccess} onNextTask={() => handleNextTask(activeModalTask)} />
         if (isText) return <TextResponseModal task={activeModalTask} onClose={() => setActiveModalTask(null)} onSuccess={handleModalSuccess} onNextTask={() => handleNextTask(activeModalTask)} />
