@@ -121,10 +121,12 @@ export const CreateTaskModal: React.FC<CreateTaskModalProps> = ({
                       setNewTask({ ...newTask, target_scope: e.target.value as 'ALL' | 'USER' })
                     }
                     className="w-full p-2.5 rounded-xl bg-surface border border-border-subtle text-xs sm:text-sm text-text-primary font-bold focus:outline-none focus:border-accent-magic"
+                    disabled
+                    title="USER targeting dinonaktifkan sementara — denominator fix belum diverifikasi"
                   >
                     <option value="ALL">🌐 Semua Anggota</option>
-                    <option value="USER">👤 User Tertentu (Personal)</option>
                   </select>
+                  <p className="text-[11px] text-text-secondary">Target USER dinonaktifkan sementara hingga denominator fix diverifikasi.</p>
                 </div>
 
                 <div className="space-y-1">
@@ -188,7 +190,7 @@ export const CreateTaskModal: React.FC<CreateTaskModalProps> = ({
 
                 <div className="space-y-1">
                   <label htmlFor="task-coins" className="text-xs font-bold text-text-secondary">
-                    Hadiah Koin (🪙)
+                    Bobot Tugas
                   </label>
                   <input
                     id="task-coins"
@@ -198,6 +200,9 @@ export const CreateTaskModal: React.FC<CreateTaskModalProps> = ({
                     onChange={(e) => setNewTask({ ...newTask, reward_coins: Number(e.target.value) })}
                     className="w-full p-2.5 rounded-xl bg-surface border border-border-subtle text-xs sm:text-sm text-text-primary focus:outline-none focus:border-accent-magic font-mono font-bold"
                   />
+                  <p className="text-[11px] text-text-secondary leading-relaxed">
+                    Bobot bukan koin final. Koin final = Target Bulanan × Bobot ÷ Total Bobot
+                  </p>
                 </div>
               </div>
             </div>

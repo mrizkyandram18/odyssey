@@ -225,46 +225,101 @@ func (a *API) HandleUpdateTask(w http.ResponseWriter, r *http.Request, taskID in
 		return
 	}
 
-	// Validate patch does not introduce invalid capability configuration
-	if cfgRaw, hasCfg := patch["config"]; hasCfg && cfgRaw != nil {
-		if cfgMap, ok := cfgRaw.(map[string]any); ok {
-			// Determine effective task_type for validation
-			effectiveType := ""
-			if tt, ok := patch["task_type"].(string); ok && tt != "" {
-				effectiveType = tt
-			} else {
-				// Fetch current task_type from DB record
-				var existing []map[string]any
-				_ = json.Unmarshal(tRaw, &existing)
-				if len(existing) > 0 {
-					if tt, ok := existing[0]["task_type"].(string); ok {
-						effectiveType = tt
-					}
+	// Submission guard: task_type is immutable once submissions exist
+	if newTypeRaw, hasType := patch["task_type"]; hasType {
+		if newTypeStr, ok := newTypeRaw.(string); ok && newTypeStr != "" {
+			var existing []map[string]any
+			_ = json.Unmarshal(tRaw, &existing)
+			existingType := ""
+			if len(existing) > 0 {
+				if tt, ok := existing[0]["task_type"].(string); ok {
+					existingType = tt
 				}
 			}
-			if effectiveType != "" {
-				tmpInput := &tasks.TaskInput{
-					Title:    "patch-validation",
-					TaskType: effectiveType,
-					Config:   cfgMap,
-				}
-				// Copy reward fields if present in patch to avoid false defaults
-				if rc, ok := patch["reward_coins"].(float64); ok {
-					tmpInput.RewardCoins = int(rc)
-				} else {
-					tmpInput.RewardCoins = 50
-				}
-				if rx, ok := patch["reward_xp"].(float64); ok {
-					tmpInput.RewardXP = int(rx)
-				} else {
-					tmpInput.RewardXP = 100
-				}
-				tmpInput.StepOrder = 1
-				if err := a.validateTaskInput(tmpInput); err != nil {
-					shared.WriteJSONError(w, err.Error(), http.StatusBadRequest)
+			if existingType != "" && newTypeStr != existingType {
+				subRaw, _ := a.client.Get(ctx, "odyssey_task_submissions", fmt.Sprintf("task_id=eq.%d&select=id&limit=1", taskID))
+				var subs []map[string]any
+				_ = json.Unmarshal(subRaw, &subs)
+				if len(subs) > 0 {
+					shared.WriteJSONError(w, "Jenis tugas tidak dapat diubah karena tugas ini sudah memiliki submission. Buat tugas baru jika ingin mengganti jenis tugas.", http.StatusBadRequest)
 					return
 				}
 			}
+		}
+	}
+
+	// Validate effective task_type + config atomically (always, not only when config present)
+	effectiveType := ""
+	effectiveConfig := map[string]any{}
+	// Resolve effective type
+	if tt, ok := patch["task_type"].(string); ok && tt != "" {
+		effectiveType = tt
+	} else {
+		var existing []map[string]any
+		_ = json.Unmarshal(tRaw, &existing)
+		if len(existing) > 0 {
+			if tt, ok := existing[0]["task_type"].(string); ok {
+				effectiveType = tt
+			}
+		}
+	}
+	// Resolve effective config
+	if cfgRaw, hasCfg := patch["config"]; hasCfg {
+		if cfgMap, ok := cfgRaw.(map[string]any); ok {
+			effectiveConfig = cfgMap
+		} else if cfgRaw == nil {
+			effectiveConfig = map[string]any{}
+		}
+	} else {
+		var existing []map[string]any
+		_ = json.Unmarshal(tRaw, &existing)
+		if len(existing) > 0 {
+			if cfg, ok := existing[0]["config"].(map[string]any); ok {
+				effectiveConfig = cfg
+			}
+		}
+	}
+	if effectiveType != "" {
+		tmpInput := &tasks.TaskInput{
+			Title:    "patch-validation",
+			TaskType: effectiveType,
+			Config:   effectiveConfig,
+		}
+		if rc, ok := patch["reward_coins"].(float64); ok {
+			tmpInput.RewardCoins = int(rc)
+		} else {
+			// Use existing reward for validation fallback
+			var existing []map[string]any
+			_ = json.Unmarshal(tRaw, &existing)
+			if len(existing) > 0 {
+				if rc2, ok := existing[0]["reward_coins"].(float64); ok {
+					tmpInput.RewardCoins = int(rc2)
+				} else {
+					tmpInput.RewardCoins = 50
+				}
+			} else {
+				tmpInput.RewardCoins = 50
+			}
+		}
+		if rx, ok := patch["reward_xp"].(float64); ok {
+			tmpInput.RewardXP = int(rx)
+		} else {
+			var existing []map[string]any
+			_ = json.Unmarshal(tRaw, &existing)
+			if len(existing) > 0 {
+				if rx2, ok := existing[0]["reward_xp"].(float64); ok {
+					tmpInput.RewardXP = int(rx2)
+				} else {
+					tmpInput.RewardXP = 100
+				}
+			} else {
+				tmpInput.RewardXP = 100
+			}
+		}
+		tmpInput.StepOrder = 1
+		if err := a.validateTaskInput(tmpInput); err != nil {
+			shared.WriteJSONError(w, err.Error(), http.StatusBadRequest)
+			return
 		}
 	}
 
