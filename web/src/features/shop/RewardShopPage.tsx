@@ -22,10 +22,6 @@ export const RewardShopPage: React.FC = () => {
   const { profile, refreshProfile } = useSession()
   const isAdmin = profile?.role === 'ADMIN' || profile?.role === 'GUIDE' || profile?.role === 'BUILDER'
 
-  if (isAdmin) {
-    return <Navigate to="/admin" replace />
-  }
-
   const [activeTab, setActiveTab] = useState<'redeem' | 'history'>('redeem')
   const [claims, setClaims] = useState<ClaimView[]>([])
   const [config, setConfig] = useState<RedemptionConfig | null>(null)
@@ -53,8 +49,14 @@ export const RewardShopPage: React.FC = () => {
   }, [])
 
   useEffect(() => {
-    loadData()
-  }, [loadData])
+    if (!isAdmin) {
+      loadData()
+    }
+  }, [loadData, isAdmin])
+
+  if (isAdmin) {
+    return <Navigate to="/admin" replace />
+  }
 
   const handleRedeemSuccess = () => {
     loadData()
