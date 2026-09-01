@@ -14,22 +14,12 @@ export const EconomySettingsForm: React.FC = () => {
     setEndDayInput,
     payoutDayInput,
     setPayoutDayInput,
-    earningPeriodInput,
-    setEarningPeriodInput,
     conversionRateInput,
     setConversionRateInput,
-    targetRupiahInput,
-    setTargetRupiahInput,
-    maxPayoutInput,
-    setMaxPayoutInput,
     timezoneInput,
     setTimezoneInput,
     handleSaveConfig,
   } = useAdminConfig()
-
-  const convRateNum = parseInt(conversionRateInput, 10) || 0
-  const targetRpNum = parseInt(targetRupiahInput, 10) || 0
-  const targetCoinsCalc = convRateNum > 0 ? Math.floor(targetRpNum / convRateNum) : 0
 
   return (
     <div className="space-y-4">
@@ -39,10 +29,10 @@ export const EconomySettingsForm: React.FC = () => {
           <div>
             <h3 className="font-heading font-bold text-text-primary text-sm sm:text-base flex items-center gap-2">
               <Sliders className="w-4 h-4 text-accent-magic" />
-              <span>Pengaturan Periode Penukaran Koin</span>
+              <span>Pengaturan Pencairan Koin</span>
             </h3>
             <p className="text-[11px] text-text-secondary mt-0.5">
-              Kelola kalender siklus pencairan, durasi periode earning, konversi saldo koin, dan batas penarikan.
+              Kelola periode pengajuan pencairan dan aturan pembayaran reward.
             </p>
           </div>
 
@@ -61,17 +51,17 @@ export const EconomySettingsForm: React.FC = () => {
         </div>
 
         <form onSubmit={handleSaveConfig} className="space-y-5">
-          {/* Group 1: Siklus & Periode Penukaran */}
+          {/* Section A: Periode Pencairan */}
           <div className="space-y-3">
             <h4 className="text-xs font-bold uppercase tracking-wider text-text-secondary flex items-center gap-1.5">
               <Calendar className="w-3.5 h-3.5 text-accent-magic" />
-              <span>Siklus & Periode Penukaran</span>
+              <span>Periode Pencairan</span>
             </h4>
 
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
               <div className="space-y-1">
                 <label htmlFor="input-start-day" className="text-xs font-bold text-text-secondary">
-                  Tanggal Mulai (1–31) <span className="text-status-error">*</span>
+                  Tanggal Mulai <span className="text-status-error">*</span>
                 </label>
                 <input
                   id="input-start-day"
@@ -83,12 +73,12 @@ export const EconomySettingsForm: React.FC = () => {
                   onChange={(e) => setStartDayInput(e.target.value)}
                   className="w-full p-2.5 rounded-xl bg-surface-elevated border border-border-subtle text-xs sm:text-sm font-bold text-text-primary focus:outline-none focus:border-accent-magic font-mono"
                 />
-                <p className="text-[10px] text-text-secondary">Hari awal buka form penukaran</p>
+                <p className="text-[10px] text-text-secondary">Hari awal user dapat mengajukan pencairan.</p>
               </div>
 
               <div className="space-y-1">
                 <label htmlFor="input-end-day" className="text-xs font-bold text-text-secondary">
-                  Tanggal Akhir (1–31) <span className="text-status-error">*</span>
+                  Tanggal Akhir <span className="text-status-error">*</span>
                 </label>
                 <input
                   id="input-end-day"
@@ -100,12 +90,12 @@ export const EconomySettingsForm: React.FC = () => {
                   onChange={(e) => setEndDayInput(e.target.value)}
                   className="w-full p-2.5 rounded-xl bg-surface-elevated border border-border-subtle text-xs sm:text-sm font-bold text-text-primary focus:outline-none focus:border-accent-magic font-mono"
                 />
-                <p className="text-[10px] text-text-secondary">Batas akhir pengajuan klaim</p>
+                <p className="text-[10px] text-text-secondary">Hari terakhir user dapat mengajukan pencairan.</p>
               </div>
 
               <div className="space-y-1">
                 <label htmlFor="input-payout-day" className="text-xs font-bold text-text-secondary">
-                  Tanggal Gajian / Payday <span className="text-status-error">*</span>
+                  Tanggal Payday <span className="text-status-error">*</span>
                 </label>
                 <input
                   id="input-payout-day"
@@ -117,29 +107,12 @@ export const EconomySettingsForm: React.FC = () => {
                   onChange={(e) => setPayoutDayInput(e.target.value)}
                   className="w-full p-2.5 rounded-xl bg-surface-elevated border border-border-subtle text-xs sm:text-sm font-bold text-text-primary focus:outline-none focus:border-accent-magic font-mono"
                 />
-                <p className="text-[10px] text-text-secondary">Hari transfer dana reward</p>
+                <p className="text-[10px] text-text-secondary">Hari pembayaran reward.</p>
               </div>
 
-              <div className="space-y-1">
-                <label htmlFor="input-earning-period" className="text-xs font-bold text-text-secondary">
-                  Durasi Earning (Hari) <span className="text-status-error">*</span>
-                </label>
-                <input
-                  id="input-earning-period"
-                  type="number"
-                  min={1}
-                  max={365}
-                  required
-                  value={earningPeriodInput}
-                  onChange={(e) => setEarningPeriodInput(e.target.value)}
-                  className="w-full p-2.5 rounded-xl bg-surface-elevated border border-border-subtle text-xs sm:text-sm font-bold text-text-primary focus:outline-none focus:border-accent-magic font-mono"
-                />
-                <p className="text-[10px] text-text-secondary">Durasi siklus kerja tugas</p>
-              </div>
-
-              <div className="space-y-1 sm:col-span-2">
+              <div className="space-y-1 sm:col-span-3">
                 <label htmlFor="input-timezone" className="text-xs font-bold text-text-secondary">
-                  Zona Waktu (Timezone) <span className="text-status-error">*</span>
+                  Zona Waktu <span className="text-status-error">*</span>
                 </label>
                 <input
                   id="input-timezone"
@@ -154,14 +127,14 @@ export const EconomySettingsForm: React.FC = () => {
             </div>
           </div>
 
-          {/* Group 2: Aturan Konversi & Batasan Koin */}
+          {/* Section B: Konversi Koin */}
           <div className="space-y-3 pt-3 border-t border-border-subtle">
             <h4 className="text-xs font-bold uppercase tracking-wider text-text-secondary flex items-center gap-1.5">
               <Coins className="w-3.5 h-3.5 text-accent-gold" />
-              <span>Aturan Konversi & Batasan Koin</span>
+              <span>Konversi Koin</span>
             </h4>
 
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div className="space-y-1">
                 <label htmlFor="input-conversion-rate" className="text-xs font-bold text-text-secondary">
                   Nilai 1 Koin (Rupiah) <span className="text-status-error">*</span>
@@ -175,55 +148,19 @@ export const EconomySettingsForm: React.FC = () => {
                   onChange={(e) => setConversionRateInput(e.target.value)}
                   className="w-full p-2.5 rounded-xl bg-surface-elevated border border-border-subtle text-xs sm:text-sm font-bold text-text-primary focus:outline-none focus:border-accent-magic font-mono"
                 />
-                <p className="text-[10px] text-text-secondary">Contoh: 100 (1 Koin = Rp 100)</p>
-              </div>
-
-              <div className="space-y-1">
-                <label htmlFor="input-target-rupiah" className="text-xs font-bold text-text-secondary">
-                  Target Normal (Rupiah) <span className="text-status-error">*</span>
-                </label>
-                <input
-                  id="input-target-rupiah"
-                  type="number"
-                  min={0}
-                  required
-                  value={targetRupiahInput}
-                  onChange={(e) => setTargetRupiahInput(e.target.value)}
-                  className="w-full p-2.5 rounded-xl bg-surface-elevated border border-border-subtle text-xs sm:text-sm font-bold text-text-primary focus:outline-none focus:border-accent-magic font-mono"
-                />
-                <p className="text-[10px] text-accent-magic font-bold">
-                  Setara: {targetCoinsCalc.toLocaleString('id-ID')} Koin
-                </p>
-              </div>
-
-              <div className="space-y-1">
-                <label htmlFor="input-max-payout" className="text-xs font-bold text-text-secondary">
-                  Batas Maksimal Klaim (Koin) <span className="text-status-error">*</span>
-                </label>
-                <input
-                  id="input-max-payout"
-                  type="number"
-                  min={1}
-                  required
-                  value={maxPayoutInput}
-                  onChange={(e) => setMaxPayoutInput(e.target.value)}
-                  className="w-full p-2.5 rounded-xl bg-surface-elevated border border-border-subtle text-xs sm:text-sm font-bold text-text-primary focus:outline-none focus:border-accent-magic font-mono"
-                />
-                <p className="text-[10px] text-text-secondary">Cap batas keras per periode</p>
+                <p className="text-[10px] text-text-secondary">Nilai rupiah yang digunakan saat menghitung nominal pencairan.</p>
               </div>
             </div>
           </div>
 
-          {/* Compact Live KPI Preview */}
+          {/* Compact Live Preview — redemption-only */}
           <div className="p-3 rounded-xl bg-surface-elevated border border-border-subtle text-xs flex flex-col sm:flex-row sm:items-center justify-between gap-2">
             <div className="flex items-center gap-1.5 text-text-secondary font-bold text-[11px] uppercase tracking-wider">
               <span>Ringkasan Parameter Aktif</span>
               <ArrowRight className="w-3 h-3 text-accent-magic" />
             </div>
             <div className="font-bold text-text-primary text-[11px] sm:text-xs">
-              Target Rp {targetRpNum.toLocaleString('id-ID')} ({targetCoinsCalc} koin) • Maks{' '}
-              {maxPayoutInput} koin • Gajian tgl {payoutDayInput} • Penukaran tgl {startDayInput}–
-              {endDayInput} • {earningPeriodInput} hari ({timezoneInput})
+              Penukaran: tanggal {startDayInput}–{endDayInput} • Payday: tanggal {payoutDayInput} • Nilai: Rp{conversionRateInput}/koin • Zona waktu: {timezoneInput}
             </div>
           </div>
 

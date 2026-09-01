@@ -66,21 +66,14 @@ export const RewardShopPage: React.FC = () => {
   }
 
   const conversionRate = config ? config.conversion_rate : 0
-  const maxPayoutCoins = config ? config.max_payout_coins : 0
-  const payoutTargetCoins = config ? config.payout_target_coins : 0
-  const payoutTargetRupiah = config ? config.payout_target_rupiah : 0
-  const maxPayoutCash = maxPayoutCoins * conversionRate
   const estimatedCash = userCoins * conversionRate
   const isOpen = config ? config.is_open : false
   const startDay = config ? config.redemption_start_day : 0
   const endDay = config ? config.redemption_end_day : 0
+  const payoutDay = config ? config.payout_day : 0
+  const timezone = config ? config.timezone : 'Asia/Jakarta'
 
   const pendingClaims = claims.filter((c) => c.status === 'PENDING')
-  const approvedCoins = claims.filter((c) => c.status === 'APPROVED').reduce((s, c) => s + c.coins_redeemed, 0)
-  const pendingCoins = pendingClaims.reduce((s, c) => s + c.coins_redeemed, 0)
-  const usedPayoutCoins = approvedCoins + pendingCoins
-  const remainingCoins = Math.max(0, maxPayoutCoins - usedPayoutCoins)
-  const isMaxReached = usedPayoutCoins >= maxPayoutCoins
 
   return (
     <div className="w-full flex flex-col gap-4">
@@ -125,24 +118,11 @@ export const RewardShopPage: React.FC = () => {
           </div>
         </div>
         <div className="mt-3.5 space-y-2">
-          <div className="flex items-center justify-between text-[11px] font-bold gap-2">
-            <span className="text-text-secondary">Progress pencairan</span>
-            <span className={isMaxReached ? 'text-status-success' : 'text-text-primary truncate'}>
-              {isMaxReached ? 'Maksimum tercapai' : `Rp ${estimatedCash.toLocaleString('id-ID')} / Rp ${payoutTargetRupiah.toLocaleString('id-ID')}`}
-            </span>
-          </div>
-          <div className="h-1.5 rounded-full bg-surface-elevated overflow-hidden">
-            <div
-              className={`h-full rounded-full transition-all ${isMaxReached ? 'bg-status-success' : 'bg-accent-gold'}`}
-              style={{ width: `${Math.min(100, Math.round(((userCoins + usedPayoutCoins) / payoutTargetCoins) * 100))}%` }}
-            />
-          </div>
-          <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1 text-[11px] text-text-secondary">
-            <span>Target {payoutTargetCoins.toLocaleString('id-ID')} Koin = Rp {payoutTargetRupiah.toLocaleString('id-ID')}</span>
-            <span className="font-semibold text-text-primary">Sisa kuota {remainingCoins.toLocaleString('id-ID')}</span>
-          </div>
           <p className="text-[11px] text-text-secondary leading-relaxed">
-            Periode {config?.earning_period_days ?? 30} hari • Gajian tgl {config?.payout_day ?? 24} • <span className="font-semibold text-text-primary">Koin</span> bisa ditukar, <span className="font-semibold text-text-primary">EXP</span> untuk Level.
+            Penukaran: tanggal {startDay}–{endDay} • Payday: tanggal {payoutDay} • Nilai: Rp{conversionRate.toLocaleString('id-ID')}/koin • Zona waktu: {timezone}
+          </p>
+          <p className="text-[11px] text-text-secondary leading-relaxed">
+            <span className="font-semibold text-text-primary">Koin</span> bisa ditukar, <span className="font-semibold text-text-primary">EXP</span> untuk Level.
           </p>
         </div>
       </div>
@@ -252,17 +232,7 @@ export const RewardShopPage: React.FC = () => {
             </div>
           </div>
 
-          {isMaxReached && (
-            <div className="p-3 rounded-xl bg-status-success/10 border border-status-success/20 flex items-start gap-2.5">
-              <CheckCircle2 className="w-4 h-4 text-status-success shrink-0 mt-0.5" />
-              <div>
-                <p className="font-bold text-xs text-status-success">Maximum pencairan tercapai 🎉</p>
-                <p className="text-xs text-text-secondary leading-relaxed mt-0.5">
-                  Kamu sudah mencapai batas {maxPayoutCoins.toLocaleString('id-ID')} Koin = Rp {maxPayoutCash.toLocaleString('id-ID')}. Koin tambahan tetap menambah EXP & Level.
-                </p>
-              </div>
-            </div>
-          )}
+
 
           {pendingClaims.length > 0 && (
             <div className="p-3 rounded-xl bg-accent-gold/10 border border-accent-gold/20 flex items-start gap-2.5">

@@ -118,26 +118,97 @@ func getEarnedThisPeriod(ctx context.Context, client db.SupabaseClient, uids []s
 		loc = time.FixedZone("WIB", 7*3600)
 	}
 	nowInTz := time.Now().In(loc)
-	startDay := 1
-	endDay := 24
-	if raw, err := client.Get(ctx, "odyssey_system_config", "key=in.(target_earning_start_day,target_earning_end_day)&select=key,value"); err == nil && len(raw) > 0 {
+	// Cutover gate: before 2026-10-25 use legacy 1-24, after use rolling 25
+	cutoverStr := "2026-10-25"
+	if raw, err := client.Get(ctx, "odyssey_system_config", "key=eq.earning_cycle_cutover_date&select=value"); err == nil && len(raw) > 0 {
+		var rows []struct{ Value string `json:"value"` }
+		if err := json.Unmarshal(raw, &rows); err == nil && len(rows) > 0 && strings.TrimSpace(rows[0].Value) != "" {
+			cutoverStr = strings.TrimSpace(rows[0].Value)
+		}
+	}
+	cutoverDate, _ := time.Parse("2006-01-02", cutoverStr)
+	nowDate := time.Date(nowInTz.Year(), nowInTz.Month(), nowInTz.Day(), 0, 0, 0, 0, loc)
+	// If before cutover, use legacy 1-24
+	if !cutoverDate.IsZero() && nowDate.Before(cutoverDate) {
+		startDay, endDay := 1, 24
+		if raw, err := client.Get(ctx, "odyssey_system_config", "key=in.(target_earning_start_day,target_earning_end_day)&select=key,value"); err == nil && len(raw) > 0 {
+			var rows []struct{ Key string `json:"key"`; Value string `json:"value"` }
+			if err := json.Unmarshal(raw, &rows); err == nil {
+				for _, r := range rows {
+					var n int
+					if _, err := fmt.Sscanf(r.Value, "%d", &n); err == nil && n >= 1 && n <= 31 {
+						if r.Key == "target_earning_start_day" {
+							startDay = n
+						} else if r.Key == "target_earning_end_day" {
+							endDay = n
+						}
+					}
+				}
+			}
+		}
+		pStart := time.Date(nowInTz.Year(), nowInTz.Month(), startDay, 0, 0, 0, 0, loc)
+		pEnd := time.Date(nowInTz.Year(), nowInTz.Month(), endDay+1, 0, 0, 0, 0, loc)
+		periodStart := pStart.UTC().Format(time.RFC3339)
+		periodEnd := pEnd.UTC().Format(time.RFC3339)
+		params := fmt.Sprintf("user_uid=in.(%s)&type=eq.TASK_REWARD&created_at=gte.%s&created_at=lt.%s&select=user_uid,amount", strings.Join(uids, ","), periodStart, periodEnd)
+		raw, err := client.Get(ctx, "odyssey_coin_transactions", params)
+		if err != nil || len(raw) == 0 {
+			return map[string]int{}
+		}
+		var rows []struct{ UserUID string `json:"user_uid"`; Amount int `json:"amount"` }
+		if err := json.Unmarshal(raw, &rows); err != nil {
+			return map[string]int{}
+		}
+		m := make(map[string]int, len(uids))
+		for _, r := range rows {
+			m[r.UserUID] += r.Amount
+		}
+		return m
+	}
+	// Post-cutover rolling 25->24
+	anchor := 25
+	if raw, err := client.Get(ctx, "odyssey_system_config", "key=in.(earning_cycle_anchor_day,target_earning_start_day)&select=key,value"); err == nil && len(raw) > 0 {
 		var rows []struct{ Key string `json:"key"`; Value string `json:"value"` }
 		if err := json.Unmarshal(raw, &rows); err == nil {
 			for _, r := range rows {
 				var n int
-				if _, err := fmt.Sscanf(r.Value, "%d", &n); err == nil {
-					if r.Key == "target_earning_start_day" && n >= 1 && n <= 31 {
-						startDay = n
-					}
-					if r.Key == "target_earning_end_day" && n >= 1 && n <= 31 {
-						endDay = n
+				if _, err := fmt.Sscanf(r.Value, "%d", &n); err == nil && n >= 1 && n <= 31 {
+					if r.Key == "earning_cycle_anchor_day" {
+						anchor = n
+					} else if r.Key == "target_earning_start_day" && anchor == 25 {
+						foundAnchor := false
+						for _, rr := range rows {
+							if rr.Key == "earning_cycle_anchor_day" {
+								foundAnchor = true
+								break
+							}
+						}
+						if !foundAnchor {
+							anchor = n
+						}
 					}
 				}
 			}
 		}
 	}
-	periodStart := time.Date(nowInTz.Year(), nowInTz.Month(), startDay, 0, 0, 0, 0, loc).UTC().Format(time.RFC3339)
-	periodEnd := time.Date(nowInTz.Year(), nowInTz.Month(), endDay+1, 0, 0, 0, 0, loc).UTC().Format(time.RFC3339)
+	var pStart, pEnd time.Time
+	if nowInTz.Day() >= anchor {
+		pStart = time.Date(nowInTz.Year(), nowInTz.Month(), anchor, 0, 0, 0, 0, loc)
+		if nowInTz.Month() == 12 {
+			pEnd = time.Date(nowInTz.Year()+1, 1, anchor, 0, 0, 0, 0, loc)
+		} else {
+			pEnd = time.Date(nowInTz.Year(), nowInTz.Month()+1, anchor, 0, 0, 0, 0, loc)
+		}
+	} else {
+		if nowInTz.Month() == 1 {
+			pStart = time.Date(nowInTz.Year()-1, 12, anchor, 0, 0, 0, 0, loc)
+		} else {
+			pStart = time.Date(nowInTz.Year(), nowInTz.Month()-1, anchor, 0, 0, 0, 0, loc)
+		}
+		pEnd = time.Date(nowInTz.Year(), nowInTz.Month(), anchor, 0, 0, 0, 0, loc)
+	}
+	periodStart := pStart.UTC().Format(time.RFC3339)
+	periodEnd := pEnd.UTC().Format(time.RFC3339)
 	params := fmt.Sprintf("user_uid=in.(%s)&type=eq.TASK_REWARD&created_at=gte.%s&created_at=lt.%s&select=user_uid,amount", strings.Join(uids, ","), periodStart, periodEnd)
 	raw, err := client.Get(ctx, "odyssey_coin_transactions", params)
 	if err != nil || len(raw) == 0 {
@@ -406,26 +477,85 @@ func (a *API) HandleCreateMember(w http.ResponseWriter, r *http.Request) {
 		}
 		if loc, err := time.LoadLocation(tz); err == nil {
 			nowInTz := time.Now().In(loc)
-			startDay := 1
-			endDay := 24
-			if raw, err := a.client.Get(ctx, "odyssey_system_config", "key=in.(target_earning_start_day,target_earning_end_day)&select=key,value"); err == nil && len(raw) > 0 {
-				var rows []struct{ Key string `json:"key"`; Value string `json:"value"` }
-				if err := json.Unmarshal(raw, &rows); err == nil {
-					for _, r := range rows {
-						var n int
-						if _, err := fmt.Sscanf(r.Value, "%d", &n); err == nil {
-							if r.Key == "target_earning_start_day" && n >= 1 && n <= 31 {
-								startDay = n
-							}
-							if r.Key == "target_earning_end_day" && n >= 1 && n <= 31 {
-								endDay = n
+			// Cutover gate: before 2026-10-25 use legacy 1-24, after use rolling 25
+			cutoverStr := "2026-10-25"
+			if raw, err := a.client.Get(ctx, "odyssey_system_config", "key=eq.earning_cycle_cutover_date&select=value"); err == nil && len(raw) > 0 {
+				var rows []struct{ Value string `json:"value"` }
+				if err := json.Unmarshal(raw, &rows); err == nil && len(rows) > 0 && strings.TrimSpace(rows[0].Value) != "" {
+					cutoverStr = strings.TrimSpace(rows[0].Value)
+				}
+			}
+			cutoverDate, _ := time.Parse("2006-01-02", cutoverStr)
+			nowDate := time.Date(nowInTz.Year(), nowInTz.Month(), nowInTz.Day(), 0, 0, 0, 0, loc)
+			var psTime, peTime time.Time
+			if !cutoverDate.IsZero() && nowDate.Before(cutoverDate) {
+				// Legacy 1-24
+				startDay, endDay := 1, 24
+				if raw, err := a.client.Get(ctx, "odyssey_system_config", "key=in.(target_earning_start_day,target_earning_end_day)&select=key,value"); err == nil && len(raw) > 0 {
+					var rows []struct{ Key string `json:"key"`; Value string `json:"value"` }
+					if err := json.Unmarshal(raw, &rows); err == nil {
+						for _, r := range rows {
+							var n int
+							if _, err := fmt.Sscanf(r.Value, "%d", &n); err == nil && n >= 1 && n <= 31 {
+								if r.Key == "target_earning_start_day" {
+									startDay = n
+								} else if r.Key == "target_earning_end_day" {
+									endDay = n
+								}
 							}
 						}
 					}
 				}
+				psTime = time.Date(nowInTz.Year(), nowInTz.Month(), startDay, 0, 0, 0, 0, loc)
+				peTime = time.Date(nowInTz.Year(), nowInTz.Month(), endDay+1, 0, 0, 0, 0, loc)
+			} else {
+				anchor := 25
+				if raw, err := a.client.Get(ctx, "odyssey_system_config", "key=in.(earning_cycle_anchor_day,target_earning_start_day)&select=key,value"); err == nil && len(raw) > 0 {
+					var rows []struct{ Key string `json:"key"`; Value string `json:"value"` }
+					if err := json.Unmarshal(raw, &rows); err == nil {
+						for _, r := range rows {
+							var n int
+							if _, err := fmt.Sscanf(r.Value, "%d", &n); err == nil && n >= 1 && n <= 31 {
+								if r.Key == "earning_cycle_anchor_day" {
+									anchor = n
+								}
+							}
+						}
+						found := false
+						for _, r := range rows {
+							if r.Key == "earning_cycle_anchor_day" {
+								found = true
+								break
+							}
+						}
+						if !found {
+							for _, r := range rows {
+								var n int
+								if _, err := fmt.Sscanf(r.Value, "%d", &n); err == nil && n >= 1 && n <= 31 && r.Key == "target_earning_start_day" {
+									anchor = n
+								}
+							}
+						}
+					}
+				}
+				if nowInTz.Day() >= anchor {
+					psTime = time.Date(nowInTz.Year(), nowInTz.Month(), anchor, 0, 0, 0, 0, loc)
+					if nowInTz.Month() == 12 {
+						peTime = time.Date(nowInTz.Year()+1, 1, anchor, 0, 0, 0, 0, loc)
+					} else {
+						peTime = time.Date(nowInTz.Year(), nowInTz.Month()+1, anchor, 0, 0, 0, 0, loc)
+					}
+				} else {
+					if nowInTz.Month() == 1 {
+						psTime = time.Date(nowInTz.Year()-1, 12, anchor, 0, 0, 0, 0, loc)
+					} else {
+						psTime = time.Date(nowInTz.Year(), nowInTz.Month()-1, anchor, 0, 0, 0, 0, loc)
+					}
+					peTime = time.Date(nowInTz.Year(), nowInTz.Month(), anchor, 0, 0, 0, 0, loc)
+				}
 			}
-			ps := time.Date(nowInTz.Year(), nowInTz.Month(), startDay, 0, 0, 0, 0, loc).UTC().Format("2006-01-02")
-			pe := time.Date(nowInTz.Year(), nowInTz.Month(), endDay+1, 0, 0, 0, 0, loc).UTC().Format("2006-01-02")
+			ps := psTime.UTC().Format("2006-01-02")
+			pe := peTime.UTC().Format("2006-01-02")
 			_, _ = a.client.Mutate(ctx, http.MethodPost, "odyssey_member_monthly_targets", map[string]any{
 				"user_uid":     uid,
 				"period_start": ps,
@@ -567,26 +697,83 @@ func (a *API) HandleUpdateMember(w http.ResponseWriter, r *http.Request, targetU
 		}
 		if loc, err := time.LoadLocation(tz); err == nil {
 			now := time.Now().In(loc)
-			startDay := 1
-			endDay := 24
-			if raw, err := a.client.Get(ctx, "odyssey_system_config", "key=in.(target_earning_start_day,target_earning_end_day)&select=key,value"); err == nil && len(raw) > 0 {
-				var rows []struct{ Key string `json:"key"`; Value string `json:"value"` }
-				if err := json.Unmarshal(raw, &rows); err == nil {
-					for _, r := range rows {
-						var n int
-						if _, err := fmt.Sscanf(r.Value, "%d", &n); err == nil {
-							if r.Key == "target_earning_start_day" && n >= 1 && n <= 31 {
-								startDay = n
-							}
-							if r.Key == "target_earning_end_day" && n >= 1 && n <= 31 {
-								endDay = n
+			cutoverStr := "2026-10-25"
+			if raw, err := a.client.Get(ctx, "odyssey_system_config", "key=eq.earning_cycle_cutover_date&select=value"); err == nil && len(raw) > 0 {
+				var rows []struct{ Value string `json:"value"` }
+				if err := json.Unmarshal(raw, &rows); err == nil && len(rows) > 0 && strings.TrimSpace(rows[0].Value) != "" {
+					cutoverStr = strings.TrimSpace(rows[0].Value)
+				}
+			}
+			cutoverDate, _ := time.Parse("2006-01-02", cutoverStr)
+			nowDate := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, loc)
+			var psTime, peTime time.Time
+			if !cutoverDate.IsZero() && nowDate.Before(cutoverDate) {
+				startDay, endDay := 1, 24
+				if raw, err := a.client.Get(ctx, "odyssey_system_config", "key=in.(target_earning_start_day,target_earning_end_day)&select=key,value"); err == nil && len(raw) > 0 {
+					var rows []struct{ Key string `json:"key"`; Value string `json:"value"` }
+					if err := json.Unmarshal(raw, &rows); err == nil {
+						for _, r := range rows {
+							var n int
+							if _, err := fmt.Sscanf(r.Value, "%d", &n); err == nil && n >= 1 && n <= 31 {
+								if r.Key == "target_earning_start_day" {
+									startDay = n
+								} else if r.Key == "target_earning_end_day" {
+									endDay = n
+								}
 							}
 						}
 					}
 				}
+				psTime = time.Date(now.Year(), now.Month(), startDay, 0, 0, 0, 0, loc)
+				peTime = time.Date(now.Year(), now.Month(), endDay+1, 0, 0, 0, 0, loc)
+			} else {
+				anchor := 25
+				if raw, err := a.client.Get(ctx, "odyssey_system_config", "key=in.(earning_cycle_anchor_day,target_earning_start_day)&select=key,value"); err == nil && len(raw) > 0 {
+					var rows []struct{ Key string `json:"key"`; Value string `json:"value"` }
+					if err := json.Unmarshal(raw, &rows); err == nil {
+						for _, r := range rows {
+							var n int
+							if _, err := fmt.Sscanf(r.Value, "%d", &n); err == nil && n >= 1 && n <= 31 {
+								if r.Key == "earning_cycle_anchor_day" {
+									anchor = n
+								}
+							}
+						}
+						found := false
+						for _, r := range rows {
+							if r.Key == "earning_cycle_anchor_day" {
+								found = true
+								break
+							}
+						}
+						if !found {
+							for _, r := range rows {
+								var n int
+								if _, err := fmt.Sscanf(r.Value, "%d", &n); err == nil && n >= 1 && n <= 31 && r.Key == "target_earning_start_day" {
+									anchor = n
+								}
+							}
+						}
+					}
+				}
+				if now.Day() >= anchor {
+					psTime = time.Date(now.Year(), now.Month(), anchor, 0, 0, 0, 0, loc)
+					if now.Month() == 12 {
+						peTime = time.Date(now.Year()+1, 1, anchor, 0, 0, 0, 0, loc)
+					} else {
+						peTime = time.Date(now.Year(), now.Month()+1, anchor, 0, 0, 0, 0, loc)
+					}
+				} else {
+					if now.Month() == 1 {
+						psTime = time.Date(now.Year()-1, 12, anchor, 0, 0, 0, 0, loc)
+					} else {
+						psTime = time.Date(now.Year(), now.Month()-1, anchor, 0, 0, 0, 0, loc)
+					}
+					peTime = time.Date(now.Year(), now.Month(), anchor, 0, 0, 0, 0, loc)
+				}
 			}
-			ps := time.Date(now.Year(), now.Month(), startDay, 0, 0, 0, 0, loc).UTC().Format("2006-01-02")
-			pe := time.Date(now.Year(), now.Month(), endDay+1, 0, 0, 0, 0, loc).UTC().Format("2006-01-02")
+			ps := psTime.UTC().Format("2006-01-02")
+			pe := peTime.UTC().Format("2006-01-02")
 			_, _ = a.client.Mutate(ctx, http.MethodPost, "odyssey_member_monthly_targets", map[string]any{
 				"user_uid": targetUID, "period_start": ps, "period_end": pe, "target": *req.MonthlyCoinTarget, "assigned_by": claims.UID, "created_at": time.Now().UTC().Format(time.RFC3339),
 			}, "")

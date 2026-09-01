@@ -251,10 +251,7 @@ export const LinearPath: React.FC = () => {
             )
           }
           const conv = shopConfig.conversion_rate
-          const maxCoins = shopConfig.max_payout_coins
           const estCash = userCoins * conv
-          const maxCash = maxCoins * conv
-          const targetCash = shopConfig.payout_target_rupiah
           const isPayoutDay = shopConfig.is_payout_day
           return (
             <>
@@ -267,7 +264,7 @@ export const LinearPath: React.FC = () => {
                       {userCoins.toLocaleString('id-ID')} <span className="text-xs font-semibold text-text-secondary">Koin</span>
                     </p>
                     <p className="text-[11px] text-text-secondary mt-1">
-                      ≈ Rp {estCash.toLocaleString('id-ID')} • Maks Rp {maxCash.toLocaleString('id-ID')}
+                      ≈ Rp {estCash.toLocaleString('id-ID')} • 1 Koin = Rp {conv.toLocaleString('id-ID')}
                     </p>
                   </div>
                 </div>
@@ -279,7 +276,7 @@ export const LinearPath: React.FC = () => {
                 <div className="mt-3 p-2.5 rounded-xl bg-status-success/10 border border-status-success/15 flex items-start gap-2">
                   <Banknote className="w-4 h-4 text-status-success shrink-0 mt-0.5" />
                   <p className="text-xs leading-relaxed text-text-secondary">
-                    <span className="font-bold text-status-success">Saatnya tukarkan!</span> {userCoins.toLocaleString('id-ID')} Koin = Rp {estCash.toLocaleString('id-ID')} (target Rp {targetCash.toLocaleString('id-ID')}). Periode tgl {shopConfig.redemption_start_day}–{shopConfig.redemption_end_day}.
+                    <span className="font-bold text-status-success">Saatnya tukarkan!</span> {userCoins.toLocaleString('id-ID')} Koin = Rp {estCash.toLocaleString('id-ID')}. Periode tgl {shopConfig.redemption_start_day}–{shopConfig.redemption_end_day}.
                   </p>
                 </div>
               )}

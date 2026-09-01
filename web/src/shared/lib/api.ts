@@ -191,7 +191,7 @@ export const adminMembersApi = {
 
 export const adminTasksApi = {
   getConfig: () => apiClient.get<RedemptionConfig>('/api/admin/config'),
-  updateConfig: (data: { start_day?: number; end_day?: number; payout_day?: number; earning_period_days?: number; conversion_rate?: number; payout_target_rupiah?: number; payout_target_coins?: number; max_payout_coins?: number; timezone?: string }) =>
+  updateConfig: (data: { start_day?: number; end_day?: number; payout_day?: number; conversion_rate?: number; timezone?: string }) =>
     apiClient.post<RedemptionConfig>('/api/admin/config', data),
   getTasks: (date?: string) => apiClient.get<TaskView[]>(`/api/admin/tasks${date ? '?date=' + date : ''}`),
   createTask: (data: any) => apiClient.post<TaskView>('/api/admin/tasks', data),

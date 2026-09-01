@@ -148,7 +148,7 @@ describe('AdminPage Component', () => {
     fireEvent.click(settingsTabBtn)
 
     await waitFor(() => {
-      expect(screen.getByText('Pengaturan Periode Penukaran Koin')).toBeInTheDocument()
+      expect(screen.getByText('Pengaturan Pencairan Koin')).toBeInTheDocument()
     })
 
     const saveBtn = screen.getByRole('button', { name: /Simpan Pengaturan Periode/i })
