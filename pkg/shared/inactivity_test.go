@@ -80,6 +80,82 @@ func TestParseAutoBlockThreshold(t *testing.T) {
 	}
 }
 
+func TestCycleAwareInactivity(t *testing.T) {
+	loc, _ := time.LoadLocation("Asia/Jakarta")
+	if loc == nil {
+		loc = time.FixedZone("WIB", 7*3600)
+	}
+	threshold := 5
+	// Cycle 2026-09-01 to 2026-09-25 (period_end exclusive Sep25)
+	periodStart := time.Date(2026, 9, 1, 0, 0, 0, 0, loc)
+	periodEnd := time.Date(2026, 9, 25, 0, 0, 0, 0, loc)
+	// Case A: completion in previous cycle Sep20, today Sep25 (new cycle start) -> NOT blocked (last outside cycle)
+	t.Run("Case A completion prev cycle Sep20 at Sep25 => NOT blocked", func(t *testing.T) {
+		last := time.Date(2026, 9, 20, 10, 0, 0, 0, loc)
+		today := time.Date(2026, 9, 25, 10, 0, 0, 0, loc)
+		// periodStart is Sep01 for today Sep25 still, but spec expects new cycle Sep25-Oct25
+		// For this test we simulate new cycle start Sep25 as periodStart
+		ps := time.Date(2026, 9, 25, 0, 0, 0, 0, loc)
+		pe := time.Date(2026, 10, 25, 0, 0, 0, 0, loc)
+		if IsInactiveCycleAware(&last, today, threshold, loc, ps, pe) {
+			t.Fatalf("expected NOT blocked for previous cycle completion")
+		}
+	})
+	// Case B: no completion in current cycle, joins Sep25 -> NOT blocked
+	t.Run("Case B never completes in current cycle -> NOT blocked", func(t *testing.T) {
+		today := time.Date(2026, 9, 30, 10, 0, 0, 0, loc)
+		if IsInactiveCycleAware(nil, today, threshold, loc, periodStart, periodEnd) {
+			t.Fatalf("expected NOT blocked for nil last")
+		}
+	})
+	// Case C: completed Sep25, at Sep30 diff 5 => BLOCKED
+	t.Run("Case C completed Sep25 at Sep30 => BLOCKED", func(t *testing.T) {
+		last := time.Date(2026, 9, 25, 10, 0, 0, 0, loc)
+		today := time.Date(2026, 9, 30, 10, 0, 0, 0, loc)
+		ps := time.Date(2026, 9, 25, 0, 0, 0, 0, loc)
+		pe := time.Date(2026, 10, 25, 0, 0, 0, 0, loc)
+		if !IsInactiveCycleAware(&last, today, threshold, loc, ps, pe) {
+			t.Fatalf("expected BLOCKED")
+		}
+	})
+	// Case D: completed yesterday Sep29 at Sep30 => NOT blocked
+	t.Run("Case D completed yesterday => NOT blocked", func(t *testing.T) {
+		last := time.Date(2026, 9, 29, 10, 0, 0, 0, loc)
+		today := time.Date(2026, 9, 30, 10, 0, 0, 0, loc)
+		ps := time.Date(2026, 9, 25, 0, 0, 0, 0, loc)
+		pe := time.Date(2026, 10, 25, 0, 0, 0, 0, loc)
+		if IsInactiveCycleAware(&last, today, threshold, loc, ps, pe) {
+			t.Fatalf("expected NOT blocked for yesterday")
+		}
+	})
+	// Case E: exactly threshold Sep25 at Sep30 => BLOCKED
+	t.Run("Case E exactly threshold Sep25 at Sep30 => BLOCKED", func(t *testing.T) {
+		last := time.Date(2026, 9, 25, 10, 0, 0, 0, loc)
+		today := time.Date(2026, 9, 30, 10, 0, 0, 0, loc)
+		ps := time.Date(2026, 9, 25, 0, 0, 0, 0, loc)
+		pe := time.Date(2026, 10, 25, 0, 0, 0, 0, loc)
+		if !IsInactiveCycleAware(&last, today, threshold, loc, ps, pe) {
+			t.Fatalf("expected BLOCKED at threshold")
+		}
+	})
+	// Join date cases
+	t.Run("Join Oct23 never completes => NOT blocked", func(t *testing.T) {
+		today := time.Date(2026, 10, 28, 10, 0, 0, 0, loc)
+		ps := time.Date(2026, 10, 1, 0, 0, 0, 0, loc)
+		pe := time.Date(2026, 11, 1, 0, 0, 0, 0, loc)
+		if IsInactiveCycleAware(nil, today, threshold, loc, ps, pe) {
+			t.Fatalf("new joiner never completed should not be blocked")
+		}
+	})
+	t.Run("last outside cycle Aug31 with Sep period => NOT blocked", func(t *testing.T) {
+		last := time.Date(2026, 8, 31, 10, 0, 0, 0, loc)
+		today := time.Date(2026, 9, 10, 10, 0, 0, 0, loc)
+		if IsInactiveCycleAware(&last, today, threshold, loc, periodStart, periodEnd) {
+			t.Fatalf("last outside cycle should not trigger block")
+		}
+	})
+}
+
 func ptrTime(t time.Time) *time.Time { return &t }
 
 func TestAutoBlockConfigIntegration(t *testing.T) {
