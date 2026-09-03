@@ -9,14 +9,14 @@ export function useAdminMembers() {
   const [error, setError] = useState<string | null>(null)
   const [processingId, setProcessingId] = useState<string | null>(null)
 
-  // Create member modal
+  // Create member modal - default 0 biar configurable, admin set per-user (Selvi 3320 tetap)
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false)
   const [newMember, setNewMember] = useState({
     username: '',
     password: '',
     explorer_name: '',
     role: 'MEMBER' as 'ADMIN' | 'MEMBER',
-    monthly_coin_target: 3200,
+    monthly_coin_target: 0,
     payout_frequency: 'THRESHOLD' as 'THRESHOLD' | 'WEEKLY' | 'MONTHLY',
     minimum_withdrawal_coins: 500,
     payout_weekday: 1,
@@ -32,7 +32,7 @@ export function useAdminMembers() {
     role: 'MEMBER' as 'ADMIN' | 'MEMBER',
     is_active: true,
     reset_device: false,
-    monthly_coin_target: 3200,
+    monthly_coin_target: 0,
     payout_frequency: 'THRESHOLD' as 'THRESHOLD' | 'WEEKLY' | 'MONTHLY',
     minimum_withdrawal_coins: 500,
     payout_weekday: 1,
@@ -69,7 +69,7 @@ export function useAdminMembers() {
       password: '',
       explorer_name: '',
       role: 'MEMBER',
-      monthly_coin_target: 3200,
+      monthly_coin_target: 0,
       payout_frequency: 'THRESHOLD',
       minimum_withdrawal_coins: 500,
       payout_weekday: 1,
@@ -88,8 +88,8 @@ export function useAdminMembers() {
       alert('Semua field wajib diisi')
       return
     }
-    if (newMember.role === 'MEMBER' && (newMember.monthly_coin_target < 1 || newMember.monthly_coin_target > 10000)) {
-      alert('Target koin bulanan harus 1..10000')
+    if (newMember.role === 'MEMBER' && (newMember.monthly_coin_target < 0 || newMember.monthly_coin_target > 10000)) {
+      alert('Target koin bulanan harus 0..10000')
       return
     }
     if (newMember.minimum_withdrawal_coins < 1 || newMember.minimum_withdrawal_coins > 100000) {
@@ -129,7 +129,7 @@ export function useAdminMembers() {
       role: (member.role === 'ADMIN' || member.role === 'GUIDE' || member.role === 'BUILDER') ? 'ADMIN' : 'MEMBER',
       is_active: member.is_active,
       reset_device: false,
-      monthly_coin_target: member.monthly_coin_target ?? 3200,
+      monthly_coin_target: member.monthly_coin_target ?? 0,
       payout_frequency: (member.payout_frequency as any) || 'THRESHOLD',
       minimum_withdrawal_coins: member.minimum_withdrawal_coins ?? 500,
       payout_weekday: 1,
@@ -148,8 +148,8 @@ export function useAdminMembers() {
       alert('Nama anggota tidak boleh kosong')
       return
     }
-    if (editMemberForm.monthly_coin_target < 1 || editMemberForm.monthly_coin_target > 10000) {
-      alert('Target koin bulanan harus 1..10000')
+    if (editMemberForm.monthly_coin_target < 0 || editMemberForm.monthly_coin_target > 10000) {
+      alert('Target koin bulanan harus 0..10000')
       return
     }
     if (editMemberForm.minimum_withdrawal_coins < 1 || editMemberForm.minimum_withdrawal_coins > 100000) {

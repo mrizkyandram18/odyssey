@@ -113,7 +113,7 @@ func fetchRedemptionConfig(ctx context.Context, client db.SupabaseClient) shared
 						}
 					}
 				case "default_monthly_coin_target":
-					if v, err := strconv.Atoi(r.Value); err == nil && v >= 1 && v <= 10000 {
+					if v, err := strconv.Atoi(r.Value); err == nil && v >= 0 && v <= 10000 {
 						defaultTarget = v
 					}
 				case "target_earning_start_day":
@@ -174,7 +174,7 @@ func (a *API) HandleGetShopConfig(w http.ResponseWriter, r *http.Request) {
 				}
 				if err := json.Unmarshal(raw, &rows); err == nil && len(rows) > 0 {
 					balance = rows[0].Coins
-					if rows[0].MonthlyCoinTarget != nil && *rows[0].MonthlyCoinTarget >= 1 && *rows[0].MonthlyCoinTarget <= 10000 {
+					if rows[0].MonthlyCoinTarget != nil && *rows[0].MonthlyCoinTarget >= 0 && *rows[0].MonthlyCoinTarget <= 10000 {
 						effMonthlyTarget = *rows[0].MonthlyCoinTarget
 					}
 				}
@@ -184,11 +184,8 @@ func (a *API) HandleGetShopConfig(w http.ResponseWriter, r *http.Request) {
 				tz = shared.DefaultTimezone
 			}
 			isEligible, reason := payout.IsEligible(eff, balance, time.Now(), tz)
-			// 1 jalur: shop target/quota ikut per-user monthly target (Selvi 3320 -> shop 3320)
-			cfg.PayoutTargetCoins = effMonthlyTarget
-			cfg.PayoutTargetRupiah = effMonthlyTarget * cfg.ConversionRate
-			cfg.MaxPayoutCoins = effMonthlyTarget
-			cfg.DefaultMonthlyCoinTarget = effMonthlyTarget
+			// Keep per-user monthly target separate from shop payout quota (3200 global). Expose as effective_monthly_target for UI if needed, but don't override global payout target.
+			// Shop's Target 3.200 stays global (payout_target_rupiah/max), per-user 3320 is for task reward distribution only.
 			// Override is_open window for UI: for THRESHOLD always based on eligibility, for WEEKLY/MONTHLY based on schedule
 			// Keep original global window in redemption_start/end but expose effective
 			resp := struct {

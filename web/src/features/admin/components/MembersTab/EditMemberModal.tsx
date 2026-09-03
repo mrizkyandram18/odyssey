@@ -198,13 +198,13 @@ export const EditMemberModal: React.FC<EditMemberModalProps> = ({
             {(member.role === 'MEMBER' || member.role === 'SEEKER') && (
               <>
                 <div className="space-y-2 p-3 rounded-xl bg-surface-elevated border border-border-subtle">
-                  <label className="text-xs font-bold text-text-secondary">Target Koin Bulanan</label>
+                  <label className="text-xs font-bold text-text-secondary">Target Koin Bulanan (0 = ikut default system)</label>
                   <input
                     type="number"
-                    min={1}
+                    min={0}
                     max={10000}
                     value={form.monthly_coin_target}
-                    onChange={(e) => setForm({ ...form, monthly_coin_target: parseInt(e.target.value || '3200', 10) })}
+                    onChange={(e) => setForm({ ...form, monthly_coin_target: parseInt(e.target.value || '0', 10) })}
                     className="w-full p-2.5 rounded-xl bg-surface border border-border-subtle text-xs sm:text-sm text-text-primary focus:outline-none focus:border-accent-magic"
                   />
                   {member.monthly_coin_target !== undefined && (

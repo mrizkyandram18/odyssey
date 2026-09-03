@@ -12,8 +12,8 @@ import (
 	"odyssey/pkg/db"
 )
 
-func TestTarget_CreateMember_Target3200Preserved(t *testing.T) {
-	// Verify default target 3200 behavior (existing user compatibility)
+func TestTarget_CreateMember_Target0Preserved(t *testing.T) {
+	// Verify default target 0 for new users (configurable per user, Selvi 3320 tetap)
 	mockClient := &mockSupabaseClient{
 		getFunc: func(ctx context.Context, table string, params string) ([]byte, error) {
 			return []byte("[]"), nil
@@ -21,8 +21,8 @@ func TestTarget_CreateMember_Target3200Preserved(t *testing.T) {
 		mutateAtomicFunc: func(ctx context.Context, method string, table string, payload any, params string, extraHeader string) ([]byte, error) {
 			if table == "odyssey_user_profiles" {
 				m := payload.(map[string]any)
-				if m["monthly_coin_target"] != 3200 {
-					t.Fatalf("expected default target 3200, got %v", m["monthly_coin_target"])
+				if m["monthly_coin_target"] != 0 {
+					t.Fatalf("expected default target 0, got %v", m["monthly_coin_target"])
 				}
 				return json.Marshal([]map[string]any{m})
 			}
@@ -40,16 +40,16 @@ func TestTarget_CreateMember_Target3200Preserved(t *testing.T) {
 	}
 }
 
-func TestTarget_CreateMember_InvalidZero(t *testing.T) {
+func TestTarget_CreateMember_InvalidNegative(t *testing.T) {
 	mockClient := &mockSupabaseClient{}
 	api := NewAPI(mockClient)
-	body, _ := json.Marshal(map[string]any{"username": "user2", "password": "secret123", "explorer_name": "X", "monthly_coin_target": 0})
+	body, _ := json.Marshal(map[string]any{"username": "user2", "password": "secret123", "explorer_name": "X", "monthly_coin_target": -1})
 	req := httptest.NewRequest(http.MethodPost, "/api/admin/members", bytes.NewReader(body))
 	req = req.WithContext(auth.ContextWithClaims(req.Context(), &auth.SessionClaims{UID: "admin_1", Role: "ADMIN", FamilyID: "fam_1"}))
 	w := httptest.NewRecorder()
 	api.HandleCreateMember(w, req)
 	if w.Code != http.StatusBadRequest {
-		t.Fatalf("expected 400 for 0 got %d", w.Code)
+		t.Fatalf("expected 400 for -1 got %d", w.Code)
 	}
 }
 

@@ -133,17 +133,17 @@ export const RewardShopPage: React.FC = () => {
           <div className="flex items-center justify-between text-[11px] font-bold gap-2">
             <span className="text-text-secondary">Progress pencairan</span>
             <span className={isMaxReached ? 'text-status-success' : 'text-text-primary truncate'}>
-              {isMaxReached ? 'Maksimum tercapai' : `Rp ${estimatedCash.toLocaleString('id-ID')} / Rp ${payoutTargetRupiah.toLocaleString('id-ID')}`}
+              {payoutTargetCoins > 0 ? (isMaxReached ? 'Maksimum tercapai' : `Rp ${estimatedCash.toLocaleString('id-ID')} / Rp ${payoutTargetRupiah.toLocaleString('id-ID')}`) : 'Belum ada target'}
             </span>
           </div>
           <div className="h-1.5 rounded-full bg-surface-elevated overflow-hidden">
             <div
               className={`h-full rounded-full transition-all ${isMaxReached ? 'bg-status-success' : 'bg-accent-gold'}`}
-              style={{ width: `${Math.min(100, Math.round(((userCoins + usedPayoutCoins) / payoutTargetCoins) * 100))}%` }}
+              style={{ width: `${payoutTargetCoins > 0 ? Math.min(100, Math.round(((userCoins + usedPayoutCoins) / payoutTargetCoins) * 100)) : 0}%` }}
             />
           </div>
           <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1 text-[11px] text-text-secondary">
-            <span>Target {payoutTargetCoins.toLocaleString('id-ID')} Koin = Rp {payoutTargetRupiah.toLocaleString('id-ID')}</span>
+            <span>{payoutTargetCoins > 0 ? `Target ${payoutTargetCoins.toLocaleString('id-ID')} Koin = Rp ${payoutTargetRupiah.toLocaleString('id-ID')}` : 'Belum ada target (hubungi admin)'}</span>
             <span className="font-semibold text-text-primary">Sisa kuota {remainingCoins.toLocaleString('id-ID')}</span>
           </div>
           <p className="text-[11px] text-text-secondary leading-relaxed">

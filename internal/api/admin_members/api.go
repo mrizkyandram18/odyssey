@@ -117,7 +117,7 @@ func getDefaultMonthlyTarget(ctx context.Context, client db.SupabaseClient) int 
 		}
 		if err := json.Unmarshal(raw, &rows); err == nil && len(rows) > 0 {
 			var n int
-			if _, err := fmt.Sscanf(rows[0].Value, "%d", &n); err == nil && n >= 1 && n <= 10000 {
+			if _, err := fmt.Sscanf(rows[0].Value, "%d", &n); err == nil && n >= 0 && n <= 10000 {
 				return n
 			}
 		}
@@ -706,8 +706,8 @@ func (a *API) HandleCreateMember(w http.ResponseWriter, r *http.Request) {
 
 	role := string(auth.NormalizeRole(req.Role))
 	if req.MonthlyCoinTarget != nil {
-		if *req.MonthlyCoinTarget < 1 || *req.MonthlyCoinTarget > 10000 {
-			shared.WriteJSONError(w, "target koin bulanan harus 1..10000", http.StatusBadRequest)
+		if *req.MonthlyCoinTarget < 0 || *req.MonthlyCoinTarget > 10000 {
+			shared.WriteJSONError(w, "target koin bulanan harus 0..10000", http.StatusBadRequest)
 			return
 		}
 	}
@@ -929,8 +929,8 @@ func (a *API) HandleUpdateMember(w http.ResponseWriter, r *http.Request, targetU
 	}
 
 	if req.MonthlyCoinTarget != nil {
-		if *req.MonthlyCoinTarget < 1 || *req.MonthlyCoinTarget > 10000 {
-			shared.WriteJSONError(w, "target koin bulanan harus 1..10000", http.StatusBadRequest)
+		if *req.MonthlyCoinTarget < 0 || *req.MonthlyCoinTarget > 10000 {
+			shared.WriteJSONError(w, "target koin bulanan harus 0..10000", http.StatusBadRequest)
 			return
 		}
 	}

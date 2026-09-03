@@ -144,17 +144,17 @@ export const CreateMemberModal: React.FC<CreateMemberModalProps> = ({
             {form.role === 'MEMBER' && (
               <>
                 <div className="space-y-1">
-                  <label className="text-xs font-bold text-text-secondary">Target Koin Bulanan</label>
+                  <label className="text-xs font-bold text-text-secondary">Target Koin Bulanan (0 = ikut default system)</label>
                   <input
                     type="number"
-                    min={1}
+                    min={0}
                     max={10000}
                     required
                     value={form.monthly_coin_target}
-                    onChange={(e) => setForm({ ...form, monthly_coin_target: parseInt(e.target.value || '3200', 10) })}
+                    onChange={(e) => setForm({ ...form, monthly_coin_target: parseInt(e.target.value || '0', 10) })}
                     className="w-full p-2.5 rounded-xl bg-surface border border-border-subtle text-xs sm:text-sm text-text-primary focus:outline-none focus:border-accent-magic"
                   />
-                  <p className="text-[11px] text-text-secondary">Sistem akan menghitung pembagian koin otomatis berdasarkan target dan bobot task. Default 3200.</p>
+                  <p className="text-[11px] text-text-secondary">Sistem akan menghitung pembagian koin otomatis berdasarkan target dan bobot task. Default 0 (admin set per-user, Selvi 3320 tetap).</p>
                 </div>
                 <div className="space-y-2 p-3 rounded-xl bg-violet-50 dark:bg-violet-950/20 border border-violet-200">
                   <label className="text-xs font-bold text-text-secondary">Pengaturan Pencairan (Per-User Payout Policy)</label>
