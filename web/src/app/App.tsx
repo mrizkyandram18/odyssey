@@ -7,6 +7,7 @@ import { HomePage } from '../features/home/HomePage'
 import { RewardShopPage } from '../features/shop/RewardShopPage'
 import { ProfilePage } from '../features/profile/ProfilePage'
 import { AdminPage } from '../features/admin/AdminPage'
+import { PWAUpdatePrompt } from '../shared/components/PWAUpdatePrompt'
 
 export function App() {
   return (
@@ -25,6 +26,7 @@ export function App() {
 
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
+      <PWAUpdatePrompt />
     </ErrorBoundary>
   )
 }
