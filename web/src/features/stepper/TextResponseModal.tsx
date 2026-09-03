@@ -179,6 +179,15 @@ export const TextResponseModal: React.FC<TextResponseModalProps> = ({ task, onCl
                   </p>
                 </div>
 
+                {task.admin_notes && (
+                  <div className="p-3.5 rounded-xl bg-violet-50 dark:bg-violet-950/20 border border-violet-200 text-left">
+                    <p className="text-[11px] font-bold text-violet-700 dark:text-violet-300 flex items-center gap-1.5">
+                      <FileEdit className="w-3.5 h-3.5" /> Komentar Admin:
+                    </p>
+                    <p className="text-xs text-text-primary leading-relaxed mt-1 whitespace-pre-wrap">“{task.admin_notes}”</p>
+                  </div>
+                )}
+
                 <div className="p-4 rounded-2xl bg-surface border border-border-subtle text-left flex items-start gap-3">
                   <CheckCircle2 className="w-5 h-5 text-status-success shrink-0 mt-0.5" />
                   <p className="text-xs text-text-secondary leading-relaxed">
