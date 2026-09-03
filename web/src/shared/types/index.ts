@@ -161,6 +161,9 @@ export interface MemberView {
   inactive_days?: number | null
   has_current_cycle_activity?: boolean
   inactivity_status?: 'ACTIVE' | 'NO_ACTIVITY_THIS_CYCLE' | 'INACTIVE' | 'BLOCKED'
+  payout_frequency?: 'THRESHOLD' | 'WEEKLY' | 'MONTHLY'
+  minimum_withdrawal_coins?: number
+  payout_config_source?: string
   created_at: string
 }
 
@@ -170,6 +173,11 @@ export interface CreateMemberInput {
   explorer_name: string
   role?: Role
   monthly_coin_target?: number
+  payout_frequency?: 'THRESHOLD' | 'WEEKLY' | 'MONTHLY'
+  minimum_withdrawal_coins?: number
+  payout_weekday?: number
+  payout_month_start_day?: number
+  payout_month_end_day?: number
 }
 
 export interface UpdateMemberInput {
@@ -179,6 +187,11 @@ export interface UpdateMemberInput {
   password?: string
   reset_device?: boolean
   monthly_coin_target?: number
+  payout_frequency?: 'THRESHOLD' | 'WEEKLY' | 'MONTHLY'
+  minimum_withdrawal_coins?: number
+  payout_weekday?: number
+  payout_month_start_day?: number
+  payout_month_end_day?: number
 }
 
 export interface TaskView {

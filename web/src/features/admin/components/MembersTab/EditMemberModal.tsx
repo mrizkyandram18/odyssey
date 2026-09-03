@@ -12,6 +12,11 @@ interface EditMemberModalProps {
     is_active: boolean
     reset_device: boolean
     monthly_coin_target: number
+    payout_frequency: 'THRESHOLD' | 'WEEKLY' | 'MONTHLY'
+    minimum_withdrawal_coins: number
+    payout_weekday: number
+    payout_month_start_day: number
+    payout_month_end_day: number
   }
   setForm: React.Dispatch<
     React.SetStateAction<{
@@ -20,6 +25,11 @@ interface EditMemberModalProps {
       is_active: boolean
       reset_device: boolean
       monthly_coin_target: number
+      payout_frequency: 'THRESHOLD' | 'WEEKLY' | 'MONTHLY'
+      minimum_withdrawal_coins: number
+      payout_weekday: number
+      payout_month_start_day: number
+      payout_month_end_day: number
     }>
   >
   isSaving: boolean
@@ -186,21 +196,61 @@ export const EditMemberModal: React.FC<EditMemberModalProps> = ({
             </div>
 
             {(member.role === 'MEMBER' || member.role === 'SEEKER') && (
-              <div className="space-y-2 p-3 rounded-xl bg-surface-elevated border border-border-subtle">
-                <label className="text-xs font-bold text-text-secondary">Target Koin Bulanan</label>
-                <input
-                  type="number"
-                  min={1}
-                  max={10000}
-                  value={form.monthly_coin_target}
-                  onChange={(e) => setForm({ ...form, monthly_coin_target: parseInt(e.target.value || '3200', 10) })}
-                  className="w-full p-2.5 rounded-xl bg-surface border border-border-subtle text-xs sm:text-sm text-text-primary focus:outline-none focus:border-accent-magic"
-                />
-                {member.monthly_coin_target !== undefined && (
-                  <p className="text-[11px] text-text-secondary">Target: {member.monthly_coin_target} • Terpakai bulan ini: {member.earned_this_period ?? 0}</p>
-                )}
-                <p className="text-[11px] text-text-secondary">Sistem akan menghitung pembagian koin otomatis berdasarkan target dan bobot task. Perubahan berlaku bulan ini.</p>
-              </div>
+              <>
+                <div className="space-y-2 p-3 rounded-xl bg-surface-elevated border border-border-subtle">
+                  <label className="text-xs font-bold text-text-secondary">Target Koin Bulanan</label>
+                  <input
+                    type="number"
+                    min={1}
+                    max={10000}
+                    value={form.monthly_coin_target}
+                    onChange={(e) => setForm({ ...form, monthly_coin_target: parseInt(e.target.value || '3200', 10) })}
+                    className="w-full p-2.5 rounded-xl bg-surface border border-border-subtle text-xs sm:text-sm text-text-primary focus:outline-none focus:border-accent-magic"
+                  />
+                  {member.monthly_coin_target !== undefined && (
+                    <p className="text-[11px] text-text-secondary">Target: {member.monthly_coin_target} • Terpakai bulan ini: {member.earned_this_period ?? 0}</p>
+                  )}
+                  <p className="text-[11px] text-text-secondary">Sistem akan menghitung pembagian koin otomatis berdasarkan target dan bobot task. Perubahan berlaku bulan ini.</p>
+                </div>
+                <div className="space-y-2 p-3 rounded-xl bg-violet-50 dark:bg-violet-950/20 border border-violet-200">
+                  <label className="text-xs font-bold text-text-secondary">Pengaturan Pencairan Per-User</label>
+                  <div className="grid grid-cols-2 gap-2">
+                    <div className="space-y-1">
+                      <label className="text-[11px] font-bold text-text-secondary">Frekuensi</label>
+                      <select value={form.payout_frequency} onChange={(e) => setForm({ ...form, payout_frequency: e.target.value as any })} className="w-full p-2 rounded-lg border border-border-subtle text-xs font-bold">
+                        <option value="THRESHOLD">THRESHOLD</option>
+                        <option value="WEEKLY">WEEKLY</option>
+                        <option value="MONTHLY">MONTHLY</option>
+                      </select>
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-[11px] font-bold text-text-secondary">Min Withdrawal</label>
+                      <input type="number" min={1} max={100000} value={form.minimum_withdrawal_coins} onChange={(e) => setForm({ ...form, minimum_withdrawal_coins: parseInt(e.target.value || '500', 10) })} className="w-full p-2 rounded-lg border border-border-subtle text-xs" />
+                    </div>
+                  </div>
+                  {form.payout_frequency === 'WEEKLY' && (
+                    <div className="space-y-1">
+                      <label className="text-[11px] font-bold text-text-secondary">Hari Payout (0=Sun..6=Sat)</label>
+                      <input type="number" min={0} max={6} value={form.payout_weekday} onChange={(e) => setForm({ ...form, payout_weekday: parseInt(e.target.value || '1', 10) })} className="w-full p-2 rounded-lg border border-border-subtle text-xs" />
+                    </div>
+                  )}
+                  {form.payout_frequency === 'MONTHLY' && (
+                    <div className="grid grid-cols-2 gap-2">
+                      <div className="space-y-1">
+                        <label className="text-[11px] font-bold text-text-secondary">Start Day 1-31</label>
+                        <input type="number" min={1} max={31} value={form.payout_month_start_day} onChange={(e) => setForm({ ...form, payout_month_start_day: parseInt(e.target.value || '24', 10) })} className="w-full p-2 rounded-lg border border-border-subtle text-xs" />
+                      </div>
+                      <div className="space-y-1">
+                        <label className="text-[11px] font-bold text-text-secondary">End Day 1-31</label>
+                        <input type="number" min={1} max={31} value={form.payout_month_end_day} onChange={(e) => setForm({ ...form, payout_month_end_day: parseInt(e.target.value || '26', 10) })} className="w-full p-2 rounded-lg border border-border-subtle text-xs" />
+                      </div>
+                    </div>
+                  )}
+                  {member.payout_frequency && (
+                    <p className="text-[11px] text-text-secondary">Efektif: {member.payout_frequency} • {member.minimum_withdrawal_coins} koin • source: {member.payout_config_source}</p>
+                  )}
+                </div>
+              </>
             )}
 
             {/* Reset Password section - separate from device binding */}

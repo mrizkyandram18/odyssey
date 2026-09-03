@@ -9,11 +9,13 @@ import (
 	"math/big"
 	"net/http"
 	"regexp"
+	"strconv"
 	"strings"
 	"time"
 
 	"odyssey/pkg/auth"
 	"odyssey/pkg/db"
+	"odyssey/pkg/payout"
 	"odyssey/pkg/shared"
 )
 
@@ -52,24 +54,37 @@ type MemberView struct {
 	InactiveDays               *int       `json:"inactive_days,omitempty"`
 	HasCurrentCycleActivity    bool       `json:"has_current_cycle_activity"`
 	InactivityStatus           string     `json:"inactivity_status"`
+	PayoutFrequency            string     `json:"payout_frequency,omitempty"`
+	MinimumWithdrawalCoins     *int       `json:"minimum_withdrawal_coins,omitempty"`
+	PayoutConfigSource         string     `json:"payout_config_source,omitempty"`
 	CreatedAt                  time.Time  `json:"created_at"`
 }
 
 type CreateMemberRequest struct {
-	Username          string `json:"username"`
-	Password          string `json:"password"`
-	ExplorerName      string `json:"explorer_name"`
-	Role              string `json:"role,omitempty"`
-	MonthlyCoinTarget *int   `json:"monthly_coin_target,omitempty"`
+	Username               string  `json:"username"`
+	Password               string  `json:"password"`
+	ExplorerName           string  `json:"explorer_name"`
+	Role                   string  `json:"role,omitempty"`
+	MonthlyCoinTarget      *int    `json:"monthly_coin_target,omitempty"`
+	PayoutFrequency        *string `json:"payout_frequency,omitempty"`
+	MinimumWithdrawalCoins *int    `json:"minimum_withdrawal_coins,omitempty"`
+	PayoutWeekday          *int    `json:"payout_weekday,omitempty"`
+	PayoutMonthStartDay    *int    `json:"payout_month_start_day,omitempty"`
+	PayoutMonthEndDay      *int    `json:"payout_month_end_day,omitempty"`
 }
 
 type UpdateMemberRequest struct {
-	ExplorerName      *string `json:"explorer_name,omitempty"`
-	Role              *string `json:"role,omitempty"`
-	IsActive          *bool   `json:"is_active,omitempty"`
-	Password          *string `json:"password,omitempty"`
-	ResetDevice       *bool   `json:"reset_device,omitempty"`
-	MonthlyCoinTarget *int    `json:"monthly_coin_target,omitempty"`
+	ExplorerName           *string `json:"explorer_name,omitempty"`
+	Role                   *string `json:"role,omitempty"`
+	IsActive               *bool   `json:"is_active,omitempty"`
+	Password               *string `json:"password,omitempty"`
+	ResetDevice            *bool   `json:"reset_device,omitempty"`
+	MonthlyCoinTarget      *int    `json:"monthly_coin_target,omitempty"`
+	PayoutFrequency        *string `json:"payout_frequency,omitempty"`
+	MinimumWithdrawalCoins *int    `json:"minimum_withdrawal_coins,omitempty"`
+	PayoutWeekday          *int    `json:"payout_weekday,omitempty"`
+	PayoutMonthStartDay    *int    `json:"payout_month_start_day,omitempty"`
+	PayoutMonthEndDay      *int    `json:"payout_month_end_day,omitempty"`
 }
 
 func (a *API) requireAdmin(w http.ResponseWriter, r *http.Request) (*auth.SessionClaims, bool) {
@@ -135,6 +150,129 @@ func getAutoBlockThreshold(ctx context.Context, client db.SupabaseClient) int {
 		}
 	}
 	return shared.DefaultAutoBlockInactivityDays
+}
+
+func upsertPayoutConfig(ctx context.Context, client db.SupabaseClient, uid string, freq *string, min *int, wd *int, ms *int, me *int) error {
+	// Resolve effective values: use provided or system defaults for required fields
+	effFreq := payout.DefaultFrequency
+	if freq != nil && payout.IsValidFrequency(*freq) {
+		effFreq = payout.NormalizeFrequency(*freq)
+	} else if freq != nil {
+		return fmt.Errorf("invalid frequency")
+	} else {
+		// If freq not provided, try to keep existing or use default
+		if existing, err := client.Get(ctx, "odyssey_user_payout_config", "user_uid=eq."+uid+"&select=payout_frequency"); err == nil && len(existing) > 2 {
+			var rows []struct {
+				PayoutFrequency string `json:"payout_frequency"`
+			}
+			if err := json.Unmarshal(existing, &rows); err == nil && len(rows) > 0 && payout.IsValidFrequency(rows[0].PayoutFrequency) {
+				effFreq = payout.NormalizeFrequency(rows[0].PayoutFrequency)
+			}
+		}
+	}
+	effMin := payout.DefaultMinimumWithdrawal
+	if min != nil {
+		effMin = *min
+	} else {
+		// try existing
+		if existing, err := client.Get(ctx, "odyssey_user_payout_config", "user_uid=eq."+uid+"&select=minimum_withdrawal_coins"); err == nil && len(existing) > 2 {
+			var rows []struct {
+				Minimum int `json:"minimum_withdrawal_coins"`
+			}
+			if err := json.Unmarshal(existing, &rows); err == nil && len(rows) > 0 && rows[0].Minimum > 0 {
+				effMin = rows[0].Minimum
+			}
+		} else {
+			// system default
+			effMin = payout.GetSystemMinimumWithdrawal(ctx, client)
+		}
+	}
+	// For monthly, ensure start/end present if freq is monthly
+	payload := map[string]any{
+		"user_uid":                 uid,
+		"payout_frequency":         string(effFreq),
+		"minimum_withdrawal_coins": effMin,
+		"enabled":                  true,
+		"updated_at":               time.Now().UTC().Format(time.RFC3339),
+	}
+	// Weekday
+	if effFreq == payout.FrequencyWeekly {
+		effWd := payout.DefaultWeeklyWeekday
+		if wd != nil {
+			effWd = *wd
+		} else {
+			if existing, err := client.Get(ctx, "odyssey_user_payout_config", "user_uid=eq."+uid+"&select=payout_weekday"); err == nil && len(existing) > 2 {
+				var rows []struct {
+					Wd *int `json:"payout_weekday"`
+				}
+				if err := json.Unmarshal(existing, &rows); err == nil && len(rows) > 0 && rows[0].Wd != nil {
+					effWd = *rows[0].Wd
+				}
+			} else {
+				// try system default weekday
+				if raw, err := client.Get(ctx, "odyssey_system_config", "key=eq.default_payout_weekday&select=value"); err == nil {
+					var r2 []struct{ Value string `json:"value"` }
+					if err := json.Unmarshal(raw, &r2); err == nil && len(r2) > 0 {
+						if v, err := strconv.Atoi(strings.TrimSpace(r2[0].Value)); err == nil && v >= 0 && v <= 6 {
+							effWd = v
+						}
+					}
+				}
+			}
+		}
+		payload["payout_weekday"] = effWd
+	} else if wd != nil {
+		payload["payout_weekday"] = *wd
+	}
+	// Monthly window
+	if effFreq == payout.FrequencyMonthly {
+		effMs := 24
+		effMe := 26
+		if ms != nil {
+			effMs = *ms
+		} else {
+			if raw, err := client.Get(ctx, "odyssey_system_config", "key=eq.redemption_start_day&select=value"); err == nil {
+				var r2 []struct{ Value string `json:"value"` }
+				if err := json.Unmarshal(raw, &r2); err == nil && len(r2) > 0 {
+					if v, err := strconv.Atoi(strings.TrimSpace(r2[0].Value)); err == nil {
+						effMs = v
+					}
+				}
+			}
+		}
+		if me != nil {
+			effMe = *me
+		} else {
+			if raw, err := client.Get(ctx, "odyssey_system_config", "key=eq.redemption_end_day&select=value"); err == nil {
+				var r2 []struct{ Value string `json:"value"` }
+				if err := json.Unmarshal(raw, &r2); err == nil && len(r2) > 0 {
+					if v, err := strconv.Atoi(strings.TrimSpace(r2[0].Value)); err == nil {
+						effMe = v
+					}
+				}
+			}
+		}
+		if ms != nil || me != nil || true {
+			payload["payout_month_start_day"] = effMs
+			payload["payout_month_end_day"] = effMe
+		}
+	} else {
+		if ms != nil {
+			payload["payout_month_start_day"] = *ms
+		}
+		if me != nil {
+			payload["payout_month_end_day"] = *me
+		}
+	}
+	_, err := client.MutateAtomic(ctx, http.MethodPost, "odyssey_user_payout_config", payload, "", "resolution=merge-duplicates")
+	if err != nil {
+		_, err = client.Mutate(ctx, http.MethodPatch, "odyssey_user_payout_config", payload, "user_uid=eq."+uid)
+		if err != nil {
+			// try plain insert
+			_, err = client.Mutate(ctx, http.MethodPost, "odyssey_user_payout_config", payload, "")
+		}
+	}
+	return err
 }
 
 func getEarnedThisPeriod(ctx context.Context, client db.SupabaseClient, uids []string) map[string]int {
@@ -462,6 +600,13 @@ func (a *API) HandleListMembers(w http.ResponseWriter, r *http.Request) {
 		isActiveMap[p.UID] = p.IsActive
 	}
 	trackingMap := getInactivityTracking(ctx, a.client, uids, isActiveMap)
+	// Fetch per-user payout configs for list view (batch)
+	payoutMap := make(map[string]payout.EffectivePayoutConfig)
+	for _, uid := range uids {
+		if eff, err := payout.GetEffectivePayoutConfig(ctx, a.client, uid, time.Now()); err == nil {
+			payoutMap[uid] = eff
+		}
+	}
 	items := make([]MemberView, len(profs))
 	for i, p := range profs {
 		username := userMap[p.UID]
@@ -475,6 +620,9 @@ func (a *API) HandleListMembers(w http.ResponseWriter, r *http.Request) {
 		}
 		earned := earnedMap[p.UID]
 		tr := trackingMap[p.UID]
+		pc := payoutMap[p.UID]
+		minVal := pc.MinimumWithdrawalCoins
+		pcMin := &minVal
 		items[i] = MemberView{
 			UID:                        p.UID,
 			FamilyID:                   p.FamilyID,
@@ -498,6 +646,9 @@ func (a *API) HandleListMembers(w http.ResponseWriter, r *http.Request) {
 			InactiveDays:               tr.InactiveDays,
 			HasCurrentCycleActivity:    tr.HasActivity,
 			InactivityStatus:           tr.Status,
+			PayoutFrequency:            string(pc.Frequency),
+			MinimumWithdrawalCoins:     pcMin,
+			PayoutConfigSource:         pc.Source,
 			CreatedAt:                  p.CreatedAt,
 		}
 	}
@@ -559,6 +710,38 @@ func (a *API) HandleCreateMember(w http.ResponseWriter, r *http.Request) {
 			shared.WriteJSONError(w, "target koin bulanan harus 1..10000", http.StatusBadRequest)
 			return
 		}
+	}
+	// Validate payout config fields if provided
+	if req.PayoutFrequency != nil && !payout.IsValidFrequency(*req.PayoutFrequency) {
+		shared.WriteJSONError(w, "payout_frequency tidak valid (THRESHOLD|WEEKLY|MONTHLY)", http.StatusBadRequest)
+		return
+	}
+	if req.MinimumWithdrawalCoins != nil {
+		if *req.MinimumWithdrawalCoins < 1 || *req.MinimumWithdrawalCoins > 100000 {
+			shared.WriteJSONError(w, "minimum_withdrawal_coins harus 1..100000", http.StatusBadRequest)
+			return
+		}
+		sysMin := payout.GetSystemMinimumWithdrawal(ctx, a.client)
+		if *req.MinimumWithdrawalCoins < sysMin {
+			shared.WriteJSONError(w, fmt.Sprintf("minimum_withdrawal_coins (%d) di bawah system minimum (%d)", *req.MinimumWithdrawalCoins, sysMin), http.StatusBadRequest)
+			return
+		}
+	}
+	if req.PayoutWeekday != nil && (*req.PayoutWeekday < 0 || *req.PayoutWeekday > 6) {
+		shared.WriteJSONError(w, "payout_weekday harus 0..6", http.StatusBadRequest)
+		return
+	}
+	if req.PayoutMonthStartDay != nil && (*req.PayoutMonthStartDay < 1 || *req.PayoutMonthStartDay > 31) {
+		shared.WriteJSONError(w, "payout_month_start_day harus 1..31", http.StatusBadRequest)
+		return
+	}
+	if req.PayoutMonthEndDay != nil && (*req.PayoutMonthEndDay < 1 || *req.PayoutMonthEndDay > 31) {
+		shared.WriteJSONError(w, "payout_month_end_day harus 1..31", http.StatusBadRequest)
+		return
+	}
+	if req.PayoutMonthStartDay != nil && req.PayoutMonthEndDay != nil && *req.PayoutMonthStartDay > *req.PayoutMonthEndDay {
+		shared.WriteJSONError(w, "payout_month_start_day tidak boleh > end_day", http.StatusBadRequest)
+		return
 	}
 
 	// 1. Check username uniqueness
@@ -688,20 +871,29 @@ func (a *API) HandleCreateMember(w http.ResponseWriter, r *http.Request) {
 			}, "")
 		}
 	}
+	// 7. Upsert payout config if any payout fields provided (best-effort)
+	if req.PayoutFrequency != nil || req.MinimumWithdrawalCoins != nil || req.PayoutWeekday != nil || req.PayoutMonthStartDay != nil || req.PayoutMonthEndDay != nil {
+		_ = upsertPayoutConfig(ctx, a.client, uid, req.PayoutFrequency, req.MinimumWithdrawalCoins, req.PayoutWeekday, req.PayoutMonthStartDay, req.PayoutMonthEndDay)
+	}
+	effPayout, _ := payout.GetEffectivePayoutConfig(ctx, a.client, uid, time.Now())
+	minWd := effPayout.MinimumWithdrawalCoins
 
 	shared.WriteJSON(w, http.StatusCreated, MemberView{
-		UID:               uid,
-		FamilyID:          familyID,
-		ExplorerName:      req.ExplorerName,
-		Username:          req.Username,
-		Role:              role,
-		IsActive:          true,
-		Level:             1,
-		XP:                0,
-		Coins:             0,
-		MonthlyCoinTarget: targetVal,
-		EarnedThisPeriod:  0,
-		CreatedAt:         now,
+		UID:                    uid,
+		FamilyID:               familyID,
+		ExplorerName:           req.ExplorerName,
+		Username:               req.Username,
+		Role:                   role,
+		IsActive:               true,
+		Level:                  1,
+		XP:                     0,
+		Coins:                  0,
+		MonthlyCoinTarget:      targetVal,
+		EarnedThisPeriod:       0,
+		PayoutFrequency:        string(effPayout.Frequency),
+		MinimumWithdrawalCoins: &minWd,
+		PayoutConfigSource:     effPayout.Source,
+		CreatedAt:              now,
 	})
 }
 
@@ -741,6 +933,38 @@ func (a *API) HandleUpdateMember(w http.ResponseWriter, r *http.Request, targetU
 			shared.WriteJSONError(w, "target koin bulanan harus 1..10000", http.StatusBadRequest)
 			return
 		}
+	}
+	// Validate payout fields
+	if req.PayoutFrequency != nil && !payout.IsValidFrequency(*req.PayoutFrequency) {
+		shared.WriteJSONError(w, "payout_frequency tidak valid", http.StatusBadRequest)
+		return
+	}
+	if req.MinimumWithdrawalCoins != nil {
+		if *req.MinimumWithdrawalCoins < 1 || *req.MinimumWithdrawalCoins > 100000 {
+			shared.WriteJSONError(w, "minimum_withdrawal_coins harus 1..100000", http.StatusBadRequest)
+			return
+		}
+		sysMin := payout.GetSystemMinimumWithdrawal(ctx, a.client)
+		if *req.MinimumWithdrawalCoins < sysMin {
+			shared.WriteJSONError(w, fmt.Sprintf("minimum_withdrawal_coins (%d) di bawah system minimum (%d)", *req.MinimumWithdrawalCoins, sysMin), http.StatusBadRequest)
+			return
+		}
+	}
+	if req.PayoutWeekday != nil && (*req.PayoutWeekday < 0 || *req.PayoutWeekday > 6) {
+		shared.WriteJSONError(w, "payout_weekday harus 0..6", http.StatusBadRequest)
+		return
+	}
+	if req.PayoutMonthStartDay != nil && (*req.PayoutMonthStartDay < 1 || *req.PayoutMonthStartDay > 31) {
+		shared.WriteJSONError(w, "payout_month_start_day harus 1..31", http.StatusBadRequest)
+		return
+	}
+	if req.PayoutMonthEndDay != nil && (*req.PayoutMonthEndDay < 1 || *req.PayoutMonthEndDay > 31) {
+		shared.WriteJSONError(w, "payout_month_end_day harus 1..31", http.StatusBadRequest)
+		return
+	}
+	if req.PayoutMonthStartDay != nil && req.PayoutMonthEndDay != nil && *req.PayoutMonthStartDay > *req.PayoutMonthEndDay {
+		shared.WriteJSONError(w, "payout_month_start_day tidak boleh > end_day", http.StatusBadRequest)
+		return
 	}
 	profPatch := map[string]any{}
 	if req.ExplorerName != nil {
@@ -861,6 +1085,10 @@ func (a *API) HandleUpdateMember(w http.ResponseWriter, r *http.Request, targetU
 			_, _ = a.client.Mutate(ctx, http.MethodPatch, "odyssey_member_monthly_targets", map[string]any{"target": *req.MonthlyCoinTarget, "assigned_by": claims.UID}, fmt.Sprintf("user_uid=eq.%s&period_start=eq.%s", targetUID, ps))
 		}
 	}
+	// Upsert payout config if any payout fields provided
+	if req.PayoutFrequency != nil || req.MinimumWithdrawalCoins != nil || req.PayoutWeekday != nil || req.PayoutMonthStartDay != nil || req.PayoutMonthEndDay != nil {
+		_ = upsertPayoutConfig(ctx, a.client, targetUID, req.PayoutFrequency, req.MinimumWithdrawalCoins, req.PayoutWeekday, req.PayoutMonthStartDay, req.PayoutMonthEndDay)
+	}
 
 	// Return reloaded member view
 	updatedRaw, _ := a.client.Get(ctx, "odyssey_user_profiles", fmt.Sprintf("uid=eq.%s", targetUID))
@@ -888,22 +1116,27 @@ func (a *API) HandleUpdateMember(w http.ResponseWriter, r *http.Request, targetU
 			tgt = &q
 		}
 		earnedMap := getEarnedThisPeriod(ctx, a.client, []string{targetUID})
+		effPayout, _ := payout.GetEffectivePayoutConfig(ctx, a.client, targetUID, time.Now())
+		minWd := effPayout.MinimumWithdrawalCoins
 		shared.WriteJSON(w, http.StatusOK, MemberView{
-			UID:               up.UID,
-			FamilyID:          up.FamilyID,
-			ExplorerName:      up.ExplorerName,
-			Username:          username,
-			Role:              up.Role,
-			IsActive:          up.IsActive,
-			Level:             up.Level,
-			XP:                up.XP,
-			Coins:             up.Coins,
-			MonthlyCoinTarget: tgt,
-			EarnedThisPeriod:  earnedMap[targetUID],
-			BlockedAt:         up.BlockedAt,
-			BlockedBy:         up.BlockedBy,
-			BlockReason:       up.BlockReason,
-			CreatedAt:         up.CreatedAt,
+			UID:                    up.UID,
+			FamilyID:               up.FamilyID,
+			ExplorerName:           up.ExplorerName,
+			Username:               username,
+			Role:                   up.Role,
+			IsActive:               up.IsActive,
+			Level:                  up.Level,
+			XP:                     up.XP,
+			Coins:                  up.Coins,
+			MonthlyCoinTarget:      tgt,
+			EarnedThisPeriod:       earnedMap[targetUID],
+			BlockedAt:              up.BlockedAt,
+			BlockedBy:              up.BlockedBy,
+			BlockReason:            up.BlockReason,
+			PayoutFrequency:        string(effPayout.Frequency),
+			MinimumWithdrawalCoins: &minWd,
+			PayoutConfigSource:     effPayout.Source,
+			CreatedAt:              up.CreatedAt,
 		})
 		return
 	}

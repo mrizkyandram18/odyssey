@@ -17,6 +17,11 @@ export function useAdminMembers() {
     explorer_name: '',
     role: 'MEMBER' as 'ADMIN' | 'MEMBER',
     monthly_coin_target: 3200,
+    payout_frequency: 'THRESHOLD' as 'THRESHOLD' | 'WEEKLY' | 'MONTHLY',
+    minimum_withdrawal_coins: 500,
+    payout_weekday: 1,
+    payout_month_start_day: 24,
+    payout_month_end_day: 26,
   })
   const [isCreating, setIsCreating] = useState(false)
 
@@ -28,6 +33,11 @@ export function useAdminMembers() {
     is_active: true,
     reset_device: false,
     monthly_coin_target: 3200,
+    payout_frequency: 'THRESHOLD' as 'THRESHOLD' | 'WEEKLY' | 'MONTHLY',
+    minimum_withdrawal_coins: 500,
+    payout_weekday: 1,
+    payout_month_start_day: 24,
+    payout_month_end_day: 26,
   })
   const [isSavingEdit, setIsSavingEdit] = useState(false)
 
@@ -60,6 +70,11 @@ export function useAdminMembers() {
       explorer_name: '',
       role: 'MEMBER',
       monthly_coin_target: 3200,
+      payout_frequency: 'THRESHOLD',
+      minimum_withdrawal_coins: 500,
+      payout_weekday: 1,
+      payout_month_start_day: 24,
+      payout_month_end_day: 26,
     })
     setIsCreateModalOpen(true)
   }
@@ -77,15 +92,27 @@ export function useAdminMembers() {
       alert('Target koin bulanan harus 1..10000')
       return
     }
+    if (newMember.minimum_withdrawal_coins < 1 || newMember.minimum_withdrawal_coins > 100000) {
+      alert('Minimum withdrawal harus 1..100000')
+      return
+    }
     setIsCreating(true)
     try {
-      await adminMembersApi.createMember({
+      const payload: any = {
         username: newMember.username.trim(),
         password: newMember.password.trim(),
         explorer_name: newMember.explorer_name.trim(),
         role: newMember.role,
         monthly_coin_target: newMember.role === 'MEMBER' ? newMember.monthly_coin_target : undefined,
-      })
+        payout_frequency: newMember.payout_frequency,
+        minimum_withdrawal_coins: newMember.minimum_withdrawal_coins,
+      }
+      if (newMember.payout_frequency === 'WEEKLY') payload.payout_weekday = newMember.payout_weekday
+      if (newMember.payout_frequency === 'MONTHLY') {
+        payload.payout_month_start_day = newMember.payout_month_start_day
+        payload.payout_month_end_day = newMember.payout_month_end_day
+      }
+      await adminMembersApi.createMember(payload)
       closeCreateModal()
       await fetchMembers(pagination.page)
     } catch (err: any) {
@@ -103,6 +130,11 @@ export function useAdminMembers() {
       is_active: member.is_active,
       reset_device: false,
       monthly_coin_target: member.monthly_coin_target ?? 3200,
+      payout_frequency: (member.payout_frequency as any) || 'THRESHOLD',
+      minimum_withdrawal_coins: member.minimum_withdrawal_coins ?? 500,
+      payout_weekday: 1,
+      payout_month_start_day: 24,
+      payout_month_end_day: 26,
     })
   }
 
@@ -120,15 +152,27 @@ export function useAdminMembers() {
       alert('Target koin bulanan harus 1..10000')
       return
     }
+    if (editMemberForm.minimum_withdrawal_coins < 1 || editMemberForm.minimum_withdrawal_coins > 100000) {
+      alert('Minimum withdrawal harus 1..100000')
+      return
+    }
     setIsSavingEdit(true)
     try {
-      await adminMembersApi.updateMember(selectedMember.uid, {
+      const payload: any = {
         explorer_name: editMemberForm.explorer_name.trim(),
         role: editMemberForm.role,
         is_active: editMemberForm.is_active,
         reset_device: editMemberForm.reset_device ? true : undefined,
         monthly_coin_target: editMemberForm.monthly_coin_target,
-      })
+        payout_frequency: editMemberForm.payout_frequency,
+        minimum_withdrawal_coins: editMemberForm.minimum_withdrawal_coins,
+      }
+      if (editMemberForm.payout_frequency === 'WEEKLY') payload.payout_weekday = editMemberForm.payout_weekday
+      if (editMemberForm.payout_frequency === 'MONTHLY') {
+        payload.payout_month_start_day = editMemberForm.payout_month_start_day
+        payload.payout_month_end_day = editMemberForm.payout_month_end_day
+      }
+      await adminMembersApi.updateMember(selectedMember.uid, payload)
       closeEditModal()
       await fetchMembers(pagination.page)
     } catch (err: any) {

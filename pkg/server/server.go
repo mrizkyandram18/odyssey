@@ -11,6 +11,7 @@ import (
 	apiFamilyTasks "odyssey/internal/api/family_tasks"
 	"odyssey/internal/api/login"
 	"odyssey/internal/api/me"
+	apiPayoutConfig "odyssey/internal/api/payout_config"
 	"odyssey/internal/api/push"
 	apiShop "odyssey/internal/api/shop"
 	"odyssey/internal/api/status"
@@ -79,6 +80,7 @@ func BuildHandler() (*Server, error) {
 	adminTasksAPI := apiAdminTasks.NewAPI(supabaseClient)
 	adminMembersAPI := apiAdminMembers.NewAPI(supabaseClient)
 	shopAPI := apiShop.NewAPI(supabaseClient)
+	payoutConfigAPI := apiPayoutConfig.NewAPI(supabaseClient)
 
 	secCfg := shared.DefaultSecurityConfig()
 	secCfg.AllowedOrigins = config.AllowedOrigins
@@ -200,6 +202,8 @@ func BuildHandler() (*Server, error) {
 	mux.HandleFunc("/api/admin/claims/", secure(rateLimit(adminLimiter, mw.RequireAuth(shopAPI.Handler))))
 	mux.HandleFunc("/api/admin/config", secure(rateLimit(adminLimiter, mw.RequireAuth(adminTasksAPI.Handler))))
 	mux.HandleFunc("/api/admin/config/", secure(rateLimit(adminLimiter, mw.RequireAuth(adminTasksAPI.Handler))))
+	mux.HandleFunc("/api/admin/payout-config", secure(rateLimit(adminLimiter, mw.RequireAuth(payoutConfigAPI.Handler))))
+	mux.HandleFunc("/api/admin/payout-config/", secure(rateLimit(adminLimiter, mw.RequireAuth(payoutConfigAPI.Handler))))
 
 	// Observability & Health
 	mux.HandleFunc("/metrics", secure(observability.InternalTokenMiddleware(config.InternalMetricsToken, observability.MetricsHandler(metrics))))

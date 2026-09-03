@@ -12,6 +12,7 @@ import (
 
 	"odyssey/pkg/auth"
 	"odyssey/pkg/db"
+	"odyssey/pkg/payout"
 	"odyssey/pkg/shared"
 )
 
@@ -204,12 +205,42 @@ func (a *API) HandleRedeem(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	// 1. Server-side Redemption Window Enforcement
 	cfg := fetchRedemptionConfig(ctx, a.client)
-	if !cfg.IsOpen {
-		shared.WriteJSONError(w, fmt.Sprintf("Periode penukaran koin saat ini ditutup. Penukaran dibuka tanggal %d–%d setiap bulan.", cfg.RedemptionStartDay, cfg.RedemptionEndDay), http.StatusBadRequest)
-		return
+
+	// Resolve per-user payout policy (single source of truth)
+	effectivePayout, err := payout.GetEffectivePayoutConfig(ctx, a.client, uid, time.Now())
+	if err != nil {
+		// fallback to threshold 500 if resolution fails
+		effectivePayout = payout.EffectivePayoutConfig{Frequency: payout.DefaultFrequency, MinimumWithdrawalCoins: payout.DefaultMinimumWithdrawal, PayoutMonthStartDay: cfg.RedemptionStartDay, PayoutMonthEndDay: cfg.RedemptionEndDay, PayoutWeekday: payout.DefaultWeeklyWeekday}
 	}
+	// Need timezone for schedule check
+	tz := cfg.Timezone
+	if tz == "" {
+		tz = shared.DefaultTimezone
+	}
+	// We will validate coins threshold after parsing request, but also validate schedule window here for early reject
+	// Schedule window is frequency-aware; THRESHOLD always open, WEEKLY/MONTHLY enforce window
+	// For early window check before coin amount, we need to allow threshold to pass regardless of global IsOpen.
+	// For WEEKLY/MONTHLY we delegate to payout eligibility; for backward compat, if frequency is MONTHLY and no user override, it matches global IsOpen.
+	if effectivePayout.Frequency != payout.FrequencyThreshold {
+		// Use payout schedule eligibility with current balance unknown yet; just check date part
+		// Create a temporary config with low threshold to test schedule-only
+		schedCfg := effectivePayout
+		schedCfg.MinimumWithdrawalCoins = 0
+		if ok, reason := payout.IsEligible(schedCfg, 999999, time.Now(), tz); !ok {
+			if reason == "not weekly payout day" {
+				shared.WriteJSONError(w, "Penarikan hanya dapat dilakukan pada hari payout mingguan yang dikonfigurasi", http.StatusBadRequest)
+				return
+			}
+			if reason == "not in monthly payout window" {
+				shared.WriteJSONError(w, fmt.Sprintf("Periode penukaran koin saat ini ditutup. Penukaran dibuka tanggal %d–%d setiap bulan.", effectivePayout.PayoutMonthStartDay, effectivePayout.PayoutMonthEndDay), http.StatusBadRequest)
+				return
+			}
+		}
+	}
+	// For THRESHOLD, skip global window check entirely (per-user policy overrides global window).
+	// For WEEKLY/MONTHLY, the above check already validated window; no need for cfg.IsOpen.
+	_ = cfg.IsOpen
 
 	var req struct {
 		RewardID    *int64 `json:"reward_id"`
@@ -237,6 +268,25 @@ func (a *API) HandleRedeem(w http.ResponseWriter, r *http.Request) {
 	if !isValidCashTarget {
 		shared.WriteJSONError(w, "tipe penukaran tidak valid: Odyssey hanya mendukung pencairan tunai (EWALLET atau BANK)", http.StatusBadRequest)
 		return
+	}
+	if req.Coins < effectivePayout.MinimumWithdrawalCoins {
+		shared.WriteJSONError(w, fmt.Sprintf("jumlah koin (%d) di bawah minimum penarikan (%d) untuk konfigurasi Anda", req.Coins, effectivePayout.MinimumWithdrawalCoins), http.StatusBadRequest)
+		return
+	}
+	// Final eligibility check including balance threshold + schedule (balance check is done in RPC atomically, but we pre-check requested amount)
+	// Fetch balance to validate threshold semantics early – only if response explicitly contains coins field
+	if raw, err := a.client.Get(ctx, "odyssey_user_profiles", fmt.Sprintf("uid=eq.%s&select=coins", uid)); err == nil && len(raw) > 2 && strings.Contains(string(raw), "\"coins\"") {
+		var rows []struct {
+			Coins int `json:"coins"`
+		}
+		if err := json.Unmarshal(raw, &rows); err == nil && len(rows) > 0 {
+			if ok, reason := payout.IsEligible(effectivePayout, rows[0].Coins, time.Now(), tz); !ok {
+				if reason == "balance below minimum withdrawal" {
+					shared.WriteJSONError(w, fmt.Sprintf("saldo koin (%d) di bawah minimum penarikan (%d)", rows[0].Coins, effectivePayout.MinimumWithdrawalCoins), http.StatusBadRequest)
+					return
+				}
+			}
+		}
 	}
 
 	rpcRes, err := a.client.RPC(ctx, "odyssey_create_claim", map[string]any{

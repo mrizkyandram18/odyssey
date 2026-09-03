@@ -11,17 +11,19 @@ import (
 )
 
 var allowedTables = map[string]bool{
-	"odyssey_user_profiles":      true,
-	"odyssey_families":           true,
-	"odyssey_local_users":        true,
-	"odyssey_tasks":              true,
-	"odyssey_task_submissions":   true,
-	"odyssey_reward_catalog":     true,
-	"odyssey_claims":             true,
-	"odyssey_coin_transactions":  true,
-	"odyssey_push_subscriptions": true,
-	"odyssey_schema_version":     true,
-	"odyssey_system_config":      true,
+	"odyssey_user_profiles":       true,
+	"odyssey_families":            true,
+	"odyssey_local_users":         true,
+	"odyssey_tasks":               true,
+	"odyssey_task_submissions":    true,
+	"odyssey_reward_catalog":      true,
+	"odyssey_claims":              true,
+	"odyssey_coin_transactions":   true,
+	"odyssey_push_subscriptions":  true,
+	"odyssey_schema_version":      true,
+	"odyssey_system_config":       true,
+	"odyssey_user_payout_config":  true,
+	"odyssey_member_monthly_targets": true,
 }
 
 func validateTable(table string) error {

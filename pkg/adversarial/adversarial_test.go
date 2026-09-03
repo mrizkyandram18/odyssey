@@ -142,7 +142,12 @@ func (m *mockAdversarialDB) Get(ctx context.Context, table string, params string
 		return json.Marshal([]map[string]any{
 			{"key": "redemption_start_day", "value": "1"},
 			{"key": "redemption_end_day", "value": "31"},
+			{"key": "default_minimum_withdrawal_coins", "value": "50"},
+			{"key": "default_payout_frequency", "value": "THRESHOLD"},
+			{"key": "default_payout_weekday", "value": "1"},
 		})
+	case "odyssey_user_payout_config":
+		return json.Marshal([]map[string]any{})
 
 	case "odyssey_local_users":
 		list := make([]map[string]any, 0)
