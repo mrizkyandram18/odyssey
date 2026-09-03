@@ -250,6 +250,7 @@ export interface RedemptionConfig {
   effective_window_start?: number
   effective_window_end?: number
   effective_weekday?: number
+  effective_monthly_target?: number
 }
 
 export interface RewardCatalogItem {
