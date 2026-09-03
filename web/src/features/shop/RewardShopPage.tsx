@@ -71,9 +71,14 @@ export const RewardShopPage: React.FC = () => {
   const payoutTargetRupiah = config ? config.payout_target_rupiah : 0
   const maxPayoutCash = maxPayoutCoins * conversionRate
   const estimatedCash = userCoins * conversionRate
-  const isOpen = config ? config.is_open : false
-  const startDay = config ? config.redemption_start_day : 0
-  const endDay = config ? config.redemption_end_day : 0
+  // Per-user effective payout: THRESHOLD not blocked by global 21-26 window
+  const effFreq = config?.effective_payout_frequency
+  const effMin = config?.effective_minimum_withdrawal
+  const isOpen = config ? (config.effective_is_eligible !== undefined ? config.effective_is_eligible : config.is_open) : false
+  const startDay = config ? (config.effective_window_start ?? config.redemption_start_day) : 0
+  const endDay = config ? (config.effective_window_end ?? config.redemption_end_day) : 0
+  const effWeekday = config?.effective_weekday
+  const weekdayNames = ['Minggu','Senin','Selasa','Rabu','Kamis','Jumat','Sabtu']
 
   const pendingClaims = claims.filter((c) => c.status === 'PENDING')
   const approvedCoins = claims.filter((c) => c.status === 'APPROVED').reduce((s, c) => s + c.coins_redeemed, 0)
@@ -220,7 +225,15 @@ export const RewardShopPage: React.FC = () => {
               {isOpen ? 'Periode penukaran aktif' : 'Penukaran belum dibuka'}
             </h3>
             <p className="text-xs text-text-secondary leading-relaxed mt-1">
-              {isOpen
+              {effFreq === 'THRESHOLD'
+                ? isOpen
+                  ? `Kamu sudah capai minimum ${effMin?.toLocaleString('id-ID')} koin - bisa tukar kapan aja.`
+                  : `Kumpulkan minimal ${effMin?.toLocaleString('id-ID')} koin untuk bisa tukar (saldo: ${userCoins.toLocaleString('id-ID')}).`
+                : effFreq === 'WEEKLY'
+                ? isOpen
+                  ? `Hari ini jadwal pencairan mingguan (${weekdayNames[effWeekday ?? 1]}) - bisa tukar.`
+                  : `Jadwal mingguan: ${weekdayNames[effWeekday ?? 1]} (hari ${effWeekday}) • Minimal ${effMin?.toLocaleString('id-ID')} koin.`
+                : isOpen
                 ? `Ajukan penukaran pada tanggal ${startDay}–${endDay} bulan ini.`
                 : `Dibuka setiap tanggal ${startDay}–${endDay} setiap bulan.`}
             </p>
@@ -229,13 +242,15 @@ export const RewardShopPage: React.FC = () => {
               {isOpen ? (
                 <button
                   onClick={() => setIsRedeemModalOpen(true)}
-                  disabled={userCoins <= 0 || pendingClaims.length > 0}
+                  disabled={userCoins <= 0 || pendingClaims.length > 0 || (effMin !== undefined && userCoins < effMin)}
                   className="w-full py-3.5 px-4 rounded-xl bg-accent-magic hover:brightness-110 text-white font-bold text-sm shadow-sm transition-all flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed min-h-[44px]"
                 >
                   <Banknote className="w-4 h-4 shrink-0" />
                   <span>
                     {pendingClaims.length > 0
                       ? 'Menunggu verifikasi admin'
+                      : effMin !== undefined && userCoins < effMin
+                      ? `Butuh ${effMin.toLocaleString('id-ID')} koin (kamu ${userCoins.toLocaleString('id-ID')})`
                       : userCoins <= 0
                       ? 'Kerjakan tugas untuk kumpulkan koin'
                       : 'Tukarkan Koin Sekarang'}
@@ -245,7 +260,13 @@ export const RewardShopPage: React.FC = () => {
                 <div className="flex items-start gap-2 text-xs text-text-secondary p-3 rounded-xl bg-surface-elevated border border-border-subtle">
                   <Info className="w-4 h-4 shrink-0 text-accent-magic mt-0.5" />
                   <span>
-                    Aktif otomatis tanggal <strong className="text-text-primary">{startDay}–{endDay}</strong>.
+                    {effFreq === 'THRESHOLD' ? (
+                      <>Kumpulkan minimal <strong className="text-text-primary">{effMin?.toLocaleString('id-ID')} koin</strong> untuk buka penukaran.</>
+                    ) : effFreq === 'WEEKLY' ? (
+                      <>Jadwal <strong className="text-text-primary">{weekdayNames[effWeekday ?? 1]}</strong> • Minimal {effMin?.toLocaleString('id-ID')} koin.</>
+                    ) : (
+                      <>Aktif otomatis tanggal <strong className="text-text-primary">{startDay}–{endDay}</strong>.</>
+                    )}
                   </span>
                 </div>
               )}
@@ -283,9 +304,16 @@ export const RewardShopPage: React.FC = () => {
             </h4>
             <ol className="mt-2.5 space-y-1.5 text-xs text-text-secondary list-decimal list-inside leading-relaxed">
               <li>Selesaikan tugas harian untuk kumpulkan koin</li>
-              <li>Tunggu periode penukaran tanggal <strong className="text-text-primary">{startDay}–{endDay}</strong></li>
+              {effFreq === 'THRESHOLD' ? (
+                <li>Capai minimal <strong className="text-text-primary">{effMin?.toLocaleString('id-ID')} koin</strong> lalu tukar kapan aja</li>
+              ) : effFreq === 'WEEKLY' ? (
+                <li>Tunggu hari <strong className="text-text-primary">{weekdayNames[effWeekday ?? 1]}</strong> untuk tukar (min {effMin?.toLocaleString('id-ID')} koin)</li>
+              ) : (
+                <li>Tunggu periode penukaran tanggal <strong className="text-text-primary">{startDay}–{endDay}</strong></li>
+              )}
               <li>Tukarkan ke Bank atau E-Wallet</li>
             </ol>
+            {effFreq && <p className="text-[10px] text-text-secondary mt-2">Mode: {effFreq} • Min: {effMin?.toLocaleString('id-ID')} koin</p>}
           </div>
         </div>
       ) : (

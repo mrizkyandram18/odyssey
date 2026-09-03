@@ -243,6 +243,13 @@ export interface RedemptionConfig {
   target_earning_start_day?: number
   target_earning_end_day?: number
   auto_block_inactivity_days?: number
+  effective_payout_frequency?: 'THRESHOLD' | 'WEEKLY' | 'MONTHLY'
+  effective_minimum_withdrawal?: number
+  effective_is_eligible?: boolean
+  effective_reason?: string
+  effective_window_start?: number
+  effective_window_end?: number
+  effective_weekday?: number
 }
 
 export interface RewardCatalogItem {

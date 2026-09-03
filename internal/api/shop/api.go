@@ -160,6 +160,63 @@ func fetchRedemptionConfig(ctx context.Context, client db.SupabaseClient) shared
 func (a *API) HandleGetShopConfig(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	cfg := fetchRedemptionConfig(ctx, a.client)
+	// Enrich with per-user effective payout eligibility if authenticated
+	if claims, ok := auth.ClaimsFromContext(ctx); ok && claims != nil {
+		uid := claims.UID
+		if eff, err := payout.GetEffectivePayoutConfig(ctx, a.client, uid, time.Now()); err == nil {
+			// Fetch current balance for eligibility
+			balance := 0
+			if raw, err := a.client.Get(ctx, "odyssey_user_profiles", fmt.Sprintf("uid=eq.%s&select=coins", uid)); err == nil && len(raw) > 2 && strings.Contains(string(raw), "\"coins\"") {
+				var rows []struct{ Coins int `json:"coins"` }
+				if err := json.Unmarshal(raw, &rows); err == nil && len(rows) > 0 {
+					balance = rows[0].Coins
+				}
+			}
+			tz := cfg.Timezone
+			if tz == "" {
+				tz = shared.DefaultTimezone
+			}
+			isEligible, reason := payout.IsEligible(eff, balance, time.Now(), tz)
+			// Override is_open window for UI: for THRESHOLD always based on eligibility, for WEEKLY/MONTHLY based on schedule
+			// Keep original global window in redemption_start/end but expose effective
+			resp := struct {
+				shared.RedemptionConfig
+				EffectivePayoutFrequency   string `json:"effective_payout_frequency"`
+				EffectiveMinimumWithdrawal int    `json:"effective_minimum_withdrawal"`
+				EffectiveIsEligible        bool   `json:"effective_is_eligible"`
+				EffectiveReason            string `json:"effective_reason"`
+				EffectiveWindowStart       int    `json:"effective_window_start"`
+				EffectiveWindowEnd         int    `json:"effective_window_end"`
+				EffectiveWeekday           int    `json:"effective_weekday"`
+			}{
+				RedemptionConfig:           cfg,
+				EffectivePayoutFrequency:   string(eff.Frequency),
+				EffectiveMinimumWithdrawal: eff.MinimumWithdrawalCoins,
+				EffectiveIsEligible:        isEligible,
+				EffectiveReason:            reason,
+				EffectiveWindowStart:       eff.PayoutMonthStartDay,
+				EffectiveWindowEnd:         eff.PayoutMonthEndDay,
+				EffectiveWeekday:           eff.PayoutWeekday,
+			}
+			// For THRESHOLD, override IsOpen to reflect eligibility so frontend shows "Dibuka" when eligible
+			if eff.Frequency == payout.FrequencyThreshold {
+				resp.RedemptionConfig.IsOpen = isEligible
+				if isEligible {
+					resp.RedemptionConfig.RedemptionStartDay = 1
+					resp.RedemptionConfig.RedemptionEndDay = 31
+				}
+			} else if eff.Frequency == payout.FrequencyWeekly {
+				// For weekly, IsOpen reflects weekly eligibility
+				resp.RedemptionConfig.IsOpen = isEligible
+			} else if eff.Frequency == payout.FrequencyMonthly {
+				resp.RedemptionConfig.IsOpen = isEligible
+				resp.RedemptionConfig.RedemptionStartDay = eff.PayoutMonthStartDay
+				resp.RedemptionConfig.RedemptionEndDay = eff.PayoutMonthEndDay
+			}
+			shared.WriteJSON(w, http.StatusOK, resp)
+			return
+		}
+	}
 	shared.WriteJSON(w, http.StatusOK, cfg)
 }
 
