@@ -50,17 +50,20 @@ export const PWAUpdatePrompt: React.FC = () => {
     }
   }, [])
 
+  // Auto-reload for HP awam (SMA) - no tap needed, reload after 1.5s
+  useEffect(() => {
+    if (needRefresh) {
+      const t = setTimeout(() => window.location.reload(), 1500)
+      return () => clearTimeout(t)
+    }
+  }, [needRefresh])
+
   if (!needRefresh) return null
 
   return (
     <div className="fixed bottom-4 left-4 right-4 z-[9999] flex items-center justify-between gap-3 rounded-2xl bg-zinc-900 text-white px-4 py-3 shadow-xl border border-zinc-700">
-      <span className="text-xs font-bold">Update tersedia — tap untuk reload</span>
-      <button
-        onClick={() => window.location.reload()}
-        className="shrink-0 rounded-xl bg-white text-zinc-900 px-3 py-1.5 text-xs font-extrabold"
-      >
-        Reload
-      </button>
+      <span className="text-xs font-bold">Update tersedia — memuat ulang...</span>
+      <span className="shrink-0 rounded-xl bg-white text-zinc-900 px-3 py-1.5 text-xs font-extrabold animate-pulse">Reload</span>
     </div>
   )
 }
