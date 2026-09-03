@@ -20,7 +20,8 @@ export const TextResponseModal: React.FC<TextResponseModalProps> = ({ task, onCl
 
   const minChars = task.config?.minimum_characters || 10
   const maxChars = task.config?.maximum_characters || 5000
-  const prompt = task.config?.prompt || task.description || 'Tuliskan jawaban atau refleksi kamu:'
+  // Hotfix: description holds the real instruction (prompt in DB is just title duplicate for 520/521). Prioritize description
+  const prompt = task.description || task.config?.prompt || 'Tuliskan jawaban atau refleksi kamu:'
 
   const charCount = response.trim().length
   const isValidLength = charCount >= minChars && charCount <= maxChars
@@ -109,7 +110,7 @@ export const TextResponseModal: React.FC<TextResponseModalProps> = ({ task, onCl
                     <FileEdit className="w-3.5 h-3.5" />
                     <span>Petunjuk</span>
                   </div>
-                  <p className="text-sm text-text-primary leading-relaxed font-medium">
+                  <p className="text-sm text-text-primary leading-relaxed font-medium whitespace-pre-wrap">
                     {prompt}
                   </p>
                 </div>
