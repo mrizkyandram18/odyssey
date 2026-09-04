@@ -1,8 +1,10 @@
 package admin_tasks
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
+	"io"
 	"net/http"
 	"strconv"
 	"strings"
@@ -17,6 +19,31 @@ import (
 type API struct {
 	client db.SupabaseClient
 	engine *tasks.Engine
+}
+
+// countCapableClient is optionally implemented by the Supabase client to
+// expose PostgREST exact counts (`Prefer: count=exact`). It is a separate
+// narrow interface (not part of db.SupabaseClient) so existing mocks keep
+// compiling; handlers fall back to estimation when unavailable.
+type countCapableClient interface {
+	GetWithCount(ctx context.Context, table string, params string) ([]byte, int64, error)
+}
+
+// exactSubmissionTotal returns the exact number of submissions matching the
+// same UID scope + status filter as the list query, using a lightweight
+// `select=id&limit=1` count query (1 row transferred, total from
+// Content-Range). Returns total=-1 when exact counting is unavailable.
+func exactSubmissionTotal(ctx context.Context, client db.SupabaseClient, uids []string, statusClause string) int64 {
+	cc, ok := client.(countCapableClient)
+	if !ok {
+		return -1
+	}
+	countParams := fmt.Sprintf("user_uid=in.(%s)%s&select=id&limit=1", strings.Join(uids, ","), statusClause)
+	_, total, err := cc.GetWithCount(ctx, "odyssey_task_submissions", countParams)
+	if err != nil || total < 0 {
+		return -1
+	}
+	return total
 }
 
 func NewAPI(client db.SupabaseClient) *API {
@@ -134,10 +161,24 @@ func (a *API) HandleCreateTask(w http.ResponseWriter, r *http.Request) {
 	}
 	ctx := r.Context()
 
-	var req TaskInput
-	if err := shared.ReadJSON(r, &req); err != nil {
+	// Read raw body first so we can distinguish "is_active omitted" from
+	// "is_active explicitly false". An omitted flag must default to true so
+	// UI-created tasks are live (DB DEFAULT TRUE would otherwise be bypassed
+	// by the Go bool zero value). Explicit false is always preserved.
+	bodyBytes, err := io.ReadAll(r.Body)
+	if err != nil {
 		shared.WriteJSONError(w, "invalid request: "+err.Error(), http.StatusBadRequest)
 		return
+	}
+	var rawMap map[string]json.RawMessage
+	_ = json.Unmarshal(bodyBytes, &rawMap)
+	var req TaskInput
+	if err := json.Unmarshal(bodyBytes, &req); err != nil {
+		shared.WriteJSONError(w, "invalid request: "+err.Error(), http.StatusBadRequest)
+		return
+	}
+	if _, present := rawMap["is_active"]; !present {
+		req.IsActive = true
 	}
 
 	if err := a.validateTaskInput(&req); err != nil {
@@ -676,16 +717,14 @@ func (a *API) HandleReorderTasks(w http.ResponseWriter, r *http.Request) {
 		shared.WriteJSONError(w, "salah satu taskId tidak ditemukan atau bukan milik keluarga Anda", http.StatusBadRequest)
 		return
 	}
-	// Validate family and active_date consistency, and is_active
+	// Validate family and active_date consistency.
+	// Membership of the reorder set is (family_id, active_date) ONLY:
+	// is_active must NOT gate reordering because an inactive task still
+	// occupies a scheduled slot in the Admin task list universe.
 	var refFamily, refDate string
 	for i, t := range tasks {
 		fam, _ := t["family_id"].(string)
 		date, _ := t["active_date"].(string)
-		isActive, _ := t["is_active"].(bool)
-		if !isActive {
-			shared.WriteJSONError(w, "hanya tugas aktif yang dapat diurutkan", http.StatusBadRequest)
-			return
-		}
 		if fam != claims.FamilyID && claims.FamilyID != "" {
 			// allow if task family matches claims, but if task has no family, use claims
 			if fam != "" && fam != claims.FamilyID {
@@ -703,11 +742,12 @@ func (a *API) HandleReorderTasks(w http.ResponseWriter, r *http.Request) {
 			}
 		}
 	}
-	// Validate submitted set matches all active tasks for that family/date
-	// Fetch all active task IDs for that family/date
-	allParams := fmt.Sprintf("family_id=eq.%s&active_date=eq.%s&is_active=eq.true&select=id", refFamily, refDate)
+	// Validate submitted set matches ALL tasks for that family/date
+	// (active + inactive — the same universe as GET /api/admin/tasks?date=).
+	// Fetch all task IDs for that family/date
+	allParams := fmt.Sprintf("family_id=eq.%s&active_date=eq.%s&select=id", refFamily, refDate)
 	if refFamily == "" {
-		allParams = fmt.Sprintf("active_date=eq.%s&is_active=eq.true&select=id", refDate)
+		allParams = fmt.Sprintf("active_date=eq.%s&select=id", refDate)
 	}
 	allRaw, err := a.client.Get(ctx, "odyssey_tasks", allParams)
 	if err != nil {
@@ -717,7 +757,7 @@ func (a *API) HandleReorderTasks(w http.ResponseWriter, r *http.Request) {
 	var allTasks []map[string]any
 	_ = json.Unmarshal(allRaw, &allTasks)
 	if len(allTasks) != len(ids) {
-		shared.WriteJSONError(w, "taskIds harus mencakup semua tugas aktif pada tanggal tersebut", http.StatusBadRequest)
+		shared.WriteJSONError(w, "taskIds harus mencakup semua tugas pada tanggal tersebut", http.StatusBadRequest)
 		return
 	}
 	allSet := make(map[int64]bool)
@@ -730,11 +770,13 @@ func (a *API) HandleReorderTasks(w http.ResponseWriter, r *http.Request) {
 	}
 	for _, id := range ids {
 		if !allSet[id] {
-			shared.WriteJSONError(w, "taskIds tidak sesuai dengan tugas aktif pada tanggal tersebut", http.StatusBadRequest)
+			shared.WriteJSONError(w, "taskIds tidak sesuai dengan tugas pada tanggal tersebut", http.StatusBadRequest)
 			return
 		}
 	}
-	// Two-phase update to avoid unique violation: first to temp 1000000+newStep, then to final 1..N
+	// Two-phase update to avoid unique violation: first to temp 1000000+newStep, then to final 1..N.
+	// Only step_order is mutated here — id, is_active, family_id, active_date
+	// and all other fields are never touched.
 	// Phase 1: temp
 	for i, id := range ids {
 		tmpStep := 1000000 + i + 1
@@ -785,7 +827,13 @@ func (a *API) HandleListPendingSubmissions(w http.ResponseWriter, r *http.Reques
 		familyID = "family_default"
 	}
 
-	// 1. Fetch profiles strictly scoped to admin's family
+	// 1. Fetch profiles strictly scoped to admin's family.
+	// NOTE: this query is intentionally NOT paginated: odyssey_task_submissions
+	// carries no family_id, so the full family UID set is required to scope the
+	// submissions query. It is bounded by family size (typically < 20 members),
+	// selects only 2 columns, and uses idx_user_profiles_family_created.
+	// The submissions + task-enrichment queries below remain limit/offset
+	// bounded to the current page.
 	profParams := fmt.Sprintf("family_id=eq.%s&select=uid,explorer_name", familyID)
 	profRaw, _ := a.client.Get(ctx, "odyssey_user_profiles", profParams)
 	type ProfRow struct {
@@ -825,6 +873,7 @@ func (a *API) HandleListPendingSubmissions(w http.ResponseWriter, r *http.Reques
 	}
 
 	// 3. Fetch submissions strictly scoped to family member UIDs with deterministic pagination
+	// Ordering is deterministic: created_at DESC, id DESC.
 	subParams := fmt.Sprintf("user_uid=in.(%s)%s&order=created_at.desc,id.desc&limit=%d&offset=%d", strings.Join(uids, ","), statusClause, limit, offset)
 
 	subRaw, err := a.client.Get(ctx, "odyssey_task_submissions", subParams)
@@ -849,13 +898,22 @@ func (a *API) HandleListPendingSubmissions(w http.ResponseWriter, r *http.Reques
 	var subs []SubRow
 	_ = json.Unmarshal(subRaw, &subs)
 
+	// Exact total with the SAME filters as the list query (status filter
+	// applied BEFORE pagination). Falls back to estimation when the client
+	// cannot provide a PostgREST count.
+	exactTotal := exactSubmissionTotal(ctx, a.client, uids, statusClause)
+
 	if len(subs) == 0 {
+		total := 0
+		if exactTotal >= 0 {
+			total = int(exactTotal)
+		}
 		shared.WriteJSON(w, http.StatusOK, shared.PaginatedResponse[PendingSubmissionView]{
 			Items: []PendingSubmissionView{},
 			Pagination: shared.PaginationMeta{
 				Page:    page,
 				Limit:   limit,
-				Total:   0,
+				Total:   total,
 				HasNext: false,
 			},
 		})
@@ -931,6 +989,10 @@ func (a *API) HandleListPendingSubmissions(w http.ResponseWriter, r *http.Reques
 	total := offset + len(items)
 	if hasNext {
 		total += 1
+	}
+	if exactTotal >= 0 {
+		total = int(exactTotal)
+		hasNext = int64(offset+len(items)) < exactTotal
 	}
 
 	shared.WriteJSON(w, http.StatusOK, shared.PaginatedResponse[PendingSubmissionView]{

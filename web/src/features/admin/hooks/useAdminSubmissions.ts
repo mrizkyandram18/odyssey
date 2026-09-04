@@ -5,6 +5,7 @@ import type { PendingSubmissionView, PaginationMeta } from '../../../shared/type
 export function useAdminSubmissions() {
   const [submissions, setSubmissions] = useState<PendingSubmissionView[]>([])
   const [pagination, setPagination] = useState<PaginationMeta>({ page: 1, limit: 50, total: 0, has_next: false })
+  const [pendingTotal, setPendingTotal] = useState<number | null>(null)
   const [filter, setFilter] = useState<'PENDING' | 'APPROVED' | 'REJECTED' | 'ALL'>('PENDING')
   const [isFetching, setIsFetching] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -33,6 +34,25 @@ export function useAdminSubmissions() {
         : res?.pagination || { page, limit: 50, total: items.length, has_next: false }
       setSubmissions(items)
       setPagination(pag)
+      // Exact global "Menunggu" count: when the current filter is PENDING the
+      // page total already IS the pending total. Otherwise fetch it with a
+      // lightweight limit=1 count query (1 row transferred, total from backend).
+      // Never derive the global pending count from the current page's rows.
+      if (Array.isArray(res)) {
+        setPendingTotal(items.filter((s) => s.status === 'PENDING').length)
+      } else if (statusFilter === 'PENDING') {
+        setPendingTotal(pag.total)
+      } else {
+        try {
+          const countRes: any = await adminTasksApi.getSubmissions({ status: 'PENDING', page: 1, limit: 1 })
+          const countTotal: number | undefined = Array.isArray(countRes)
+            ? countRes.filter((s: PendingSubmissionView) => s.status === 'PENDING').length
+            : countRes?.pagination?.total
+          setPendingTotal(typeof countTotal === 'number' ? countTotal : null)
+        } catch {
+          setPendingTotal(null)
+        }
+      }
     } catch (err: any) {
       setError(err?.message || 'Gagal memuat daftar verifikasi tugas')
     } finally {
@@ -96,6 +116,7 @@ export function useAdminSubmissions() {
   return {
     submissions,
     pagination,
+    pendingTotal,
     filter,
     setFilter,
     isFetching,

@@ -15,7 +15,7 @@ import (
 )
 
 type seqMock struct {
-	tasks []map[string]any
+	tasks      []map[string]any
 	lastParams string
 	lastMutate map[string]any
 }
@@ -119,6 +119,7 @@ func TestOrderingDeterministic(t *testing.T) {
 }
 
 type mockWrapper struct{ seq *seqMock }
+
 func (m *mockWrapper) Get(ctx context.Context, table string, params string) ([]byte, error) {
 	return m.seq.Get(ctx, table, params)
 }
@@ -390,9 +391,10 @@ func (m *mockReorderClient) Get(ctx context.Context, table string, params string
 		return json.Marshal(out)
 	}
 	if strings.Contains(params, "select=id") {
+		// Completeness universe: ALL tasks for family/date (active + inactive).
 		var out []map[string]any
 		for _, t := range m.mock.tasks {
-			if isActiveOf(t) && familyOf(t) == familyParam(params) && dateOf(t) == dateParam(params) {
+			if familyOf(t) == familyParam(params) && dateOf(t) == dateParam(params) {
 				out = append(out, map[string]any{"id": t["id"]})
 			}
 		}
@@ -577,4 +579,199 @@ func TestReorderRejectIncompleteSet(t *testing.T) {
 func init() {
 	// ensure bytes import used
 	_ = bytes.NewReader
+}
+
+func runReorderRequest(tasks []map[string]any, body string) (*httptest.ResponseRecorder, *reorderMock) {
+	store := &reorderMock{tasks: tasks}
+	client := &mockReorderClient{mock: store}
+	api := NewAPI(client)
+	req := httptest.NewRequest(http.MethodPatch, "/api/admin/tasks/reorder", strings.NewReader(body))
+	req.Header.Set("Content-Type", "application/json")
+	claims := &auth.SessionClaims{UID: "a1", FamilyID: "fam-1", Role: "ADMIN"}
+	req = req.WithContext(auth.ContextWithClaims(req.Context(), claims))
+	rec := httptest.NewRecorder()
+	api.HandleReorderTasks(rec, req)
+	return rec, store
+}
+
+func finalStepByID(store *reorderMock) map[string]int {
+	// Two-phase writes record every mutation; last write per ID wins (final phase).
+	got := map[string]int{}
+	for _, call := range store.mutateCalls {
+		got[call.params] = call.stepOrder
+	}
+	return got
+}
+
+func TestReorderMixedActiveInactive(t *testing.T) {
+	// A(active,1) B(inactive,2) C(active,2) → reorder C,B,A → persisted 1,2,3.
+	tasks := []map[string]any{
+		{"id": float64(101), "family_id": "fam-1", "active_date": "2026-09-01", "step_order": float64(1), "is_active": true},
+		{"id": float64(102), "family_id": "fam-1", "active_date": "2026-09-01", "step_order": float64(2), "is_active": false},
+		{"id": float64(103), "family_id": "fam-1", "active_date": "2026-09-01", "step_order": float64(2), "is_active": true},
+	}
+	rec, store := runReorderRequest(tasks, `{"taskIds":[103,102,101]}`)
+	if rec.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d %s", rec.Code, rec.Body.String())
+	}
+	got := finalStepByID(store)
+	if got["id=eq.103"] != 1 || got["id=eq.102"] != 2 || got["id=eq.101"] != 3 {
+		t.Fatalf("expected persisted mapping 103->1,102->2,101->3, got %v", got)
+	}
+	// IDs unchanged, is_active untouched.
+	seenIDs := map[int64]bool{}
+	for _, tk := range store.tasks {
+		seenIDs[idOf(tk)] = true
+	}
+	for _, want := range []int64{101, 102, 103} {
+		if !seenIDs[want] {
+			t.Fatalf("task id %d missing after reorder", want)
+		}
+	}
+	for _, tk := range store.tasks {
+		if idOf(tk) == 102 && isActiveOf(tk) {
+			t.Fatalf("is_active of task 102 must remain false, was flipped")
+		}
+		if idOf(tk) == 101 && !isActiveOf(tk) {
+			t.Fatalf("is_active of task 101 must remain true, was flipped")
+		}
+	}
+	var returned []map[string]any
+	if err := json.Unmarshal(rec.Body.Bytes(), &returned); err != nil {
+		t.Fatalf("expected JSON array response, got %q: %v", rec.Body.String(), err)
+	}
+	if len(returned) != 3 {
+		t.Fatalf("expected 3 tasks returned, got %d", len(returned))
+	}
+	wantIDs := []float64{103, 102, 101}
+	for i, want := range wantIDs {
+		gotID, _ := returned[i]["id"].(float64)
+		gotStep, _ := returned[i]["step_order"].(float64)
+		if gotID != want || gotStep != float64(i+1) {
+			t.Fatalf("position %d: expected id=%v step=%d, got id=%v step=%v", i, want, i+1, gotID, gotStep)
+		}
+	}
+}
+
+func TestReorderAllInactiveTodayTasks(t *testing.T) {
+	// Today's existing 1,2,2 with is_active=false must still be reorderable.
+	tasks := []map[string]any{
+		{"id": float64(101), "family_id": "fam-1", "active_date": "2026-09-01", "step_order": float64(1), "is_active": false},
+		{"id": float64(102), "family_id": "fam-1", "active_date": "2026-09-01", "step_order": float64(2), "is_active": false},
+		{"id": float64(103), "family_id": "fam-1", "active_date": "2026-09-01", "step_order": float64(2), "is_active": false},
+	}
+	rec, store := runReorderRequest(tasks, `{"taskIds":[101,102,103]}`)
+	if rec.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d %s", rec.Code, rec.Body.String())
+	}
+	got := finalStepByID(store)
+	if got["id=eq.101"] != 1 || got["id=eq.102"] != 2 || got["id=eq.103"] != 3 {
+		t.Fatalf("expected normalized mapping 101->1,102->2,103->3, got %v", got)
+	}
+}
+
+func TestReorderDuplicate122Normalizes(t *testing.T) {
+	tasks := []map[string]any{
+		{"id": float64(101), "family_id": "fam-1", "active_date": "2026-09-01", "step_order": float64(1), "is_active": true},
+		{"id": float64(102), "family_id": "fam-1", "active_date": "2026-09-01", "step_order": float64(2), "is_active": true},
+		{"id": float64(103), "family_id": "fam-1", "active_date": "2026-09-01", "step_order": float64(2), "is_active": true},
+	}
+	rec, store := runReorderRequest(tasks, `{"taskIds":[101,102,103]}`)
+	if rec.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d %s", rec.Code, rec.Body.String())
+	}
+	got := finalStepByID(store)
+	if got["id=eq.101"] != 1 || got["id=eq.102"] != 2 || got["id=eq.103"] != 3 {
+		t.Fatalf("expected normalized mapping 101->1,102->2,103->3, got %v", got)
+	}
+}
+
+func TestReorderGappedSteps(t *testing.T) {
+	tasks := []map[string]any{
+		{"id": float64(101), "family_id": "fam-1", "active_date": "2026-09-01", "step_order": float64(1), "is_active": true},
+		{"id": float64(102), "family_id": "fam-1", "active_date": "2026-09-01", "step_order": float64(3), "is_active": true},
+		{"id": float64(103), "family_id": "fam-1", "active_date": "2026-09-01", "step_order": float64(5), "is_active": false},
+	}
+	rec, store := runReorderRequest(tasks, `{"taskIds":[103,101,102]}`)
+	if rec.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d %s", rec.Code, rec.Body.String())
+	}
+	got := finalStepByID(store)
+	if got["id=eq.103"] != 1 || got["id=eq.101"] != 2 || got["id=eq.102"] != 3 {
+		t.Fatalf("expected persisted mapping 103->1,101->2,102->3, got %v", got)
+	}
+}
+
+func TestReorderRejectIncompleteSetMixed(t *testing.T) {
+	tasks := []map[string]any{
+		{"id": float64(101), "family_id": "fam-1", "active_date": "2026-09-01", "step_order": float64(1), "is_active": true},
+		{"id": float64(102), "family_id": "fam-1", "active_date": "2026-09-01", "step_order": float64(2), "is_active": false},
+		{"id": float64(103), "family_id": "fam-1", "active_date": "2026-09-01", "step_order": float64(3), "is_active": true},
+	}
+	rec, _ := runReorderRequest(tasks, `{"taskIds":[101,103]}`) // missing 102
+	if rec.Code != http.StatusBadRequest {
+		t.Fatalf("expected 400 incomplete set, got %d %s", rec.Code, rec.Body.String())
+	}
+}
+
+func TestReorderRejectCrossDate(t *testing.T) {
+	tasks := []map[string]any{
+		{"id": float64(101), "family_id": "fam-1", "active_date": "2026-09-01", "step_order": float64(1), "is_active": true},
+		{"id": float64(102), "family_id": "fam-1", "active_date": "2026-09-02", "step_order": float64(1), "is_active": true},
+	}
+	rec, _ := runReorderRequest(tasks, `{"taskIds":[101,102]}`)
+	if rec.Code != http.StatusBadRequest {
+		t.Fatalf("expected 400 cross-date, got %d %s", rec.Code, rec.Body.String())
+	}
+	if !strings.Contains(rec.Body.String(), "family_id dan active_date yang sama") {
+		t.Fatalf("expected same family/date message, got %s", rec.Body.String())
+	}
+}
+
+func TestCreateOmittedIsActiveDefaultsTrue(t *testing.T) {
+	client := &mockSupabaseClient{
+		mutateResp: []byte(`{"id":1,"title":"Tugas Baru"}`),
+	}
+	api := NewAPI(client)
+	payload := `{"title":"Tugas Baru","task_type":"GENERAL"}`
+	req := httptest.NewRequest(http.MethodPost, "/api/admin/tasks", strings.NewReader(payload))
+	req.Header.Set("Content-Type", "application/json")
+	claims := &auth.SessionClaims{UID: "admin-1", FamilyID: "fam-1", Role: "ADMIN"}
+	req = req.WithContext(auth.ContextWithClaims(req.Context(), claims))
+	rec := httptest.NewRecorder()
+	api.Handler(rec, req)
+	if rec.Code != http.StatusCreated {
+		t.Fatalf("expected 201, got %d %s", rec.Code, rec.Body.String())
+	}
+	mutateMap, ok := client.lastMutatePayload.(map[string]any)
+	if !ok {
+		t.Fatalf("expected map payload on task create")
+	}
+	if mutateMap["is_active"] != true {
+		t.Fatalf("expected omitted is_active to default true, got %v", mutateMap["is_active"])
+	}
+}
+
+func TestCreateExplicitIsActiveFalsePreserved(t *testing.T) {
+	client := &mockSupabaseClient{
+		mutateResp: []byte(`{"id":2,"title":"Tugas Nonaktif"}`),
+	}
+	api := NewAPI(client)
+	payload := `{"title":"Tugas Nonaktif","task_type":"GENERAL","is_active":false}`
+	req := httptest.NewRequest(http.MethodPost, "/api/admin/tasks", strings.NewReader(payload))
+	req.Header.Set("Content-Type", "application/json")
+	claims := &auth.SessionClaims{UID: "admin-1", FamilyID: "fam-1", Role: "ADMIN"}
+	req = req.WithContext(auth.ContextWithClaims(req.Context(), claims))
+	rec := httptest.NewRecorder()
+	api.Handler(rec, req)
+	if rec.Code != http.StatusCreated {
+		t.Fatalf("expected 201, got %d %s", rec.Code, rec.Body.String())
+	}
+	mutateMap, ok := client.lastMutatePayload.(map[string]any)
+	if !ok {
+		t.Fatalf("expected map payload on task create")
+	}
+	if mutateMap["is_active"] != false {
+		t.Fatalf("expected explicit is_active=false to be preserved, got %v", mutateMap["is_active"])
+	}
 }

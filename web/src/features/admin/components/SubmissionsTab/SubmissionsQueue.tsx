@@ -9,6 +9,7 @@ export const SubmissionsQueue: React.FC = () => {
   const {
     submissions,
     pagination,
+    pendingTotal,
     filter,
     setFilter,
     isFetching,
@@ -33,7 +34,43 @@ export const SubmissionsQueue: React.FC = () => {
     fetchSubmissions,
   } = useAdminSubmissions()
 
-  const pendingCount = submissions.filter((s) => s.status === 'PENDING').length
+  // Total is the exact backend total (pagination.total), never submissions.length.
+  // Menunggu is the exact global pending count (pendingTotal), never the
+  // current page's pending rows.
+  const pagePendingCount = submissions.filter((s) => s.status === 'PENDING').length
+  const pendingDisplay = pendingTotal ?? pagePendingCount
+
+  const totalPages = pagination.limit > 0 && pagination.total > 0
+    ? Math.max(1, Math.ceil(pagination.total / pagination.limit))
+    : 1
+  const showPagination = totalPages > 1 || pagination.page > 1 || pagination.has_next
+
+  const gotoPage = (page: number) => {
+    if (isFetching) return
+    if (page < 1 || page === pagination.page) return
+    if (totalPages > 1 && page > totalPages) return
+    fetchSubmissions(filter, page)
+  }
+
+  // Compact windowed page numbers: 1 … c-1 c c+1 … N (max ~7 slots).
+  const pageItems: (number | 'ellipsis-left' | 'ellipsis-right')[] = (() => {
+    if (totalPages <= 7) {
+      return Array.from({ length: totalPages }, (_, i) => i + 1)
+    }
+    const current = pagination.page
+    const window = new Set<number>([1, 2, current - 1, current, current + 1, totalPages - 1, totalPages])
+    const sorted = [...window].filter((n) => n >= 1 && n <= totalPages).sort((a, b) => a - b)
+    const out: (number | 'ellipsis-left' | 'ellipsis-right')[] = []
+    let prev = 0
+    for (const n of sorted) {
+      if (prev !== 0 && n - prev > 1) {
+        out.push(prev === 1 ? 'ellipsis-left' : 'ellipsis-right')
+      }
+      out.push(n)
+      prev = n
+    }
+    return out
+  })()
 
   return (
     <div className="space-y-3.5">
@@ -54,7 +91,7 @@ export const SubmissionsQueue: React.FC = () => {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 p-3 rounded-2xl bg-surface border border-border-subtle shadow-xs">
         <div>
           <h3 className="font-bold text-text-primary text-xs flex items-center gap-2">
-            <span>Antrean Verifikasi Bukti Tugas ({pendingCount} Menunggu / {submissions.length} Total)</span>
+            <span>Antrean Verifikasi Bukti Tugas ({pendingDisplay} Menunggu / {pagination.total} Total)</span>
             {isFetching && <RefreshCw className="w-3.5 h-3.5 animate-spin text-text-secondary" />}
           </h3>
           <p className="text-[11px] text-text-secondary mt-0.5">
@@ -143,27 +180,51 @@ export const SubmissionsQueue: React.FC = () => {
         </div>
       )}
 
-      {/* Pagination Controls */}
-      {(pagination.page > 1 || pagination.has_next) && (
-        <div className="flex items-center justify-between p-3 rounded-2xl bg-surface border border-border-subtle">
+      {/* Pagination Controls — server-side: each page fetches only that page */}
+      {showPagination && (
+        <div className="flex items-center justify-between gap-2 p-3 rounded-2xl bg-surface border border-border-subtle">
           <button
             type="button"
             disabled={pagination.page <= 1 || isFetching}
-            onClick={() => fetchSubmissions(filter, pagination.page - 1)}
+            onClick={() => gotoPage(pagination.page - 1)}
+            aria-label="Halaman sebelumnya"
             className="px-3 py-1.5 rounded-xl bg-surface-elevated border border-border-subtle text-xs font-bold text-text-primary hover:bg-surface disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-1 cursor-pointer"
           >
             <ChevronLeft className="w-3.5 h-3.5" />
             <span>Sebelumnya</span>
           </button>
 
-          <span className="text-xs font-bold text-text-secondary font-mono">
-            Halaman {pagination.page}
-          </span>
+          <div className="flex items-center gap-1 overflow-x-auto" role="navigation" aria-label="Navigasi halaman verifikasi">
+            {pageItems.map((item) =>
+              typeof item === 'number' ? (
+                <button
+                  key={item}
+                  type="button"
+                  disabled={isFetching}
+                  onClick={() => gotoPage(item)}
+                  aria-label={`Halaman ${item}`}
+                  aria-current={item === pagination.page ? 'page' : undefined}
+                  className={`min-w-8 px-2 py-1.5 rounded-xl text-xs font-bold transition-colors cursor-pointer disabled:cursor-not-allowed ${
+                    item === pagination.page
+                      ? 'bg-accent-magic text-white shadow-xs'
+                      : 'bg-surface-elevated border border-border-subtle text-text-primary hover:bg-surface disabled:opacity-40'
+                  }`}
+                >
+                  {item}
+                </button>
+              ) : (
+                <span key={item} className="px-1 text-xs font-bold text-text-secondary" aria-hidden="true">
+                  …
+                </span>
+              )
+            )}
+          </div>
 
           <button
             type="button"
-            disabled={!pagination.has_next || isFetching}
-            onClick={() => fetchSubmissions(filter, pagination.page + 1)}
+            disabled={(!pagination.has_next && pagination.page >= totalPages) || isFetching}
+            onClick={() => gotoPage(pagination.page + 1)}
+            aria-label="Halaman selanjutnya"
             className="px-3 py-1.5 rounded-xl bg-surface-elevated border border-border-subtle text-xs font-bold text-text-primary hover:bg-surface disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-1 cursor-pointer"
           >
             <span>Selanjutnya</span>
