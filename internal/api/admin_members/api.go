@@ -42,7 +42,10 @@ type MemberView struct {
 	XP                         int64      `json:"xp"`
 	Coins                      int64      `json:"coins"`
 	MonthlyCoinTarget          *int       `json:"monthly_coin_target,omitempty"`
+	MonthlyEarningCap          *int       `json:"monthly_earning_cap,omitempty"`
 	EarnedThisPeriod           int        `json:"earned_this_period,omitempty"`
+	EarningStatus              string     `json:"earning_status,omitempty"`
+	EarningLocked              bool       `json:"earning_locked"`
 	BlockedAt                  *time.Time `json:"blocked_at,omitempty"`
 	BlockedBy                  *string    `json:"blocked_by,omitempty"`
 	BlockReason                *string    `json:"block_reason,omitempty"`
@@ -66,6 +69,7 @@ type CreateMemberRequest struct {
 	ExplorerName           string  `json:"explorer_name"`
 	Role                   string  `json:"role,omitempty"`
 	MonthlyCoinTarget      *int    `json:"monthly_coin_target,omitempty"`
+	MonthlyEarningCap      *int    `json:"monthly_earning_cap,omitempty"`
 	PayoutFrequency        *string `json:"payout_frequency,omitempty"`
 	MinimumWithdrawalCoins *int    `json:"minimum_withdrawal_coins,omitempty"`
 	PayoutWeekday          *int    `json:"payout_weekday,omitempty"`
@@ -80,6 +84,7 @@ type UpdateMemberRequest struct {
 	Password               *string `json:"password,omitempty"`
 	ResetDevice            *bool   `json:"reset_device,omitempty"`
 	MonthlyCoinTarget      *int    `json:"monthly_coin_target,omitempty"`
+	MonthlyEarningCap      *int    `json:"monthly_earning_cap,omitempty"`
 	PayoutFrequency        *string `json:"payout_frequency,omitempty"`
 	MinimumWithdrawalCoins *int    `json:"minimum_withdrawal_coins,omitempty"`
 	PayoutWeekday          *int    `json:"payout_weekday,omitempty"`
@@ -123,6 +128,41 @@ func getDefaultMonthlyTarget(ctx context.Context, client db.SupabaseClient) int 
 		}
 	}
 	return shared.DefaultMonthlyCoinTarget
+}
+
+func getDefaultMonthlyEarningCap(ctx context.Context, client db.SupabaseClient) int {
+	raw, err := client.Get(ctx, "odyssey_system_config", "key=eq.default_monthly_earning_cap&select=value")
+	if err == nil && len(raw) > 0 {
+		var rows []struct {
+			Value string `json:"value"`
+		}
+		if err := json.Unmarshal(raw, &rows); err == nil && len(rows) > 0 {
+			var n int
+			if _, err := fmt.Sscanf(strings.TrimSpace(rows[0].Value), "%d", &n); err == nil && n >= 0 && n <= 10000 {
+				return n
+			}
+		}
+	}
+	// Fallback constant if DB not migrated yet
+	return 3320
+}
+
+func resolveEarningCap(ctx context.Context, client db.SupabaseClient, profileCap *int) (eff int, isLimited bool) {
+	if profileCap != nil {
+		return *profileCap, *profileCap > 0
+	}
+	def := getDefaultMonthlyEarningCap(ctx, client)
+	return def, def > 0
+}
+
+func earningStatus(cap, earned int) (status string, locked bool) {
+	if cap <= 0 {
+		return "ACTIVE", false
+	}
+	if earned >= cap {
+		return "HALTED", true
+	}
+	return "ACTIVE", false
 }
 
 func getAutoBlockThreshold(ctx context.Context, client db.SupabaseClient) int {
@@ -543,19 +583,20 @@ func (a *API) HandleListMembers(w http.ResponseWriter, r *http.Request) {
 	}
 
 	type ProfRow struct {
-		UID               string     `json:"uid"`
-		FamilyID          string     `json:"family_id"`
-		ExplorerName      string     `json:"explorer_name"`
-		Role              string     `json:"role"`
-		IsActive          bool       `json:"is_active"`
-		Level             int        `json:"level"`
-		XP                int64      `json:"xp"`
-		Coins             int64      `json:"coins"`
-		MonthlyCoinTarget *int       `json:"monthly_coin_target"`
-		BlockedAt         *time.Time `json:"blocked_at"`
-		BlockedBy         *string    `json:"blocked_by"`
-		BlockReason       *string    `json:"block_reason"`
-		CreatedAt         time.Time  `json:"created_at"`
+		UID                string     `json:"uid"`
+		FamilyID           string     `json:"family_id"`
+		ExplorerName       string     `json:"explorer_name"`
+		Role               string     `json:"role"`
+		IsActive           bool       `json:"is_active"`
+		Level              int        `json:"level"`
+		XP                 int64      `json:"xp"`
+		Coins              int64      `json:"coins"`
+		MonthlyCoinTarget  *int       `json:"monthly_coin_target"`
+		MonthlyEarningCap  *int       `json:"monthly_earning_cap"`
+		BlockedAt          *time.Time `json:"blocked_at"`
+		BlockedBy          *string    `json:"blocked_by"`
+		BlockReason        *string    `json:"block_reason"`
+		CreatedAt          time.Time  `json:"created_at"`
 	}
 	var profs []ProfRow
 	_ = json.Unmarshal(profRaw, &profs)
@@ -623,6 +664,19 @@ func (a *API) HandleListMembers(w http.ResponseWriter, r *http.Request) {
 		pc := payoutMap[p.UID]
 		minVal := pc.MinimumWithdrawalCoins
 		pcMin := &minVal
+		// resolve per-user earning cap with lazy fallback
+		var capVal *int
+		if p.MonthlyEarningCap != nil {
+			capVal = p.MonthlyEarningCap
+		} else {
+			defCap := getDefaultMonthlyEarningCap(ctx, a.client)
+			capVal = &defCap
+		}
+		capInt := 0
+		if capVal != nil {
+			capInt = *capVal
+		}
+		eStatus, eLocked := earningStatus(capInt, earned)
 		items[i] = MemberView{
 			UID:                        p.UID,
 			FamilyID:                   p.FamilyID,
@@ -634,7 +688,10 @@ func (a *API) HandleListMembers(w http.ResponseWriter, r *http.Request) {
 			XP:                         p.XP,
 			Coins:                      p.Coins,
 			MonthlyCoinTarget:          tgt,
+			MonthlyEarningCap:          capVal,
 			EarnedThisPeriod:           earned,
+			EarningStatus:              eStatus,
+			EarningLocked:              eLocked,
 			BlockedAt:                  p.BlockedAt,
 			BlockedBy:                  p.BlockedBy,
 			BlockReason:                p.BlockReason,
@@ -708,6 +765,12 @@ func (a *API) HandleCreateMember(w http.ResponseWriter, r *http.Request) {
 	if req.MonthlyCoinTarget != nil {
 		if *req.MonthlyCoinTarget < 0 || *req.MonthlyCoinTarget > 10000 {
 			shared.WriteJSONError(w, "target koin bulanan harus 0..10000", http.StatusBadRequest)
+			return
+		}
+	}
+	if req.MonthlyEarningCap != nil {
+		if *req.MonthlyEarningCap < 0 || *req.MonthlyEarningCap > 10000 {
+			shared.WriteJSONError(w, "monthly_earning_cap harus 0..10000", http.StatusBadRequest)
 			return
 		}
 	}
@@ -795,6 +858,9 @@ func (a *API) HandleCreateMember(w http.ResponseWriter, r *http.Request) {
 	if targetVal != nil {
 		profPayload["monthly_coin_target"] = *targetVal
 	}
+	if req.MonthlyEarningCap != nil {
+		profPayload["monthly_earning_cap"] = *req.MonthlyEarningCap
+	}
 
 	_, err = a.client.MutateAtomic(ctx, http.MethodPost, "odyssey_user_profiles", profPayload, "", "return=representation")
 	if err != nil {
@@ -877,7 +943,16 @@ func (a *API) HandleCreateMember(w http.ResponseWriter, r *http.Request) {
 	}
 	effPayout, _ := payout.GetEffectivePayoutConfig(ctx, a.client, uid, time.Now())
 	minWd := effPayout.MinimumWithdrawalCoins
-
+	capVal := req.MonthlyEarningCap
+	if capVal == nil {
+		defCap := getDefaultMonthlyEarningCap(ctx, a.client)
+		capVal = &defCap
+	}
+	capInt := 0
+	if capVal != nil {
+		capInt = *capVal
+	}
+	eStatus, eLocked := earningStatus(capInt, 0)
 	shared.WriteJSON(w, http.StatusCreated, MemberView{
 		UID:                    uid,
 		FamilyID:               familyID,
@@ -889,7 +964,10 @@ func (a *API) HandleCreateMember(w http.ResponseWriter, r *http.Request) {
 		XP:                     0,
 		Coins:                  0,
 		MonthlyCoinTarget:      targetVal,
+		MonthlyEarningCap:      capVal,
 		EarnedThisPeriod:       0,
+		EarningStatus:          eStatus,
+		EarningLocked:          eLocked,
 		PayoutFrequency:        string(effPayout.Frequency),
 		MinimumWithdrawalCoins: &minWd,
 		PayoutConfigSource:     effPayout.Source,
@@ -931,6 +1009,12 @@ func (a *API) HandleUpdateMember(w http.ResponseWriter, r *http.Request, targetU
 	if req.MonthlyCoinTarget != nil {
 		if *req.MonthlyCoinTarget < 0 || *req.MonthlyCoinTarget > 10000 {
 			shared.WriteJSONError(w, "target koin bulanan harus 0..10000", http.StatusBadRequest)
+			return
+		}
+	}
+	if req.MonthlyEarningCap != nil {
+		if *req.MonthlyEarningCap < 0 || *req.MonthlyEarningCap > 10000 {
+			shared.WriteJSONError(w, "monthly_earning_cap harus 0..10000", http.StatusBadRequest)
 			return
 		}
 	}
@@ -998,6 +1082,9 @@ func (a *API) HandleUpdateMember(w http.ResponseWriter, r *http.Request, targetU
 	}
 	if req.MonthlyCoinTarget != nil {
 		profPatch["monthly_coin_target"] = *req.MonthlyCoinTarget
+	}
+	if req.MonthlyEarningCap != nil {
+		profPatch["monthly_earning_cap"] = *req.MonthlyEarningCap
 	}
 	if req.ResetDevice != nil && *req.ResetDevice {
 		profPatch["device_id"] = nil
@@ -1115,7 +1202,20 @@ func (a *API) HandleUpdateMember(w http.ResponseWriter, r *http.Request, targetU
 			q := defaultTarget
 			tgt = &q
 		}
+		var capVal *int
+		if up.MonthlyEarningCap != nil {
+			capVal = up.MonthlyEarningCap
+		} else {
+			defCap := getDefaultMonthlyEarningCap(ctx, a.client)
+			capVal = &defCap
+		}
 		earnedMap := getEarnedThisPeriod(ctx, a.client, []string{targetUID})
+		earned := earnedMap[targetUID]
+		capInt := 0
+		if capVal != nil {
+			capInt = *capVal
+		}
+		eStatus, eLocked := earningStatus(capInt, earned)
 		effPayout, _ := payout.GetEffectivePayoutConfig(ctx, a.client, targetUID, time.Now())
 		minWd := effPayout.MinimumWithdrawalCoins
 		shared.WriteJSON(w, http.StatusOK, MemberView{
@@ -1129,7 +1229,10 @@ func (a *API) HandleUpdateMember(w http.ResponseWriter, r *http.Request, targetU
 			XP:                     up.XP,
 			Coins:                  up.Coins,
 			MonthlyCoinTarget:      tgt,
-			EarnedThisPeriod:       earnedMap[targetUID],
+			MonthlyEarningCap:      capVal,
+			EarnedThisPeriod:       earned,
+			EarningStatus:          eStatus,
+			EarningLocked:          eLocked,
 			BlockedAt:              up.BlockedAt,
 			BlockedBy:              up.BlockedBy,
 			BlockReason:            up.BlockReason,

@@ -38,6 +38,91 @@ func fetchSystemTimezone(ctx context.Context, client db.SupabaseClient) string {
 	return tz
 }
 
+func getEffectiveEarningCap(ctx context.Context, client db.SupabaseClient, uid string) int {
+	// Try per-user cap directly
+	if uid != "" {
+		raw, err := client.Get(ctx, "odyssey_user_profiles", fmt.Sprintf("uid=eq.%s&select=monthly_earning_cap", uid))
+		if err == nil && len(raw) > 0 && strings.Contains(string(raw), "monthly_earning_cap") {
+			var rows []struct {
+				MonthlyEarningCap *int `json:"monthly_earning_cap"`
+			}
+			if err := json.Unmarshal(raw, &rows); err == nil && len(rows) > 0 {
+				if rows[0].MonthlyEarningCap != nil {
+					return *rows[0].MonthlyEarningCap
+				}
+			}
+		}
+	}
+	// Fallback to global default
+	raw, err := client.Get(ctx, "odyssey_system_config", "key=eq.default_monthly_earning_cap&select=value")
+	if err == nil && len(raw) > 0 {
+		var rows []struct {
+			Value string `json:"value"`
+		}
+		if err := json.Unmarshal(raw, &rows); err == nil && len(rows) > 0 {
+			if v, err := strconv.Atoi(strings.TrimSpace(rows[0].Value)); err == nil && v >= 0 && v <= 10000 {
+				return v
+			}
+		}
+	}
+	return 3320
+}
+
+func getEarnedThisPeriodForUser(ctx context.Context, client db.SupabaseClient, uid string) int {
+	tz := fetchSystemTimezone(ctx, client)
+	loc, err := time.LoadLocation(tz)
+	if err != nil {
+		loc = time.FixedZone("WIB", 7*3600)
+	}
+	nowInTz := time.Now().In(loc)
+	startDay, endDay := 1, 24
+	if raw, err := client.Get(ctx, "odyssey_system_config", "key=in.(target_earning_start_day,target_earning_end_day)&select=key,value"); err == nil && len(raw) > 0 {
+		var rows []struct {
+			Key   string `json:"key"`
+			Value string `json:"value"`
+		}
+		if err := json.Unmarshal(raw, &rows); err == nil {
+			for _, r := range rows {
+				var n int
+				if _, err := fmt.Sscanf(r.Value, "%d", &n); err == nil {
+					if r.Key == "target_earning_start_day" && n >= 1 && n <= 31 {
+						startDay = n
+					}
+					if r.Key == "target_earning_end_day" && n >= 1 && n <= 31 {
+						endDay = n
+					}
+				}
+			}
+		}
+	}
+	periodStart := time.Date(nowInTz.Year(), nowInTz.Month(), startDay, 0, 0, 0, 0, loc).UTC().Format(time.RFC3339)
+	periodEnd := time.Date(nowInTz.Year(), nowInTz.Month(), endDay+1, 0, 0, 0, 0, loc).UTC().Format(time.RFC3339)
+	raw, err := client.Get(ctx, "odyssey_coin_transactions", fmt.Sprintf("user_uid=eq.%s&type=eq.TASK_REWARD&created_at=gte.%s&created_at=lt.%s&select=amount", uid, periodStart, periodEnd))
+	if err != nil || len(raw) == 0 {
+		return 0
+	}
+	var rows []struct {
+		Amount int `json:"amount"`
+	}
+	if err := json.Unmarshal(raw, &rows); err != nil {
+		return 0
+	}
+	sum := 0
+	for _, r := range rows {
+		sum += r.Amount
+	}
+	return sum
+}
+
+func isEarningHalted(ctx context.Context, client db.SupabaseClient, uid string) bool {
+	cap := getEffectiveEarningCap(ctx, client, uid)
+	if cap <= 0 {
+		return false
+	}
+	earned := getEarnedThisPeriodForUser(ctx, client, uid)
+	return earned >= cap
+}
+
 func NewAPI(client db.SupabaseClient) *API {
 	return &API{client: client}
 }
@@ -84,6 +169,7 @@ type TaskView struct {
 	RewardXP       int            `json:"reward_xp"`
 	Status         string         `json:"status"` // "UNLOCKED", "LOCKED", "PENDING", "APPROVED", "REJECTED"
 	IsLocked       bool           `json:"is_locked"`
+	EarningLocked  bool           `json:"earning_locked,omitempty"`
 	Config         map[string]any `json:"config,omitempty"`
 	TargetScope    string         `json:"target_scope,omitempty"`
 	TargetUserUID  string         `json:"target_user_uid,omitempty"`
@@ -310,8 +396,29 @@ func (a *API) HandleGetToday(w http.ResponseWriter, r *http.Request) {
 		taskViews[i] = view
 	}
 
+	// Defense-in-depth: earning cap status (lazy derived)
+	earningLocked := isEarningHalted(ctx, a.client, uid)
+	cap := getEffectiveEarningCap(ctx, a.client, uid)
+	earned := getEarnedThisPeriodForUser(ctx, a.client, uid)
+	if earningLocked {
+		// Mark all UNLOCKED coin-earning tasks as earning-locked (UI can show HALTED badge)
+		for i := range taskViews {
+			if taskViews[i].Status == "UNLOCKED" {
+				taskViews[i].EarningLocked = true
+				taskViews[i].IsLocked = true
+			}
+			// Also annotate PENDING-free LOCKED tasks that would otherwise be earnable
+			if taskViews[i].Status == "LOCKED" && taskViews[i].RewardCoins > 0 {
+				taskViews[i].EarningLocked = true
+			}
+		}
+	}
+
 	shared.WriteJSON(w, http.StatusOK, map[string]any{
-		"tasks": taskViews,
+		"tasks":          taskViews,
+		"earning_locked": earningLocked,
+		"earning_cap":    cap,
+		"earned":         earned,
 	})
 }
 
@@ -342,6 +449,10 @@ func (a *API) HandleSubmit(w http.ResponseWriter, r *http.Request) {
 	uid := claims.UID
 	if isUserBlocked(ctx, a.client, uid) {
 		shared.WriteJSONError(w, "akun Anda diblokir, tidak dapat mengerjakan tugas", http.StatusForbidden)
+		return
+	}
+	if isEarningHalted(ctx, a.client, uid) {
+		shared.WriteJSONError(w, "EARNING_CAP_REACHED: batas earning bulanan tercapai, tidak dapat mengerjakan tugas lagi sampai periode berikutnya", http.StatusForbidden)
 		return
 	}
 
