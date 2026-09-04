@@ -22,7 +22,17 @@ export const TextResponseModal: React.FC<TextResponseModalProps> = ({ task, onCl
   const minChars = task.config?.minimum_characters || 10
   const maxChars = task.config?.maximum_characters || 5000
   // Hotfix: description holds the real instruction (prompt in DB is just title duplicate for 520/521). Prioritize description
-  const prompt = task.description || task.config?.prompt || 'Tuliskan jawaban atau refleksi kamu:'
+  const prompt = task.config?.prompt || task.description || 'Tuliskan jawaban atau refleksi kamu:'
+  const videoUrl = task.config?.video_url || task.config?.youtube_url || ''
+  const getEmbedUrl = (url: string) => {
+    if (!url) return ''
+    let videoId = ''
+    if (url.includes('v=')) videoId = url.split('v=')[1]?.split('&')[0]
+    else if (url.includes('youtu.be/')) videoId = url.split('youtu.be/')[1]?.split('?')[0]
+    else if (url.includes('embed/')) return url
+    return videoId ? `https://www.youtube.com/embed/${videoId}?rel=0` : url
+  }
+  const embedUrl = getEmbedUrl(videoUrl)
 
   const charCount = response.trim().length
   const isValidLength = charCount >= minChars && charCount <= maxChars
@@ -110,6 +120,12 @@ export const TextResponseModal: React.FC<TextResponseModalProps> = ({ task, onCl
                     +{task.reward_coins} 🪙 | +{task.reward_xp} XP
                   </div>
                 </div>
+
+                {embedUrl && (
+                  <div className="relative aspect-video rounded-2xl overflow-hidden shadow-inner border border-border-subtle bg-black">
+                    <iframe src={embedUrl} title={task.title} className="w-full h-full" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowFullScreen />
+                  </div>
+                )}
 
                 <div className="rounded-xl bg-surface border border-border-subtle p-3.5 space-y-1.5">
                   <div className="flex items-center gap-1.5 text-accent-magic font-bold text-xs">
