@@ -80,7 +80,7 @@ export const VideoQuizModal: React.FC<VideoQuizModalProps> = ({ task, onClose, o
     } catch (err: any) {
       if (isEarningCapError(err)) {
         setErrorMessage(EARNING_CAP_MESSAGE)
-        try { (onSuccess as any)?.() } catch {}
+        try { (onSuccess as any)?.() } catch { /* ignore */ }
       } else {
         setErrorMessage(err.message || 'Gagal mengirim jawaban kuis. Coba lagi.')
       }

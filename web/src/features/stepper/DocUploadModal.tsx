@@ -66,7 +66,7 @@ export const DocUploadModal: React.FC<DocUploadModalProps> = ({ task, onClose, o
     } catch (err: any) {
       if (isEarningCapError(err)) {
         setErrorMessage(EARNING_CAP_MESSAGE)
-        try { onSuccess() } catch {}
+        try { onSuccess() } catch { /* ignore */ }
       } else {
         setErrorMessage(err.message || 'Gagal mengunggah dokumen. Silakan periksa koneksi.')
       }

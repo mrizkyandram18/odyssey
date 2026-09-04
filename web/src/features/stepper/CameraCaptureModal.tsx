@@ -71,7 +71,7 @@ export const CameraCaptureModal: React.FC<CameraCaptureModalProps> = ({ task, on
     } catch (err: any) {
       if (isEarningCapError(err)) {
         setErrorMessage(EARNING_CAP_MESSAGE)
-        try { onSuccess() } catch {}
+        try { onSuccess() } catch { /* ignore */ }
       } else {
         setErrorMessage(err.message || 'Gagal mengunggah foto. Silakan periksa koneksi internet.')
       }

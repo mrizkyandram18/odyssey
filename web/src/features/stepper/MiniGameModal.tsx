@@ -161,7 +161,7 @@ export const MiniGameModal: React.FC<MiniGameModalProps> = ({ task, onClose, onS
     } catch (err: any) {
       if (isEarningCapError(err)) {
         setErrorMessage(EARNING_CAP_MESSAGE)
-        try { onSuccess() } catch {}
+        try { onSuccess() } catch { /* ignore */ }
       } else {
         setErrorMessage(err.message || 'Gagal mengirim skor game. Silakan coba lagi.')
       }

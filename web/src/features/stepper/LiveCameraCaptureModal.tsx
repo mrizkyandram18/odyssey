@@ -165,7 +165,7 @@ export const LiveCameraCaptureModal: React.FC<LiveCameraCaptureModalProps> = ({ 
     } catch (err: any) {
       if (isEarningCapError(err)) {
         setErrorMessage(EARNING_CAP_MESSAGE)
-        try { onSuccess() } catch {}
+        try { onSuccess() } catch { /* ignore */ }
       } else {
         setErrorMessage(err.message || 'Gagal mengunggah foto. Periksa koneksi internet.')
       }

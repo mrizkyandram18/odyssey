@@ -65,7 +65,7 @@ export const TextResponseModal: React.FC<TextResponseModalProps> = ({ task, onCl
     } catch (err: any) {
       if (isEarningCapError(err)) {
         setErrorMessage(EARNING_CAP_MESSAGE)
-        try { (onSuccess as any)?.() } catch {}
+        try { (onSuccess as any)?.() } catch { /* ignore */ }
       } else {
         setErrorMessage(err.message || 'Gagal mengirimkan jawaban. Periksa koneksi Anda.')
       }

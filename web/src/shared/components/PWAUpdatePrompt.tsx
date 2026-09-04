@@ -5,7 +5,6 @@ export const PWAUpdatePrompt: React.FC = () => {
 
   useEffect(() => {
     if (!('serviceWorker' in navigator)) return
-    let timeout: any
 
     // Listen for new SW
     navigator.serviceWorker.ready.then((reg) => {
@@ -30,10 +29,10 @@ export const PWAUpdatePrompt: React.FC = () => {
         const v = j?.version ?? j?.schema_version ?? await r.text()
         if (lastVersion && v && v !== lastVersion) setNeedRefresh(true)
         else if (!lastVersion) lastVersion = v
-      } catch {}
+      } catch { /* ignore */ }
     }
     check()
-    timeout = setInterval(check, 60000)
+    const timeout = setInterval(check, 60000)
 
     // Also check on visibility change (when user re-opens app)
     const onVisible = () => {

@@ -117,7 +117,7 @@ export function useAdminTasks() {
   const [isSavingTask, setIsSavingTask] = useState(false)
 
   const fetchTasks = useCallback(async (date: string) => {
-    const effectiveDate = date || selectedDate || getLocalTodayString()
+    const effectiveDate = date || getLocalTodayString()
     setIsFetching(true)
     setError(null)
     try {
@@ -132,7 +132,7 @@ export function useAdminTasks() {
 
   useEffect(() => {
     fetchTasks(selectedDate)
-  }, [selectedDate])
+  }, [selectedDate, fetchTasks])
 
   const openCreateModal = () => {
     setNewTask(getInitialNewTask(selectedDate))
