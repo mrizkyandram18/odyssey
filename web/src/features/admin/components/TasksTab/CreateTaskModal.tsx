@@ -211,7 +211,7 @@ export const CreateTaskModal: React.FC<CreateTaskModalProps> = ({
             <div className="space-y-3 pt-2 border-t border-border-subtle">
               {/* VIDEO */}
               {newTask.task_type === 'VIDEO' && (
-                <div className="p-3.5 rounded-2xl bg-surface-elevated border border-border-subtle space-y-2.5">
+                <div className="p-3.5 rounded-2xl bg-surface-elevated border border-border-subtle space-y-3">
                   <h4 className="text-xs font-bold uppercase tracking-wider text-text-secondary flex items-center gap-1.5">
                     <Play className="w-3.5 h-3.5 text-accent-magic" /> Konfigurasi Video YouTube
                   </h4>
@@ -226,6 +226,47 @@ export const CreateTaskModal: React.FC<CreateTaskModalProps> = ({
                       className="w-full p-2.5 rounded-xl bg-surface border border-border-subtle text-xs text-text-primary focus:outline-none focus:border-accent-magic"
                     />
                   </div>
+                  <div className="space-y-1">
+                    <label className="text-[11px] font-bold text-text-secondary">Cara Jawab Embedded:</label>
+                    <select
+                      value={newTask.video_answer_mode}
+                      onChange={(e) => setNewTask({ ...newTask, video_answer_mode: e.target.value as any })}
+                      className="w-full p-2.5 rounded-xl bg-surface border border-border-subtle text-xs font-bold"
+                    >
+                      <option value="none">Hanya Nonton (tanpa jawaban)</option>
+                      <option value="quiz">Pilihan Ganda (Kuis) — embedded</option>
+                      <option value="essay">Esai Teks Panjang — embedded</option>
+                    </select>
+                    <p className="text-[11px] text-text-secondary">Admin sekarang bisa lihat user jawab ganda / essay langsung di tugas video.</p>
+                  </div>
+                  {newTask.video_answer_mode === 'quiz' && (
+                    <div className="space-y-2 pt-2 border-t border-border-subtle">
+                      {newTask.questions.map((q, qIndex) => (
+                        <div key={q.id || qIndex} className="space-y-2 p-3 bg-surface rounded-xl border border-border-subtle">
+                          <input type="text" required value={q.question} onChange={(e) => { const next=[...newTask.questions]; next[qIndex].question=e.target.value; setNewTask({ ...newTask, questions: next })}} placeholder={`Pertanyaan #${qIndex+1}`} className="w-full p-2 rounded-xl bg-surface-elevated border text-xs" />
+                          <div className="grid grid-cols-2 gap-2">
+                            {q.options.map((opt, oi) => (
+                              <input key={oi} type="text" required value={opt} onChange={(e)=>{const n=[...newTask.questions]; n[qIndex].options[oi]=e.target.value; setNewTask({...newTask, questions:n})}} placeholder={`Pilihan ${String.fromCharCode(65+oi)}`} className="p-2 rounded-xl border text-xs" />
+                            ))}
+                          </div>
+                          <select value={q.correct_answer} onChange={(e)=>{const n=[...newTask.questions]; n[qIndex].correct_answer=e.target.value; setNewTask({...newTask, questions:n})}} className="w-full p-2 rounded-xl border text-xs font-bold">
+                            <option value="">-- Kunci --</option>
+                            {q.options.map((opt, oi)=>(<option key={oi} value={opt || String.fromCharCode(65+oi)}>Pilihan {String.fromCharCode(65+oi)}</option>))}
+                          </select>
+                        </div>
+                      ))}
+                      <button type="button" onClick={()=>setNewTask({...newTask, questions:[...newTask.questions,{id:String(Date.now()),question:'',options:['',''],correct_answer:''}]})} className="text-xs font-bold text-accent-magic">+ Tambah Soal</button>
+                    </div>
+                  )}
+                  {newTask.video_answer_mode === 'essay' && (
+                    <div className="space-y-2 pt-2 border-t border-border-subtle">
+                      <input type="text" required value={newTask.text_prompt} onChange={(e)=>setNewTask({...newTask, text_prompt:e.target.value})} placeholder="Prompt esai: Jelaskan..." className="w-full p-2.5 rounded-xl border text-xs" />
+                      <div className="grid grid-cols-2 gap-2">
+                        <input type="number" value={newTask.text_min_chars} onChange={(e)=>setNewTask({...newTask, text_min_chars:Number(e.target.value)||10})} placeholder="Min 80" className="p-2 rounded-xl border text-xs" />
+                        <input type="number" value={newTask.text_max_chars} onChange={(e)=>setNewTask({...newTask, text_max_chars:Number(e.target.value)||500})} placeholder="Max 2000" className="p-2 rounded-xl border text-xs" />
+                      </div>
+                    </div>
+                  )}
                 </div>
               )}
 

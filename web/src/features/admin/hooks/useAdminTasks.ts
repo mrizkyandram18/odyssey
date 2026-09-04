@@ -14,6 +14,7 @@ export interface NewTaskFormState {
   step_order: number
   // Config fields
   video_url: string
+  video_answer_mode: 'none' | 'quiz' | 'essay'
   questions: Array<{ id: string; question: string; options: string[]; correct_answer: string }>
   photo_min_count: number
   doc_allowed_extensions: string
@@ -30,6 +31,7 @@ const getInitialNewTask = (date: string): NewTaskFormState => ({
   title: '',
   description: '',
   task_type: 'VIDEO',
+  video_answer_mode: 'none',
   reward_coins: 50,
   reward_xp: 100,
   target_scope: 'ALL',
@@ -77,6 +79,7 @@ export function useAdminTasks() {
     reward_coins: number
     reward_xp: number
     video_url: string
+    video_answer_mode: 'none' | 'quiz' | 'essay'
     questions: any[]
     photo_min_count: number
     doc_allowed_extensions: string
@@ -95,6 +98,7 @@ export function useAdminTasks() {
     reward_coins: 50,
     reward_xp: 100,
     video_url: '',
+    video_answer_mode: 'none',
     questions: [{ id: '1', question: '', options: ['', ''], correct_answer: '' }],
     photo_min_count: 1,
     doc_allowed_extensions: 'pdf,docx,xlsx,txt',
@@ -147,7 +151,21 @@ export function useAdminTasks() {
         alert('URL Video YouTube wajib diisi')
         return
       }
-      config = { video_url: newTask.video_url.trim() }
+      config = { video_url: newTask.video_url.trim(), youtube_url: newTask.video_url.trim() }
+      if (newTask.video_answer_mode === 'quiz') {
+        for (let i = 0; i < newTask.questions.length; i++) {
+          const q = newTask.questions[i]
+          if (!q.question.trim()) { alert(`Pertanyaan ke-${i + 1} belum diisi`); return }
+          if (q.options.some((opt) => !opt.trim())) { alert(`Opsi ke-${i + 1} belum lengkap`); return }
+          if (!q.correct_answer.trim()) { alert(`Kunci #${i + 1} wajib dipilih`); return }
+        }
+        config.questions = newTask.questions
+      } else if (newTask.video_answer_mode === 'essay') {
+        if (!newTask.text_prompt.trim()) { alert('Prompt essay tidak boleh kosong'); return }
+        config.prompt = newTask.text_prompt.trim()
+        config.minimum_characters = newTask.text_min_chars
+        config.maximum_characters = newTask.text_max_chars
+      }
     } else if (newTask.task_type === 'QUIZ') {
       for (let i = 0; i < newTask.questions.length; i++) {
         const q = newTask.questions[i]
@@ -245,6 +263,12 @@ export function useAdminTasks() {
   const openEditModal = (task: TaskView) => {
     setEditingTask(task)
     const cfg = task.config || {}
+    // Detect VIDEO answer mode from existing config
+    let vMode: 'none' | 'quiz' | 'essay' = 'none'
+    if (task.task_type === 'VIDEO') {
+      if (Array.isArray(cfg.questions) && cfg.questions.length > 0) vMode = 'quiz'
+      else if (cfg.prompt) vMode = 'essay'
+    }
     setEditTaskForm({
       title: task.title,
       description: task.description || '',
@@ -252,6 +276,7 @@ export function useAdminTasks() {
       reward_coins: task.reward_coins,
       reward_xp: task.reward_xp || 100,
       video_url: cfg.video_url || cfg.youtube_url || '',
+      video_answer_mode: vMode,
       questions: Array.isArray(cfg.questions) && cfg.questions.length > 0 ? cfg.questions as any[] : [{ id: '1', question: '', options: ['', ''], correct_answer: '' }],
       photo_min_count: (cfg.min_photos as number) || (cfg.max_files as number) || 1,
       doc_allowed_extensions: Array.isArray(cfg.allowed_extensions) ? (cfg.allowed_extensions as unknown as string[]).join(',') : (cfg.accepted_extensions as unknown as string) || 'pdf,docx,xlsx,txt',
@@ -286,6 +311,20 @@ export function useAdminTasks() {
       }
       config = { video_url: editTaskForm.video_url.trim() }
       if (editTaskForm.video_url.trim()) config.youtube_url = editTaskForm.video_url.trim()
+      if (editTaskForm.video_answer_mode === 'quiz') {
+        for (let i = 0; i < editTaskForm.questions.length; i++) {
+          const q = editTaskForm.questions[i]
+          if (!q.question.trim()) { alert(`Pertanyaan #${i + 1} belum diisi`); return }
+          if (q.options.some((o: string) => !o.trim())) { alert(`Opsi #${i + 1} belum lengkap`); return }
+          if (!q.correct_answer.trim()) { alert(`Kunci #${i + 1} belum dipilih`); return }
+        }
+        config.questions = editTaskForm.questions
+      } else if (editTaskForm.video_answer_mode === 'essay') {
+        if (!editTaskForm.text_prompt.trim()) { alert('Prompt essay tidak boleh kosong'); return }
+        config.prompt = editTaskForm.text_prompt.trim()
+        config.minimum_characters = editTaskForm.text_min_chars
+        config.maximum_characters = editTaskForm.text_max_chars
+      }
     } else if (t === 'QUIZ') {
       for (let i = 0; i < editTaskForm.questions.length; i++) {
         const q = editTaskForm.questions[i]

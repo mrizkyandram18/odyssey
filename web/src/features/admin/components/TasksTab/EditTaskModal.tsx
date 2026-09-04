@@ -12,6 +12,7 @@ interface EditTaskModalProps {
     reward_coins: number
     reward_xp: number
     video_url: string
+    video_answer_mode: 'none' | 'quiz' | 'essay'
     questions: Array<{ id: string; question: string; options: string[]; correct_answer: string }>
     photo_min_count: number
     doc_allowed_extensions: string
@@ -32,6 +33,7 @@ interface EditTaskModalProps {
       reward_coins: number
       reward_xp: number
       video_url: string
+      video_answer_mode: 'none' | 'quiz' | 'essay'
       questions: Array<{ id: string; question: string; options: string[]; correct_answer: string }>
       photo_min_count: number
       doc_allowed_extensions: string
@@ -169,7 +171,7 @@ export const EditTaskModal: React.FC<EditTaskModalProps> = ({
             {/* Dynamic Config */}
             <div className="space-y-3 pt-2 border-t border-border-subtle">
               {form.task_type === 'VIDEO' && (
-                <div className="p-3.5 rounded-2xl bg-surface-elevated border border-border-subtle space-y-2.5">
+                <div className="p-3.5 rounded-2xl bg-surface-elevated border border-border-subtle space-y-3">
                   <h4 className="text-xs font-bold uppercase tracking-wider text-text-secondary flex items-center gap-1.5">
                     <Play className="w-3.5 h-3.5 text-accent-magic" /> Video
                   </h4>
@@ -180,6 +182,40 @@ export const EditTaskModal: React.FC<EditTaskModalProps> = ({
                     placeholder="https://www.youtube.com/watch?v=..."
                     className="w-full p-2.5 rounded-xl bg-surface border border-border-subtle text-xs text-text-primary"
                   />
+                  <div className="space-y-1">
+                    <label className="text-[11px] font-bold text-text-secondary">Cara Jawab Embedded:</label>
+                    <select value={form.video_answer_mode} onChange={(e) => setForm({ ...form, video_answer_mode: e.target.value as any })} className="w-full p-2.5 rounded-xl bg-surface border border-border-subtle text-xs font-bold">
+                      <option value="none">Hanya Nonton</option>
+                      <option value="quiz">Pilihan Ganda (Kuis)</option>
+                      <option value="essay">Esai Teks Panjang</option>
+                    </select>
+                  </div>
+                  {form.video_answer_mode === 'quiz' && (
+                    <div className="space-y-2 pt-2 border-t border-border-subtle">
+                      {form.questions.map((q, qi) => (
+                        <div key={q.id || qi} className="p-3 bg-surface rounded-xl border space-y-2">
+                          <input type="text" value={q.question} onChange={(e)=>{const n=[...form.questions]; n[qi].question=e.target.value; setForm({...form, questions:n})}} placeholder={`Pertanyaan #${qi+1}`} className="w-full p-2 rounded-xl border text-xs" />
+                          <div className="grid grid-cols-2 gap-2">
+                            {q.options.map((opt, oi)=>(<input key={oi} type="text" value={opt} onChange={(e)=>{const n=[...form.questions]; n[qi].options[oi]=e.target.value; setForm({...form, questions:n})}} placeholder={`Opsi ${String.fromCharCode(65+oi)}`} className="p-2 rounded-xl border text-xs" />))}
+                          </div>
+                          <select value={q.correct_answer} onChange={(e)=>{const n=[...form.questions]; n[qi].correct_answer=e.target.value; setForm({...form, questions:n})}} className="w-full p-2 rounded-xl border text-xs font-bold">
+                            <option value="">-- Kunci --</option>
+                            {q.options.map((opt, oi)=>(<option key={oi} value={opt || String.fromCharCode(65+oi)}>{String.fromCharCode(65+oi)}: {opt || '(kosong)'}</option>))}
+                          </select>
+                        </div>
+                      ))}
+                      <button type="button" onClick={()=>setForm({...form, questions:[...form.questions,{id:String(Date.now()),question:'',options:['',''],correct_answer:''}]})} className="text-xs font-bold text-accent-magic">+ Tambah Soal</button>
+                    </div>
+                  )}
+                  {form.video_answer_mode === 'essay' && (
+                    <div className="space-y-2 pt-2 border-t border-border-subtle">
+                      <input type="text" value={form.text_prompt} onChange={(e)=>setForm({...form, text_prompt:e.target.value})} placeholder="Prompt esai" className="w-full p-2.5 rounded-xl border text-xs" />
+                      <div className="grid grid-cols-2 gap-2">
+                        <input type="number" value={form.text_min_chars} onChange={(e)=>setForm({...form, text_min_chars:Number(e.target.value)||10})} className="p-2 rounded-xl border text-xs" placeholder="Min" />
+                        <input type="number" value={form.text_max_chars} onChange={(e)=>setForm({...form, text_max_chars:Number(e.target.value)||500})} className="p-2 rounded-xl border text-xs" placeholder="Max" />
+                      </div>
+                    </div>
+                  )}
                 </div>
               )}
               {form.task_type === 'QUIZ' && (
