@@ -731,8 +731,64 @@ func (a *API) HandleListMembers(w http.ResponseWriter, r *http.Request) {
 		familyID = "family_default"
 	}
 
-	// 1. Fetch user profiles strictly scoped to admin's family with deterministic pagination
-	profParams := fmt.Sprintf("family_id=eq.%s&order=created_at.desc,uid.desc&limit=%d&offset=%d", familyID, limit, offset)
+	// 1. Fetch user profiles strictly scoped to admin's family with deterministic pagination.
+	// Deleted members (is_active=false AND login credential revoked) are excluded
+	// here using the same discriminator as HandleDeleteMember; ordinary blocked
+	// members (credential still present) remain visible. The exclusion is applied
+	// in the DB query BEFORE limit/offset so pagination stays exact.
+	// Step 1a: lightweight family UID + active flags (bounded by family size).
+	famParams := fmt.Sprintf("family_id=eq.%s&select=uid,is_active", familyID)
+	famRaw, err := a.client.Get(ctx, "odyssey_user_profiles", famParams)
+	if err != nil {
+		shared.WriteJSONError(w, "gagal mengambil daftar anggota: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+	var famRows []struct {
+		UID      string `json:"uid"`
+		IsActive bool   `json:"is_active"`
+	}
+	_ = json.Unmarshal(famRaw, &famRows)
+	if len(famRows) == 0 {
+		shared.WriteJSON(w, http.StatusOK, shared.PaginatedResponse[MemberView]{
+			Items: []MemberView{},
+			Pagination: shared.PaginationMeta{
+				Page:    page,
+				Limit:   limit,
+				Total:   0,
+				HasNext: false,
+			},
+		})
+		return
+	}
+	famUIDs := make([]string, len(famRows))
+	inactiveSet := make(map[string]bool, len(famRows))
+	for i, f := range famRows {
+		famUIDs[i] = f.UID
+		if !f.IsActive {
+			inactiveSet[f.UID] = true
+		}
+	}
+	// Step 1b: credential presence for family UIDs only (no global dump).
+	credParams := fmt.Sprintf("profile_uid=in.(%s)&select=profile_uid", strings.Join(famUIDs, ","))
+	credRaw, _ := a.client.Get(ctx, "odyssey_local_users", credParams)
+	var credRows []struct {
+		ProfileUID string `json:"profile_uid"`
+	}
+	_ = json.Unmarshal(credRaw, &credRows)
+	for _, c := range credRows {
+		delete(inactiveSet, c.ProfileUID)
+	}
+	// Remaining inactiveSet = deleted members (inactive + no credential).
+	excludeClause := ""
+	if len(inactiveSet) > 0 {
+		excluded := make([]string, 0, len(inactiveSet))
+		for uid := range inactiveSet {
+			excluded = append(excluded, uid)
+		}
+		excludeClause = fmt.Sprintf("&uid=not.in.(%s)", strings.Join(excluded, ","))
+	}
+	// Step 1c: paginated page with deleted members excluded at DB level.
+	profParams := fmt.Sprintf("family_id=eq.%s%s&order=created_at.desc,uid.desc&limit=%d&offset=%d", familyID, excludeClause, limit, offset)
 
 	profRaw, err := a.client.Get(ctx, "odyssey_user_profiles", profParams)
 	if err != nil {

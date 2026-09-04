@@ -313,7 +313,9 @@ func TestHandleListMembers_Pagination(t *testing.T) {
 	mockClient := &mockSupabaseClient{
 		getFunc: func(ctx context.Context, table string, params string) ([]byte, error) {
 			if table == "odyssey_user_profiles" {
-				if !strings.Contains(params, "limit=2&offset=2") {
+				// The paginated page query carries order=+limit/offset; the
+				// lightweight pre-query (uid/is_active) does not.
+				if strings.Contains(params, "order=created_at.desc") && !strings.Contains(params, "limit=2&offset=2") {
 					t.Errorf("expected limit=2&offset=2 for page 2, got %s", params)
 				}
 				profiles := []map[string]any{

@@ -6,6 +6,8 @@ import (
 	"errors"
 	"net/http"
 	"net/http/httptest"
+	"sort"
+	"strconv"
 	"strings"
 	"testing"
 
@@ -247,5 +249,240 @@ func TestHandleUnblockMember_BlockedWithCredentialAllowed(t *testing.T) {
 	api.Handler(w, req)
 	if w.Code != http.StatusOK {
 		t.Fatalf("expected 200 got %d body %s", w.Code, w.Body.String())
+	}
+}
+
+// listFilterMock honors family scoping, uid=not.in exclusion, and
+// limit/offset like PostgREST so list-filtering behavior is testable.
+type listFilterMock struct {
+	profiles    []map[string]any
+	credentials map[string]bool
+	pageParams  []string
+}
+
+func newListFilterMock() *listFilterMock {
+	profiles := []map[string]any{
+		{"uid": "u1", "family_id": "fam_1", "explorer_name": "Active", "role": "MEMBER", "is_active": true, "level": 1, "xp": 0, "coins": 0, "created_at": "2026-09-03T00:00:00Z"},
+		{"uid": "u2", "family_id": "fam_1", "explorer_name": "Blocked", "role": "MEMBER", "is_active": false, "level": 1, "xp": 0, "coins": 0, "created_at": "2026-09-02T00:00:00Z"},
+		{"uid": "u3", "family_id": "fam_1", "explorer_name": "Deleted", "role": "MEMBER", "is_active": false, "level": 1, "xp": 0, "coins": 0, "created_at": "2026-09-05T00:00:00Z"},
+		{"uid": "u4", "family_id": "fam_1", "explorer_name": "Admin", "role": "ADMIN", "is_active": true, "level": 1, "xp": 0, "coins": 0, "created_at": "2026-09-04T00:00:00Z"},
+		{"uid": "u5", "family_id": "fam_1", "explorer_name": "Guide", "role": "GUIDE", "is_active": true, "level": 1, "xp": 0, "coins": 0, "created_at": "2026-09-01T00:00:00Z"},
+		{"uid": "u9", "family_id": "fam_2", "explorer_name": "Other", "role": "MEMBER", "is_active": true, "level": 1, "xp": 0, "coins": 0, "created_at": "2026-09-06T00:00:00Z"},
+	}
+	return &listFilterMock{
+		profiles:    profiles,
+		credentials: map[string]bool{"u1": true, "u2": true, "u4": true, "u5": true, "u9": true},
+	}
+}
+
+func listFamilyParam(params string) string {
+	for _, part := range strings.Split(params, "&") {
+		if strings.HasPrefix(part, "family_id=eq.") {
+			return strings.TrimPrefix(part, "family_id=eq.")
+		}
+	}
+	return ""
+}
+
+func listExcludedUIDs(params string) map[string]bool {
+	out := map[string]bool{}
+	idx := strings.Index(params, "uid=not.in.(")
+	if idx < 0 {
+		return out
+	}
+	seg := params[idx+len("uid=not.in.("):]
+	if end := strings.Index(seg, ")"); end >= 0 {
+		seg = seg[:end]
+	}
+	for _, s := range strings.Split(seg, ",") {
+		if s = strings.TrimSpace(s); s != "" {
+			out[s] = true
+		}
+	}
+	return out
+}
+
+func listCredentialUIDs(params string) map[string]bool {
+	out := map[string]bool{}
+	idx := strings.Index(params, "profile_uid=in.(")
+	if idx < 0 {
+		return out
+	}
+	seg := params[idx+len("profile_uid=in.("):]
+	if end := strings.Index(seg, ")"); end >= 0 {
+		seg = seg[:end]
+	}
+	for _, s := range strings.Split(seg, ",") {
+		if s = strings.TrimSpace(s); s != "" {
+			out[s] = true
+		}
+	}
+	return out
+}
+
+func (m *listFilterMock) Get(ctx context.Context, table string, params string) ([]byte, error) {
+	switch table {
+	case "odyssey_user_profiles":
+		fam := listFamilyParam(params)
+		excluded := listExcludedUIDs(params)
+		filtered := make([]map[string]any, 0)
+		for _, p := range m.profiles {
+			if fam != "" && p["family_id"] != fam {
+				continue
+			}
+			if excluded[p["uid"].(string)] {
+				continue
+			}
+			filtered = append(filtered, p)
+		}
+		sort.Slice(filtered, func(i, j int) bool {
+			ci, _ := filtered[i]["created_at"].(string)
+			cj, _ := filtered[j]["created_at"].(string)
+			if ci != cj {
+				return ci > cj
+			}
+			return filtered[i]["uid"].(string) > filtered[j]["uid"].(string)
+		})
+		if strings.Contains(params, "order=created_at.desc") {
+			m.pageParams = append(m.pageParams, params)
+			limit, offset := 50, 0
+			for _, part := range strings.Split(params, "&") {
+				if strings.HasPrefix(part, "limit=") {
+					limit, _ = strconv.Atoi(strings.TrimPrefix(part, "limit="))
+				}
+				if strings.HasPrefix(part, "offset=") {
+					offset, _ = strconv.Atoi(strings.TrimPrefix(part, "offset="))
+				}
+			}
+			if offset >= len(filtered) {
+				return json.Marshal([]map[string]any{})
+			}
+			end := offset + limit
+			if end > len(filtered) {
+				end = len(filtered)
+			}
+			return json.Marshal(filtered[offset:end])
+		}
+		return json.Marshal(filtered)
+	case "odyssey_local_users":
+		uids := listCredentialUIDs(params)
+		rows := make([]map[string]any, 0)
+		for uid := range uids {
+			if m.credentials[uid] {
+				rows = append(rows, map[string]any{"username": "user_" + uid, "profile_uid": uid})
+			}
+		}
+		// verificationUIDs-style fallback: plain profile_uid=eq.X
+		for _, part := range strings.Split(params, "&") {
+			if strings.HasPrefix(part, "profile_uid=eq.") {
+				uid := strings.TrimPrefix(part, "profile_uid=eq.")
+				if m.credentials[uid] {
+					rows = append(rows, map[string]any{"username": "user_" + uid, "profile_uid": uid})
+				}
+			}
+		}
+		return json.Marshal(rows)
+	}
+	return json.Marshal([]map[string]any{})
+}
+
+func (m *listFilterMock) Mutate(ctx context.Context, method, table string, payload any, params string) ([]byte, error) {
+	return []byte("{}"), nil
+}
+func (m *listFilterMock) MutateAtomic(ctx context.Context, method, table string, payload any, params string, prefer string) ([]byte, error) {
+	return []byte("{}"), nil
+}
+func (m *listFilterMock) RPC(ctx context.Context, fn string, payload any) ([]byte, error) {
+	return []byte("{}"), nil
+}
+func (m *listFilterMock) UploadStorage(ctx context.Context, bucket, path, contentType string, data []byte) (string, error) {
+	return "", nil
+}
+
+func runListRequest(m *listFilterMock, target string) (int, []MemberView, map[string]any) {
+	api := NewAPI(m)
+	req := httptest.NewRequest(http.MethodGet, target, nil)
+	req = req.WithContext(auth.ContextWithClaims(req.Context(), adminClaims("fam_1")))
+	w := httptest.NewRecorder()
+	api.Handler(w, req)
+	var body struct {
+		Items      []MemberView   `json:"items"`
+		Pagination map[string]any `json:"pagination"`
+	}
+	_ = json.Unmarshal(w.Body.Bytes(), &body)
+	return w.Code, body.Items, body.Pagination
+}
+
+func listUIDs(items []MemberView) []string {
+	uids := make([]string, len(items))
+	for i, m := range items {
+		uids[i] = m.UID
+	}
+	return uids
+}
+
+func TestListMembers_HidesDeletedKeepsBlocked(t *testing.T) {
+	m := newListFilterMock()
+	code, items, _ := runListRequest(m, "/api/admin/members?page=1&limit=10")
+	if code != http.StatusOK {
+		t.Fatalf("expected 200 got %d", code)
+	}
+	got := listUIDs(items)
+	// Deleted u3 excluded (despite newest created_at); active, blocked,
+	// admin, guide visible in deterministic order; cross-family u9 never.
+	want := []string{"u4", "u1", "u2", "u5"}
+	if len(got) != len(want) {
+		t.Fatalf("expected %v, got %v", want, got)
+	}
+	for i := range want {
+		if got[i] != want[i] {
+			t.Fatalf("expected %v, got %v", want, got)
+		}
+	}
+	if len(m.pageParams) == 0 {
+		t.Fatalf("expected paginated page query to be issued")
+	}
+	pageQ := m.pageParams[len(m.pageParams)-1]
+	if !strings.Contains(pageQ, "uid=not.in.(u3)") {
+		t.Fatalf("expected DB-level deleted exclusion, got %s", pageQ)
+	}
+	if !strings.Contains(pageQ, "family_id=eq.fam_1") || !strings.Contains(pageQ, "order=created_at.desc,uid.desc") {
+		t.Fatalf("expected family scope + deterministic order, got %s", pageQ)
+	}
+}
+
+func TestListMembers_NoExclusionClauseWhenNothingDeleted(t *testing.T) {
+	m := newListFilterMock()
+	m.credentials["u3"] = true // u3 becomes ordinary blocked, not deleted
+	code, items, _ := runListRequest(m, "/api/admin/members?page=1&limit=10")
+	if code != http.StatusOK {
+		t.Fatalf("expected 200 got %d", code)
+	}
+	if len(items) != 5 {
+		t.Fatalf("expected all 5 family members, got %v", listUIDs(items))
+	}
+	pageQ := m.pageParams[len(m.pageParams)-1]
+	if strings.Contains(pageQ, "not.in") {
+		t.Fatalf("expected no exclusion clause when nothing deleted, got %s", pageQ)
+	}
+}
+
+func TestListMembers_DeletedExcludedFromPagination(t *testing.T) {
+	m := newListFilterMock()
+	_, page1, pag1 := runListRequest(m, "/api/admin/members?page=1&limit=2")
+	if len(page1) != 2 || page1[0].UID != "u4" || page1[1].UID != "u1" {
+		t.Fatalf("expected page 1 [u4,u1], got %v", listUIDs(page1))
+	}
+	if pag1["has_next"] != true {
+		t.Fatalf("expected has_next=true on page 1, got %v", pag1)
+	}
+	_, page2, pag2 := runListRequest(m, "/api/admin/members?page=2&limit=2")
+	if len(page2) != 2 || page2[0].UID != "u2" || page2[1].UID != "u5" {
+		t.Fatalf("expected page 2 [u2,u5] (deleted u3 excluded), got %v", listUIDs(page2))
+	}
+	// Members list uses the established estimated-total pattern: a full page
+	// implies has_next. The deleted member never surfaces on any page.
+	if pag2["has_next"] != true {
+		t.Fatalf("expected has_next=true on full page 2 (estimate pattern), got %v", pag2)
 	}
 }
