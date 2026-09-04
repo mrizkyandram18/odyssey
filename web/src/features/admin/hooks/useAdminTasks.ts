@@ -115,6 +115,7 @@ export function useAdminTasks() {
     config: {},
   })
   const [isSavingTask, setIsSavingTask] = useState(false)
+  const [isReordering, setIsReordering] = useState(false)
 
   const fetchTasks = useCallback(async (date: string) => {
     const effectiveDate = date || getLocalTodayString()
@@ -264,6 +265,44 @@ export function useAdminTasks() {
     }
   }
 
+  const handleReorder = async (orderedIds: (number | string)[]) => {
+    if (isReordering || isFetching) return
+    if (orderedIds.length !== tasks.length) {
+      setError('Gagal reorder: jumlah tugas tidak sesuai')
+      return
+    }
+    const previousTasks = [...tasks]
+    const idToTask = new Map<string, TaskView>(tasks.map((t) => [String(t.id), t]))
+    const reordered: TaskView[] = []
+    for (let i = 0; i < orderedIds.length; i++) {
+      const t = idToTask.get(String(orderedIds[i]))
+      if (!t) {
+        setError('Gagal reorder: task tidak ditemukan')
+        return
+      }
+      reordered.push({ ...t, step_order: i + 1 })
+    }
+    setTasks(reordered)
+    setIsReordering(true)
+    try {
+      const res = await adminTasksApi.reorderTasks(orderedIds)
+      if (Array.isArray(res) && res.length > 0) {
+        // backend returns ordered tasks; ensure deterministic sort
+        const sorted = [...res].sort((a: TaskView, b: TaskView) => a.step_order - b.step_order || a.id - b.id)
+        setTasks(sorted)
+      } else {
+        await fetchTasks(selectedDate)
+      }
+    } catch (err: any) {
+      setTasks(previousTasks)
+      const msg = err?.message || 'Gagal menyimpan urutan'
+      setError(msg)
+      alert(`Gagal menyimpan urutan: ${msg}`)
+    } finally {
+      setIsReordering(false)
+    }
+  }
+
   const openEditModal = (task: TaskView) => {
     setEditingTask(task)
     const cfg = task.config || {}
@@ -396,5 +435,7 @@ export function useAdminTasks() {
     openEditModal,
     closeEditModal,
     handleSaveEditTask,
+    isReordering,
+    handleReorder,
   }
 }

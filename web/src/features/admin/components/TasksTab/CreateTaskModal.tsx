@@ -20,6 +20,7 @@ interface CreateTaskModalProps {
   isCreating: boolean
   onClose: () => void
   onSubmit: () => void
+  existingTasks?: { step_order: number }[]
 }
 
 export const CreateTaskModal: React.FC<CreateTaskModalProps> = ({
@@ -30,11 +31,17 @@ export const CreateTaskModal: React.FC<CreateTaskModalProps> = ({
   isCreating,
   onClose,
   onSubmit,
+  existingTasks,
 }) => {
   if (!isOpen) return null
 
+  const isDuplicateStep = existingTasks
+    ? existingTasks.some((t) => t.step_order === newTask.step_order)
+    : false
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
+    if (isDuplicateStep) return
     onSubmit()
   }
 
@@ -184,8 +191,11 @@ export const CreateTaskModal: React.FC<CreateTaskModalProps> = ({
                     min={1}
                     value={newTask.step_order}
                     onChange={(e) => setNewTask({ ...newTask, step_order: Number(e.target.value) })}
-                    className="w-full p-2.5 rounded-xl bg-surface border border-border-subtle text-xs sm:text-sm text-text-primary focus:outline-none focus:border-accent-magic font-mono"
+                    className={`w-full p-2.5 rounded-xl bg-surface border text-xs sm:text-sm text-text-primary focus:outline-none font-mono ${isDuplicateStep ? 'border-status-error focus:border-status-error' : 'border-border-subtle focus:border-accent-magic'}`}
                   />
+                  {isDuplicateStep && (
+                    <p className="text-[11px] font-medium text-status-error">step_order sudah digunakan untuk tanggal tersebut</p>
+                  )}
                 </div>
 
                 <div className="space-y-1">

@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"net/url"
 	"strings"
+	"time"
 
 	"odyssey/pkg/auth"
 )
@@ -117,7 +118,7 @@ func (s *supabaseProfileStore) BindOrVerifyDevice(ctx context.Context, uid, devi
 			if currentDevice == "" {
 				payload := map[string]any{
 					"device_id":       deviceID,
-					"device_bound_at": "now()",
+					"device_bound_at": time.Now().UTC().Format(time.RFC3339),
 				}
 				params := s.buildFilter(uid)
 				_, _ = s.client.Mutate(ctx, "PATCH", "odyssey_user_profiles", payload, params)

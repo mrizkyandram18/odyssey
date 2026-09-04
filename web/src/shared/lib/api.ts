@@ -202,6 +202,7 @@ export const adminTasksApi = {
   updateTask: (id: number, patch: any) => apiClient.patch<any>(`/api/admin/tasks/${id}`, patch),
   duplicateTask: (id: number) => apiClient.post<TaskView>(`/api/admin/tasks/${id}/duplicate`, {}),
   deleteTask: (id: number) => apiClient.delete<{ status: string }>(`/api/admin/tasks/${id}`),
+  reorderTasks: (taskIds: (number | string)[]) => apiClient.patch<TaskView[]>(`/api/admin/tasks/reorder`, { taskIds }),
   getSubmissions: (params?: string | { status?: string; page?: number; limit?: number }) => {
     const q = new URLSearchParams()
     if (typeof params === 'string') {

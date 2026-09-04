@@ -1,5 +1,5 @@
-import React from 'react'
-import { Calendar, Plus, FileText, Edit3, Copy, Trash2, RefreshCw } from 'lucide-react'
+import React, { useState } from 'react'
+import { Calendar, Plus, FileText, Edit3, Copy, Trash2, RefreshCw, GripVertical } from 'lucide-react'
 import { useAdminTasks } from '../../hooks/useAdminTasks'
 import { TaskTypeBadge } from '../shared/TaskTypeBadge'
 import { CreateTaskModal } from './CreateTaskModal'
@@ -34,7 +34,60 @@ export const TaskScheduleList: React.FC<TaskScheduleListProps> = ({ members = []
     openEditModal,
     closeEditModal,
     handleSaveEditTask,
+    isReordering,
+    handleReorder,
   } = useAdminTasks()
+
+  const [draggedId, setDraggedId] = useState<number | null>(null)
+  const [dragOverId, setDragOverId] = useState<number | null>(null)
+
+  const handleDragStart = (e: React.DragEvent, id: number) => {
+    if (isReordering) {
+      e.preventDefault()
+      return
+    }
+    setDraggedId(id)
+    e.dataTransfer.effectAllowed = 'move'
+    e.dataTransfer.setData('text/plain', String(id))
+  }
+
+  const handleDragOver = (e: React.DragEvent, id: number) => {
+    e.preventDefault()
+    if (draggedId === null || draggedId === id) return
+    setDragOverId(id)
+  }
+
+  const handleDragLeave = () => {
+    setDragOverId(null)
+  }
+
+  const handleDrop = (e: React.DragEvent, targetId: number) => {
+    e.preventDefault()
+    if (draggedId === null || draggedId === targetId) {
+      setDraggedId(null)
+      setDragOverId(null)
+      return
+    }
+    const fromIndex = tasks.findIndex((t) => t.id === draggedId)
+    const toIndex = tasks.findIndex((t) => t.id === targetId)
+    if (fromIndex < 0 || toIndex < 0) {
+      setDraggedId(null)
+      setDragOverId(null)
+      return
+    }
+    const newOrder = [...tasks]
+    const [moved] = newOrder.splice(fromIndex, 1)
+    newOrder.splice(toIndex, 0, moved)
+    const orderedIds = newOrder.map((t) => t.id)
+    setDraggedId(null)
+    setDragOverId(null)
+    handleReorder(orderedIds)
+  }
+
+  const handleDragEnd = () => {
+    setDraggedId(null)
+    setDragOverId(null)
+  }
 
   return (
     <div className="space-y-3.5">
@@ -93,12 +146,31 @@ export const TaskScheduleList: React.FC<TaskScheduleListProps> = ({ members = []
         </div>
       ) : (
         <div className="space-y-2">
+          {tasks.length > 1 && !isReordering && (
+            <p className="text-[11px] text-text-secondary flex items-center gap-1">
+              <GripVertical className="w-3 h-3" /> Seret untuk mengatur urutan
+            </p>
+          )}
+          {isReordering && (
+            <p className="text-[11px] font-medium text-accent-magic flex items-center gap-1">
+              <RefreshCw className="w-3 h-3 animate-spin" /> Menyimpan urutan...
+            </p>
+          )}
           {tasks.map((task) => (
             <div
               key={task.id}
-              className="p-3 sm:p-3.5 rounded-2xl bg-surface border border-border-subtle shadow-xs flex items-center justify-between gap-3 transition-all hover:bg-surface-elevated/40"
+              draggable={!isReordering}
+              onDragStart={(e) => handleDragStart(e, task.id)}
+              onDragOver={(e) => handleDragOver(e, task.id)}
+              onDragLeave={handleDragLeave}
+              onDrop={(e) => handleDrop(e, task.id)}
+              onDragEnd={handleDragEnd}
+              className={`p-3 sm:p-3.5 rounded-2xl bg-surface border shadow-xs flex items-center justify-between gap-3 transition-all hover:bg-surface-elevated/40 ${draggedId === task.id ? 'opacity-50 border-dashed border-accent-magic' : 'border-border-subtle'} ${dragOverId === task.id ? 'ring-2 ring-accent-magic ring-offset-1' : ''} ${isReordering ? 'opacity-60 cursor-wait' : 'cursor-grab active:cursor-grabbing'}`}
             >
               <div className="flex items-center gap-3 min-w-0">
+                <span className="text-text-secondary cursor-grab active:cursor-grabbing p-1" aria-hidden="true">
+                  <GripVertical className="w-4 h-4" />
+                </span>
                 <div className="w-8 h-8 rounded-xl bg-accent-magic/15 text-accent-magic flex items-center justify-center font-bold text-xs shrink-0 font-mono">
                   #{task.step_order}
                 </div>
@@ -176,6 +248,7 @@ export const TaskScheduleList: React.FC<TaskScheduleListProps> = ({ members = []
         isCreating={isCreatingTask}
         onClose={closeCreateModal}
         onSubmit={handleCreateTask}
+        existingTasks={tasks}
       />
 
       <EditTaskModal

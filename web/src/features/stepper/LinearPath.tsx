@@ -118,7 +118,8 @@ export const LinearPath: React.FC = () => {
     loadTasks()
     if (refreshProfile) refreshProfile()
     if (currentTask) {
-      const next = tasks.find((t) => t.step_order === currentTask.step_order + 1)
+      const currentIndex = tasks.findIndex((t) => t.id === currentTask.id)
+      const next = currentIndex >= 0 ? tasks[currentIndex + 1] : undefined
       if (next) {
         // Do not open next if earning is locked
         if (earningLocked || next.earning_locked) {

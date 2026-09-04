@@ -202,6 +202,9 @@ export function useAdminMembers() {
         payload.payout_month_end_day = editMemberForm.payout_month_end_day
       }
       await adminMembersApi.updateMember(selectedMember.uid, payload)
+      if (editMemberForm.reset_device) {
+        alert('Device binding berhasil direset. User dapat login dari perangkat baru.')
+      }
       closeEditModal()
       await fetchMembers(pagination.page)
     } catch (err: any) {

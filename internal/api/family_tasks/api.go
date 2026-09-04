@@ -75,28 +75,10 @@ func getEarnedThisPeriodForUser(ctx context.Context, client db.SupabaseClient, u
 		loc = time.FixedZone("WIB", 7*3600)
 	}
 	nowInTz := time.Now().In(loc)
-	startDay, endDay := 1, 24
-	if raw, err := client.Get(ctx, "odyssey_system_config", "key=in.(target_earning_start_day,target_earning_end_day)&select=key,value"); err == nil && len(raw) > 0 {
-		var rows []struct {
-			Key   string `json:"key"`
-			Value string `json:"value"`
-		}
-		if err := json.Unmarshal(raw, &rows); err == nil {
-			for _, r := range rows {
-				var n int
-				if _, err := fmt.Sscanf(r.Value, "%d", &n); err == nil {
-					if r.Key == "target_earning_start_day" && n >= 1 && n <= 31 {
-						startDay = n
-					}
-					if r.Key == "target_earning_end_day" && n >= 1 && n <= 31 {
-						endDay = n
-					}
-				}
-			}
-		}
-	}
-	periodStart := time.Date(nowInTz.Year(), nowInTz.Month(), startDay, 0, 0, 0, 0, loc).UTC().Format(time.RFC3339)
-	periodEnd := time.Date(nowInTz.Year(), nowInTz.Month(), endDay+1, 0, 0, 0, 0, loc).UTC().Format(time.RFC3339)
+	// Calendar month: 1 → last day (not target_earning 1-24)
+	lastDay := time.Date(nowInTz.Year(), nowInTz.Month()+1, 0, 0, 0, 0, 0, loc).Day()
+	periodStart := time.Date(nowInTz.Year(), nowInTz.Month(), 1, 0, 0, 0, 0, loc).UTC().Format(time.RFC3339)
+	periodEnd := time.Date(nowInTz.Year(), nowInTz.Month(), lastDay+1, 0, 0, 0, 0, loc).UTC().Format(time.RFC3339)
 	raw, err := client.Get(ctx, "odyssey_coin_transactions", fmt.Sprintf("user_uid=eq.%s&type=eq.TASK_REWARD&created_at=gte.%s&created_at=lt.%s&select=amount", uid, periodStart, periodEnd))
 	if err != nil || len(raw) == 0 {
 		return 0
@@ -273,9 +255,9 @@ func (a *API) HandleGetToday(w http.ResponseWriter, r *http.Request) {
 	}
 	todayStr := time.Now().In(loc).Format("2006-01-02")
 
-	params := fmt.Sprintf("is_active=eq.true&active_date=eq.%s&order=step_order.asc", todayStr)
+	params := fmt.Sprintf("is_active=eq.true&active_date=eq.%s&order=step_order.asc,id.asc", todayStr)
 	if familyID != "" {
-		params = fmt.Sprintf("is_active=eq.true&family_id=eq.%s&active_date=eq.%s&order=step_order.asc", familyID, todayStr)
+		params = fmt.Sprintf("is_active=eq.true&family_id=eq.%s&active_date=eq.%s&order=step_order.asc,id.asc", familyID, todayStr)
 	}
 
 	taskRaw, err := a.client.Get(ctx, "odyssey_tasks", params)

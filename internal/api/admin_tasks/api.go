@@ -92,15 +92,15 @@ func (a *API) HandleListTasks(w http.ResponseWriter, r *http.Request) {
 		date = time.Now().In(loc).Format("2006-01-02")
 	}
 
-	params := "order=active_date.desc,step_order.asc"
+	params := "order=active_date.desc,step_order.asc,id.asc"
 	if claims.FamilyID != "" {
 		if date != "" {
-			params = fmt.Sprintf("family_id=eq.%s&active_date=eq.%s&order=step_order.asc", claims.FamilyID, date)
+			params = fmt.Sprintf("family_id=eq.%s&active_date=eq.%s&order=step_order.asc,id.asc", claims.FamilyID, date)
 		} else {
-			params = fmt.Sprintf("family_id=eq.%s&order=active_date.desc,step_order.asc", claims.FamilyID)
+			params = fmt.Sprintf("family_id=eq.%s&order=active_date.desc,step_order.asc,id.asc", claims.FamilyID)
 		}
 	} else if date != "" {
-		params = fmt.Sprintf("active_date=eq.%s&order=step_order.asc", date)
+		params = fmt.Sprintf("active_date=eq.%s&order=step_order.asc,id.asc", date)
 	}
 
 	raw, err := a.client.Get(ctx, "odyssey_tasks", params)
@@ -187,6 +187,19 @@ func (a *API) HandleCreateTask(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
+	// Validate duplicate active step_order for same family/date
+	if req.StepOrder > 0 && strings.TrimSpace(req.ActiveDate) != "" {
+		dupParams := fmt.Sprintf("family_id=eq.%s&active_date=eq.%s&step_order=eq.%d&is_active=eq.true&select=id", claims.FamilyID, strings.TrimSpace(req.ActiveDate), req.StepOrder)
+		if dupRaw, err := a.client.Get(ctx, "odyssey_tasks", dupParams); err == nil && len(dupRaw) > 2 && strings.TrimSpace(string(dupRaw)) != "[]" {
+			var dups []map[string]any
+			_ = json.Unmarshal(dupRaw, &dups)
+			if len(dups) > 0 {
+				shared.WriteJSONError(w, "step_order sudah digunakan untuk tanggal tersebut", http.StatusBadRequest)
+				return
+			}
+		}
+	}
+
 	payload := map[string]any{
 		"title":           req.Title,
 		"description":     req.Description,
@@ -210,6 +223,10 @@ func (a *API) HandleCreateTask(w http.ResponseWriter, r *http.Request) {
 
 	raw, err := a.client.MutateAtomic(ctx, http.MethodPost, "odyssey_tasks", payload, "", "return=representation")
 	if err != nil {
+		if strings.Contains(strings.ToLower(err.Error()), "duplicate") || strings.Contains(err.Error(), "uq_tasks_family_date_step_active") || strings.Contains(err.Error(), "23505") {
+			shared.WriteJSONError(w, "step_order sudah digunakan untuk tanggal tersebut", http.StatusBadRequest)
+			return
+		}
 		shared.WriteJSONError(w, "gagal membuat tugas: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
@@ -345,8 +362,69 @@ func (a *API) HandleUpdateTask(w http.ResponseWriter, r *http.Request, taskID in
 		}
 	}
 
+	// Validate duplicate active step_order for same family/date
+	if _, hasStep := patch["step_order"]; hasStep {
+		var existing []map[string]any
+		_ = json.Unmarshal(tRaw, &existing)
+		var effStep float64
+		var effActiveDate string
+		var effIsActive bool = true
+		var effFamilyID string
+		if len(existing) > 0 {
+			if v, ok := existing[0]["step_order"].(float64); ok {
+				effStep = v
+			}
+			if v, ok := existing[0]["active_date"].(string); ok {
+				effActiveDate = v
+			}
+			if v, ok := existing[0]["is_active"].(bool); ok {
+				effIsActive = v
+			}
+			if v, ok := existing[0]["family_id"].(string); ok {
+				effFamilyID = v
+			}
+		}
+		if v, ok := patch["step_order"].(float64); ok {
+			effStep = v
+		} else if v, ok := patch["step_order"].(int); ok {
+			effStep = float64(v)
+		}
+		if v, ok := patch["active_date"].(string); ok && strings.TrimSpace(v) != "" {
+			effActiveDate = strings.TrimSpace(v)
+		}
+		if v, ok := patch["is_active"].(bool); ok {
+			effIsActive = v
+		}
+		if effIsActive && effStep > 0 && strings.TrimSpace(effActiveDate) != "" && strings.TrimSpace(effFamilyID) != "" {
+			dupParams := fmt.Sprintf("family_id=eq.%s&active_date=eq.%s&step_order=eq.%d&is_active=eq.true&select=id", effFamilyID, effActiveDate, int(effStep))
+			if dupRaw, err := a.client.Get(ctx, "odyssey_tasks", dupParams); err == nil && len(dupRaw) > 2 && strings.TrimSpace(string(dupRaw)) != "[]" {
+				var dups []map[string]any
+				_ = json.Unmarshal(dupRaw, &dups)
+				for _, d := range dups {
+					if idVal, ok := d["id"].(float64); ok && int64(idVal) != taskID {
+						shared.WriteJSONError(w, "step_order sudah digunakan untuk tanggal tersebut", http.StatusBadRequest)
+						return
+					}
+					if idVal, ok := d["id"].(int64); ok && idVal != taskID {
+						shared.WriteJSONError(w, "step_order sudah digunakan untuk tanggal tersebut", http.StatusBadRequest)
+						return
+					}
+				}
+				if len(dups) > 0 {
+					// fallback if id type mismatch
+					shared.WriteJSONError(w, "step_order sudah digunakan untuk tanggal tersebut", http.StatusBadRequest)
+					return
+				}
+			}
+		}
+	}
+
 	raw, err := a.client.Mutate(ctx, http.MethodPatch, "odyssey_tasks", patch, fmt.Sprintf("id=eq.%d", taskID))
 	if err != nil {
+		if strings.Contains(strings.ToLower(err.Error()), "duplicate") || strings.Contains(err.Error(), "uq_tasks_family_date_step_active") || strings.Contains(err.Error(), "23505") {
+			shared.WriteJSONError(w, "step_order sudah digunakan untuk tanggal tersebut", http.StatusBadRequest)
+			return
+		}
 		shared.WriteJSONError(w, "gagal update tugas: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
@@ -418,12 +496,42 @@ func (a *API) HandleDuplicateTask(w http.ResponseWriter, r *http.Request, taskID
 	}
 
 	newTitle := fmt.Sprintf("%v (Salinan)", orig["title"])
+	// Assign next available step_order for same family/date to avoid duplicate
+	nextStep := 1
+	if origIsActive, _ := orig["is_active"].(bool); origIsActive {
+		famIDStr, _ := orig["family_id"].(string)
+		if famIDStr == "" {
+			famIDStr = claims.FamilyID
+		}
+		actDateStr, _ := orig["active_date"].(string)
+		if actDateStr != "" && famIDStr != "" {
+			maxParams := fmt.Sprintf("family_id=eq.%s&active_date=eq.%s&is_active=eq.true&select=step_order&order=step_order.desc&limit=1", famIDStr, actDateStr)
+			if maxRaw, err := a.client.Get(ctx, "odyssey_tasks", maxParams); err == nil && len(maxRaw) > 2 {
+				var maxRows []map[string]any
+				_ = json.Unmarshal(maxRaw, &maxRows)
+				if len(maxRows) > 0 {
+					if v, ok := maxRows[0]["step_order"].(float64); ok {
+						nextStep = int(v) + 1
+					} else if v, ok := maxRows[0]["step_order"].(int); ok {
+						nextStep = v + 1
+					}
+				}
+			}
+			if nextStep < 1 {
+				nextStep = 1
+			}
+		} else if v, ok := orig["step_order"].(float64); ok {
+			nextStep = int(v) + 1
+		}
+	} else if v, ok := orig["step_order"].(float64); ok {
+		nextStep = int(v)
+	}
 	payload := map[string]any{
 		"title":           newTitle,
 		"description":     orig["description"],
 		"task_type":       orig["task_type"],
 		"evaluation_type": orig["evaluation_type"],
-		"step_order":      orig["step_order"],
+		"step_order":      nextStep,
 		"reward_coins":    orig["reward_coins"],
 		"reward_xp":       orig["reward_xp"],
 		"config":          orig["config"],
@@ -443,12 +551,224 @@ func (a *API) HandleDuplicateTask(w http.ResponseWriter, r *http.Request, taskID
 
 	raw, err := a.client.MutateAtomic(ctx, http.MethodPost, "odyssey_tasks", payload, "", "return=representation")
 	if err != nil {
-		shared.WriteJSONError(w, "gagal duplikasi tugas: "+err.Error(), http.StatusInternalServerError)
-		return
+		if strings.Contains(strings.ToLower(err.Error()), "duplicate") || strings.Contains(err.Error(), "uq_tasks_family_date_step_active") || strings.Contains(err.Error(), "23505") {
+			// Race: try next step
+			payload["step_order"] = nextStep + 1
+			if retryRaw, retryErr := a.client.MutateAtomic(ctx, http.MethodPost, "odyssey_tasks", payload, "", "return=representation"); retryErr == nil {
+				raw = retryRaw
+				err = nil
+			} else {
+				shared.WriteJSONError(w, "step_order sudah digunakan untuk tanggal tersebut", http.StatusBadRequest)
+				return
+			}
+		}
+		if err != nil {
+			shared.WriteJSONError(w, "gagal duplikasi tugas: "+err.Error(), http.StatusInternalServerError)
+			return
+		}
 	}
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusCreated)
 	w.Write(raw)
+}
+
+func (a *API) HandleReorderTasks(w http.ResponseWriter, r *http.Request) {
+	claims, ok := a.requireAdmin(w, r)
+	if !ok {
+		return
+	}
+	ctx := r.Context()
+
+	var req struct {
+		TaskIDs []json.RawMessage `json:"taskIds"`
+		// also support snake_case
+		TaskIDsSnake []json.RawMessage `json:"task_ids"`
+		IDs          []json.RawMessage `json:"ids"`
+	}
+	if err := shared.ReadJSON(r, &req); err != nil {
+		shared.WriteJSONError(w, "invalid json: "+err.Error(), http.StatusBadRequest)
+		return
+	}
+	rawIDs := req.TaskIDs
+	if len(rawIDs) == 0 {
+		rawIDs = req.TaskIDsSnake
+	}
+	if len(rawIDs) == 0 {
+		rawIDs = req.IDs
+	}
+	// also handle direct []int64 case via unmarshal to []json.RawMessage already
+	if len(rawIDs) == 0 {
+		shared.WriteJSONError(w, "taskIds tidak boleh kosong", http.StatusBadRequest)
+		return
+	}
+	// Parse IDs to int64, support string or number
+	ids := make([]int64, 0, len(rawIDs))
+	seen := make(map[int64]bool)
+	for _, rm := range rawIDs {
+		var asInt int64
+		var asStr string
+		// try int
+		if err := json.Unmarshal(rm, &asInt); err == nil && asInt != 0 {
+			// check if raw was number (not string)
+			trim := strings.TrimSpace(string(rm))
+			if len(trim) > 0 && trim[0] != '"' {
+				ids = append(ids, asInt)
+				if seen[asInt] {
+					shared.WriteJSONError(w, "taskIds tidak boleh duplikat", http.StatusBadRequest)
+					return
+				}
+				seen[asInt] = true
+				continue
+			}
+		}
+		// try string
+		if err := json.Unmarshal(rm, &asStr); err == nil {
+			s := strings.TrimSpace(asStr)
+			if s == "" {
+				shared.WriteJSONError(w, "taskIds mengandung id kosong", http.StatusBadRequest)
+				return
+			}
+			if v, err := strconv.ParseInt(s, 10, 64); err == nil {
+				ids = append(ids, v)
+				if seen[v] {
+					shared.WriteJSONError(w, "taskIds tidak boleh duplikat", http.StatusBadRequest)
+					return
+				}
+				seen[v] = true
+				continue
+			}
+			shared.WriteJSONError(w, "taskIds harus array ID numerik", http.StatusBadRequest)
+			return
+		}
+		// try float
+		var asFloat float64
+		if err := json.Unmarshal(rm, &asFloat); err == nil {
+			v := int64(asFloat)
+			ids = append(ids, v)
+			if seen[v] {
+				shared.WriteJSONError(w, "taskIds tidak boleh duplikat", http.StatusBadRequest)
+				return
+			}
+			seen[v] = true
+			continue
+		}
+		shared.WriteJSONError(w, "taskIds harus array ID numerik", http.StatusBadRequest)
+		return
+	}
+	if len(ids) == 0 {
+		shared.WriteJSONError(w, "taskIds tidak boleh kosong", http.StatusBadRequest)
+		return
+	}
+	// Fetch tasks for these IDs
+	idStrs := make([]string, len(ids))
+	for i, id := range ids {
+		idStrs[i] = strconv.FormatInt(id, 10)
+	}
+	params := fmt.Sprintf("id=in.(%s)&select=id,family_id,active_date,step_order,is_active", strings.Join(idStrs, ","))
+	raw, err := a.client.Get(ctx, "odyssey_tasks", params)
+	if err != nil {
+		shared.WriteJSONError(w, "gagal memuat tugas: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+	var tasks []map[string]any
+	_ = json.Unmarshal(raw, &tasks)
+	if len(tasks) != len(ids) {
+		shared.WriteJSONError(w, "salah satu taskId tidak ditemukan atau bukan milik keluarga Anda", http.StatusBadRequest)
+		return
+	}
+	// Validate family and active_date consistency, and is_active
+	var refFamily, refDate string
+	for i, t := range tasks {
+		fam, _ := t["family_id"].(string)
+		date, _ := t["active_date"].(string)
+		isActive, _ := t["is_active"].(bool)
+		if !isActive {
+			shared.WriteJSONError(w, "hanya tugas aktif yang dapat diurutkan", http.StatusBadRequest)
+			return
+		}
+		if fam != claims.FamilyID && claims.FamilyID != "" {
+			// allow if task family matches claims, but if task has no family, use claims
+			if fam != "" && fam != claims.FamilyID {
+				shared.WriteJSONError(w, "taskIds mengandung tugas dari keluarga lain", http.StatusBadRequest)
+				return
+			}
+		}
+		if i == 0 {
+			refFamily = fam
+			refDate = date
+		} else {
+			if fam != refFamily || date != refDate {
+				shared.WriteJSONError(w, "taskIds harus dari family_id dan active_date yang sama", http.StatusBadRequest)
+				return
+			}
+		}
+	}
+	// Validate submitted set matches all active tasks for that family/date
+	// Fetch all active task IDs for that family/date
+	allParams := fmt.Sprintf("family_id=eq.%s&active_date=eq.%s&is_active=eq.true&select=id", refFamily, refDate)
+	if refFamily == "" {
+		allParams = fmt.Sprintf("active_date=eq.%s&is_active=eq.true&select=id", refDate)
+	}
+	allRaw, err := a.client.Get(ctx, "odyssey_tasks", allParams)
+	if err != nil {
+		shared.WriteJSONError(w, "gagal validasi tugas: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+	var allTasks []map[string]any
+	_ = json.Unmarshal(allRaw, &allTasks)
+	if len(allTasks) != len(ids) {
+		shared.WriteJSONError(w, "taskIds harus mencakup semua tugas aktif pada tanggal tersebut", http.StatusBadRequest)
+		return
+	}
+	allSet := make(map[int64]bool)
+	for _, t := range allTasks {
+		if v, ok := t["id"].(float64); ok {
+			allSet[int64(v)] = true
+		} else if v, ok := t["id"].(int64); ok {
+			allSet[v] = true
+		}
+	}
+	for _, id := range ids {
+		if !allSet[id] {
+			shared.WriteJSONError(w, "taskIds tidak sesuai dengan tugas aktif pada tanggal tersebut", http.StatusBadRequest)
+			return
+		}
+	}
+	// Two-phase update to avoid unique violation: first to temp 1000000+newStep, then to final 1..N
+	// Phase 1: temp
+	for i, id := range ids {
+		tmpStep := 1000000 + i + 1
+		payload := map[string]any{"step_order": tmpStep}
+		if _, err := a.client.Mutate(ctx, http.MethodPatch, "odyssey_tasks", payload, fmt.Sprintf("id=eq.%d", id)); err != nil {
+			shared.WriteJSONError(w, "gagal reorder (phase1): "+err.Error(), http.StatusInternalServerError)
+			return
+		}
+	}
+	// Phase 2: final 1..N in submitted order
+	for i, id := range ids {
+		finalStep := i + 1
+		payload := map[string]any{"step_order": finalStep}
+		if _, err := a.client.Mutate(ctx, http.MethodPatch, "odyssey_tasks", payload, fmt.Sprintf("id=eq.%d", id)); err != nil {
+			if strings.Contains(strings.ToLower(err.Error()), "duplicate") || strings.Contains(err.Error(), "uq_tasks_family_date_step_active") || strings.Contains(err.Error(), "23505") {
+				shared.WriteJSONError(w, "konflik reorder, coba lagi", http.StatusConflict)
+				return
+			}
+			shared.WriteJSONError(w, "gagal reorder: "+err.Error(), http.StatusInternalServerError)
+			return
+		}
+	}
+	// Return ordered tasks
+	finalParams := fmt.Sprintf("family_id=eq.%s&active_date=eq.%s&order=step_order.asc,id.asc", refFamily, refDate)
+	if refFamily == "" {
+		finalParams = fmt.Sprintf("active_date=eq.%s&order=step_order.asc,id.asc", refDate)
+	}
+	finalRaw, err := a.client.Get(ctx, "odyssey_tasks", finalParams)
+	if err != nil {
+		shared.WriteJSON(w, http.StatusOK, map[string]any{"status": "reordered"})
+		return
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.Write(finalRaw)
 }
 
 func (a *API) HandleListPendingSubmissions(w http.ResponseWriter, r *http.Request) {
@@ -774,6 +1094,13 @@ func (a *API) Handler(w http.ResponseWriter, r *http.Request) {
 		}
 		if r.Method == http.MethodPost {
 			a.HandleCreateTask(w, r)
+			return
+		}
+	}
+
+	if path == "/api/admin/tasks/reorder" {
+		if r.Method == http.MethodPatch || r.Method == http.MethodPut || r.Method == http.MethodPost {
+			a.HandleReorderTasks(w, r)
 			return
 		}
 	}

@@ -65,8 +65,13 @@ export function LoginPage() {
             </div>
             
             {error && (
-              <div className="rounded-xl bg-accent-danger/10 border border-accent-danger/20 p-3">
+              <div className="rounded-xl bg-accent-danger/10 border border-accent-danger/20 p-3 space-y-1">
                 <p className="text-xs font-semibold text-accent-danger text-center">{error}</p>
+                {error.toLowerCase().includes('perangkat') && (
+                  <p className="text-[11px] text-text-secondary text-center leading-relaxed">
+                    Akun ini terikat ke perangkat lain. Hubungi admin untuk reset binding perangkat jika Anda ganti HP.
+                  </p>
+                )}
               </div>
             )}
             
