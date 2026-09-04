@@ -68,7 +68,29 @@ func (a *API) HandleListTasks(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	ctx := r.Context()
-	date := r.URL.Query().Get("date")
+	date := strings.TrimSpace(r.URL.Query().Get("date"))
+	// Defensive default: empty date must not silently return all tasks; default to today in system timezone
+	if date == "" {
+		tz := shared.LoadConfig().Timezone
+		if tz == "" {
+			tz = shared.DefaultTimezone
+		}
+		if raw, err := a.client.Get(ctx, "odyssey_system_config", "key=eq.timezone&select=value"); err == nil && len(raw) > 0 {
+			var rows []struct {
+				Value string `json:"value"`
+			}
+			if err := json.Unmarshal(raw, &rows); err == nil && len(rows) > 0 && strings.TrimSpace(rows[0].Value) != "" {
+				if _, err := time.LoadLocation(strings.TrimSpace(rows[0].Value)); err == nil {
+					tz = strings.TrimSpace(rows[0].Value)
+				}
+			}
+		}
+		loc, _ := time.LoadLocation(tz)
+		if loc == nil {
+			loc = time.FixedZone("WIB", 7*3600)
+		}
+		date = time.Now().In(loc).Format("2006-01-02")
+	}
 
 	params := "order=active_date.desc,step_order.asc"
 	if claims.FamilyID != "" {

@@ -207,6 +207,152 @@ func GetEffectivePayoutConfig(ctx context.Context, client db.SupabaseClient, use
 	return effective, nil
 }
 
+// GetEffectivePayoutConfigs resolves effective configs for multiple users with a single batch of queries.
+// System defaults are fetched once; user overrides are fetched with user_uid=in.(...).
+func GetEffectivePayoutConfigs(ctx context.Context, client db.SupabaseClient, userUIDs []string, now time.Time) (map[string]EffectivePayoutConfig, error) {
+	sysMin := DefaultMinimumWithdrawal
+	sysFreq := DefaultFrequency
+	sysWeekday := DefaultWeeklyWeekday
+	sysMonthStart := shared.DefaultRedemptionStartDay
+	sysMonthEnd := shared.DefaultRedemptionEndDay
+	sysTimezone := shared.DefaultTimezone
+
+	raw, err := client.Get(ctx, "odyssey_system_config", "key=in.(default_payout_frequency,default_minimum_withdrawal_coins,default_payout_weekday,redemption_start_day,redemption_end_day,payout_day,timezone)&select=key,value")
+	if err == nil && len(raw) > 0 {
+		var rows []struct {
+			Key   string `json:"key"`
+			Value string `json:"value"`
+		}
+		if jerr := json.Unmarshal(raw, &rows); jerr == nil {
+			for _, r := range rows {
+				switch r.Key {
+				case "default_payout_frequency":
+					if IsValidFrequency(r.Value) {
+						sysFreq = NormalizeFrequency(r.Value)
+					}
+				case "default_minimum_withdrawal_coins":
+					if v, err := strconv.Atoi(strings.TrimSpace(r.Value)); err == nil && v > 0 && v <= 100000 {
+						sysMin = v
+					}
+				case "default_payout_weekday":
+					if v, err := strconv.Atoi(strings.TrimSpace(r.Value)); err == nil && v >= 0 && v <= 6 {
+						sysWeekday = v
+					}
+				case "redemption_start_day":
+					if v, err := strconv.Atoi(strings.TrimSpace(r.Value)); err == nil && v >= 1 && v <= 31 {
+						sysMonthStart = v
+					}
+				case "redemption_end_day":
+					if v, err := strconv.Atoi(strings.TrimSpace(r.Value)); err == nil && v >= 1 && v <= 31 {
+						sysMonthEnd = v
+					}
+				case "timezone":
+					if v := strings.TrimSpace(r.Value); v != "" {
+						if _, err := time.LoadLocation(v); err == nil {
+							sysTimezone = v
+						}
+					}
+				}
+			}
+		}
+	}
+	raw2, err := client.Get(ctx, "odyssey_system_config", "key=in.(default_payout_month_start_day,default_payout_month_end_day)&select=key,value")
+	if err == nil && len(raw2) > 0 {
+		var rows []struct {
+			Key   string `json:"key"`
+			Value string `json:"value"`
+		}
+		if jerr := json.Unmarshal(raw2, &rows); jerr == nil {
+			for _, r := range rows {
+				switch r.Key {
+				case "default_payout_month_start_day":
+					if v, err := strconv.Atoi(strings.TrimSpace(r.Value)); err == nil && v >= 1 && v <= 31 {
+						sysMonthStart = v
+					}
+				case "default_payout_month_end_day":
+					if v, err := strconv.Atoi(strings.TrimSpace(r.Value)); err == nil && v >= 1 && v <= 31 {
+						sysMonthEnd = v
+					}
+				}
+			}
+		}
+	}
+
+	_ = sysTimezone
+	_ = now
+
+	systemEffective := EffectivePayoutConfig{
+		Frequency:             sysFreq,
+		MinimumWithdrawalCoins: sysMin,
+		PayoutWeekday:         sysWeekday,
+		PayoutMonthStartDay:   sysMonthStart,
+		PayoutMonthEndDay:     sysMonthEnd,
+		Source:                "system",
+	}
+	if systemEffective.PayoutMonthStartDay > systemEffective.PayoutMonthEndDay {
+		systemEffective.PayoutMonthStartDay = sysMonthStart
+		systemEffective.PayoutMonthEndDay = sysMonthEnd
+	}
+
+	result := make(map[string]EffectivePayoutConfig, len(userUIDs))
+	for _, uid := range userUIDs {
+		result[uid] = systemEffective
+	}
+	if len(userUIDs) == 0 {
+		return result, nil
+	}
+	// Single batched fetch for all user overrides
+	params := "user_uid=in.(" + strings.Join(userUIDs, ",") + ")&select=user_uid,payout_frequency,minimum_withdrawal_coins,payout_weekday,payout_month_start_day,payout_month_end_day,enabled"
+	rawUser, err := client.Get(ctx, "odyssey_user_payout_config", params)
+	if err != nil || len(rawUser) == 0 || strings.TrimSpace(string(rawUser)) == "[]" {
+		return result, nil
+	}
+	var rows []struct {
+		UserUID               string `json:"user_uid"`
+		PayoutFrequency       string `json:"payout_frequency"`
+		MinimumWithdrawalCoins int    `json:"minimum_withdrawal_coins"`
+		PayoutWeekday          *int   `json:"payout_weekday"`
+		PayoutMonthStartDay    *int   `json:"payout_month_start_day"`
+		PayoutMonthEndDay      *int   `json:"payout_month_end_day"`
+		Enabled               *bool  `json:"enabled"`
+	}
+	if jerr := json.Unmarshal(rawUser, &rows); jerr != nil || len(rows) == 0 {
+		return result, nil
+	}
+	for _, r := range rows {
+		enabled := true
+		if r.Enabled != nil {
+			enabled = *r.Enabled
+		}
+		if !enabled {
+			continue
+		}
+		eff := result[r.UserUID]
+		if IsValidFrequency(r.PayoutFrequency) {
+			eff.Frequency = NormalizeFrequency(r.PayoutFrequency)
+		}
+		if r.MinimumWithdrawalCoins > 0 {
+			eff.MinimumWithdrawalCoins = r.MinimumWithdrawalCoins
+		}
+		if r.PayoutWeekday != nil && *r.PayoutWeekday >= 0 && *r.PayoutWeekday <= 6 {
+			eff.PayoutWeekday = *r.PayoutWeekday
+		}
+		if r.PayoutMonthStartDay != nil && *r.PayoutMonthStartDay >= 1 && *r.PayoutMonthStartDay <= 31 {
+			eff.PayoutMonthStartDay = *r.PayoutMonthStartDay
+		}
+		if r.PayoutMonthEndDay != nil && *r.PayoutMonthEndDay >= 1 && *r.PayoutMonthEndDay <= 31 {
+			eff.PayoutMonthEndDay = *r.PayoutMonthEndDay
+		}
+		eff.Source = "user"
+		if eff.PayoutMonthStartDay > eff.PayoutMonthEndDay {
+			eff.PayoutMonthStartDay = sysMonthStart
+			eff.PayoutMonthEndDay = sysMonthEnd
+		}
+		result[r.UserUID] = eff
+	}
+	return result, nil
+}
+
 // IsEligible checks if user can withdraw given balance and current time according to frequency + threshold.
 func IsEligible(cfg EffectivePayoutConfig, balance int, now time.Time, timezone string) (bool, string) {
 	if balance < cfg.MinimumWithdrawalCoins {

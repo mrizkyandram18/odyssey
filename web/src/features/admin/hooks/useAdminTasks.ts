@@ -58,8 +58,11 @@ const getInitialNewTask = (date: string): NewTaskFormState => ({
   game_max_moves: 20,
 })
 
+const getLocalTodayString = (): string =>
+  new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Jakarta' })
+
 export function useAdminTasks() {
-  const [selectedDate, setSelectedDate] = useState(() => new Date().toISOString().split('T')[0])
+  const [selectedDate, setSelectedDate] = useState(() => getLocalTodayString())
   const [tasks, setTasks] = useState<TaskView[]>([])
   const [isFetching, setIsFetching] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -113,22 +116,23 @@ export function useAdminTasks() {
   })
   const [isSavingTask, setIsSavingTask] = useState(false)
 
-  const fetchTasks = useCallback(async (date = selectedDate) => {
+  const fetchTasks = useCallback(async (date: string) => {
+    const effectiveDate = date || selectedDate || getLocalTodayString()
     setIsFetching(true)
     setError(null)
     try {
-      const res = await adminTasksApi.getTasks(date)
+      const res = await adminTasksApi.getTasks(effectiveDate)
       setTasks(res || [])
     } catch (err: any) {
       setError(err?.message || 'Gagal memuat daftar tugas')
     } finally {
       setIsFetching(false)
     }
-  }, [selectedDate])
+  }, [])
 
   useEffect(() => {
     fetchTasks(selectedDate)
-  }, [selectedDate, fetchTasks])
+  }, [selectedDate])
 
   const openCreateModal = () => {
     setNewTask(getInitialNewTask(selectedDate))

@@ -441,6 +441,79 @@ type inactivityInfo struct {
 	CurrentCycleEnd   string
 }
 
+func resolveTimezone(ctx context.Context, client db.SupabaseClient) (string, *time.Location) {
+	tz := shared.LoadConfig().Timezone
+	if tz == "" {
+		tz = shared.DefaultTimezone
+	}
+	if raw, err := client.Get(ctx, "odyssey_system_config", "key=eq.timezone&select=value"); err == nil && len(raw) > 0 {
+		var rows []struct {
+			Value string `json:"value"`
+		}
+		if err := json.Unmarshal(raw, &rows); err == nil && len(rows) > 0 && strings.TrimSpace(rows[0].Value) != "" {
+			if _, err := time.LoadLocation(strings.TrimSpace(rows[0].Value)); err == nil {
+				tz = strings.TrimSpace(rows[0].Value)
+			}
+		}
+	}
+	loc, _ := time.LoadLocation(tz)
+	if loc == nil {
+		loc = time.FixedZone("WIB", 7*3600)
+		tz = shared.DefaultTimezone
+	}
+	return tz, loc
+}
+
+func resolveTargetEarningDays(ctx context.Context, client db.SupabaseClient) (startDay, endDay int) {
+	startDay, endDay = 1, 24
+	if raw, err := client.Get(ctx, "odyssey_system_config", "key=in.(target_earning_start_day,target_earning_end_day)&select=key,value"); err == nil && len(raw) > 0 {
+		var rows []struct {
+			Key   string `json:"key"`
+			Value string `json:"value"`
+		}
+		if err := json.Unmarshal(raw, &rows); err == nil {
+			for _, r := range rows {
+				var n int
+				if _, err := fmt.Sscanf(r.Value, "%d", &n); err == nil {
+					if r.Key == "target_earning_start_day" && n >= 1 && n <= 31 {
+						startDay = n
+					}
+					if r.Key == "target_earning_end_day" && n >= 1 && n <= 31 {
+						endDay = n
+					}
+				}
+			}
+		}
+	}
+	return
+}
+
+func getEarnedThisPeriodWithLoc(ctx context.Context, client db.SupabaseClient, uids []string, loc *time.Location, startDay, endDay int) map[string]int {
+	if len(uids) == 0 {
+		return map[string]int{}
+	}
+	nowInTz := time.Now().In(loc)
+	periodStart := time.Date(nowInTz.Year(), nowInTz.Month(), startDay, 0, 0, 0, 0, loc).UTC().Format(time.RFC3339)
+	periodEnd := time.Date(nowInTz.Year(), nowInTz.Month(), endDay+1, 0, 0, 0, 0, loc).UTC().Format(time.RFC3339)
+	params := fmt.Sprintf("user_uid=in.(%s)&type=eq.TASK_REWARD&created_at=gte.%s&created_at=lt.%s&select=user_uid,amount", strings.Join(uids, ","), periodStart, periodEnd)
+	raw, err := client.Get(ctx, "odyssey_coin_transactions", params)
+	if err != nil || len(raw) == 0 {
+		return map[string]int{}
+	}
+	var rows []struct {
+		UserUID string `json:"user_uid"`
+		Amount  int    `json:"amount"`
+	}
+	if err := json.Unmarshal(raw, &rows); err != nil {
+		return map[string]int{}
+	}
+	m := make(map[string]int, len(uids))
+	for _, r := range rows {
+		m[r.UserUID] += r.Amount
+	}
+	return m
+}
+
 func getInactivityTracking(ctx context.Context, client db.SupabaseClient, uids []string, isActiveMap map[string]bool) map[string]inactivityInfo {
 	result := make(map[string]inactivityInfo, len(uids))
 	if len(uids) == 0 {
@@ -448,7 +521,6 @@ func getInactivityTracking(ctx context.Context, client db.SupabaseClient, uids [
 	}
 	periodStart, periodEnd, loc, today, periodStartStr, periodEndStr := getCurrentCycleBounds(ctx, client)
 	threshold := getAutoBlockThreshold(ctx, client)
-	// 0 = disabled for display (never INACTIVE); keep as is, no fallback to 5
 	if threshold < 0 {
 		threshold = shared.DefaultAutoBlockInactivityDays
 	}
@@ -559,6 +631,111 @@ func getInactivityTracking(ctx context.Context, client db.SupabaseClient, uids [
 	return result
 }
 
+func getInactivityTrackingWithBounds(ctx context.Context, client db.SupabaseClient, uids []string, isActiveMap map[string]bool, periodStart, periodEnd time.Time, loc *time.Location, today time.Time, periodStartStr, periodEndStr string, threshold int) map[string]inactivityInfo {
+	result := make(map[string]inactivityInfo, len(uids))
+	if len(uids) == 0 {
+		return result
+	}
+	if threshold < 0 {
+		threshold = shared.DefaultAutoBlockInactivityDays
+	}
+	for _, uid := range uids {
+		result[uid] = inactivityInfo{
+			CurrentCycleStart: periodStartStr,
+			CurrentCycleEnd:   periodEndStr,
+		}
+	}
+	params := fmt.Sprintf("user_uid=in.(%s)&status=eq.APPROVED&select=user_uid,created_at,reviewed_at", strings.Join(uids, ","))
+	raw, err := client.Get(ctx, "odyssey_task_submissions", params)
+	if err != nil || len(raw) == 0 || string(raw) == "[]" {
+		for uid, info := range result {
+			if !isActiveMap[uid] {
+				info.Status = "BLOCKED"
+			} else {
+				info.Status = "NO_ACTIVITY_THIS_CYCLE"
+			}
+			result[uid] = info
+		}
+		return result
+	}
+	var rows []struct {
+		UserUID    string  `json:"user_uid"`
+		CreatedAt  string  `json:"created_at"`
+		ReviewedAt *string `json:"reviewed_at"`
+	}
+	_ = json.Unmarshal(raw, &rows)
+	tmp := make(map[string][]time.Time)
+	countMap := make(map[string]int)
+	lastMap := make(map[string]time.Time)
+	for _, r := range rows {
+		tsStr := r.CreatedAt
+		if r.ReviewedAt != nil && strings.TrimSpace(*r.ReviewedAt) != "" {
+			tsStr = *r.ReviewedAt
+		}
+		var t time.Time
+		var err error
+		t, err = time.Parse(time.RFC3339, tsStr)
+		if err != nil {
+			t, err = time.Parse("2006-01-02T15:04:05", tsStr)
+			if err != nil {
+				continue
+			}
+		}
+		localDateStr := t.In(loc).Format("2006-01-02")
+		localDate, _ := time.ParseInLocation("2006-01-02", localDateStr, loc)
+		psStr := periodStart.Format("2006-01-02")
+		peStr := periodEnd.Format("2006-01-02")
+		ps, _ := time.ParseInLocation("2006-01-02", psStr, loc)
+		pe, _ := time.ParseInLocation("2006-01-02", peStr, loc)
+		if localDate.Before(ps) || !localDate.Before(pe) {
+			continue
+		}
+		tmp[r.UserUID] = append(tmp[r.UserUID], t)
+		countMap[r.UserUID]++
+		if existing, ok := lastMap[r.UserUID]; !ok || t.After(existing) {
+			lastMap[r.UserUID] = t
+		}
+	}
+	todayDateStr := today.Format("2006-01-02")
+	todayDate, _ := time.ParseInLocation("2006-01-02", todayDateStr, loc)
+	for uid, info := range result {
+		if !isActiveMap[uid] {
+			info.Status = "BLOCKED"
+			result[uid] = info
+			continue
+		}
+		last, ok := lastMap[uid]
+		if !ok {
+			info.Status = "NO_ACTIVITY_THIS_CYCLE"
+			info.HasActivity = false
+			info.Count = 0
+			result[uid] = info
+			continue
+		}
+		info.HasActivity = true
+		info.Count = countMap[uid]
+		cpy := last
+		info.LastCompletedAt = &cpy
+		ldStr := last.In(loc).Format("2006-01-02")
+		info.LastCompletedDate = &ldStr
+		lastDateStr := last.In(loc).Format("2006-01-02")
+		lastDate, _ := time.ParseInLocation("2006-01-02", lastDateStr, loc)
+		days := int(todayDate.Sub(lastDate) / (24 * time.Hour))
+		if days < 0 {
+			days = 0
+		}
+		d := days
+		info.InactiveDays = &d
+		if threshold != 0 && days >= threshold {
+			info.Status = "INACTIVE"
+		} else {
+			info.Status = "ACTIVE"
+		}
+		result[uid] = info
+	}
+	return result
+}
+
 func (a *API) HandleListMembers(w http.ResponseWriter, r *http.Request) {
 	claims, ok := a.requireAdmin(w, r)
 	if !ok {
@@ -633,21 +810,27 @@ func (a *API) HandleListMembers(w http.ResponseWriter, r *http.Request) {
 		userMap[l.ProfileUID] = l.Username
 	}
 
-	earnedMap := getEarnedThisPeriod(ctx, a.client, uids)
+	// Hoist system config reads to avoid duplicate Supabase calls per member
+	_, loc := resolveTimezone(ctx, a.client)
+	startDay, endDay := resolveTargetEarningDays(ctx, a.client)
+	earnedMap := getEarnedThisPeriodWithLoc(ctx, a.client, uids, loc, startDay, endDay)
 	defaultTarget := getDefaultMonthlyTarget(ctx, a.client)
-	// Inactivity tracking (read-only, cycle-aware)
+	defaultCapCached := getDefaultMonthlyEarningCap(ctx, a.client)
+	// Inactivity tracking (read-only, cycle-aware) — reuse hoisted loc/days
 	isActiveMap := make(map[string]bool, len(profs))
 	for _, p := range profs {
 		isActiveMap[p.UID] = p.IsActive
 	}
-	trackingMap := getInactivityTracking(ctx, a.client, uids, isActiveMap)
-	// Fetch per-user payout configs for list view (batch)
-	payoutMap := make(map[string]payout.EffectivePayoutConfig)
-	for _, uid := range uids {
-		if eff, err := payout.GetEffectivePayoutConfig(ctx, a.client, uid, time.Now()); err == nil {
-			payoutMap[uid] = eff
-		}
-	}
+	nowInTz := time.Now().In(loc)
+	periodStart := time.Date(nowInTz.Year(), nowInTz.Month(), startDay, 0, 0, 0, 0, loc)
+	periodEnd := time.Date(nowInTz.Year(), nowInTz.Month(), endDay+1, 0, 0, 0, 0, loc)
+	periodStartStr := periodStart.Format("2006-01-02")
+	periodEndStr := periodEnd.AddDate(0, 0, -1).Format("2006-01-02")
+	today := nowInTz
+	threshold := getAutoBlockThreshold(ctx, a.client)
+	trackingMap := getInactivityTrackingWithBounds(ctx, a.client, uids, isActiveMap, periodStart, periodEnd, loc, today, periodStartStr, periodEndStr, threshold)
+	// Batch payout configs — single query for all UIDs
+	payoutMap, _ := payout.GetEffectivePayoutConfigs(ctx, a.client, uids, time.Now())
 	items := make([]MemberView, len(profs))
 	for i, p := range profs {
 		username := userMap[p.UID]
@@ -664,13 +847,13 @@ func (a *API) HandleListMembers(w http.ResponseWriter, r *http.Request) {
 		pc := payoutMap[p.UID]
 		minVal := pc.MinimumWithdrawalCoins
 		pcMin := &minVal
-		// resolve per-user earning cap with lazy fallback
+		// resolve per-user earning cap with hoisted fallback (single query)
 		var capVal *int
 		if p.MonthlyEarningCap != nil {
 			capVal = p.MonthlyEarningCap
 		} else {
-			defCap := getDefaultMonthlyEarningCap(ctx, a.client)
-			capVal = &defCap
+			v := defaultCapCached
+			capVal = &v
 		}
 		capInt := 0
 		if capVal != nil {
