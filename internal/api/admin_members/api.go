@@ -1508,6 +1508,13 @@ func (a *API) HandleUnblockMember(w http.ResponseWriter, r *http.Request, target
 		shared.WriteJSON(w, http.StatusOK, map[string]any{"success": true, "uid": targetUID, "already_active": true, "is_active": true})
 		return
 	}
+	// A deleted member (login credential revoked) must not be resurrected into
+	// an active-but-locked-out state: unblock requires the credential to exist.
+	credRaw, _ := a.client.Get(ctx, "odyssey_local_users", fmt.Sprintf("profile_uid=eq.%s&select=profile_uid", targetUID))
+	if len(credRaw) <= 2 || strings.TrimSpace(string(credRaw)) == "[]" {
+		shared.WriteJSONError(w, "anggota sudah dihapus dan tidak dapat diaktifkan kembali", http.StatusBadRequest)
+		return
+	}
 	if _, err := a.client.RPC(ctx, "odyssey_unblock_user", map[string]any{"p_target_uid": targetUID, "p_admin_uid": claims.UID}); err == nil {
 		shared.WriteJSON(w, http.StatusOK, map[string]any{"success": true, "uid": targetUID, "is_active": true})
 		return
@@ -1524,6 +1531,94 @@ func (a *API) HandleUnblockMember(w http.ResponseWriter, r *http.Request, target
 		return
 	}
 	shared.WriteJSON(w, http.StatusOK, map[string]any{"success": true, "uid": targetUID, "is_active": true})
+}
+
+func (a *API) HandleDeleteMember(w http.ResponseWriter, r *http.Request, targetUID string) {
+	claims, ok := a.requireAdmin(w, r)
+	if !ok {
+		return
+	}
+	ctx := r.Context()
+	targetRaw, err := a.client.Get(ctx, "odyssey_user_profiles", fmt.Sprintf("uid=eq.%s", targetUID))
+	if err != nil || len(targetRaw) == 0 || strings.TrimSpace(string(targetRaw)) == "[]" {
+		shared.WriteJSONError(w, "anggota tidak ditemukan", http.StatusNotFound)
+		return
+	}
+	var checks []struct {
+		UID      string `json:"uid"`
+		FamilyID string `json:"family_id"`
+		Role     string `json:"role"`
+		IsActive bool   `json:"is_active"`
+	}
+	_ = json.Unmarshal(targetRaw, &checks)
+	if len(checks) == 0 {
+		shared.WriteJSONError(w, "anggota tidak ditemukan", http.StatusNotFound)
+		return
+	}
+	// Tenant check without existence leak: cross-family reads as not found
+	// (same convention as HandleResetPassword).
+	if claims.FamilyID != "" && checks[0].FamilyID != "" && checks[0].FamilyID != claims.FamilyID {
+		shared.WriteJSONError(w, "anggota tidak ditemukan", http.StatusNotFound)
+		return
+	}
+	if checks[0].Role == "ADMIN" || checks[0].Role == "GUIDE" || checks[0].Role == "BUILDER" {
+		shared.WriteJSONError(w, "akun admin tidak dapat dihapus", http.StatusBadRequest)
+		return
+	}
+	if claims.UID == targetUID {
+		shared.WriteJSONError(w, "tidak dapat menghapus akun sendiri", http.StatusBadRequest)
+		return
+	}
+	var req struct {
+		Reason *string `json:"reason"`
+	}
+	_ = shared.ReadJSON(r, &req)
+	reason := "deleted by admin"
+	if req.Reason != nil && strings.TrimSpace(*req.Reason) != "" {
+		reason = strings.TrimSpace(*req.Reason)
+	}
+
+	// Idempotency discriminator: a deleted member is inactive AND has no login
+	// credential row (block alone never removes the credential).
+	credRaw, _ := a.client.Get(ctx, "odyssey_local_users", fmt.Sprintf("profile_uid=eq.%s&select=profile_uid", targetUID))
+	hasCredential := len(credRaw) > 2 && strings.TrimSpace(string(credRaw)) != "[]"
+	if !checks[0].IsActive && !hasCredential {
+		shared.WriteJSON(w, http.StatusOK, map[string]any{"success": true, "uid": targetUID, "already_deleted": true, "is_active": false})
+		return
+	}
+
+	// 1. Deactivate via the existing block mechanism (RPC first, conditional
+	// PATCH fallback) so every is_active guard (login, tasks, submit) applies.
+	// Only step 2 distinguishes delete from block; the profile row itself is
+	// never removed, preserving all historical FK relationships.
+	if _, err := a.client.RPC(ctx, "odyssey_block_user", map[string]any{"p_target_uid": targetUID, "p_admin_uid": claims.UID, "p_reason": reason}); err != nil {
+		patch := map[string]any{
+			"is_active":    false,
+			"blocked_at":   time.Now().UTC().Format(time.RFC3339),
+			"blocked_by":   claims.UID,
+			"block_reason": reason,
+			"updated_at":   time.Now().UTC().Format(time.RFC3339),
+		}
+		params := fmt.Sprintf("uid=eq.%s", targetUID)
+		if checks[0].IsActive {
+			params += "&is_active=eq.true"
+		}
+		if _, err := a.client.Mutate(ctx, http.MethodPatch, "odyssey_user_profiles", patch, params); err != nil {
+			shared.WriteJSONError(w, "gagal menghapus anggota: "+err.Error(), http.StatusInternalServerError)
+			return
+		}
+	}
+
+	// 2. Revoke the login credential. Nothing references odyssey_local_users,
+	// so this orphans no records; it prevents any future login and frees the
+	// username for reuse. Profile + submissions + claims + ledger stay intact.
+	if hasCredential {
+		if _, err := a.client.Mutate(ctx, http.MethodDelete, "odyssey_local_users", nil, fmt.Sprintf("profile_uid=eq.%s", targetUID)); err != nil {
+			shared.WriteJSONError(w, "gagal menghapus kredensial anggota: "+err.Error(), http.StatusInternalServerError)
+			return
+		}
+	}
+	shared.WriteJSON(w, http.StatusOK, map[string]any{"success": true, "uid": targetUID, "is_active": false, "deleted": true})
 }
 
 func generateTemporaryPassword() (string, error) {
@@ -1656,6 +1751,10 @@ func (a *API) Handler(w http.ResponseWriter, r *http.Request) {
 		targetUID := trimmed
 		if targetUID != "" && !strings.Contains(targetUID, "/") && r.Method == http.MethodPatch {
 			a.HandleUpdateMember(w, r, targetUID)
+			return
+		}
+		if targetUID != "" && !strings.Contains(targetUID, "/") && r.Method == http.MethodDelete {
+			a.HandleDeleteMember(w, r, targetUID)
 			return
 		}
 	}

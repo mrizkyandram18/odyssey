@@ -252,6 +252,19 @@ export function useAdminMembers() {
     }
   }
 
+  const handleDelete = async (member: MemberView) => {
+    if (!confirm(`Hapus anggota "${member.explorer_name}" (@${member.username})?\n\nAkses login akan dicabut dan anggota dinonaktifkan. Riwayat submission, klaim, dan koin tetap tersimpan.`)) return
+    setProcessingId(member.uid)
+    try {
+      await adminMembersApi.deleteMember(member.uid)
+      await fetchMembers(pagination.page)
+    } catch (err: any) {
+      alert(`Gagal menghapus anggota: ${err?.message || 'Terjadi kesalahan'}`)
+    } finally {
+      setProcessingId(null)
+    }
+  }
+
   return {
     members,
     pagination,
@@ -276,5 +289,6 @@ export function useAdminMembers() {
     handleToggleActive,
     handleBlock,
     handleUnblock,
+    handleDelete,
   }
 }

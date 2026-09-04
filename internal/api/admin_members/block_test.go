@@ -227,7 +227,7 @@ func TestInactivityTrackingDoesNotMutateIsActive(t *testing.T) {
 	}
 }
 
-func TestNoDeleteUserEndpoint(t *testing.T) {
+func TestDeleteMemberRequiresExistingMember(t *testing.T) {
 	mockClient := &mockSupabaseClient{}
 	api := NewAPI(mockClient)
 	req := httptest.NewRequest(http.MethodDelete, "/api/admin/members/usr_target", nil)
@@ -235,7 +235,7 @@ func TestNoDeleteUserEndpoint(t *testing.T) {
 	w := httptest.NewRecorder()
 	api.Handler(w, req)
 	if w.Code != http.StatusNotFound {
-		t.Fatalf("expected 404 for DELETE (no delete endpoint) got %d", w.Code)
+		t.Fatalf("expected 404 for DELETE on unknown member got %d", w.Code)
 	}
 }
 

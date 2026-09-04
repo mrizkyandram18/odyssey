@@ -1,5 +1,5 @@
 import React from 'react'
-import { Users, UserPlus, Coins, Edit3, ChevronLeft, ChevronRight, RefreshCw, Shield, Sparkles, Calendar, Clock } from 'lucide-react'
+import { Users, UserPlus, Coins, Edit3, Trash2, ChevronLeft, ChevronRight, RefreshCw, Shield, Sparkles, Calendar, Clock } from 'lucide-react'
 import { useAdminMembers } from '../../hooks/useAdminMembers'
 import { CreateMemberModal } from './CreateMemberModal'
 import { EditMemberModal } from './EditMemberModal'
@@ -49,8 +49,12 @@ function getStatusConfig(member: any): { label: string; variant: 'success' | 'wa
   }
 }
 
+function isAdminRole(role: string): boolean {
+  return role === 'ADMIN' || role === 'GUIDE' || role === 'BUILDER'
+}
+
 function RoleBadge({ role }: { role: string }) {
-  const normalized = role === 'ADMIN' || role === 'GUIDE' || role === 'BUILDER' ? 'ADMIN' : 'MEMBER'
+  const normalized = isAdminRole(role) ? 'ADMIN' : 'MEMBER'
   const isAdmin = normalized === 'ADMIN'
   return (
     <span
@@ -106,6 +110,8 @@ export const MemberList: React.FC = () => {
     handleSaveEditMember,
     handleBlock,
     handleUnblock,
+    handleDelete,
+    processingId,
   } = useAdminMembers()
 
   return (
@@ -262,6 +268,19 @@ export const MemberList: React.FC = () => {
                                 Unblock
                               </button>
                             )}
+                            {!isAdminRole(member.role) && (
+                              <button
+                                type="button"
+                                data-testid={`delete-button-${member.uid}`}
+                                onClick={() => handleDelete(member)}
+                                disabled={processingId === member.uid}
+                                className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-zinc-200 bg-white text-red-600 transition hover:bg-red-50 disabled:opacity-40"
+                                title={`Hapus ${member.explorer_name}`}
+                                aria-label={`Hapus ${member.explorer_name}`}
+                              >
+                                <Trash2 className="h-4 w-4" aria-hidden="true" />
+                              </button>
+                            )}
                           </div>
                         </td>
                       </tr>
@@ -329,6 +348,18 @@ export const MemberList: React.FC = () => {
                           aria-label={`Unblock ${member.explorer_name}`}
                         >
                           Unblock
+                        </button>
+                      )}
+                      {!isAdminRole(member.role) && (
+                        <button
+                          type="button"
+                          data-testid={`delete-button-${member.uid}`}
+                          onClick={() => handleDelete(member)}
+                          disabled={processingId === member.uid}
+                          className="flex h-8 w-8 items-center justify-center rounded-lg border border-zinc-200 bg-white text-red-600 disabled:opacity-40"
+                          aria-label={`Hapus ${member.explorer_name}`}
+                        >
+                          <Trash2 className="h-4 w-4" aria-hidden="true" />
                         </button>
                       )}
                     </div>

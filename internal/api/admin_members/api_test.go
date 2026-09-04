@@ -18,6 +18,7 @@ type mockSupabaseClient struct {
 	getFunc          func(ctx context.Context, table string, params string) ([]byte, error)
 	mutateAtomicFunc func(ctx context.Context, method string, table string, payload any, params string, extraHeader string) ([]byte, error)
 	mutateFunc       func(ctx context.Context, method string, table string, payload any, params string) ([]byte, error)
+	rpcFunc          func(ctx context.Context, fnName string, payload any) ([]byte, error)
 }
 
 func (m *mockSupabaseClient) Get(ctx context.Context, table string, params string) ([]byte, error) {
@@ -42,6 +43,9 @@ func (m *mockSupabaseClient) Mutate(ctx context.Context, method string, table st
 }
 
 func (m *mockSupabaseClient) RPC(ctx context.Context, fn string, payload any) ([]byte, error) {
+	if m.rpcFunc != nil {
+		return m.rpcFunc(ctx, fn, payload)
+	}
 	return []byte("{}"), nil
 }
 
