@@ -225,6 +225,9 @@ export const MemberList: React.FC = () => {
                               <Sparkles className="h-3 w-3" aria-hidden="true" />
                               Lv {member.level}
                             </span>
+                            <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full border ${member.earning_locked ? 'bg-amber-100 text-amber-700 border-amber-200' : 'bg-emerald-50 text-emerald-700 border-emerald-200'}`}>
+                              {member.earned_this_period ?? 0}/{member.monthly_earning_cap ?? 3320} {member.earning_locked ? '🔒 HALTED' : '✓'}
+                            </span>
                           </div>
                         </td>
                         <td className="px-4 py-3 text-right">
@@ -364,6 +367,9 @@ export const MemberList: React.FC = () => {
                           <Sparkles className="h-3 w-3" aria-hidden="true" />
                           Lv {member.level}
                         </span>
+                      </p>
+                      <p className={`mt-1 text-[10px] font-bold inline-flex px-2 py-0.5 rounded-full border ${member.earning_locked ? 'bg-amber-100 text-amber-700 border-amber-200' : 'bg-emerald-50 text-emerald-700 border-emerald-200'}`}>
+                        {member.earned_this_period ?? 0}/{member.monthly_earning_cap ?? 3320} {member.earning_locked ? '🔒 HALTED' : '✓ ACTIVE'}
                       </p>
                     </div>
                   </div>

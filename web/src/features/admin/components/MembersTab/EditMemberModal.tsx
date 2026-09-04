@@ -12,6 +12,7 @@ interface EditMemberModalProps {
     is_active: boolean
     reset_device: boolean
     monthly_coin_target: number
+    monthly_earning_cap: number
     payout_frequency: 'THRESHOLD' | 'WEEKLY' | 'MONTHLY'
     minimum_withdrawal_coins: number
     payout_weekday: number
@@ -25,6 +26,7 @@ interface EditMemberModalProps {
       is_active: boolean
       reset_device: boolean
       monthly_coin_target: number
+      monthly_earning_cap: number
       payout_frequency: 'THRESHOLD' | 'WEEKLY' | 'MONTHLY'
       minimum_withdrawal_coins: number
       payout_weekday: number
@@ -211,6 +213,23 @@ export const EditMemberModal: React.FC<EditMemberModalProps> = ({
                     <p className="text-[11px] text-text-secondary">Target: {member.monthly_coin_target} • Terpakai bulan ini: {member.earned_this_period ?? 0}</p>
                   )}
                   <p className="text-[11px] text-text-secondary">Sistem akan menghitung pembagian koin otomatis berdasarkan target dan bobot task. Perubahan berlaku bulan ini.</p>
+                </div>
+                <div className="space-y-2 p-3 rounded-xl bg-amber-50 border border-amber-200">
+                  <label className="text-xs font-bold text-text-secondary">Batas Earning Bulanan (0 = unlimited, 3320 default)</label>
+                  <input
+                    type="number"
+                    min={0}
+                    max={10000}
+                    value={form.monthly_earning_cap}
+                    onChange={(e) => setForm({ ...form, monthly_earning_cap: parseInt(e.target.value || '0', 10) })}
+                    className="w-full p-2.5 rounded-xl bg-surface border border-border-subtle text-xs sm:text-sm text-text-primary focus:outline-none focus:border-accent-magic"
+                  />
+                  {member.monthly_earning_cap !== undefined && (
+                    <p className="text-[11px] text-text-secondary">
+                      Cap: {member.monthly_earning_cap} • Earned: {member.earned_this_period ?? 0} • Status: {member.earning_status ?? '—'} {member.earning_locked ? '🔒 HALTED' : '✓ ACTIVE'}
+                    </p>
+                  )}
+                  <p className="text-[11px] text-text-secondary">Hard limit. Jika earned ≥ cap, earning_locked=true sampai periode baru (1–24). Saldo tidak reset.</p>
                 </div>
                 <div className="space-y-2 p-3 rounded-xl bg-violet-50 dark:bg-violet-950/20 border border-violet-200">
                   <label className="text-xs font-bold text-text-secondary">Pengaturan Pencairan Per-User</label>

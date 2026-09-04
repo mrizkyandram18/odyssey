@@ -76,6 +76,8 @@ export class ApiClient {
     const isAuthenticated = session !== null && !isSessionExpired(session)
     const headers: Record<string, string> = {
       'Content-Type': 'application/json',
+      'Cache-Control': 'no-store',
+      Pragma: 'no-cache',
     }
 
     if (isAuthenticated && session) {
@@ -162,7 +164,7 @@ export const profileApi = {
 }
 
 export const tasksApi = {
-  getToday: () => apiClient.get<{ tasks: TaskView[] }>('/api/tasks/today'),
+  getToday: () => apiClient.get<{ tasks: TaskView[]; earning_locked?: boolean; earning_cap?: number; earned?: number }>('/api/tasks/today'),
   getTask: (taskId: number) => apiClient.get<TaskView>(`/api/tasks/${taskId}`),
   submit: (taskId: number, data: { submission_type?: string; answers?: Record<string, any>; payload?: Record<string, any> }) =>
     apiClient.post<SubmitTaskResponse>(`/api/tasks/${taskId}/submit`, data),

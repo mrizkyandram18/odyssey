@@ -4,6 +4,7 @@ import { FileUp, FileText, X, CheckCircle2, AlertCircle, Sparkles, Clock, ArrowR
 import type { TaskView } from '../../shared/types'
 import { tasksApi } from '../../shared/lib/api'
 import { uploadTaskProof } from '../../shared/lib/compress'
+import { isEarningCapError, EARNING_CAP_MESSAGE } from '../../shared/lib/earning'
 
 interface DocUploadModalProps {
   task: TaskView
@@ -63,7 +64,12 @@ export const DocUploadModal: React.FC<DocUploadModalProps> = ({ task, onClose, o
         setErrorMessage(res.error || 'Gagal menyimpan submission dokumen')
       }
     } catch (err: any) {
-      setErrorMessage(err.message || 'Gagal mengunggah dokumen. Silakan periksa koneksi.')
+      if (isEarningCapError(err)) {
+        setErrorMessage(EARNING_CAP_MESSAGE)
+        try { onSuccess() } catch {}
+      } else {
+        setErrorMessage(err.message || 'Gagal mengunggah dokumen. Silakan periksa koneksi.')
+      }
     } finally {
       setUploading(false)
     }

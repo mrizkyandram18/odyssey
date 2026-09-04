@@ -17,6 +17,7 @@ export function useAdminMembers() {
     explorer_name: '',
     role: 'MEMBER' as 'ADMIN' | 'MEMBER',
     monthly_coin_target: 0,
+    monthly_earning_cap: 3320,
     payout_frequency: 'THRESHOLD' as 'THRESHOLD' | 'WEEKLY' | 'MONTHLY',
     minimum_withdrawal_coins: 500,
     payout_weekday: 1,
@@ -33,6 +34,7 @@ export function useAdminMembers() {
     is_active: true,
     reset_device: false,
     monthly_coin_target: 0,
+    monthly_earning_cap: 3320,
     payout_frequency: 'THRESHOLD' as 'THRESHOLD' | 'WEEKLY' | 'MONTHLY',
     minimum_withdrawal_coins: 500,
     payout_weekday: 1,
@@ -63,6 +65,21 @@ export function useAdminMembers() {
     fetchMembers(1)
   }, [fetchMembers])
 
+  // Refetch on window focus / reconnect to avoid stale earning cap / active state
+  useEffect(() => {
+    const onFocus = () => fetchMembers(pagination.page)
+    const onOnline = () => fetchMembers(pagination.page)
+    const onVisible = () => { if (document.visibilityState === 'visible') fetchMembers(pagination.page) }
+    window.addEventListener('focus', onFocus)
+    window.addEventListener('online', onOnline)
+    document.addEventListener('visibilitychange', onVisible)
+    return () => {
+      window.removeEventListener('focus', onFocus)
+      window.removeEventListener('online', onOnline)
+      document.removeEventListener('visibilitychange', onVisible)
+    }
+  }, [fetchMembers, pagination.page])
+
   const openCreateModal = () => {
     setNewMember({
       username: '',
@@ -70,6 +87,7 @@ export function useAdminMembers() {
       explorer_name: '',
       role: 'MEMBER',
       monthly_coin_target: 0,
+      monthly_earning_cap: 3320,
       payout_frequency: 'THRESHOLD',
       minimum_withdrawal_coins: 500,
       payout_weekday: 1,
@@ -92,6 +110,10 @@ export function useAdminMembers() {
       alert('Target koin bulanan harus 0..10000')
       return
     }
+    if (newMember.role === 'MEMBER' && (newMember.monthly_earning_cap < 0 || newMember.monthly_earning_cap > 10000)) {
+      alert('Batas earning bulanan harus 0..10000 (0=unlimited)')
+      return
+    }
     if (newMember.minimum_withdrawal_coins < 1 || newMember.minimum_withdrawal_coins > 100000) {
       alert('Minimum withdrawal harus 1..100000')
       return
@@ -104,6 +126,7 @@ export function useAdminMembers() {
         explorer_name: newMember.explorer_name.trim(),
         role: newMember.role,
         monthly_coin_target: newMember.role === 'MEMBER' ? newMember.monthly_coin_target : undefined,
+        monthly_earning_cap: newMember.role === 'MEMBER' ? newMember.monthly_earning_cap : undefined,
         payout_frequency: newMember.payout_frequency,
         minimum_withdrawal_coins: newMember.minimum_withdrawal_coins,
       }
@@ -130,6 +153,7 @@ export function useAdminMembers() {
       is_active: member.is_active,
       reset_device: false,
       monthly_coin_target: member.monthly_coin_target ?? 0,
+      monthly_earning_cap: member.monthly_earning_cap ?? 3320,
       payout_frequency: (member.payout_frequency as any) || 'THRESHOLD',
       minimum_withdrawal_coins: member.minimum_withdrawal_coins ?? 500,
       payout_weekday: 1,
@@ -152,6 +176,10 @@ export function useAdminMembers() {
       alert('Target koin bulanan harus 0..10000')
       return
     }
+    if (editMemberForm.monthly_earning_cap < 0 || editMemberForm.monthly_earning_cap > 10000) {
+      alert('Batas earning bulanan harus 0..10000 (0=unlimited)')
+      return
+    }
     if (editMemberForm.minimum_withdrawal_coins < 1 || editMemberForm.minimum_withdrawal_coins > 100000) {
       alert('Minimum withdrawal harus 1..100000')
       return
@@ -164,6 +192,7 @@ export function useAdminMembers() {
         is_active: editMemberForm.is_active,
         reset_device: editMemberForm.reset_device ? true : undefined,
         monthly_coin_target: editMemberForm.monthly_coin_target,
+        monthly_earning_cap: editMemberForm.monthly_earning_cap,
         payout_frequency: editMemberForm.payout_frequency,
         minimum_withdrawal_coins: editMemberForm.minimum_withdrawal_coins,
       }

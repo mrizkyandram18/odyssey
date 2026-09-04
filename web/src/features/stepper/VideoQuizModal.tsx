@@ -4,6 +4,7 @@ import confetti from 'canvas-confetti'
 import { Play, CheckCircle2, XCircle, Award, Sparkles, ChevronRight, HelpCircle, X } from 'lucide-react'
 import type { TaskView, QuizQuestion } from '../../shared/types'
 import { tasksApi } from '../../shared/lib/api'
+import { isEarningCapError, EARNING_CAP_MESSAGE } from '../../shared/lib/earning'
 
 interface VideoQuizModalProps {
   task: TaskView
@@ -77,7 +78,12 @@ export const VideoQuizModal: React.FC<VideoQuizModalProps> = ({ task, onClose, o
         setErrorMessage(res.error || 'Jawaban kuis belum tepat. Periksa kembali jawabanmu.')
       }
     } catch (err: any) {
-      setErrorMessage(err.message || 'Gagal mengirim jawaban kuis. Coba lagi.')
+      if (isEarningCapError(err)) {
+        setErrorMessage(EARNING_CAP_MESSAGE)
+        try { (onSuccess as any)?.() } catch {}
+      } else {
+        setErrorMessage(err.message || 'Gagal mengirim jawaban kuis. Coba lagi.')
+      }
     } finally {
       setSubmitting(false)
     }

@@ -149,7 +149,10 @@ export interface MemberView {
   xp: number
   coins: number
   monthly_coin_target?: number
+  monthly_earning_cap?: number
   earned_this_period?: number
+  earning_status?: 'ACTIVE' | 'HALTED'
+  earning_locked?: boolean
   blocked_at?: string | null
   blocked_by?: string | null
   block_reason?: string | null
@@ -173,6 +176,7 @@ export interface CreateMemberInput {
   explorer_name: string
   role?: Role
   monthly_coin_target?: number
+  monthly_earning_cap?: number
   payout_frequency?: 'THRESHOLD' | 'WEEKLY' | 'MONTHLY'
   minimum_withdrawal_coins?: number
   payout_weekday?: number
@@ -187,6 +191,7 @@ export interface UpdateMemberInput {
   password?: string
   reset_device?: boolean
   monthly_coin_target?: number
+  monthly_earning_cap?: number
   payout_frequency?: 'THRESHOLD' | 'WEEKLY' | 'MONTHLY'
   minimum_withdrawal_coins?: number
   payout_weekday?: number
@@ -207,11 +212,19 @@ export interface TaskView {
   target_scope?: 'ALL' | 'FAMILY' | 'USER'
   target_user_uid?: string
   is_locked: boolean
+  earning_locked?: boolean
   status: TaskStatus
   admin_notes?: string
   coins_earned: number
   xp_earned: number
   submitted_at?: string
+}
+
+export interface TodayTasksResponse {
+  tasks: TaskView[]
+  earning_locked: boolean
+  earning_cap: number
+  earned: number
 }
 
 export interface SubmitTaskResponse {

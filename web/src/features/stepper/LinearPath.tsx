@@ -39,33 +39,74 @@ function getTaskIcon(taskType: string) {
 }
 
 export const LinearPath: React.FC = () => {
-  const { profile, refreshProfile } = useSession()
+  const { profile, refreshProfile, session } = useSession()
   const [tasks, setTasks] = useState<TaskView[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [activeModalTask, setActiveModalTask] = useState<TaskView | null>(null)
   const [shopConfig, setShopConfig] = useState<RedemptionConfig | null>(null)
+  const [earningLocked, setEarningLocked] = useState(false)
+  const [earningCap, setEarningCap] = useState<number | null>(null)
+  const [earned, setEarned] = useState<number | null>(null)
+  const requestIdRef = React.useRef(0)
 
   const loadTasks = useCallback(async () => {
+    const reqId = ++requestIdRef.current
     try {
       setLoading(true)
       setError(null)
       const data = await tasksApi.getToday()
+      // Race guard: ignore stale response
+      if (reqId !== requestIdRef.current) return
       setTasks(data.tasks || [])
+      setEarningLocked(Boolean(data.earning_locked))
+      setEarningCap(data.earning_cap ?? null)
+      setEarned(data.earned ?? null)
     } catch (err: any) {
-      setError(err.message || 'Gagal memuat alur tugas harian.')
+      if (reqId !== requestIdRef.current) return
+      const msg = err.message || 'Gagal memuat alur tugas harian.'
+      setError(msg)
+      // If cap reached, also lock UI from error path
+      if (msg.includes('EARNING_CAP_REACHED') || msg.includes('batas earning')) {
+        setEarningLocked(true)
+      }
     } finally {
-      setLoading(false)
+      if (reqId === requestIdRef.current) setLoading(false)
     }
   }, [])
 
-  useEffect(() => { loadTasks() }, [loadTasks])
+  // Load on mount and when session (user) changes — prevents User A data leaking to User B
+  useEffect(() => { loadTasks() }, [loadTasks, session?.uid])
+  // Clear stale tasks immediately when user switches
+  useEffect(() => {
+    setTasks([])
+    setEarningLocked(false)
+    setEarningCap(null)
+    setEarned(null)
+  }, [session?.uid])
+
   useEffect(() => {
     shopApi.getConfig().then((c) => setShopConfig(c)).catch(() => {})
   }, [])
 
+  // Refetch on window focus / reconnect / visibility — ensures period rollover and cap updates propagate without manual reload
+  useEffect(() => {
+    const onFocus = () => loadTasks()
+    const onOnline = () => loadTasks()
+    const onVisibility = () => { if (document.visibilityState === 'visible') loadTasks() }
+    window.addEventListener('focus', onFocus)
+    window.addEventListener('online', onOnline)
+    document.addEventListener('visibilitychange', onVisibility)
+    return () => {
+      window.removeEventListener('focus', onFocus)
+      window.removeEventListener('online', onOnline)
+      document.removeEventListener('visibilitychange', onVisibility)
+    }
+  }, [loadTasks])
+
   const handleTaskClick = (task: TaskView) => {
-    if (task.is_locked || task.status === 'LOCKED') return
+    if (earningLocked) return
+    if (task.earning_locked || task.is_locked || task.status === 'LOCKED') return
     setActiveModalTask(task)
   }
   const handleModalSuccess = () => {
@@ -79,6 +120,11 @@ export const LinearPath: React.FC = () => {
     if (currentTask) {
       const next = tasks.find((t) => t.step_order === currentTask.step_order + 1)
       if (next) {
+        // Do not open next if earning is locked
+        if (earningLocked || next.earning_locked) {
+          setActiveModalTask(null)
+          return
+        }
         setActiveModalTask({ ...next, is_locked: false, status: next.status === 'LOCKED' ? 'UNLOCKED' : next.status })
         return
       }
@@ -197,8 +243,8 @@ export const LinearPath: React.FC = () => {
               <span className="text-accent-gold font-bold">+{stats.nextTask.reward_coins} koin</span> • +{stats.nextTask.reward_xp} XP
             </span>
           </div>
-          <Button onClick={() => handleTaskClick(stats.nextTask!)} size="lg" className="w-full mt-4">
-            {stats.completed === 0 ? 'Mulai Tugas' : 'Lanjutkan Tugas'} <ArrowRight className="w-4 h-4 ml-2" />
+          <Button onClick={() => handleTaskClick(stats.nextTask!)} size="lg" className="w-full mt-4" disabled={earningLocked}>
+            {earningLocked ? 'Batas tercapai' : stats.completed === 0 ? 'Mulai Tugas' : 'Lanjutkan Tugas'} <ArrowRight className="w-4 h-4 ml-2" />
           </Button>
           {stats.rejected > 0 && (
             <p className="text-xs text-status-error text-center mt-2.5 font-medium">Ada {stats.rejected} tugas perlu revisi — cek daftar di bawah.</p>
@@ -211,6 +257,23 @@ export const LinearPath: React.FC = () => {
           </div>
           <h2 className="text-sm font-bold text-text-primary mt-3">Menunggu verifikasi</h2>
           <p className="text-xs text-text-secondary mt-1 leading-relaxed">Semua tugas sudah dikumpulkan. Koin akan masuk setelah admin memeriksa.</p>
+        </Card>
+      )}
+
+      {/* Earning cap HALTED banner — authoritative from backend */}
+      {earningLocked && !loading && (
+        <Card className="p-4 border-amber-200 bg-amber-50">
+          <div className="flex items-start gap-3">
+            <div className="w-9 h-9 rounded-xl bg-amber-100 border border-amber-200 flex items-center justify-center shrink-0">
+              <Lock className="w-4 h-4 text-amber-700" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <h3 className="text-sm font-extrabold text-zinc-900">Batas earning bulanan tercapai</h3>
+              <p className="text-xs text-zinc-600 mt-1 leading-relaxed">
+                Kamu sudah mencapai {earned ?? '—'} / {earningCap ?? '—'} koin periode ini (1–24). Tugas tetap terlihat, tapi tidak menghasilkan koin sampai periode berikutnya. Saldo {userCoins.toLocaleString('id-ID')} koin tetap aman.
+              </p>
+            </div>
+          </div>
         </Card>
       )}
 
@@ -302,8 +365,8 @@ export const LinearPath: React.FC = () => {
             {tasks.map((task) => {
               const isApproved = task.status === 'APPROVED'
               const isPending = task.status === 'PENDING'
-              const isUnlocked = task.status === 'UNLOCKED'
-              const isLocked = task.status === 'LOCKED' || task.is_locked
+              const isUnlocked = task.status === 'UNLOCKED' && !earningLocked && !task.earning_locked
+              const isLocked = task.status === 'LOCKED' || task.is_locked || earningLocked || Boolean(task.earning_locked)
               const isRejected = task.status === 'REJECTED'
               return (
                 <button

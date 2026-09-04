@@ -10,6 +10,7 @@ interface CreateMemberModalProps {
     explorer_name: string
     role: 'ADMIN' | 'MEMBER'
     monthly_coin_target: number
+    monthly_earning_cap: number
     payout_frequency: 'THRESHOLD' | 'WEEKLY' | 'MONTHLY'
     minimum_withdrawal_coins: number
     payout_weekday: number
@@ -23,6 +24,7 @@ interface CreateMemberModalProps {
       explorer_name: string
       role: 'ADMIN' | 'MEMBER'
       monthly_coin_target: number
+      monthly_earning_cap: number
       payout_frequency: 'THRESHOLD' | 'WEEKLY' | 'MONTHLY'
       minimum_withdrawal_coins: number
       payout_weekday: number
@@ -155,6 +157,18 @@ export const CreateMemberModal: React.FC<CreateMemberModalProps> = ({
                     className="w-full p-2.5 rounded-xl bg-surface border border-border-subtle text-xs sm:text-sm text-text-primary focus:outline-none focus:border-accent-magic"
                   />
                   <p className="text-[11px] text-text-secondary">Sistem akan menghitung pembagian koin otomatis berdasarkan target dan bobot task. Default 0 (admin set per-user, Selvi 3320 tetap).</p>
+                </div>
+                <div className="space-y-1">
+                  <label className="text-xs font-bold text-text-secondary">Batas Earning Bulanan (0 = unlimited, 3320 default)</label>
+                  <input
+                    type="number"
+                    min={0}
+                    max={10000}
+                    value={form.monthly_earning_cap}
+                    onChange={(e) => setForm({ ...form, monthly_earning_cap: parseInt(e.target.value || '0', 10) })}
+                    className="w-full p-2.5 rounded-xl bg-surface border border-border-subtle text-xs sm:text-sm text-text-primary focus:outline-none focus:border-accent-magic"
+                  />
+                  <p className="text-[11px] text-text-secondary">Hard limit. Jika earned ≥ cap, locked sampai periode baru (1–24). Saldo tidak reset.</p>
                 </div>
                 <div className="space-y-2 p-3 rounded-xl bg-violet-50 dark:bg-violet-950/20 border border-violet-200">
                   <label className="text-xs font-bold text-text-secondary">Pengaturan Pencairan (Per-User Payout Policy)</label>

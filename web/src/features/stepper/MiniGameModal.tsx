@@ -4,6 +4,7 @@ import confetti from 'canvas-confetti'
 import { Gamepad2, Award, X, Sparkles, CheckCircle2, RotateCcw, Clock, Target, AlertCircle } from 'lucide-react'
 import type { TaskView } from '../../shared/types'
 import { tasksApi } from '../../shared/lib/api'
+import { isEarningCapError, EARNING_CAP_MESSAGE } from '../../shared/lib/earning'
 
 interface MiniGameModalProps {
   task: TaskView
@@ -158,7 +159,12 @@ export const MiniGameModal: React.FC<MiniGameModalProps> = ({ task, onClose, onS
         setErrorMessage(res.error || 'Skor belum mencukupi atau hasil gagal divalidasi.')
       }
     } catch (err: any) {
-      setErrorMessage(err.message || 'Gagal mengirim skor game. Silakan coba lagi.')
+      if (isEarningCapError(err)) {
+        setErrorMessage(EARNING_CAP_MESSAGE)
+        try { onSuccess() } catch {}
+      } else {
+        setErrorMessage(err.message || 'Gagal mengirim skor game. Silakan coba lagi.')
+      }
     } finally {
       setSubmitting(false)
     }
