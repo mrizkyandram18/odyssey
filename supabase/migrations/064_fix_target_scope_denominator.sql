@@ -13,7 +13,8 @@ SET search_path = public
 AS $$
 DECLARE v_total_weight INT; v_weight INT; v_period_start DATE; v_period_end DATE; v_actual INT; v_user_join_date DATE;
 BEGIN
-    IF p_target IS NULL OR p_target<1 OR p_target>10000 THEN p_target:=3200; END IF;
+    -- Invalid target resolves to global default 0 (legacy 3200 retired; explicit per-user values pass through untouched)
+    IF p_target IS NULL OR p_target<1 OR p_target>10000 THEN p_target:=0; END IF;
     SELECT period_start, period_end INTO v_period_start, v_period_end FROM odyssey_target_period_bounds();
     IF p_user_uid IS NOT NULL THEN
         SELECT (created_at AT TIME ZONE COALESCE((SELECT value FROM odyssey_system_config WHERE key='timezone'),'Asia/Jakarta'))::date

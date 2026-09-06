@@ -142,9 +142,9 @@ BEGIN
         IF v_game_score<0 OR v_game_score>1000000 THEN RAISE EXCEPTION 'Skor permainan tidak valid' USING ERRCODE='P0008'; END IF;
         IF v_game_target>0 AND v_game_score < v_game_target THEN RAISE EXCEPTION 'Skor permainan belum mencapai target minimum (% vs target %)', v_game_score, v_game_target USING ERRCODE='P0008'; END IF;
     END IF;
-    -- Resolve target (member-specific, default 3200) and compute scaled reward (user-aware window)
-    v_target := COALESCE(v_profile.monthly_coin_target, COALESCE((SELECT value::INT FROM odyssey_system_config WHERE key='default_monthly_coin_target'),3200));
-    IF v_target IS NULL OR v_target<1 OR v_target>10000 THEN v_target:=3200; END IF;
+    -- Resolve target (member-specific, global default 0; legacy 3200 retired) and compute scaled reward (user-aware window)
+    v_target := COALESCE(v_profile.monthly_coin_target, COALESCE((SELECT value::INT FROM odyssey_system_config WHERE key='default_monthly_coin_target'),0));
+    IF v_target IS NULL OR v_target<1 OR v_target>10000 THEN v_target:=0; END IF;
     v_actual := odyssey_calc_target_reward(v_target, p_task_id, v_profile.family_id, p_user_uid);
     v_reward_xp := COALESCE(v_task.reward_xp,100);
 
@@ -204,8 +204,8 @@ BEGIN
     IF p_status='APPROVED' THEN
         IF v_penalty>0 THEN RAISE EXCEPTION 'Penalti poin tidak dapat diterapkan pada submission yang disetujui' USING ERRCODE='P0005'; END IF;
         IF EXISTS (SELECT 1 FROM odyssey_coin_transactions WHERE type IN ('TASK_REWARD','TASK_PENALTY') AND reference_id=p_submission_id::TEXT) THEN RAISE EXCEPTION 'Transaksi untuk submission ini sudah tercatat di ledger' USING ERRCODE='P0004'; END IF;
-        v_target := COALESCE(v_member.monthly_coin_target, COALESCE((SELECT value::INT FROM odyssey_system_config WHERE key='default_monthly_coin_target'),3200));
-        IF v_target IS NULL OR v_target<1 OR v_target>10000 THEN v_target:=3200; END IF;
+        v_target := COALESCE(v_member.monthly_coin_target, COALESCE((SELECT value::INT FROM odyssey_system_config WHERE key='default_monthly_coin_target'),0));
+        IF v_target IS NULL OR v_target<1 OR v_target>10000 THEN v_target:=0; END IF;
         v_actual := odyssey_calc_target_reward(v_target, v_sub.task_id, v_member.family_id, v_member.uid);
         v_reward_xp := COALESCE(v_task.reward_xp,100);
 

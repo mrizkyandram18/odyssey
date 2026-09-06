@@ -143,8 +143,8 @@ func getDefaultMonthlyEarningCap(ctx context.Context, client db.SupabaseClient) 
 			}
 		}
 	}
-	// Fallback constant if DB not migrated yet
-	return 3320
+	// Fallback constant if DB not migrated yet (DB value is source of truth)
+	return shared.DefaultMonthlyEarningCap
 }
 
 func resolveEarningCap(ctx context.Context, client db.SupabaseClient, profileCap *int) (eff int, isLimited bool) {

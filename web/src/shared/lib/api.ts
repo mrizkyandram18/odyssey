@@ -15,7 +15,9 @@ import type {
 } from '../types'
 import { getSession, isSessionExpired } from './session'
 
-const API_BASE = import.meta.env.DEV ? '' : ''
+// Same-origin by default (Vercel serverless + Vite dev proxy). Override with
+// VITE_API_BASE_URL only when the UI must target a remote API explicitly.
+const API_BASE = (import.meta.env.VITE_API_BASE_URL as string | undefined) || ''
 
 export class ApiClient {
   private baseURL: string
@@ -196,7 +198,7 @@ export const adminMembersApi = {
 
 export const adminTasksApi = {
   getConfig: () => apiClient.get<RedemptionConfig>('/api/admin/config'),
-  updateConfig: (data: { start_day?: number; end_day?: number; payout_day?: number; earning_period_days?: number; conversion_rate?: number; payout_target_rupiah?: number; payout_target_coins?: number; max_payout_coins?: number; timezone?: string; auto_block_inactivity_days?: number }) =>
+  updateConfig: (data: { start_day?: number; end_day?: number; payout_day?: number; earning_period_days?: number; conversion_rate?: number; payout_target_rupiah?: number; payout_target_coins?: number; max_payout_coins?: number; timezone?: string; auto_block_inactivity_days?: number; default_monthly_coin_target?: number; default_monthly_earning_cap?: number }) =>
     apiClient.post<RedemptionConfig>('/api/admin/config', data),
   getTasks: (date?: string) => apiClient.get<TaskView[]>(`/api/admin/tasks${date ? '?date=' + date : ''}`),
   createTask: (data: any) => apiClient.post<TaskView>('/api/admin/tasks', data),

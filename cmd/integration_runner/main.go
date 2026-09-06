@@ -13,10 +13,24 @@ import (
 	"github.com/joho/godotenv"
 )
 
+// Defaults for explicitly-local integration tooling. Both are overridable via
+// environment so the runner can target staging without code changes.
 const (
-	productionTarget = "hmrkssfhcxlvjzyigufd"
-	apiBase          = "http://localhost:8080"
+	defaultProductionTarget = "hmrkssfhcxlvjzyigufd"
+	defaultAPIBase          = "http://localhost:8080"
 )
+
+func resolveRunnerConfig() (apiBase, productionTarget string) {
+	apiBase = os.Getenv("ODYSSEY_API_BASE")
+	if apiBase == "" {
+		apiBase = defaultAPIBase
+	}
+	productionTarget = os.Getenv("ODYSSEY_PROD_GUARD_REF")
+	if productionTarget == "" {
+		productionTarget = defaultProductionTarget
+	}
+	return apiBase, productionTarget
+}
 
 type DevicePayload struct {
 	LoginMethod string `json:"login_method"`
@@ -44,10 +58,13 @@ func main() {
 		log.Fatal("SUPABASE_URL is not set")
 	}
 
+	apiBase, productionTarget := resolveRunnerConfig()
+
 	fmt.Println("==================================================")
 	fmt.Println("Target Database Verification")
 	fmt.Println("==================================================")
 	fmt.Printf("Detected Target: %s\n", supabaseURL)
+	fmt.Printf("API Base: %s\n", apiBase)
 
 	if strings.Contains(supabaseURL, productionTarget) {
 		fmt.Println("\n[!] FATAL: Production database detected!")
@@ -57,10 +74,10 @@ func main() {
 	}
 
 	fmt.Println("\nTarget is safe. Proceeding with integration tests...")
-	runTests()
+	runTests(apiBase)
 }
 
-func runTests() {
+func runTests(apiBase string) {
 	fmt.Println("\n--- Starting Authentication Flow Test ---")
 	uid := "test_integration_user_1"
 	req := loginRequest{

@@ -18,6 +18,9 @@ export function useAdminConfig() {
   const [targetRupiahInput, setTargetRupiahInput] = useState('320000')
   const [maxPayoutInput, setMaxPayoutInput] = useState('3200')
   const [timezoneInput, setTimezoneInput] = useState('Asia/Jakarta')
+  const [autoBlockInput, setAutoBlockInput] = useState('5')
+  const [monthlyTargetInput, setMonthlyTargetInput] = useState('0')
+  const [monthlyCapInput, setMonthlyCapInput] = useState('3320')
 
   const fetchConfig = useCallback(async () => {
     setIsFetching(true)
@@ -34,6 +37,9 @@ export function useAdminConfig() {
         setTargetRupiahInput(String(res.payout_target_rupiah ?? 320000))
         setMaxPayoutInput(String(res.max_payout_coins ?? 3200))
         setTimezoneInput(res.timezone || 'Asia/Jakarta')
+        setAutoBlockInput(String(res.auto_block_inactivity_days ?? 5))
+        setMonthlyTargetInput(String(res.default_monthly_coin_target ?? 0))
+        setMonthlyCapInput(String(res.default_monthly_earning_cap ?? 3320))
       }
     } catch (err: any) {
       setErrorMsg(err?.message || 'Gagal memuat konfigurasi ekonomi')
@@ -58,6 +64,9 @@ export function useAdminConfig() {
     const rate = parseInt(conversionRateInput, 10)
     const targetRp = parseInt(targetRupiahInput, 10)
     const maxPayout = parseInt(maxPayoutInput, 10)
+    const autoBlock = parseInt(autoBlockInput, 10)
+    const monthlyTarget = parseInt(monthlyTargetInput, 10)
+    const monthlyCap = parseInt(monthlyCapInput, 10)
 
     if (isNaN(start) || start < 1 || start > 31) {
       setErrorMsg('Tanggal mulai harus antara 1 sampai 31')
@@ -91,6 +100,18 @@ export function useAdminConfig() {
       setErrorMsg('Batas penarikan koin maksimum harus lebih dari 0')
       return
     }
+    if (isNaN(autoBlock) || autoBlock < 0 || autoBlock > 365) {
+      setErrorMsg('Batas inaktivitas auto-block harus antara 0 sampai 365 (0 = nonaktif)')
+      return
+    }
+    if (isNaN(monthlyTarget) || monthlyTarget < 0 || monthlyTarget > 10000) {
+      setErrorMsg('Target koin bulanan default harus antara 0 sampai 10000')
+      return
+    }
+    if (isNaN(monthlyCap) || monthlyCap < 0 || monthlyCap > 10000) {
+      setErrorMsg('Batas earning bulanan default harus antara 0 sampai 10000')
+      return
+    }
 
     setIsSaving(true)
     try {
@@ -104,6 +125,9 @@ export function useAdminConfig() {
         payout_target_coins: Math.round(targetRp / rate),
         max_payout_coins: maxPayout,
         timezone: timezoneInput.trim() || 'Asia/Jakarta',
+        auto_block_inactivity_days: autoBlock,
+        default_monthly_coin_target: monthlyTarget,
+        default_monthly_earning_cap: monthlyCap,
       })
       setConfig(updated)
       setSuccessMsg('Konfigurasi ekonomi berhasil disimpan!')
@@ -137,6 +161,12 @@ export function useAdminConfig() {
     setMaxPayoutInput,
     timezoneInput,
     setTimezoneInput,
+    autoBlockInput,
+    setAutoBlockInput,
+    monthlyTargetInput,
+    setMonthlyTargetInput,
+    monthlyCapInput,
+    setMonthlyCapInput,
     handleSaveConfig,
     fetchConfig,
   }

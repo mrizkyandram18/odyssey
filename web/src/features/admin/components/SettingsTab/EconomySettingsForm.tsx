@@ -24,6 +24,12 @@ export const EconomySettingsForm: React.FC = () => {
     setMaxPayoutInput,
     timezoneInput,
     setTimezoneInput,
+    autoBlockInput,
+    setAutoBlockInput,
+    monthlyTargetInput,
+    setMonthlyTargetInput,
+    monthlyCapInput,
+    setMonthlyCapInput,
     handleSaveConfig,
   } = useAdminConfig()
 
@@ -210,6 +216,67 @@ export const EconomySettingsForm: React.FC = () => {
                   className="w-full p-2.5 rounded-xl bg-surface-elevated border border-border-subtle text-xs sm:text-sm font-bold text-text-primary focus:outline-none focus:border-accent-magic font-mono"
                 />
                 <p className="text-[10px] text-text-secondary">Cap batas keras per periode</p>
+              </div>
+            </div>
+          </div>
+
+          {/* Group 3: Batas Default Member & Auto-Block */}
+          <div className="space-y-3 pt-3 border-t border-border-subtle">
+            <h4 className="text-xs font-bold uppercase tracking-wider text-text-secondary flex items-center gap-1.5">
+              <Coins className="w-3.5 h-3.5 text-accent-gold" />
+              <span>Batas Default Member & Auto-Block</span>
+            </h4>
+
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              <div className="space-y-1">
+                <label htmlFor="input-monthly-target" className="text-xs font-bold text-text-secondary">
+                  Target Koin Bulanan Default <span className="text-status-error">*</span>
+                </label>
+                <input
+                  id="input-monthly-target"
+                  type="number"
+                  min={0}
+                  max={10000}
+                  required
+                  value={monthlyTargetInput}
+                  onChange={(e) => setMonthlyTargetInput(e.target.value)}
+                  className="w-full p-2.5 rounded-xl bg-surface-elevated border border-border-subtle text-xs sm:text-sm font-bold text-text-primary focus:outline-none focus:border-accent-magic font-mono"
+                />
+                <p className="text-[10px] text-text-secondary">Default untuk member baru (0–10000)</p>
+              </div>
+
+              <div className="space-y-1">
+                <label htmlFor="input-monthly-cap" className="text-xs font-bold text-text-secondary">
+                  Batas Earning Bulanan Default <span className="text-status-error">*</span>
+                </label>
+                <input
+                  id="input-monthly-cap"
+                  type="number"
+                  min={0}
+                  max={10000}
+                  required
+                  value={monthlyCapInput}
+                  onChange={(e) => setMonthlyCapInput(e.target.value)}
+                  className="w-full p-2.5 rounded-xl bg-surface-elevated border border-border-subtle text-xs sm:text-sm font-bold text-text-primary focus:outline-none focus:border-accent-magic font-mono"
+                />
+                <p className="text-[10px] text-text-secondary">0 = unlimited (0–10000)</p>
+              </div>
+
+              <div className="space-y-1">
+                <label htmlFor="input-auto-block" className="text-xs font-bold text-text-secondary">
+                  Auto-Block Inaktivitas (Hari) <span className="text-status-error">*</span>
+                </label>
+                <input
+                  id="input-auto-block"
+                  type="number"
+                  min={0}
+                  max={365}
+                  required
+                  value={autoBlockInput}
+                  onChange={(e) => setAutoBlockInput(e.target.value)}
+                  className="w-full p-2.5 rounded-xl bg-surface-elevated border border-border-subtle text-xs sm:text-sm font-bold text-text-primary focus:outline-none focus:border-accent-magic font-mono"
+                />
+                <p className="text-[10px] text-text-secondary">0 = nonaktif (0–365)</p>
               </div>
             </div>
           </div>

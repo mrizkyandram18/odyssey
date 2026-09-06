@@ -141,6 +141,7 @@ type RedemptionConfig struct {
 	MaxPayoutCoins           int    `json:"max_payout_coins"`
 	Timezone                 string `json:"timezone"`
 	DefaultMonthlyCoinTarget int    `json:"default_monthly_coin_target"`
+	DefaultMonthlyEarningCap int    `json:"default_monthly_earning_cap,omitempty"`
 	TargetEarningStartDay    int    `json:"target_earning_start_day"`
 	TargetEarningEndDay      int    `json:"target_earning_end_day"`
 	AutoBlockInactivityDays  int    `json:"auto_block_inactivity_days"`
@@ -155,6 +156,16 @@ const DefaultPayoutTargetRupiah = 320000
 const DefaultPayoutTargetCoins = 3200
 const DefaultMaxPayoutCoins = 3200
 const DefaultMonthlyCoinTarget = 0
+
+// DefaultMonthlyEarningCap is the fallback monthly earning cap (coins) used
+// when odyssey_system_config has no default_monthly_earning_cap row yet
+// (e.g. DB predates migration 070). The DB value is source of truth.
+const DefaultMonthlyEarningCap = 3320
+
+// DefaultMaxUploadBytes is the single request/file size limit for task proof
+// uploads. It must stay in sync between the HTTP body-limit middleware and the
+// multipart handler checks, hence one shared constant instead of literals.
+const DefaultMaxUploadBytes = 10 << 20
 const DefaultTargetEarningStartDay = 1
 const DefaultTargetEarningEndDay = 24
 const DefaultTimezone = "Asia/Jakarta"

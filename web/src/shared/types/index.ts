@@ -253,6 +253,7 @@ export interface RedemptionConfig {
   max_payout_coins: number
   timezone: string
   default_monthly_coin_target?: number
+  default_monthly_earning_cap?: number
   target_earning_start_day?: number
   target_earning_end_day?: number
   auto_block_inactivity_days?: number

@@ -1209,7 +1209,9 @@ func (a *API) HandleGetAdminConfig(w http.ResponseWriter, r *http.Request) {
 	maxPayoutCoins := shared.DefaultMaxPayoutCoins
 	timezone := shared.DefaultTimezone
 	autoBlockDays := shared.DefaultAutoBlockInactivityDays
-	raw, err := a.client.Get(ctx, "odyssey_system_config", "key=in.(redemption_start_day,redemption_end_day,payout_day,earning_period_days,coin_conversion_rate,payout_target_rupiah,payout_target_coins,max_payout_coins,timezone,auto_block_inactivity_days,AUTO_BLOCK_INACTIVITY_DAYS)")
+	monthlyCoinTarget := shared.DefaultMonthlyCoinTarget
+	monthlyEarningCap := shared.DefaultMonthlyEarningCap
+	raw, err := a.client.Get(ctx, "odyssey_system_config", "key=in.(redemption_start_day,redemption_end_day,payout_day,earning_period_days,coin_conversion_rate,payout_target_rupiah,payout_target_coins,max_payout_coins,timezone,auto_block_inactivity_days,AUTO_BLOCK_INACTIVITY_DAYS,default_monthly_coin_target,default_monthly_earning_cap)")
 	if err == nil && len(raw) > 0 {
 		type ConfigRow struct {
 			Key   string `json:"key"`
@@ -1264,6 +1266,14 @@ func (a *API) HandleGetAdminConfig(w http.ResponseWriter, r *http.Request) {
 							autoBlockDays = 0
 						}
 					}
+				case "default_monthly_coin_target":
+					if v, err := strconv.Atoi(strings.TrimSpace(row.Value)); err == nil && v >= 0 && v <= 10000 {
+						monthlyCoinTarget = v
+					}
+				case "default_monthly_earning_cap":
+					if v, err := strconv.Atoi(strings.TrimSpace(row.Value)); err == nil && v >= 0 && v <= 10000 {
+						monthlyEarningCap = v
+					}
 				}
 			}
 		}
@@ -1286,6 +1296,8 @@ func (a *API) HandleGetAdminConfig(w http.ResponseWriter, r *http.Request) {
 		MaxPayoutCoins:          maxPayoutCoins,
 		AutoBlockInactivityDays: autoBlockDays,
 	})
+	cfg.DefaultMonthlyCoinTarget = monthlyCoinTarget
+	cfg.DefaultMonthlyEarningCap = monthlyEarningCap
 	shared.WriteJSON(w, http.StatusOK, cfg)
 }
 
@@ -1307,6 +1319,8 @@ func (a *API) HandleUpdateAdminConfig(w http.ResponseWriter, r *http.Request) {
 		MaxPayoutCoins          *int    `json:"max_payout_coins"`
 		Timezone                *string `json:"timezone"`
 		AutoBlockInactivityDays *int    `json:"auto_block_inactivity_days"`
+		MonthlyCoinTarget       *int    `json:"default_monthly_coin_target"`
+		MonthlyEarningCap       *int    `json:"default_monthly_earning_cap"`
 	}
 	if err := shared.ReadJSON(r, &req); err != nil {
 		shared.WriteJSONError(w, "invalid request payload: "+err.Error(), http.StatusBadRequest)
@@ -1453,6 +1467,20 @@ func (a *API) HandleUpdateAdminConfig(w http.ResponseWriter, r *http.Request) {
 		}
 		upsert("auto_block_inactivity_days", strconv.Itoa(*req.AutoBlockInactivityDays))
 		upsert("AUTO_BLOCK_INACTIVITY_DAYS", strconv.Itoa(*req.AutoBlockInactivityDays))
+	}
+	if req.MonthlyCoinTarget != nil {
+		if *req.MonthlyCoinTarget < 0 || *req.MonthlyCoinTarget > 10000 {
+			shared.WriteJSONError(w, "default_monthly_coin_target must be 0..10000", http.StatusBadRequest)
+			return
+		}
+		upsert("default_monthly_coin_target", strconv.Itoa(*req.MonthlyCoinTarget))
+	}
+	if req.MonthlyEarningCap != nil {
+		if *req.MonthlyEarningCap < 0 || *req.MonthlyEarningCap > 10000 {
+			shared.WriteJSONError(w, "default_monthly_earning_cap must be 0..10000", http.StatusBadRequest)
+			return
+		}
+		upsert("default_monthly_earning_cap", strconv.Itoa(*req.MonthlyEarningCap))
 	}
 
 	// Return updated config

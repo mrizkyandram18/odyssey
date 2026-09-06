@@ -86,7 +86,7 @@ func BuildHandler() (*Server, error) {
 	secCfg.AllowedOrigins = config.AllowedOrigins
 	secCfg.MaxBodyBytes = config.MaxBodyBytes
 	secCfg.MaxBodyBytesByPath = map[string]int64{
-		"/api/tasks/upload": 10 << 20,
+		"/api/tasks/upload": shared.DefaultMaxUploadBytes,
 	}
 	secCfg.RateLimitWindow = time.Duration(config.RateLimitWindowSec) * time.Second
 	secCfg.RateLimitMaxHits = config.RateLimitMaxHits

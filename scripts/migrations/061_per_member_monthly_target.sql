@@ -16,7 +16,9 @@ DO $$ BEGIN
 END $$;
 
 -- 2. Global defaults (single source of truth)
-INSERT INTO odyssey_system_config(key, value) VALUES ('default_monthly_coin_target','3200') ON CONFLICT(key) DO NOTHING;
+-- NOTE: default_monthly_coin_target default is 0 (legacy 3200 retired).
+-- ON CONFLICT DO NOTHING never overwrites an existing admin-configured value.
+INSERT INTO odyssey_system_config(key, value) VALUES ('default_monthly_coin_target','0') ON CONFLICT(key) DO NOTHING;
 INSERT INTO odyssey_system_config(key, value) VALUES ('target_earning_start_day','1') ON CONFLICT(key) DO NOTHING;
 INSERT INTO odyssey_system_config(key, value) VALUES ('target_earning_end_day','24') ON CONFLICT(key) DO NOTHING;
 

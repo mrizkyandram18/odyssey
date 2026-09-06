@@ -65,7 +65,8 @@ func getEffectiveEarningCap(ctx context.Context, client db.SupabaseClient, uid s
 			}
 		}
 	}
-	return 3320
+	// Fallback constant if DB not migrated yet (DB value is source of truth)
+	return shared.DefaultMonthlyEarningCap
 }
 
 func getEarnedThisPeriodForUser(ctx context.Context, client db.SupabaseClient, uid string) int {
@@ -596,8 +597,8 @@ func (a *API) HandleUploadProof(w http.ResponseWriter, r *http.Request) {
 		familyID = "family_default"
 	}
 
-	// Max 10MB payload
-	if err := r.ParseMultipartForm(10 << 20); err != nil {
+	// Max upload payload (single shared limit, see shared.DefaultMaxUploadBytes)
+	if err := r.ParseMultipartForm(shared.DefaultMaxUploadBytes); err != nil {
 		shared.WriteJSONError(w, "file too large (max 10MB)", http.StatusBadRequest)
 		return
 	}
@@ -613,7 +614,7 @@ func (a *API) HandleUploadProof(w http.ResponseWriter, r *http.Request) {
 		shared.WriteJSONError(w, "file cannot be empty", http.StatusBadRequest)
 		return
 	}
-	if header.Size > 10<<20 {
+	if header.Size > shared.DefaultMaxUploadBytes {
 		shared.WriteJSONError(w, "file size exceeds 10MB limit", http.StatusBadRequest)
 		return
 	}

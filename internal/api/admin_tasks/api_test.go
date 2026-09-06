@@ -361,6 +361,92 @@ func TestAdminConfig_UpdateSuccessAndValidation(t *testing.T) {
 	}
 }
 
+func TestAdminConfig_MonthlyDefaults_MissingReturnsZero(t *testing.T) {
+	// Missing default_monthly_coin_target row must resolve to global default 0
+	// (legacy 3200 retired); earning-cap fallback stays 3320 (untouched).
+	client := &mockSupabaseClient{
+		getResp: []byte(`[]`),
+	}
+	api := NewAPI(client)
+
+	req := httptest.NewRequest(http.MethodGet, "/api/admin/config", nil)
+	guideClaims := &auth.SessionClaims{UID: "admin-1", FamilyID: "fam-1", Role: "ADMIN"}
+	req = req.WithContext(auth.ContextWithClaims(req.Context(), guideClaims))
+
+	rec := httptest.NewRecorder()
+	api.Handler(rec, req)
+
+	if rec.Code != http.StatusOK {
+		t.Fatalf("expected status 200, got %d: %s", rec.Code, rec.Body.String())
+	}
+
+	var res map[string]any
+	if err := json.Unmarshal(rec.Body.Bytes(), &res); err != nil {
+		t.Fatalf("invalid json: %v", err)
+	}
+	if v, ok := res["default_monthly_coin_target"]; !ok || v != float64(0) {
+		t.Fatalf("expected default_monthly_coin_target 0 for missing row, got %v", res)
+	}
+	if v, ok := res["default_monthly_earning_cap"]; !ok || v != float64(3320) {
+		t.Fatalf("expected default_monthly_earning_cap 3320 fallback, got %v", res)
+	}
+}
+
+func TestAdminConfig_UpdateMonthlyDefaults_Validation(t *testing.T) {
+	client := &mockSupabaseClient{
+		getResp: []byte(`[]`),
+	}
+	api := NewAPI(client)
+	guideClaims := &auth.SessionClaims{UID: "admin-1", Role: "ADMIN"}
+
+	cases := []struct {
+		name       string
+		payload    string
+		expectCode int
+	}{
+		{
+			name:       "Reject negative monthly coin target",
+			payload:    `{"default_monthly_coin_target":-1}`,
+			expectCode: http.StatusBadRequest,
+		},
+		{
+			name:       "Reject monthly coin target above 10000",
+			payload:    `{"default_monthly_coin_target":10001}`,
+			expectCode: http.StatusBadRequest,
+		},
+		{
+			name:       "Reject negative monthly earning cap",
+			payload:    `{"default_monthly_earning_cap":-1}`,
+			expectCode: http.StatusBadRequest,
+		},
+		{
+			name:       "Reject monthly earning cap above 10000",
+			payload:    `{"default_monthly_earning_cap":10001}`,
+			expectCode: http.StatusBadRequest,
+		},
+		{
+			name:       "Accept explicit zero for both member defaults",
+			payload:    `{"default_monthly_coin_target":0,"default_monthly_earning_cap":0}`,
+			expectCode: http.StatusOK,
+		},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			req := httptest.NewRequest(http.MethodPost, "/api/admin/config", strings.NewReader(tc.payload))
+			req.Header.Set("Content-Type", "application/json")
+			req = req.WithContext(auth.ContextWithClaims(req.Context(), guideClaims))
+
+			rec := httptest.NewRecorder()
+			api.Handler(rec, req)
+
+			if rec.Code != tc.expectCode {
+				t.Fatalf("expected code %d, got %d: %s", tc.expectCode, rec.Code, rec.Body.String())
+			}
+		})
+	}
+}
+
 func TestAdminDuplicateTask_Success(t *testing.T) {
 	origTask, _ := json.Marshal([]map[string]any{
 		{
