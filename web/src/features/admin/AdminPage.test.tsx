@@ -160,6 +160,58 @@ describe('AdminPage Component', () => {
     })
   })
 
+  it('keeps monthly coin target 0 from API through display to save (no 3200 fallback)', async () => {
+    vi.mocked(useSession).mockReturnValue({
+      session: { uid: '1', family_id: '1', role: 'ADMIN', kind: 'user', expires: 9999999999, token: 'abc' },
+      profile: { uid: '1', role: 'ADMIN' },
+      loading: false,
+    } as any)
+
+    vi.mocked(adminTasksApi.getConfig).mockResolvedValue({
+      ...mockConfig,
+      default_monthly_coin_target: 0,
+      default_monthly_earning_cap: 3320,
+      auto_block_inactivity_days: 5,
+    })
+
+    render(
+      <MemoryRouter>
+        <AdminPage />
+      </MemoryRouter>
+    )
+
+    const settingsTabBtn = screen.getByTestId('admin-tab-settings')
+    fireEvent.click(settingsTabBtn)
+
+    await waitFor(() => {
+      expect(screen.getByText('Pengaturan Periode Penukaran Koin')).toBeInTheDocument()
+    })
+
+    // API value 0 must render as "0", not empty and not replaced by a legacy fallback
+    const targetInput = document.getElementById('input-monthly-target') as HTMLInputElement
+    const capInput = document.getElementById('input-monthly-cap') as HTMLInputElement
+    const autoBlockInput = document.getElementById('input-auto-block') as HTMLInputElement
+    await waitFor(() => {
+      expect(targetInput.value).toBe('0')
+      expect(capInput.value).toBe('3320')
+      expect(autoBlockInput.value).toBe('5')
+    })
+
+    const saveBtn = screen.getByRole('button', { name: /Simpan Pengaturan Periode/i })
+    fireEvent.submit(saveBtn.closest('form')!)
+
+    await waitFor(() => {
+      expect(adminTasksApi.updateConfig).toHaveBeenCalledWith(expect.objectContaining({
+        default_monthly_coin_target: 0,
+        default_monthly_earning_cap: 3320,
+        auto_block_inactivity_days: 5,
+      }))
+    })
+    const sent = vi.mocked(adminTasksApi.updateConfig).mock.calls[0][0] as Record<string, unknown>
+    expect(sent.default_monthly_coin_target).toBe(0)
+    expect(sent.default_monthly_earning_cap).toBe(3320)
+  })
+
   it('renders pending submission with edit and reject with penalty buttons', async () => {
     vi.mocked(useSession).mockReturnValue({
       session: { uid: '1', family_id: '1', role: 'ADMIN', kind: 'user', expires: 9999999999, token: 'abc' },
