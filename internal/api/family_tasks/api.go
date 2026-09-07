@@ -339,7 +339,7 @@ func (a *API) HandleGetToday(w http.ResponseWriter, r *http.Request) {
 			cfg["questions"] = sanitizeQuestions(cfg["questions"])
 		}
 
-		evalType := tasks.ResolveEvaluationType(t.TaskType, t.EvaluationType)
+		evalType := tasks.ResolveEvaluationTypeForConfig(t.TaskType, t.EvaluationType, t.Config)
 
 		view := TaskView{
 			ID:             t.ID,
@@ -495,10 +495,15 @@ func (a *API) HandleSubmit(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// 3. Determine if Auto-Graded vs Manual Verification
-	resolvedEval := tasks.ResolveEvaluationType(targetTask.TaskType, targetTask.EvaluationType)
-	isAuto := resolvedEval == "AUTO" || reqBody.SubmissionType == "AUTO_QUIZ"
+	// NOTE: VIDEO + essay prompt resolves to ADMIN_REVIEW even when the
+	// stored evaluation_type is a legacy AUTO (see ResolveEvaluationTypeForConfig).
+	resolvedEval := tasks.ResolveEvaluationTypeForConfig(targetTask.TaskType, targetTask.EvaluationType, targetTask.Config)
+	// ADMIN_REVIEW tasks always take the manual path, even if the client
+	// explicitly requests AUTO_QUIZ — this closes an instant-approval /
+	// instant-reward bypass for essay/photo/document submissions.
+	isAuto := resolvedEval == "AUTO" && reqBody.SubmissionType != "MANUAL_VERIFY"
 
-	if isAuto && reqBody.SubmissionType != "MANUAL_VERIFY" {
+	if isAuto {
 		answers := reqBody.Answers
 		if answers == nil {
 			answers = reqBody.Payload
@@ -739,15 +744,7 @@ func (a *API) HandleGetTask(w http.ResponseWriter, r *http.Request, taskID int64
 		cfg["questions"] = sanitizeQuestions(cfg["questions"])
 	}
 
-	evalType := targetTask.EvaluationType
-	if evalType == "" {
-		switch targetTask.TaskType {
-		case "PHOTO_UPLOAD", "DOCUMENT_UPLOAD", "TEXT_RESPONSE", "PHOTO_PROOF":
-			evalType = "ADMIN_REVIEW"
-		default:
-			evalType = "AUTO"
-		}
-	}
+	evalType := tasks.ResolveEvaluationTypeForConfig(targetTask.TaskType, targetTask.EvaluationType, cfg)
 
 	view := TaskView{
 		ID:             targetTask.ID,

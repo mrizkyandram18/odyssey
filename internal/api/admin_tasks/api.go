@@ -186,15 +186,9 @@ func (a *API) HandleCreateTask(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	evalType := req.EvaluationType
-	if evalType == "" {
-		switch req.TaskType {
-		case "PHOTO_UPLOAD", "DOCUMENT_UPLOAD", "TEXT_RESPONSE", "PHOTO_PROOF":
-			evalType = "ADMIN_REVIEW"
-		default:
-			evalType = "AUTO"
-		}
-	}
+	// Default evaluation honors explicit input; VIDEO + essay prompt always
+	// forces ADMIN_REVIEW (see ResolveEvaluationTypeForConfig).
+	evalType := tasks.ResolveEvaluationTypeForConfig(req.TaskType, req.EvaluationType, req.Config)
 
 	targetScope := strings.ToUpper(strings.TrimSpace(req.TargetScope))
 	if targetScope == "" {
@@ -400,6 +394,20 @@ func (a *API) HandleUpdateTask(w http.ResponseWriter, r *http.Request, taskID in
 		if err := a.validateTaskInput(tmpInput); err != nil {
 			shared.WriteJSONError(w, err.Error(), http.StatusBadRequest)
 			return
+		}
+	}
+
+	// Keep stored evaluation_type in sync when config/task_type changes.
+	// The effective value is derived deterministically from the effective
+	// type+config (VIDEO + essay prompt ⇒ ADMIN_REVIEW), so adding or
+	// removing an essay prompt flips correctly in both directions.
+	// An explicitly patched evaluation_type is always respected, and
+	// edits that touch neither config nor task_type keep the stored value.
+	if _, hasEval := patch["evaluation_type"]; !hasEval && effectiveType != "" {
+		_, touchesCfg := patch["config"]
+		_, touchesType := patch["task_type"]
+		if touchesCfg || touchesType {
+			patch["evaluation_type"] = tasks.ResolveEvaluationTypeForConfig(effectiveType, "", effectiveConfig)
 		}
 	}
 

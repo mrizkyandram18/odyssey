@@ -148,6 +148,126 @@ func TestAdminCreateTask_MiniGameEvaluationType(t *testing.T) {
 	}
 }
 
+func TestAdminCreateTask_VideoEssayEvaluationType(t *testing.T) {
+	guideClaims := &auth.SessionClaims{UID: "admin-1", FamilyID: "fam-alpha", Role: "ADMIN"}
+
+	newCreateReq := func(client *mockSupabaseClient, payload string) *httptest.ResponseRecorder {
+		api := NewAPI(client)
+		req := httptest.NewRequest(http.MethodPost, "/api/admin/tasks", strings.NewReader(payload))
+		req.Header.Set("Content-Type", "application/json")
+		req = req.WithContext(auth.ContextWithClaims(req.Context(), guideClaims))
+		rec := httptest.NewRecorder()
+		api.Handler(rec, req)
+		return rec
+	}
+
+	// AC2: VIDEO + essay prompt must default to ADMIN_REVIEW
+	t.Run("VIDEO essay defaults to ADMIN_REVIEW", func(t *testing.T) {
+		client := &mockSupabaseClient{mutateResp: []byte(`{"id":3,"title":"Video Essay"}`)}
+		payload := `{"title":"Video Essay","task_type":"VIDEO","step_order":3,` +
+			`"config":{"video_url":"https://www.youtube.com/watch?v=x","youtube_url":"https://www.youtube.com/watch?v=x",` +
+			`"prompt":"Jelaskan apa yang kamu pahami.","minimum_characters":10,"maximum_characters":500}}`
+		rec := newCreateReq(client, payload)
+		if rec.Code != http.StatusCreated {
+			t.Fatalf("expected 201 Created, got %d: %s", rec.Code, rec.Body.String())
+		}
+		mutateMap, ok := client.lastMutatePayload.(map[string]any)
+		if !ok {
+			t.Fatalf("expected map payload on task create")
+		}
+		if mutateMap["evaluation_type"] != "ADMIN_REVIEW" {
+			t.Errorf("expected evaluation_type ADMIN_REVIEW for VIDEO essay, got %v", mutateMap["evaluation_type"])
+		}
+	})
+
+	// AC1: VIDEO watch-only keeps existing AUTO behavior
+	t.Run("VIDEO watch-only stays AUTO", func(t *testing.T) {
+		client := &mockSupabaseClient{mutateResp: []byte(`{"id":4,"title":"Video Nonton"}`)}
+		payload := `{"title":"Video Nonton","task_type":"VIDEO","step_order":4,` +
+			`"config":{"video_url":"https://www.youtube.com/watch?v=x","youtube_url":"https://www.youtube.com/watch?v=x"}}`
+		rec := newCreateReq(client, payload)
+		if rec.Code != http.StatusCreated {
+			t.Fatalf("expected 201 Created, got %d: %s", rec.Code, rec.Body.String())
+		}
+		mutateMap := client.lastMutatePayload.(map[string]any)
+		if mutateMap["evaluation_type"] != "AUTO" {
+			t.Errorf("expected evaluation_type AUTO for VIDEO watch-only, got %v", mutateMap["evaluation_type"])
+		}
+	})
+}
+
+func TestAdminUpdateTask_VideoEssaySyncsEvaluationType(t *testing.T) {
+	guideClaims := &auth.SessionClaims{UID: "admin-1", FamilyID: "fam-1", Role: "ADMIN"}
+
+	newUpdateReq := func(client *mockSupabaseClient, patch string) *httptest.ResponseRecorder {
+		api := NewAPI(client)
+		req := httptest.NewRequest(http.MethodPatch, "/api/admin/tasks/9", strings.NewReader(patch))
+		req.Header.Set("Content-Type", "application/json")
+		req = req.WithContext(auth.ContextWithClaims(req.Context(), guideClaims))
+		rec := httptest.NewRecorder()
+		api.Handler(rec, req)
+		return rec
+	}
+
+	existingVideo := func(eval string) []byte {
+		b, _ := json.Marshal([]map[string]any{
+			{"id": 9, "family_id": "fam-1", "task_type": "VIDEO", "evaluation_type": eval,
+				"reward_coins": float64(50), "reward_xp": float64(100),
+				"config": map[string]any{"video_url": "https://www.youtube.com/watch?v=x"}},
+		})
+		return b
+	}
+	essayConfig := `{"config":{"video_url":"https://www.youtube.com/watch?v=x",` +
+		`"prompt":"Jelaskan apa yang kamu pahami.","minimum_characters":10,"maximum_characters":500}}`
+
+	// AC2/backward compat: adding an essay prompt flips stored AUTO to ADMIN_REVIEW
+	t.Run("adding essay prompt sets ADMIN_REVIEW", func(t *testing.T) {
+		client := &mockSupabaseClient{getResp: existingVideo("AUTO"), mutateResp: []byte(`{"status":"updated","id":9}`)}
+		rec := newUpdateReq(client, essayConfig)
+		if rec.Code != http.StatusOK {
+			t.Fatalf("expected 200 OK, got %d: %s", rec.Code, rec.Body.String())
+		}
+		mutateMap, ok := client.lastMutatePayload.(map[string]any)
+		if !ok {
+			t.Fatalf("expected map payload on task update")
+		}
+		if mutateMap["evaluation_type"] != "ADMIN_REVIEW" {
+			t.Errorf("expected evaluation_type ADMIN_REVIEW after adding prompt, got %v", mutateMap["evaluation_type"])
+		}
+	})
+
+	// AC1: removing the prompt flips back to AUTO
+	t.Run("removing essay prompt restores AUTO", func(t *testing.T) {
+		b, _ := json.Marshal([]map[string]any{
+			{"id": 9, "family_id": "fam-1", "task_type": "VIDEO", "evaluation_type": "ADMIN_REVIEW",
+				"reward_coins": float64(50), "reward_xp": float64(100),
+				"config": map[string]any{"video_url": "https://www.youtube.com/watch?v=x", "prompt": "Old"}},
+		})
+		client := &mockSupabaseClient{getResp: b, mutateResp: []byte(`{"status":"updated","id":9}`)}
+		rec := newUpdateReq(client, `{"config":{"video_url":"https://www.youtube.com/watch?v=x"}}`)
+		if rec.Code != http.StatusOK {
+			t.Fatalf("expected 200 OK, got %d: %s", rec.Code, rec.Body.String())
+		}
+		mutateMap := client.lastMutatePayload.(map[string]any)
+		if mutateMap["evaluation_type"] != "AUTO" {
+			t.Errorf("expected evaluation_type AUTO after removing prompt, got %v", mutateMap["evaluation_type"])
+		}
+	})
+
+	// Non-config edits must not touch evaluation_type
+	t.Run("title-only edit preserves evaluation_type", func(t *testing.T) {
+		client := &mockSupabaseClient{getResp: existingVideo("AUTO"), mutateResp: []byte(`{"status":"updated","id":9}`)}
+		rec := newUpdateReq(client, `{"title":"Judul Baru"}`)
+		if rec.Code != http.StatusOK {
+			t.Fatalf("expected 200 OK, got %d: %s", rec.Code, rec.Body.String())
+		}
+		mutateMap := client.lastMutatePayload.(map[string]any)
+		if _, present := mutateMap["evaluation_type"]; present {
+			t.Errorf("expected evaluation_type untouched on title-only edit, got %v", mutateMap["evaluation_type"])
+		}
+	})
+}
+
 func TestAdminUpdateTask_FamilyMismatchForbidden(t *testing.T) {
 	// Task belongs to fam-beta
 	taskData, _ := json.Marshal([]map[string]any{

@@ -8,6 +8,7 @@ import (
 	"mime/multipart"
 	"net/http"
 	"net/http/httptest"
+	"strconv"
 	"strings"
 	"testing"
 
@@ -561,5 +562,124 @@ func TestHandleGetToday_NewUserJoinDateBacklogGuard(t *testing.T) {
 		if task.ID == 10 {
 			t.Errorf("backlog guard failure: new user received historical task prior to join date")
 		}
+	}
+}
+
+// rpcRecordingClient records which RPC function HandleSubmit routes to.
+type rpcRecordingClient struct {
+	mockSupabaseClient
+	lastRPC     string
+	lastRPCBody any
+}
+
+func (m *rpcRecordingClient) RPC(ctx context.Context, fnName string, payload any) ([]byte, error) {
+	m.lastRPC = fnName
+	m.lastRPCBody = payload
+	if m.rpcErr != nil {
+		return nil, m.rpcErr
+	}
+	return m.rpcResp, nil
+}
+
+func submitAs(t *testing.T, client *rpcRecordingClient, taskID int64, body string) *httptest.ResponseRecorder {
+	t.Helper()
+	api := NewAPI(client)
+	req := httptest.NewRequest(http.MethodPost, "/api/tasks/"+strconv.FormatInt(taskID, 10)+"/submit", strings.NewReader(body))
+	req.Header.Set("Content-Type", "application/json")
+	claims := &auth.SessionClaims{UID: "user-123", FamilyID: "fam-1", Role: "SEEKER"}
+	req = req.WithContext(auth.ContextWithClaims(req.Context(), claims))
+	rec := httptest.NewRecorder()
+	api.Handler(rec, req)
+	return rec
+}
+
+func TestHandleSubmitVideoEssay_RoutesToManualVerify(t *testing.T) {
+	// AC2: legacy VIDEO + essay prompt stored as AUTO must still route to
+	// MANUAL_VERIFY (PENDING, no immediate reward).
+	task := []TaskRecord{
+		{ID: 7, FamilyID: "fam-1", Title: "Video Essay", TaskType: "VIDEO", EvaluationType: "AUTO",
+			StepOrder: 1, IsActive: true,
+			Config: map[string]any{
+				"video_url": "https://www.youtube.com/watch?v=x", "youtube_url": "https://www.youtube.com/watch?v=x",
+				"prompt": "Jelaskan apa yang kamu pahami.", "minimum_characters": 10, "maximum_characters": 500,
+			}},
+	}
+	taskBytes, _ := json.Marshal(task)
+
+	client := &rpcRecordingClient{}
+	client.getResp = taskBytes
+	client.rpcResp = []byte(`{"success":true,"submission_id":107,"status":"PENDING"}`)
+
+	body := `{"payload":{"text":"Jawaban essay yang cukup panjang untuk lolos validasi minimum."}}`
+	rec := submitAs(t, client, 7, body)
+
+	if rec.Code != http.StatusOK {
+		t.Fatalf("expected status 200, got %d: %s", rec.Code, rec.Body.String())
+	}
+	if client.lastRPC != "odyssey_submit_manual_task" {
+		t.Errorf("expected routing to odyssey_submit_manual_task, got %q", client.lastRPC)
+	}
+	rpcMap, ok := client.lastRPCBody.(map[string]any)
+	if !ok {
+		t.Fatalf("expected map RPC payload, got %T", client.lastRPCBody)
+	}
+	payload, ok := rpcMap["p_payload"].(map[string]any)
+	if !ok {
+		t.Fatalf("expected p_payload map, got %T", rpcMap["p_payload"])
+	}
+	if payload["text"] != "Jawaban essay yang cukup panjang untuk lolos validasi minimum." {
+		t.Errorf("expected payload.text preserved, got %v", payload["text"])
+	}
+}
+
+func TestHandleSubmitVideoWatchOnly_RoutesToAutoTask(t *testing.T) {
+	// AC1: VIDEO without essay prompt keeps existing AUTO behavior.
+	task := []TaskRecord{
+		{ID: 8, FamilyID: "fam-1", Title: "Video Nonton", TaskType: "VIDEO", EvaluationType: "AUTO",
+			StepOrder: 1, IsActive: true,
+			Config: map[string]any{
+				"video_url": "https://www.youtube.com/watch?v=x", "youtube_url": "https://www.youtube.com/watch?v=x",
+			}},
+	}
+	taskBytes, _ := json.Marshal(task)
+
+	client := &rpcRecordingClient{}
+	client.getResp = taskBytes
+	client.rpcResp = []byte(`{"success":true,"coins_earned":34,"xp_earned":100,"new_balance":134}`)
+
+	rec := submitAs(t, client, 8, `{}`)
+
+	if rec.Code != http.StatusOK {
+		t.Fatalf("expected status 200, got %d: %s", rec.Code, rec.Body.String())
+	}
+	if client.lastRPC != "odyssey_submit_auto_task" {
+		t.Errorf("expected routing to odyssey_submit_auto_task, got %q", client.lastRPC)
+	}
+}
+
+func TestHandleSubmitVideoEssay_ExplicitAutoQuizStillManual(t *testing.T) {
+	// AC2 hardening: a crafted AUTO_QUIZ request must not bypass review.
+	task := []TaskRecord{
+		{ID: 9, FamilyID: "fam-1", Title: "Video Essay", TaskType: "VIDEO", EvaluationType: "AUTO",
+			StepOrder: 1, IsActive: true,
+			Config: map[string]any{
+				"video_url": "https://www.youtube.com/watch?v=x",
+				"prompt":    "Jelaskan apa yang kamu pahami.",
+			}},
+	}
+	taskBytes, _ := json.Marshal(task)
+
+	client := &rpcRecordingClient{}
+	client.getResp = taskBytes
+	client.rpcResp = []byte(`{"success":true,"submission_id":109,"status":"PENDING"}`)
+
+	body := `{"submission_type":"AUTO_QUIZ","payload":{"text":"Jawaban essay yang cukup panjang."}}`
+	rec := submitAs(t, client, 9, body)
+
+	if rec.Code != http.StatusOK {
+		t.Fatalf("expected status 200, got %d: %s", rec.Code, rec.Body.String())
+	}
+	if client.lastRPC != "odyssey_submit_manual_task" {
+		t.Errorf("expected bypass attempt to route to odyssey_submit_manual_task, got %q", client.lastRPC)
 	}
 }

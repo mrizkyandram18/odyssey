@@ -311,6 +311,25 @@ func contains(slice []string, val string) bool {
 	return false
 }
 
+// HasEssayPrompt reports whether a task config carries a non-empty essay
+// question (config.prompt). This is the frontend's video_answer_mode='essay'
+// marker: useAdminTasks writes config.prompt/minimum_characters/
+// maximum_characters on task_type VIDEO.
+func HasEssayPrompt(config map[string]any) bool {
+	if config == nil {
+		return false
+	}
+	prompt, _ := config["prompt"].(string)
+	return strings.TrimSpace(prompt) != ""
+}
+
+// IsVideoEssayTask reports whether a task is a VIDEO task that requires a
+// written essay answer (VIDEO + Esai Teks Panjang). Such tasks must be
+// evaluated by an admin, never auto-graded.
+func IsVideoEssayTask(taskType string, config map[string]any) bool {
+	return strings.EqualFold(strings.TrimSpace(taskType), "VIDEO") && HasEssayPrompt(config)
+}
+
 // ResolveEvaluationType determines whether a task evaluates as AUTO or ADMIN_REVIEW.
 func ResolveEvaluationType(taskType string, explicitEvalType string) string {
 	if explicitEvalType == "AUTO" || explicitEvalType == "ADMIN_REVIEW" {
@@ -322,6 +341,18 @@ func ResolveEvaluationType(taskType string, explicitEvalType string) string {
 	default:
 		return "AUTO"
 	}
+}
+
+// ResolveEvaluationTypeForConfig is the config-aware evaluation resolver.
+// VIDEO tasks carrying an essay prompt (VIDEO + Esai Teks Panjang) always
+// resolve to ADMIN_REVIEW — even when the stored evaluation_type says AUTO
+// (legacy rows created before essay forced review). All other tasks fall
+// back to ResolveEvaluationType.
+func ResolveEvaluationTypeForConfig(taskType string, explicitEvalType string, config map[string]any) string {
+	if IsVideoEssayTask(taskType, config) {
+		return "ADMIN_REVIEW"
+	}
+	return ResolveEvaluationType(taskType, explicitEvalType)
 }
 
 // DefaultEngine is the global shared TaskEngine instance.

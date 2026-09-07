@@ -124,3 +124,42 @@ func TestEngine_ValidateTaskInput(t *testing.T) {
 		}
 	})
 }
+
+func TestResolveEvaluationTypeForConfig(t *testing.T) {
+	cases := []struct {
+		name     string
+		taskType string
+		explicit string
+		config   map[string]any
+		want     string
+	}{
+		// AC2: VIDEO + essay prompt forces ADMIN_REVIEW
+		{"VIDEO essay defaults to ADMIN_REVIEW", "VIDEO", "", map[string]any{"video_url": "https://www.youtube.com/watch?v=x", "prompt": "Jelaskan..."}, "ADMIN_REVIEW"},
+		// Backward compat: legacy stored AUTO is overridden by essay prompt
+		{"VIDEO essay overrides explicit AUTO", "VIDEO", "AUTO", map[string]any{"prompt": "Jelaskan..."}, "ADMIN_REVIEW"},
+		{"VIDEO essay lowercase type", "video", "", map[string]any{"prompt": "Jelaskan..."}, "ADMIN_REVIEW"},
+		// AC1: VIDEO without prompt keeps existing behavior
+		{"VIDEO watch-only defaults to AUTO", "VIDEO", "", map[string]any{"video_url": "https://www.youtube.com/watch?v=x"}, "AUTO"},
+		{"VIDEO watch-only explicit AUTO stays AUTO", "VIDEO", "AUTO", nil, "AUTO"},
+		{"VIDEO blank prompt stays AUTO", "VIDEO", "", map[string]any{"prompt": "   "}, "AUTO"},
+		{"VIDEO quiz stays AUTO", "VIDEO", "", map[string]any{
+			"youtube_url": "https://www.youtube.com/watch?v=x",
+			"questions": []any{
+				map[string]any{"id": "1", "question": "Q?", "options": []any{"A", "B"}, "correct_answer": "A"},
+			},
+		}, "AUTO"},
+		// Existing types unchanged
+		{"TEXT_RESPONSE stays ADMIN_REVIEW", "TEXT_RESPONSE", "", map[string]any{"prompt": "Ceritakan..."}, "ADMIN_REVIEW"},
+		{"MINI_GAME stays AUTO", "MINI_GAME", "", nil, "AUTO"},
+		{"explicit ADMIN_REVIEW preserved", "QUIZ", "ADMIN_REVIEW", nil, "ADMIN_REVIEW"},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			if got := ResolveEvaluationTypeForConfig(tc.taskType, tc.explicit, tc.config); got != tc.want {
+				t.Errorf("ResolveEvaluationTypeForConfig(%q, %q, %v) = %q, want %q",
+					tc.taskType, tc.explicit, tc.config, got, tc.want)
+			}
+		})
+	}
+}
