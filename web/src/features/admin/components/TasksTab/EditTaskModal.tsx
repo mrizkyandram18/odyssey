@@ -209,10 +209,21 @@ export const EditTaskModal: React.FC<EditTaskModalProps> = ({
                   )}
                   {form.video_answer_mode === 'essay' && (
                     <div className="space-y-2 pt-2 border-t border-border-subtle">
-                      <input type="text" value={form.text_prompt} onChange={(e)=>setForm({...form, text_prompt:e.target.value})} placeholder="Prompt esai" className="w-full p-2.5 rounded-xl border text-xs" />
+                      <div className="space-y-1">
+                        <label className="text-[11px] font-bold text-text-secondary">
+                          Pertanyaan Essay <span className="text-status-error">*</span>
+                        </label>
+                        <input type="text" required value={form.text_prompt} onChange={(e)=>setForm({...form, text_prompt:e.target.value})} placeholder="Tulis pertanyaan yang harus dijawab setelah menonton video..." className="w-full p-2.5 rounded-xl bg-surface border border-border-subtle text-xs text-text-primary focus:outline-none focus:border-accent-magic" />
+                      </div>
                       <div className="grid grid-cols-2 gap-2">
-                        <input type="number" value={form.text_min_chars} onChange={(e)=>setForm({...form, text_min_chars:Number(e.target.value)||10})} className="p-2 rounded-xl border text-xs" placeholder="Min" />
-                        <input type="number" value={form.text_max_chars} onChange={(e)=>setForm({...form, text_max_chars:Number(e.target.value)||500})} className="p-2 rounded-xl border text-xs" placeholder="Max" />
+                        <div className="space-y-1">
+                          <label className="text-[10px] text-text-secondary">Min Karakter:</label>
+                          <input type="number" min={1} value={form.text_min_chars} onChange={(e)=>setForm({...form, text_min_chars:Number(e.target.value)||10})} className="p-2 rounded-xl bg-surface border border-border-subtle text-xs text-text-primary w-full font-mono" placeholder="Min" />
+                        </div>
+                        <div className="space-y-1">
+                          <label className="text-[10px] text-text-secondary">Maks Karakter:</label>
+                          <input type="number" min={50} value={form.text_max_chars} onChange={(e)=>setForm({...form, text_max_chars:Number(e.target.value)||500})} className="p-2 rounded-xl bg-surface border border-border-subtle text-xs text-text-primary w-full font-mono" placeholder="Max" />
+                        </div>
                       </div>
                     </div>
                   )}

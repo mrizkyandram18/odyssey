@@ -270,10 +270,21 @@ export const CreateTaskModal: React.FC<CreateTaskModalProps> = ({
                   )}
                   {newTask.video_answer_mode === 'essay' && (
                     <div className="space-y-2 pt-2 border-t border-border-subtle">
-                      <input type="text" required value={newTask.text_prompt} onChange={(e)=>setNewTask({...newTask, text_prompt:e.target.value})} placeholder="Prompt esai: Jelaskan..." className="w-full p-2.5 rounded-xl border text-xs" />
+                      <div className="space-y-1">
+                        <label className="text-[11px] font-bold text-text-secondary">
+                          Pertanyaan Essay <span className="text-status-error">*</span>
+                        </label>
+                        <input type="text" required value={newTask.text_prompt} onChange={(e)=>setNewTask({...newTask, text_prompt:e.target.value})} placeholder="Tulis pertanyaan yang harus dijawab setelah menonton video..." className="w-full p-2.5 rounded-xl bg-surface border border-border-subtle text-xs text-text-primary focus:outline-none focus:border-accent-magic" />
+                      </div>
                       <div className="grid grid-cols-2 gap-2">
-                        <input type="number" value={newTask.text_min_chars} onChange={(e)=>setNewTask({...newTask, text_min_chars:Number(e.target.value)||10})} placeholder="Min 80" className="p-2 rounded-xl border text-xs" />
-                        <input type="number" value={newTask.text_max_chars} onChange={(e)=>setNewTask({...newTask, text_max_chars:Number(e.target.value)||500})} placeholder="Max 2000" className="p-2 rounded-xl border text-xs" />
+                        <div className="space-y-1">
+                          <label className="text-[10px] text-text-secondary">Min Karakter:</label>
+                          <input type="number" min={1} value={newTask.text_min_chars} onChange={(e)=>setNewTask({...newTask, text_min_chars:Number(e.target.value)||10})} placeholder="Min 80" className="p-2 rounded-xl bg-surface border border-border-subtle text-xs text-text-primary w-full font-mono" />
+                        </div>
+                        <div className="space-y-1">
+                          <label className="text-[10px] text-text-secondary">Maks Karakter:</label>
+                          <input type="number" min={50} value={newTask.text_max_chars} onChange={(e)=>setNewTask({...newTask, text_max_chars:Number(e.target.value)||500})} placeholder="Max 2000" className="p-2 rounded-xl bg-surface border border-border-subtle text-xs text-text-primary w-full font-mono" />
+                        </div>
                       </div>
                     </div>
                   )}
