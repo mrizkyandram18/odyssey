@@ -62,6 +62,19 @@ export const LiveCameraCaptureModal: React.FC<LiveCameraCaptureModalProps> = ({ 
     }
   }, [stopStream, previewUrl])
 
+  useEffect(() => {
+    if (isCameraOpen && streamRef.current && videoRef.current) {
+      const video = videoRef.current
+      if (video.srcObject !== streamRef.current) {
+        video.srcObject = streamRef.current
+      }
+      video.onloadedmetadata = () => {
+        video.play().catch((err) => console.warn('Video play error:', err))
+      }
+      video.play().catch((err) => console.warn('Video play error:', err))
+    }
+  }, [isCameraOpen])
+
   const handleOpenCamera = async () => {
     if (!isSupported) {
       setErrorMessage('Perangkat/browser Anda tidak mendukung akses kamera. Silakan gunakan browser terbaru di HP Anda.')
@@ -70,14 +83,19 @@ export const LiveCameraCaptureModal: React.FC<LiveCameraCaptureModalProps> = ({ 
     setIsRequesting(true)
     setErrorMessage(null)
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode: cameraFacing },
-      })
-      streamRef.current = stream
-      if (videoRef.current) {
-        videoRef.current.srcObject = stream
-        await videoRef.current.play()
+      let stream: MediaStream
+      try {
+        stream = await navigator.mediaDevices.getUserMedia({
+          video: { facingMode: cameraFacing },
+        })
+      } catch (err: any) {
+        if (err?.name === 'OverconstrainedError') {
+          stream = await navigator.mediaDevices.getUserMedia({ video: true })
+        } else {
+          throw err
+        }
       }
+      streamRef.current = stream
       setIsCameraOpen(true)
     } catch (err: any) {
       const name = err?.name || ''
@@ -274,7 +292,23 @@ export const LiveCameraCaptureModal: React.FC<LiveCameraCaptureModalProps> = ({ 
                     ) : (
                       <div className="space-y-3">
                         <div className="relative aspect-[4/3] w-full max-w-[360px] mx-auto rounded-2xl overflow-hidden border-2 border-accent-magic bg-black">
-                          <video ref={videoRef} autoPlay playsInline muted className="w-full h-full object-cover" data-testid="camera-preview" />
+                          <video
+                            ref={(el) => {
+                              videoRef.current = el
+                              if (el && streamRef.current && el.srcObject !== streamRef.current) {
+                                el.srcObject = streamRef.current
+                                el.onloadedmetadata = () => {
+                                  el.play().catch((err) => console.warn('Video play error:', err))
+                                }
+                                el.play().catch((err) => console.warn('Video play error:', err))
+                              }
+                            }}
+                            autoPlay
+                            playsInline
+                            muted
+                            className="w-full h-full object-cover"
+                            data-testid="camera-preview"
+                          />
                         </div>
                         <div className="flex gap-2">
                           <button
