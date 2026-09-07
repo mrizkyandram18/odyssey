@@ -88,11 +88,12 @@ export const LiveCameraCaptureModal: React.FC<LiveCameraCaptureModalProps> = ({ 
         stream = await navigator.mediaDevices.getUserMedia({
           video: { facingMode: cameraFacing },
         })
-      } catch (err: any) {
-        if (err?.name === 'OverconstrainedError') {
+      } catch {
+        // Fallback to basic video for ANY constraint or device-specific error
+        try {
           stream = await navigator.mediaDevices.getUserMedia({ video: true })
-        } else {
-          throw err
+        } catch (fallbackErr: any) {
+          throw fallbackErr
         }
       }
       streamRef.current = stream
@@ -100,13 +101,13 @@ export const LiveCameraCaptureModal: React.FC<LiveCameraCaptureModalProps> = ({ 
     } catch (err: any) {
       const name = err?.name || ''
       if (name === 'NotAllowedError' || name === 'PermissionDeniedError') {
-        setErrorMessage('Kamera tidak dapat diakses. Izinkan akses kamera pada browser/perangkat Anda lalu coba lagi.')
+        setErrorMessage('Izin kamera belum aktif. Ketuk ikon gembok 🔒 di sebelah alamat web (atas browser) lalu pilih Izinkan akses kamera pada browser/perangkat Anda.')
       } else if (name === 'NotFoundError' || name === 'OverconstrainedError') {
         setErrorMessage('Kamera tidak ditemukan di perangkat ini.')
       } else if (name === 'NotReadableError') {
-        setErrorMessage('Kamera sedang digunakan aplikasi lain. Tutup aplikasi lain dan coba lagi.')
+        setErrorMessage('Kamera sedang digunakan aplikasi lain. Tutup aplikasi kamera lain lalu coba lagi.')
       } else {
-        setErrorMessage('Gagal membuka kamera: ' + (err?.message || 'Unknown error'))
+        setErrorMessage('Gagal membuka kamera: ' + (err?.message || 'Pastikan izin kamera aktif'))
       }
     } finally {
       setIsRequesting(false)
