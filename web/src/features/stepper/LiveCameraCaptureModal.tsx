@@ -90,11 +90,7 @@ export const LiveCameraCaptureModal: React.FC<LiveCameraCaptureModalProps> = ({ 
         })
       } catch {
         // Fallback to basic video for ANY constraint or device-specific error
-        try {
-          stream = await navigator.mediaDevices.getUserMedia({ video: true })
-        } catch (fallbackErr: any) {
-          throw fallbackErr
-        }
+        stream = await navigator.mediaDevices.getUserMedia({ video: true })
       }
       streamRef.current = stream
       setIsCameraOpen(true)
