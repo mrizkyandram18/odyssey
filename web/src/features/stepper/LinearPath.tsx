@@ -38,6 +38,15 @@ function getTaskIcon(taskType: string) {
   }
 }
 
+// Helper for legacy camera-only tasks that might not have camera_only in config yet
+export function isLegacyCameraOnlyTask(task: TaskView): boolean {
+  const title = (task.title || '').trim()
+  return (
+    title === 'Foto Langsung Kesiapan Profil CV (Rapi & Profesional)' ||
+    title === 'Bukti Diskusi'
+  )
+}
+
 export const LinearPath: React.FC = () => {
   const { profile, refreshProfile, session } = useSession()
   const [tasks, setTasks] = useState<TaskView[]>([])
@@ -403,7 +412,10 @@ export const LinearPath: React.FC = () => {
             cfg = {}
           }
         }
-        const isLiveCamera = Boolean(cfg.camera_only) || activeModalTask.title === 'Foto Langsung Kesiapan Profil CV (Rapi & Profesional)'
+        const isLiveCamera =
+          cfg.camera_only !== undefined
+            ? Boolean(cfg.camera_only)
+            : isLegacyCameraOnlyTask(activeModalTask)
         const isDoc = activeModalTask.task_type === 'DOCUMENT_UPLOAD' || Boolean(cfg.attachment_url)
         const isPhoto = activeModalTask.task_type === 'PHOTO_UPLOAD' || activeModalTask.task_type === 'PHOTO_PROOF'
         const isGame = activeModalTask.task_type === 'MINI_GAME' || Boolean(cfg.game)

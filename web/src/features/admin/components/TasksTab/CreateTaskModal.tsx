@@ -389,6 +389,85 @@ export const CreateTaskModal: React.FC<CreateTaskModalProps> = ({
                       className="w-full p-2.5 rounded-xl bg-surface border border-border-subtle text-xs text-text-primary focus:outline-none focus:border-accent-magic font-mono"
                     />
                   </div>
+                  <div className="space-y-2">
+                    <label className="text-[11px] font-bold text-text-secondary">
+                      Metode Pengambilan Foto:
+                    </label>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                      <label
+                        className={`flex items-center gap-2 p-2.5 rounded-xl border cursor-pointer transition-all ${
+                          !newTask.photo_camera_only
+                            ? 'border-accent-magic bg-accent-magic/10 text-text-primary'
+                            : 'border-border-subtle bg-surface hover:bg-surface-elevated text-text-secondary'
+                        }`}
+                      >
+                        <input
+                          type="radio"
+                          name="photo_mode_create"
+                          data-testid="photo-mode-upload"
+                          checked={!newTask.photo_camera_only}
+                          onChange={() => setNewTask({ ...newTask, photo_camera_only: false })}
+                          className="w-4 h-4 accent-[#8b5cf6]"
+                        />
+                        <span className="text-xs font-bold">Upload Foto / Gallery</span>
+                      </label>
+
+                      <label
+                        className={`flex items-center gap-2 p-2.5 rounded-xl border cursor-pointer transition-all ${
+                          newTask.photo_camera_only
+                            ? 'border-accent-magic bg-accent-magic/10 text-text-primary'
+                            : 'border-border-subtle bg-surface hover:bg-surface-elevated text-text-secondary'
+                        }`}
+                      >
+                        <input
+                          type="radio"
+                          name="photo_mode_create"
+                          data-testid="photo-mode-camera"
+                          checked={newTask.photo_camera_only}
+                          onChange={() => setNewTask({ ...newTask, photo_camera_only: true })}
+                          className="w-4 h-4 accent-[#8b5cf6]"
+                        />
+                        <span className="text-xs font-bold">Wajib Ambil dari Kamera</span>
+                      </label>
+                    </div>
+                    <p className="text-[11px] text-text-secondary">
+                      {!newTask.photo_camera_only
+                        ? 'User boleh memilih foto dari galeri, screenshot, atau penyimpanan perangkat.'
+                        : 'User wajib mengambil foto langsung dari kamera saat mengerjakan tugas (tanpa galeri).'}
+                    </p>
+                  </div>
+
+                  {newTask.photo_camera_only && (
+                    <div className="space-y-2 pt-2 border-t border-border-subtle">
+                      <div className="space-y-1">
+                        <label className="text-[11px] font-bold text-text-secondary">Kamera Default:</label>
+                        <select
+                          data-testid="photo-camera-facing-select"
+                          value={newTask.photo_camera_facing}
+                          onChange={(e) =>
+                            setNewTask({ ...newTask, photo_camera_facing: e.target.value as 'user' | 'environment' })
+                          }
+                          className="w-full p-2.5 rounded-xl bg-surface border border-border-subtle text-xs text-text-primary font-bold focus:outline-none focus:border-accent-magic"
+                        >
+                          <option value="environment">📷 Belakang (foto bersama orang lain)</option>
+                          <option value="user">🤳 Depan (swafoto)</option>
+                        </select>
+                      </div>
+                      <div className="space-y-1">
+                        <label className="text-[11px] font-bold text-text-secondary">Instruksi Kamera (opsional):</label>
+                        <textarea
+                          rows={2}
+                          data-testid="photo-camera-instruction-input"
+                          value={newTask.photo_camera_instruction}
+                          onChange={(e) =>
+                            setNewTask({ ...newTask, photo_camera_instruction: e.target.value })
+                          }
+                          placeholder="Contoh: Ambil foto bersama teman diskusimu..."
+                          className="w-full p-2.5 rounded-xl bg-surface border border-border-subtle text-xs text-text-primary focus:outline-none focus:border-accent-magic resize-none"
+                        />
+                      </div>
+                    </div>
+                  )}
                 </div>
               )}
 

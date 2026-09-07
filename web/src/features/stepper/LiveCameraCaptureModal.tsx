@@ -29,6 +29,16 @@ export const LiveCameraCaptureModal: React.FC<LiveCameraCaptureModalProps> = ({ 
   const [submitted, setSubmitted] = useState(isAlreadyDone)
   const [isSupported, setIsSupported] = useState(true)
 
+  // Per-task camera params (optional). Defaults preserve legacy behavior.
+  const rawFacing = task.config?.camera_facing || task.config?.photo_camera_facing
+  const cameraFacing: 'user' | 'environment' = rawFacing === 'environment' ? 'environment' : 'user'
+  const customInstruction =
+    (task.config?.camera_instruction as string | undefined)?.trim() ||
+    (task.config?.instruction as string | undefined)?.trim() ||
+    ''
+  const isCvTask = task.title === 'Foto Langsung Kesiapan Profil CV (Rapi & Profesional)'
+  const isDiscussionTask = task.title === 'Bukti Diskusi'
+
   useEffect(() => {
     if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
       setIsSupported(false)
@@ -48,7 +58,7 @@ export const LiveCameraCaptureModal: React.FC<LiveCameraCaptureModalProps> = ({ 
   useEffect(() => {
     return () => {
       stopStream()
-      if (previewUrl) URL.revokeObjectURL(previewUrl)
+      if (previewUrl && typeof URL.revokeObjectURL === 'function') URL.revokeObjectURL(previewUrl)
     }
   }, [stopStream, previewUrl])
 
@@ -61,7 +71,7 @@ export const LiveCameraCaptureModal: React.FC<LiveCameraCaptureModalProps> = ({ 
     setErrorMessage(null)
     try {
       const stream = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode: 'user' },
+        video: { facingMode: cameraFacing },
       })
       streamRef.current = stream
       if (videoRef.current) {
@@ -136,7 +146,7 @@ export const LiveCameraCaptureModal: React.FC<LiveCameraCaptureModalProps> = ({ 
   }
 
   const handleRetake = () => {
-    if (previewUrl) URL.revokeObjectURL(previewUrl)
+    if (previewUrl && typeof URL.revokeObjectURL === 'function') URL.revokeObjectURL(previewUrl)
     setPreviewUrl(null)
     setCapturedFile(null)
     setErrorMessage(null)
@@ -213,17 +223,33 @@ export const LiveCameraCaptureModal: React.FC<LiveCameraCaptureModalProps> = ({ 
 
                 <div className="rounded-xl bg-amber-50 border border-amber-200 p-3 text-xs leading-relaxed text-amber-800">
                   <p className="font-bold">Petunjuk:</p>
-                  <ol className="list-decimal list-inside space-y-1 mt-1">
-                    <li>Gunakan kemeja/pakaian berkerah rapi seperti standar foto CV.</li>
-                    <li>Pegang kertas kecil di depan dada bertuliskan: <span className="font-bold">[Nama Lengkap] - Siap Kerja {todayStr}</span></li>
-                    <li>Wajah tegak menghadap kamera, tersenyum ramah, latar dinding polos.</li>
-                    <li>Ambil foto langsung menggunakan kamera HP lalu kirim.</li>
-                  </ol>
+                  {customInstruction ? (
+                    <p className="mt-1 whitespace-pre-wrap">{customInstruction}</p>
+                  ) : isCvTask ? (
+                    <ol className="list-decimal list-inside space-y-1 mt-1">
+                      <li>Gunakan kemeja/pakaian berkerah rapi seperti standar foto CV.</li>
+                      <li>Pegang kertas kecil di depan dada bertuliskan: <span className="font-bold">[Nama Lengkap] - Siap Kerja {todayStr}</span></li>
+                      <li>Wajah tegak menghadap kamera, tersenyum ramah, latar dinding polos.</li>
+                      <li>Ambil foto langsung menggunakan kamera HP lalu kirim.</li>
+                    </ol>
+                  ) : isDiscussionTask ? (
+                    <ol className="list-decimal list-inside space-y-1 mt-1">
+                      <li>Selesaikan sesi diskusi bersama teman/rekanmu.</li>
+                      <li>Buka kamera dan ambil foto bersama teman diskusimu langsung di tempat.</li>
+                      <li>Pastikan wajah atau bukti aktivitas terlihat jelas lalu kirim.</li>
+                    </ol>
+                  ) : (
+                    <ol className="list-decimal list-inside space-y-1 mt-1">
+                      <li>Ambil foto bukti aktivitas langsung menggunakan kamera perangkat.</li>
+                      <li>Pastikan objek foto terlihat jelas dan memiliki pencahayaan yang cukup.</li>
+                      <li>Kirim foto langsung setelah diambil untuk verifikasi admin.</li>
+                    </ol>
+                  )}
                   <p className="mt-2 text-[11px] text-amber-700">Foto harus diambil langsung dari kamera — tidak ada pilihan galeri.</p>
                 </div>
 
                 {!isSupported && (
-                  <div className="p-3.5 rounded-xl bg-status-error/15 border border-status-error/30 text-status-error text-sm flex items-center gap-2">
+                  <div className="p-3.5 rounded-xl bg-status-error/15 border border-status-error/30 text-status-error text-sm flex items-center gap-2" data-testid="camera-error">
                     <AlertCircle className="w-5 h-5 shrink-0" />
                     <span>Perangkat/browser Anda tidak mendukung akses kamera.</span>
                   </div>

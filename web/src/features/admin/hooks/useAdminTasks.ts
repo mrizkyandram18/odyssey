@@ -17,6 +17,9 @@ export interface NewTaskFormState {
   video_answer_mode: 'none' | 'quiz' | 'essay'
   questions: Array<{ id: string; question: string; options: string[]; correct_answer: string }>
   photo_min_count: number
+  photo_camera_only: boolean
+  photo_camera_facing: 'user' | 'environment'
+  photo_camera_instruction: string
   doc_allowed_extensions: string
   doc_max_size_mb: number
   text_prompt: string
@@ -48,6 +51,9 @@ const getInitialNewTask = (date: string): NewTaskFormState => ({
     },
   ],
   photo_min_count: 1,
+  photo_camera_only: false,
+  photo_camera_facing: 'environment',
+  photo_camera_instruction: '',
   doc_allowed_extensions: 'pdf,docx,xlsx,txt',
   doc_max_size_mb: 10,
   text_prompt: '',
@@ -85,6 +91,9 @@ export function useAdminTasks() {
     video_answer_mode: 'none' | 'quiz' | 'essay'
     questions: any[]
     photo_min_count: number
+    photo_camera_only: boolean
+    photo_camera_facing: 'user' | 'environment'
+    photo_camera_instruction: string
     doc_allowed_extensions: string
     doc_max_size_mb: number
     text_prompt: string
@@ -104,6 +113,9 @@ export function useAdminTasks() {
     video_answer_mode: 'none',
     questions: [{ id: '1', question: '', options: ['', ''], correct_answer: '' }],
     photo_min_count: 1,
+    photo_camera_only: false,
+    photo_camera_facing: 'environment',
+    photo_camera_instruction: '',
     doc_allowed_extensions: 'pdf,docx,xlsx,txt',
     doc_max_size_mb: 10,
     text_prompt: '',
@@ -189,7 +201,16 @@ export function useAdminTasks() {
       }
       config = { questions: newTask.questions }
     } else if (newTask.task_type === 'PHOTO_UPLOAD') {
-      config = { min_photos: newTask.photo_min_count }
+      config = {
+        min_photos: newTask.photo_min_count,
+        camera_only: Boolean(newTask.photo_camera_only),
+      }
+      if (newTask.photo_camera_only) {
+        config.camera_facing = newTask.photo_camera_facing
+        if (newTask.photo_camera_instruction.trim()) {
+          config.camera_instruction = newTask.photo_camera_instruction.trim()
+        }
+      }
     } else if (newTask.task_type === 'DOCUMENT_UPLOAD') {
       const exts = newTask.doc_allowed_extensions
         .split(',')
@@ -322,6 +343,9 @@ export function useAdminTasks() {
       video_answer_mode: vMode,
       questions: Array.isArray(cfg.questions) && cfg.questions.length > 0 ? cfg.questions as any[] : [{ id: '1', question: '', options: ['', ''], correct_answer: '' }],
       photo_min_count: (cfg.min_photos as number) || (cfg.max_files as number) || 1,
+      photo_camera_only: Boolean(cfg.camera_only),
+      photo_camera_facing: cfg.camera_facing === 'user' ? 'user' : 'environment',
+      photo_camera_instruction: (cfg.camera_instruction as string) || '',
       doc_allowed_extensions: Array.isArray(cfg.allowed_extensions) ? (cfg.allowed_extensions as unknown as string[]).join(',') : (cfg.accepted_extensions as unknown as string) || 'pdf,docx,xlsx,txt',
       doc_max_size_mb: (cfg.max_file_size_mb as number) || 10,
       text_prompt: (cfg.prompt as string) || (cfg.instruction as string) || '',
@@ -378,7 +402,17 @@ export function useAdminTasks() {
       config = { questions: editTaskForm.questions }
       if (editTaskForm.video_url.trim()) config.youtube_url = editTaskForm.video_url.trim()
       } else if (t === 'PHOTO_UPLOAD') {
-      config = { max_files: editTaskForm.photo_min_count, min_photos: editTaskForm.photo_min_count }
+      config = {
+        max_files: editTaskForm.photo_min_count,
+        min_photos: editTaskForm.photo_min_count,
+        camera_only: Boolean(editTaskForm.photo_camera_only),
+      }
+      if (editTaskForm.photo_camera_only) {
+        config.camera_facing = editTaskForm.photo_camera_facing
+        if (editTaskForm.photo_camera_instruction.trim()) {
+          config.camera_instruction = editTaskForm.photo_camera_instruction.trim()
+        }
+      }
     } else if (t === 'DOCUMENT_UPLOAD') {
       const exts = editTaskForm.doc_allowed_extensions.split(',').map((s: string) => s.trim().toLowerCase().replace(/^\./, '')).filter(Boolean)
       config = { allowed_extensions: exts, max_file_size_mb: editTaskForm.doc_max_size_mb }

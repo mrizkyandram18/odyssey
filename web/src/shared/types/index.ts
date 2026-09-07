@@ -110,6 +110,12 @@ export interface PhotoUploadConfig {
   instruction?: string
   max_files?: number
   accepted_mime_types?: string[]
+  /** When true, user must capture via live camera (getUserMedia); no gallery/file picker. */
+  camera_only?: boolean
+  /** Which lens the live camera requests. Defaults to 'user' when unset. */
+  camera_facing?: 'user' | 'environment'
+  /** Custom instruction text shown in the live-camera modal (falls back to built-in text). */
+  camera_instruction?: string
 }
 
 export interface DocUploadConfig {

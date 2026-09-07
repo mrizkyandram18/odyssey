@@ -3,50 +3,34 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { X, Edit3, Play, HelpCircle, Camera, FileText, PenLine, Gamepad2 } from 'lucide-react'
 import type { TaskView, TaskType } from '../../../../shared/types'
 
+export interface EditTaskFormState {
+  title: string
+  description: string
+  task_type: TaskType
+  reward_coins: number
+  reward_xp: number
+  video_url: string
+  video_answer_mode: 'none' | 'quiz' | 'essay'
+  questions: Array<{ id: string; question: string; options: string[]; correct_answer: string }>
+  photo_min_count: number
+  photo_camera_only: boolean
+  photo_camera_facing: 'user' | 'environment'
+  photo_camera_instruction: string
+  doc_allowed_extensions: string
+  doc_max_size_mb: number
+  text_prompt: string
+  text_min_chars: number
+  text_max_chars: number
+  game_type: string
+  game_target_score: number
+  game_max_moves: number
+  config: Record<string, any>
+}
+
 interface EditTaskModalProps {
   task: TaskView | null
-  form: {
-    title: string
-    description: string
-    task_type: TaskType
-    reward_coins: number
-    reward_xp: number
-    video_url: string
-    video_answer_mode: 'none' | 'quiz' | 'essay'
-    questions: Array<{ id: string; question: string; options: string[]; correct_answer: string }>
-    photo_min_count: number
-    doc_allowed_extensions: string
-    doc_max_size_mb: number
-    text_prompt: string
-    text_min_chars: number
-    text_max_chars: number
-    game_type: string
-    game_target_score: number
-    game_max_moves: number
-    config: Record<string, any>
-  }
-  setForm: React.Dispatch<
-    React.SetStateAction<{
-      title: string
-      description: string
-      task_type: TaskType
-      reward_coins: number
-      reward_xp: number
-      video_url: string
-      video_answer_mode: 'none' | 'quiz' | 'essay'
-      questions: Array<{ id: string; question: string; options: string[]; correct_answer: string }>
-      photo_min_count: number
-      doc_allowed_extensions: string
-      doc_max_size_mb: number
-      text_prompt: string
-      text_min_chars: number
-      text_max_chars: number
-      game_type: string
-      game_target_score: number
-      game_max_moves: number
-      config: Record<string, any>
-    }>
-  >
+  form: EditTaskFormState
+  setForm: React.Dispatch<React.SetStateAction<EditTaskFormState>>
   isSaving: boolean
   onClose: () => void
   onSave: () => void
@@ -296,6 +280,81 @@ export const EditTaskModal: React.FC<EditTaskModalProps> = ({
                   <h4 className="text-xs font-bold uppercase tracking-wider text-text-secondary flex items-center gap-1.5"><Camera className="w-3.5 h-3.5 text-accent-cyan" /> Foto</h4>
                   <label className="text-[11px] text-text-secondary">Maksimal file (1-10)</label>
                   <input type="number" min={1} max={10} value={form.photo_min_count} onChange={(e) => setForm({ ...form, photo_min_count: Number(e.target.value) || 1 })} className="w-full p-2.5 rounded-xl bg-surface border border-border-subtle text-xs font-mono" />
+                  <div className="space-y-2">
+                    <label className="text-[11px] font-bold text-text-secondary">
+                      Metode Pengambilan Foto:
+                    </label>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                      <label
+                        className={`flex items-center gap-2 p-2.5 rounded-xl border cursor-pointer transition-all ${
+                          !form.photo_camera_only
+                            ? 'border-accent-magic bg-accent-magic/10 text-text-primary'
+                            : 'border-border-subtle bg-surface hover:bg-surface-elevated text-text-secondary'
+                        }`}
+                      >
+                        <input
+                          type="radio"
+                          name="photo_mode_edit"
+                          data-testid="edit-photo-mode-upload"
+                          checked={!form.photo_camera_only}
+                          onChange={() => setForm({ ...form, photo_camera_only: false })}
+                          className="w-4 h-4 accent-[#8b5cf6]"
+                        />
+                        <span className="text-xs font-bold">Upload Foto / Gallery</span>
+                      </label>
+
+                      <label
+                        className={`flex items-center gap-2 p-2.5 rounded-xl border cursor-pointer transition-all ${
+                          form.photo_camera_only
+                            ? 'border-accent-magic bg-accent-magic/10 text-text-primary'
+                            : 'border-border-subtle bg-surface hover:bg-surface-elevated text-text-secondary'
+                        }`}
+                      >
+                        <input
+                          type="radio"
+                          name="photo_mode_edit"
+                          data-testid="edit-photo-mode-camera"
+                          checked={form.photo_camera_only}
+                          onChange={() => setForm({ ...form, photo_camera_only: true })}
+                          className="w-4 h-4 accent-[#8b5cf6]"
+                        />
+                        <span className="text-xs font-bold">Wajib Ambil dari Kamera</span>
+                      </label>
+                    </div>
+                    <p className="text-[11px] text-text-secondary">
+                      {!form.photo_camera_only
+                        ? 'User boleh memilih foto dari galeri, screenshot, atau penyimpanan perangkat.'
+                        : 'User wajib mengambil foto langsung dari kamera saat mengerjakan tugas (tanpa galeri).'}
+                    </p>
+                  </div>
+
+                  {form.photo_camera_only && (
+                    <div className="space-y-2 pt-2 border-t border-border-subtle">
+                      <div className="space-y-1">
+                        <label className="text-[11px] font-bold text-text-secondary">Kamera Default:</label>
+                        <select
+                          data-testid="edit-photo-camera-facing-select"
+                          value={form.photo_camera_facing}
+                          onChange={(e) => setForm({ ...form, photo_camera_facing: e.target.value as 'user' | 'environment' })}
+                          className="w-full p-2.5 rounded-xl bg-surface border border-border-subtle text-xs text-text-primary font-bold focus:outline-none focus:border-accent-magic"
+                        >
+                          <option value="environment">📷 Belakang (foto bersama orang lain)</option>
+                          <option value="user">🤳 Depan (swafoto)</option>
+                        </select>
+                      </div>
+                      <div className="space-y-1">
+                        <label className="text-[11px] font-bold text-text-secondary">Instruksi Kamera (opsional):</label>
+                        <textarea
+                          rows={2}
+                          data-testid="edit-photo-camera-instruction-input"
+                          value={form.photo_camera_instruction}
+                          onChange={(e) => setForm({ ...form, photo_camera_instruction: e.target.value })}
+                          placeholder="Contoh: Ambil foto bersama teman diskusimu..."
+                          className="w-full p-2.5 rounded-xl bg-surface border border-border-subtle text-xs text-text-primary focus:outline-none focus:border-accent-magic resize-none"
+                        />
+                      </div>
+                    </div>
+                  )}
                 </div>
               )}
               {form.task_type === 'DOCUMENT_UPLOAD' && (
