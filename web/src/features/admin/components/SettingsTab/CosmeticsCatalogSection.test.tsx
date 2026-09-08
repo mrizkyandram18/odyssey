@@ -57,7 +57,7 @@ describe('CosmeticsCatalogSection', () => {
     await waitFor(() => {
       expect(screen.getByText('Bingkai Emas')).toBeInTheDocument()
       expect(screen.getByText('Efek Kilau')).toBeInTheDocument()
-      expect(screen.getByText('● Aktif di Gacha Box')).toBeInTheDocument()
+      expect(screen.getByText('● Aktif di Kotak Hadiah')).toBeInTheDocument()
       expect(screen.getByText('○ Dinonaktifkan')).toBeInTheDocument()
     })
   })
@@ -69,7 +69,7 @@ describe('CosmeticsCatalogSection', () => {
       expect(screen.getByText('Bingkai Emas')).toBeInTheDocument()
     })
 
-    const toggleButtons = screen.getAllByRole('button', { name: /nonaktifkan kosmetik/i })
+    const toggleButtons = screen.getAllByRole('button', { name: /nonaktifkan hadiah/i })
     fireEvent.click(toggleButtons[0])
 
     await waitFor(() => {
@@ -83,13 +83,13 @@ describe('CosmeticsCatalogSection', () => {
     render(<CosmeticsCatalogSection />)
 
     await waitFor(() => {
-      expect(screen.getByText('Katalog Kosmetik Hadiah')).toBeInTheDocument()
+      expect(screen.getByText('Katalog Hadiah & Koleksi')).toBeInTheDocument()
     })
 
-    const addBtn = screen.getByRole('button', { name: /Tambah Kosmetik/i })
+    const addBtn = screen.getByRole('button', { name: /Tambah Hadiah/i })
     fireEvent.click(addBtn)
 
-    expect(screen.getByText('Tambah Kosmetik Baru')).toBeInTheDocument()
+    expect(screen.getByText('Tambah Hadiah Baru')).toBeInTheDocument()
 
     const idInput = screen.getByPlaceholderText(/contoh: frame-emerald/i)
     const nameInput = screen.getByPlaceholderText(/contoh: Bingkai Zamrud/i)
@@ -99,7 +99,7 @@ describe('CosmeticsCatalogSection', () => {
     fireEvent.change(nameInput, { target: { value: 'Bingkai Neon' } })
     fireEvent.change(assetInput, { target: { value: 'neon' } })
 
-    const submitBtn = screen.getByRole('button', { name: /Simpan Kosmetik/i })
+    const submitBtn = screen.getByRole('button', { name: /Simpan Hadiah/i })
     fireEvent.click(submitBtn)
 
     await waitFor(() => {

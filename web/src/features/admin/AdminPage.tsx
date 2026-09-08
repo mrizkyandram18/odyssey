@@ -1,6 +1,6 @@
 import React, { useState } from 'react'
 import { Navigate } from 'react-router-dom'
-import { ShieldCheck, CheckCircle2, Coins, Calendar, Users, Sliders } from 'lucide-react'
+import { ShieldCheck, CheckCircle2, Coins, Calendar, Users, Sliders, Sparkles } from 'lucide-react'
 import { useSession } from '../../shared/hooks/useSession'
 import { useAdminConfig } from './hooks/useAdminConfig'
 import { SubmissionsQueue } from './components/SubmissionsTab/SubmissionsQueue'
@@ -8,8 +8,9 @@ import { ClaimsQueue } from './components/ClaimsTab/ClaimsQueue'
 import { TaskScheduleList } from './components/TasksTab/TaskScheduleList'
 import { MemberList } from './components/MembersTab/MemberList'
 import { EconomySettingsForm } from './components/SettingsTab/EconomySettingsForm'
+import { CosmeticsCatalogSection } from './components/SettingsTab/CosmeticsCatalogSection'
 
-type AdminTab = 'submissions' | 'claims' | 'tasks' | 'members' | 'settings'
+type AdminTab = 'submissions' | 'claims' | 'tasks' | 'members' | 'rewards' | 'settings'
 
 export const AdminPage: React.FC = () => {
   const { profile, loading } = useSession()
@@ -62,8 +63,8 @@ export const AdminPage: React.FC = () => {
         {/* Live Period Status Tag */}
         <div className="flex items-center gap-2 self-start sm:self-auto">
           <div className="flex items-center gap-1.5 px-3 py-1 rounded-xl bg-surface border border-border-subtle text-xs">
-            <span className="text-[11px] text-text-secondary font-medium">Periode Penukaran:</span>
-            <span className="font-bold text-text-primary font-mono">{periodRange}</span>
+            <span className="text-[11px] text-text-secondary font-medium">Jadwal Pencairan:</span>
+            <span className="font-bold text-text-primary font-mono">Tgl {periodRange}</span>
             <span
               className={`inline-flex items-center gap-1 text-[10px] font-bold px-1.5 py-0.5 rounded-full ${
                 isOpen
@@ -81,7 +82,7 @@ export const AdminPage: React.FC = () => {
       {/* Single Primary Tab Navigation */}
       <nav
         aria-label="Admin Navigation"
-        className="grid grid-cols-2 sm:grid-cols-5 gap-1.5 p-1 bg-surface rounded-2xl border border-border-subtle shadow-xs"
+        className="grid grid-cols-2 sm:grid-cols-6 gap-1.5 p-1 bg-surface rounded-2xl border border-border-subtle shadow-xs"
       >
         <button
           type="button"
@@ -145,17 +146,32 @@ export const AdminPage: React.FC = () => {
 
         <button
           type="button"
+          data-testid="admin-tab-rewards"
+          onClick={() => setActiveTab('rewards')}
+          aria-current={activeTab === 'rewards' ? 'page' : undefined}
+          className={`py-2 px-3 rounded-xl font-bold text-xs flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
+            activeTab === 'rewards'
+              ? 'bg-accent-magic text-white shadow-sm'
+              : 'text-text-secondary hover:text-text-primary hover:bg-surface-elevated'
+          }`}
+        >
+          <Sparkles className="w-3.5 h-3.5" />
+          <span>Hadiah</span>
+        </button>
+
+        <button
+          type="button"
           data-testid="admin-tab-settings"
           onClick={() => setActiveTab('settings')}
           aria-current={activeTab === 'settings' ? 'page' : undefined}
-          className={`col-span-2 sm:col-span-1 py-2 px-3 rounded-xl font-bold text-xs flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
+          className={`py-2 px-3 rounded-xl font-bold text-xs flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
             activeTab === 'settings'
               ? 'bg-accent-magic text-white shadow-sm'
               : 'text-text-secondary hover:text-text-primary hover:bg-surface-elevated'
           }`}
         >
           <Sliders className="w-3.5 h-3.5" />
-          <span>Periode</span>
+          <span>Pengaturan</span>
         </button>
       </nav>
 
@@ -165,6 +181,7 @@ export const AdminPage: React.FC = () => {
         {activeTab === 'claims' && <ClaimsQueue />}
         {activeTab === 'tasks' && <TaskScheduleList />}
         {activeTab === 'members' && <MemberList />}
+        {activeTab === 'rewards' && <CosmeticsCatalogSection />}
         {activeTab === 'settings' && <EconomySettingsForm />}
       </main>
     </div>

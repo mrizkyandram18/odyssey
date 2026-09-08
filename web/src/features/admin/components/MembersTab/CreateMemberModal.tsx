@@ -158,17 +158,63 @@ export const CreateMemberModal: React.FC<CreateMemberModalProps> = ({
                   />
                   <p className="text-[11px] text-text-secondary">Sistem akan menghitung pembagian koin otomatis berdasarkan target dan bobot task. Nilai 0 berarti mengikuti pengaturan default sistem.</p>
                 </div>
-                <div className="space-y-1">
-                  <label className="text-xs font-bold text-text-secondary">Batas Earning Bulanan (0 = unlimited / ikuti default sistem)</label>
-                  <input
-                    type="number"
-                    min={0}
-                    max={10000}
-                    value={form.monthly_earning_cap}
-                    onChange={(e) => setForm({ ...form, monthly_earning_cap: parseInt(e.target.value || '0', 10) })}
-                    className="w-full p-2.5 rounded-xl bg-surface border border-border-subtle text-xs sm:text-sm text-text-primary focus:outline-none focus:border-accent-magic"
-                  />
-                  <p className="text-[11px] text-text-secondary">Hard limit. Jika earned ≥ cap, locked sampai periode baru (1–24). Saldo tidak reset.</p>
+                <div className="space-y-3 p-3.5 rounded-xl bg-amber-50/70 dark:bg-amber-950/20 border border-amber-200/80">
+                  <div className="flex items-center justify-between">
+                    <label className="text-xs font-bold text-text-primary">
+                      Batas Koin Bulanan Anggota
+                    </label>
+                    <span className="text-[10px] font-semibold text-text-secondary">
+                      {form.monthly_earning_cap > 0 ? 'Batas Khusus' : 'Ikuti Batas Standar'}
+                    </span>
+                  </div>
+
+                  <div className="space-y-2">
+                    <label className="flex items-center gap-2 cursor-pointer text-xs text-text-primary">
+                      <input
+                        type="radio"
+                        name="create_cap_mode"
+                        checked={form.monthly_earning_cap === 0}
+                        onChange={() => setForm({ ...form, monthly_earning_cap: 0 })}
+                        className="text-accent-magic cursor-pointer"
+                      />
+                      <span>Gunakan batas koin bulanan standar (global)</span>
+                    </label>
+
+                    <label className="flex items-center gap-2 cursor-pointer text-xs text-text-primary">
+                      <input
+                        type="radio"
+                        name="create_cap_mode"
+                        checked={form.monthly_earning_cap > 0}
+                        onChange={() => setForm({ ...form, monthly_earning_cap: 3000 })}
+                        className="text-accent-magic cursor-pointer"
+                      />
+                      <span>Atur batas koin khusus untuk anggota ini</span>
+                    </label>
+                  </div>
+
+                  {form.monthly_earning_cap > 0 && (
+                    <div className="pt-2">
+                      <div className="relative">
+                        <input
+                          type="number"
+                          min={1}
+                          max={10000}
+                          value={form.monthly_earning_cap}
+                          onChange={(e) => setForm({ ...form, monthly_earning_cap: Math.max(0, parseInt(e.target.value || '0', 10)) })}
+                          placeholder="Contoh: 3500"
+                          className="w-full p-2.5 pr-24 rounded-xl bg-surface border border-border-subtle text-xs sm:text-sm font-bold text-text-primary focus:outline-none focus:border-accent-magic"
+                        />
+                        <span className="absolute right-3 top-2.5 text-xs text-text-secondary">koin / bulan</span>
+                      </div>
+                      <p className="text-[10px] text-text-secondary mt-1">
+                        Batas khusus ini hanya berlaku untuk anggota ini dan menggantikan batas global.
+                      </p>
+                    </div>
+                  )}
+
+                  <p className="text-[11px] text-text-secondary leading-relaxed">
+                    Jika perolehan koin bulan ini mencapai batas, anggota tidak dapat memperoleh koin tambahan sampai awal bulan berikutnya. Saldo koin tidak akan berkurang.
+                  </p>
                 </div>
                 <div className="space-y-2 p-3 rounded-xl bg-violet-50 dark:bg-violet-950/20 border border-violet-200">
                   <label className="text-xs font-bold text-text-secondary">Pengaturan Pencairan (Per-User Payout Policy)</label>

@@ -1,7 +1,6 @@
-import React from 'react'
-import { Sliders, AlertCircle, Check, Calendar, Coins, ArrowRight, Shield, Award } from 'lucide-react'
+import React, { useState, useMemo } from 'react'
+import { Sliders, AlertCircle, Check, Calendar, Coins, ArrowRight, Shield, Award, Plus, Trash2, ChevronDown, ChevronUp } from 'lucide-react'
 import { useAdminConfig } from '../../hooks/useAdminConfig'
-import { CosmeticsCatalogSection } from './CosmeticsCatalogSection'
 
 export const EconomySettingsForm: React.FC = () => {
   const {
@@ -38,9 +37,69 @@ export const EconomySettingsForm: React.FC = () => {
     handleSaveConfig,
   } = useAdminConfig()
 
+  // State for visual Level Cap Bonus builder
+  const [newTierLevel, setNewTierLevel] = useState('')
+  const [newTierBonus, setNewTierBonus] = useState('')
+  const [tierError, setTierError] = useState<string | null>(null)
+  const [showAdvanced, setShowAdvanced] = useState(false)
+
   const convRateNum = parseInt(conversionRateInput, 10) || 0
   const targetRpNum = parseInt(targetRupiahInput, 10) || 0
   const targetCoinsCalc = convRateNum > 0 ? Math.floor(targetRpNum / convRateNum) : 0
+  const baseCapNum = parseInt(monthlyCapInput, 10) || 0
+  const ceilingNum = parseInt(maxCapCeilingInput, 10) || 0
+
+  // Parse structured tiers from levelCapBonusInput
+  const parsedTiers = useMemo(() => {
+    try {
+      if (!levelCapBonusInput.trim()) return []
+      const obj = JSON.parse(levelCapBonusInput)
+      if (typeof obj !== 'object' || obj === null || Array.isArray(obj)) return []
+      return Object.entries(obj)
+        .map(([k, v]) => ({ level: parseInt(k, 10), bonus: Number(v) }))
+        .filter((t) => !isNaN(t.level) && t.level > 0 && !isNaN(t.bonus) && t.bonus >= 0)
+        .sort((a, b) => a.level - b.level)
+    } catch {
+      return []
+    }
+  }, [levelCapBonusInput])
+
+  const handleAddTier = (e?: React.MouseEvent) => {
+    if (e) e.preventDefault()
+    setTierError(null)
+    const lvl = parseInt(newTierLevel, 10)
+    const bns = parseInt(newTierBonus, 10)
+
+    if (isNaN(lvl) || lvl < 1) {
+      setTierError('Tingkat harus berupa angka >= 1')
+      return
+    }
+    if (isNaN(bns) || bns < 0) {
+      setTierError('Tambahan bonus koin harus berupa angka >= 0')
+      return
+    }
+
+    const currentMap: Record<string, number> = {}
+    parsedTiers.forEach((t) => {
+      currentMap[String(t.level)] = t.bonus
+    })
+    currentMap[String(lvl)] = bns
+
+    // Update underlying JSON string
+    setLevelCapBonusInput(JSON.stringify(currentMap))
+    setNewTierLevel('')
+    setNewTierBonus('')
+  }
+
+  const handleRemoveTier = (levelToRemove: number) => {
+    const currentMap: Record<string, number> = {}
+    parsedTiers.forEach((t) => {
+      if (t.level !== levelToRemove) {
+        currentMap[String(t.level)] = t.bonus
+      }
+    })
+    setLevelCapBonusInput(JSON.stringify(currentMap))
+  }
 
   return (
     <div className="space-y-4">
@@ -50,10 +109,10 @@ export const EconomySettingsForm: React.FC = () => {
           <div>
             <h3 className="font-heading font-bold text-text-primary text-sm sm:text-base flex items-center gap-2">
               <Sliders className="w-4 h-4 text-accent-magic" />
-              <span>Pengaturan Periode Penukaran Koin</span>
+              <span>Pengaturan Ekonomi & Batas Koin Bulanan</span>
             </h3>
             <p className="text-[11px] text-text-secondary mt-0.5">
-              Kelola kalender siklus pencairan, durasi periode earning, konversi saldo koin, dan batas penarikan.
+              Kelola batas koin bulanan, bonus berdasarkan Tingkat, nilai konversi koin, dan jadwal pencairan.
             </p>
           </div>
 
@@ -66,110 +125,175 @@ export const EconomySettingsForm: React.FC = () => {
               }`}
             >
               <span className={`w-2 h-2 rounded-full ${config.is_open ? 'bg-status-success animate-pulse' : 'bg-text-secondary'}`} />
-              {config.is_open ? 'Sedang Dibuka' : 'Sedang Ditutup'}
+              {config.is_open ? 'Pencairan Dibuka' : 'Pencairan Ditutup'}
             </span>
           )}
         </div>
 
-        <form onSubmit={handleSaveConfig} className="space-y-5">
-          {/* Group 1: Siklus & Periode Penukaran */}
-          <div className="space-y-3">
-            <h4 className="text-xs font-bold uppercase tracking-wider text-text-secondary flex items-center gap-1.5">
-              <Calendar className="w-3.5 h-3.5 text-accent-magic" />
-              <span>Siklus & Periode Penukaran</span>
-            </h4>
+        <form onSubmit={handleSaveConfig} className="space-y-6">
+          {/* Group 1: Batas Koin Bulanan & Bonus Tingkat */}
+          <div className="space-y-4 p-4 rounded-xl bg-surface-elevated/40 border border-border-subtle">
+            <div className="flex items-center justify-between">
+              <h4 className="text-xs font-bold uppercase tracking-wider text-text-primary flex items-center gap-2">
+                <Shield className="w-4 h-4 text-accent-magic" />
+                <span>Batas Koin Bulanan & Bonus Tingkat</span>
+              </h4>
+              <span className="text-[10px] text-text-secondary font-medium">Bulan Kalender (Tgl 1 – Akhir Bulan)</span>
+            </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div className="space-y-1">
-                <label htmlFor="input-start-day" className="text-xs font-bold text-text-secondary">
-                  Tanggal Mulai (1–31) <span className="text-status-error">*</span>
+                <label htmlFor="input-monthly-cap" className="text-xs font-bold text-text-secondary flex items-center justify-between">
+                  <span>Batas Koin Bulanan Standar <span className="text-status-error">*</span></span>
+                  <span className="text-[10px] font-normal text-text-secondary">0 = tanpa batas</span>
                 </label>
-                <input
-                  id="input-start-day"
-                  type="number"
-                  min={1}
-                  max={31}
-                  required
-                  value={startDayInput}
-                  onChange={(e) => setStartDayInput(e.target.value)}
-                  className="w-full p-2.5 rounded-xl bg-surface-elevated border border-border-subtle text-xs sm:text-sm font-bold text-text-primary focus:outline-none focus:border-accent-magic font-mono"
-                />
-                <p className="text-[10px] text-text-secondary">Hari awal buka form penukaran</p>
-              </div>
-
-              <div className="space-y-1">
-                <label htmlFor="input-end-day" className="text-xs font-bold text-text-secondary">
-                  Tanggal Akhir (1–31) <span className="text-status-error">*</span>
-                </label>
-                <input
-                  id="input-end-day"
-                  type="number"
-                  min={1}
-                  max={31}
-                  required
-                  value={endDayInput}
-                  onChange={(e) => setEndDayInput(e.target.value)}
-                  className="w-full p-2.5 rounded-xl bg-surface-elevated border border-border-subtle text-xs sm:text-sm font-bold text-text-primary focus:outline-none focus:border-accent-magic font-mono"
-                />
-                <p className="text-[10px] text-text-secondary">Batas akhir pengajuan klaim</p>
+                <div className="relative">
+                  <input
+                    id="input-monthly-cap"
+                    type="number"
+                    min={0}
+                    required
+                    value={monthlyCapInput}
+                    onChange={(e) => setMonthlyCapInput(e.target.value)}
+                    className="w-full p-2.5 pr-20 rounded-xl bg-surface border border-border-subtle text-xs sm:text-sm font-bold text-text-primary focus:outline-none focus:border-accent-magic font-mono"
+                  />
+                  <span className="absolute right-3 top-2.5 text-xs text-text-secondary">koin / bulan</span>
+                </div>
+                <p className="text-[10px] text-text-secondary">
+                  Jumlah maksimum koin yang dapat diperoleh anggota dalam satu bulan kalender.
+                </p>
               </div>
 
               <div className="space-y-1">
-                <label htmlFor="input-payout-day" className="text-xs font-bold text-text-secondary">
-                  Tanggal Gajian / Payday <span className="text-status-error">*</span>
+                <label htmlFor="input-max-ceiling" className="text-xs font-bold text-text-secondary flex items-center justify-between">
+                  <span>Plafon Maksimum (Ceiling)</span>
+                  <span className="text-[10px] font-normal text-text-secondary">0 = tanpa plafon</span>
                 </label>
-                <input
-                  id="input-payout-day"
-                  type="number"
-                  min={1}
-                  max={31}
-                  required
-                  value={payoutDayInput}
-                  onChange={(e) => setPayoutDayInput(e.target.value)}
-                  className="w-full p-2.5 rounded-xl bg-surface-elevated border border-border-subtle text-xs sm:text-sm font-bold text-text-primary focus:outline-none focus:border-accent-magic font-mono"
-                />
-                <p className="text-[10px] text-text-secondary">Hari transfer dana reward</p>
+                <div className="relative">
+                  <input
+                    id="input-max-ceiling"
+                    type="number"
+                    min={0}
+                    placeholder="10000"
+                    value={maxCapCeilingInput}
+                    onChange={(e) => setMaxCapCeilingInput(e.target.value)}
+                    className="w-full p-2.5 pr-20 rounded-xl bg-surface border border-border-subtle text-xs sm:text-sm font-bold text-text-primary focus:outline-none focus:border-accent-magic font-mono"
+                  />
+                  <span className="absolute right-3 top-2.5 text-xs text-text-secondary">koin / bulan</span>
+                </div>
+                <p className="text-[10px] text-text-secondary">
+                  Batas tertinggi koin bulanan seorang anggota, termasuk setelah ditambah bonus Tingkat.
+                </p>
+              </div>
+            </div>
+
+            {/* Visual Level Cap Bonus Builder */}
+            <div className="pt-2 border-t border-border-subtle/80 space-y-3">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h5 className="text-xs font-bold text-text-primary flex items-center gap-1.5">
+                    <Award className="w-3.5 h-3.5 text-accent-gold" />
+                    <span>Bonus Batas Koin Berdasarkan Tingkat</span>
+                  </h5>
+                  <p className="text-[11px] text-text-secondary mt-0.5">
+                    Tambahan batas koin bulanan yang otomatis aktif saat anggota mencapai Tingkat tertentu.
+                  </p>
+                </div>
               </div>
 
-              <div className="space-y-1">
-                <label htmlFor="input-earning-period" className="text-xs font-bold text-text-secondary">
-                  Durasi Earning (Hari) <span className="text-status-error">*</span>
-                </label>
-                <input
-                  id="input-earning-period"
-                  type="number"
-                  min={1}
-                  max={365}
-                  required
-                  value={earningPeriodInput}
-                  onChange={(e) => setEarningPeriodInput(e.target.value)}
-                  className="w-full p-2.5 rounded-xl bg-surface-elevated border border-border-subtle text-xs sm:text-sm font-bold text-text-primary focus:outline-none focus:border-accent-magic font-mono"
-                />
-                <p className="text-[10px] text-text-secondary">Durasi siklus kerja tugas</p>
+              {/* Tiers List */}
+              {parsedTiers.length === 0 ? (
+                <div className="p-3 text-center text-text-secondary text-xs bg-surface rounded-xl border border-dashed border-border-subtle">
+                  Belum ada bonus tingkat yang diatur. Semua tingkat akan menggunakan batas standar.
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
+                  {parsedTiers.map((tier) => {
+                    const effectivePreview = baseCapNum > 0
+                      ? (ceilingNum > 0 && baseCapNum + tier.bonus > ceilingNum ? ceilingNum : baseCapNum + tier.bonus)
+                      : 'Bebas'
+                    return (
+                      <div
+                        key={tier.level}
+                        className="p-2.5 rounded-xl bg-surface border border-border-subtle flex items-center justify-between gap-2 shadow-2xs"
+                      >
+                        <div>
+                          <div className="flex items-center gap-1.5">
+                            <span className="text-xs font-bold text-text-primary">Tingkat {tier.level}</span>
+                            <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-md bg-accent-gold/15 text-accent-gold">
+                              +{tier.bonus.toLocaleString('id-ID')} Koin
+                            </span>
+                          </div>
+                          <p className="text-[10px] text-text-secondary mt-0.5">
+                            Total Batas: {effectivePreview.toLocaleString('id-ID')} koin
+                          </p>
+                        </div>
+
+                        <button
+                          type="button"
+                          onClick={() => handleRemoveTier(tier.level)}
+                          className="p-1.5 rounded-lg text-text-secondary hover:text-status-error hover:bg-status-error/10 transition-colors cursor-pointer"
+                          title={`Hapus bonus tingkat ${tier.level}`}
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                    )
+                  })}
+                </div>
+              )}
+
+              {/* Add Tier Inline Form */}
+              <div className="p-3 rounded-xl bg-surface border border-border-subtle space-y-2">
+                <span className="text-[11px] font-bold text-text-secondary block">Tambah Bonus Tingkat Baru:</span>
+                <div className="flex flex-col sm:flex-row items-center gap-2">
+                  <div className="w-full sm:w-1/3">
+                    <input
+                      type="number"
+                      min={1}
+                      placeholder="Tingkat (misal: 15)"
+                      value={newTierLevel}
+                      onChange={(e) => setNewTierLevel(e.target.value)}
+                      className="w-full p-2 rounded-lg bg-surface-elevated border border-border-subtle text-xs text-text-primary focus:outline-none focus:border-accent-magic font-mono"
+                    />
+                  </div>
+                  <div className="w-full sm:w-1/2">
+                    <input
+                      type="number"
+                      min={0}
+                      placeholder="Tambahan Koin (misal: 750)"
+                      value={newTierBonus}
+                      onChange={(e) => setNewTierBonus(e.target.value)}
+                      className="w-full p-2 rounded-lg bg-surface-elevated border border-border-subtle text-xs text-text-primary focus:outline-none focus:border-accent-magic font-mono"
+                    />
+                  </div>
+                  <button
+                    type="button"
+                    onClick={handleAddTier}
+                    className="w-full sm:w-auto px-4 py-2 rounded-lg bg-accent-magic text-white text-xs font-bold hover:brightness-110 active:scale-[0.99] transition-all flex items-center justify-center gap-1 cursor-pointer shrink-0"
+                  >
+                    <Plus className="w-3.5 h-3.5" />
+                    <span>Tambah</span>
+                  </button>
+                </div>
+                {tierError && <p className="text-[10px] text-status-error">{tierError}</p>}
               </div>
 
-              <div className="space-y-1 sm:col-span-2">
-                <label htmlFor="input-timezone" className="text-xs font-bold text-text-secondary">
-                  Zona Waktu (Timezone) <span className="text-status-error">*</span>
-                </label>
-                <input
-                  id="input-timezone"
-                  type="text"
-                  required
-                  value={timezoneInput}
-                  onChange={(e) => setTimezoneInput(e.target.value)}
-                  className="w-full p-2.5 rounded-xl bg-surface-elevated border border-border-subtle text-xs sm:text-sm font-bold text-text-primary focus:outline-none focus:border-accent-magic font-mono"
-                />
-                <p className="text-[10px] text-text-secondary">Contoh: Asia/Jakarta</p>
-              </div>
+              {/* Technical JSON storage (kept for backwards-compatibility and tests) */}
+              <input
+                id="input-level-bonus"
+                type="hidden"
+                value={levelCapBonusInput}
+                onChange={(e) => setLevelCapBonusInput(e.target.value)}
+              />
             </div>
           </div>
 
-          {/* Group 2: Aturan Konversi & Batasan Koin */}
-          <div className="space-y-3 pt-3 border-t border-border-subtle">
+          {/* Group 2: Target & Nilai Konversi Koin */}
+          <div className="space-y-3 pt-2">
             <h4 className="text-xs font-bold uppercase tracking-wider text-text-secondary flex items-center gap-1.5">
               <Coins className="w-3.5 h-3.5 text-accent-gold" />
-              <span>Aturan Konversi & Batasan Koin</span>
+              <span>Target & Nilai Konversi Koin</span>
             </h4>
 
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
@@ -186,7 +310,7 @@ export const EconomySettingsForm: React.FC = () => {
                   onChange={(e) => setConversionRateInput(e.target.value)}
                   className="w-full p-2.5 rounded-xl bg-surface-elevated border border-border-subtle text-xs sm:text-sm font-bold text-text-primary focus:outline-none focus:border-accent-magic font-mono"
                 />
-                <p className="text-[10px] text-text-secondary">Contoh: 100 (1 Koin = Rp 100)</p>
+                <p className="text-[10px] text-text-secondary">Contoh: 100 berarti 1 Koin = Rp 100</p>
               </div>
 
               <div className="space-y-1">
@@ -208,34 +332,8 @@ export const EconomySettingsForm: React.FC = () => {
               </div>
 
               <div className="space-y-1">
-                <label htmlFor="input-max-payout" className="text-xs font-bold text-text-secondary">
-                  Batas Maksimal Klaim (Koin) <span className="text-status-error">*</span>
-                </label>
-                <input
-                  id="input-max-payout"
-                  type="number"
-                  min={1}
-                  required
-                  value={maxPayoutInput}
-                  onChange={(e) => setMaxPayoutInput(e.target.value)}
-                  className="w-full p-2.5 rounded-xl bg-surface-elevated border border-border-subtle text-xs sm:text-sm font-bold text-text-primary focus:outline-none focus:border-accent-magic font-mono"
-                />
-                <p className="text-[10px] text-text-secondary">Cap batas keras per periode</p>
-              </div>
-            </div>
-          </div>
-
-          {/* Group 3: Batas Default Member & Auto-Block */}
-          <div className="space-y-3 pt-3 border-t border-border-subtle">
-            <h4 className="text-xs font-bold uppercase tracking-wider text-text-secondary flex items-center gap-1.5">
-              <Coins className="w-3.5 h-3.5 text-accent-gold" />
-              <span>Batas Default Member & Auto-Block</span>
-            </h4>
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
-              <div className="space-y-1">
                 <label htmlFor="input-monthly-target" className="text-xs font-bold text-text-secondary">
-                  Target Koin Bulanan Default <span className="text-status-error">*</span>
+                  Target Koin Awal Anggota <span className="text-status-error">*</span>
                 </label>
                 <input
                   id="input-monthly-target"
@@ -247,45 +345,99 @@ export const EconomySettingsForm: React.FC = () => {
                   onChange={(e) => setMonthlyTargetInput(e.target.value)}
                   className="w-full p-2.5 rounded-xl bg-surface-elevated border border-border-subtle text-xs sm:text-sm font-bold text-text-primary focus:outline-none focus:border-accent-magic font-mono"
                 />
-                <p className="text-[10px] text-text-secondary">Default untuk member baru (0–10000)</p>
+                <p className="text-[10px] text-text-secondary">Target default anggota baru (0–10.000)</p>
               </div>
+            </div>
+          </div>
 
+          {/* Group 3: Jadwal & Periode Penukaran Koin */}
+          <div className="space-y-3 pt-3 border-t border-border-subtle">
+            <div>
+              <h4 className="text-xs font-bold uppercase tracking-wider text-text-secondary flex items-center gap-1.5">
+                <Calendar className="w-3.5 h-3.5 text-accent-magic" />
+                <span>Pengaturan Periode Penukaran Koin</span>
+              </h4>
+              <p className="text-[11px] text-text-secondary mt-0.5">
+                Jadwal kapan anggota dapat mengajukan pencairan saldo koin menjadi uang tunai/saldo e-wallet.
+              </p>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-4 gap-3">
               <div className="space-y-1">
-                <label htmlFor="input-monthly-cap" className="text-xs font-bold text-text-secondary">
-                  Batas Earning Bulanan Default <span className="text-status-error">*</span>
+                <label htmlFor="input-start-day" className="text-xs font-bold text-text-secondary">
+                  Tanggal Buka Pengajuan <span className="text-status-error">*</span>
                 </label>
                 <input
-                  id="input-monthly-cap"
+                  id="input-start-day"
                   type="number"
-                  min={0}
+                  min={1}
+                  max={31}
                   required
-                  value={monthlyCapInput}
-                  onChange={(e) => setMonthlyCapInput(e.target.value)}
+                  value={startDayInput}
+                  onChange={(e) => setStartDayInput(e.target.value)}
                   className="w-full p-2.5 rounded-xl bg-surface-elevated border border-border-subtle text-xs sm:text-sm font-bold text-text-primary focus:outline-none focus:border-accent-magic font-mono"
                 />
-                <p className="text-[10px] text-text-secondary">0 = unlimited</p>
+                <p className="text-[10px] text-text-secondary">Tgl 1–31 buka pengajuan</p>
               </div>
 
               <div className="space-y-1">
-                <label htmlFor="input-max-ceiling" className="text-xs font-bold text-text-secondary flex items-center gap-1">
-                  <Shield className="w-3 h-3 text-accent-magic" />
-                  <span>Plafon Ceiling Keras</span>
+                <label htmlFor="input-end-day" className="text-xs font-bold text-text-secondary">
+                  Tanggal Tutup Pengajuan <span className="text-status-error">*</span>
                 </label>
                 <input
-                  id="input-max-ceiling"
+                  id="input-end-day"
                   type="number"
-                  min={0}
-                  placeholder="10000"
-                  value={maxCapCeilingInput}
-                  onChange={(e) => setMaxCapCeilingInput(e.target.value)}
+                  min={1}
+                  max={31}
+                  required
+                  value={endDayInput}
+                  onChange={(e) => setEndDayInput(e.target.value)}
                   className="w-full p-2.5 rounded-xl bg-surface-elevated border border-border-subtle text-xs sm:text-sm font-bold text-text-primary focus:outline-none focus:border-accent-magic font-mono"
                 />
-                <p className="text-[10px] text-text-secondary">Cap total tertinggi + bonus</p>
+                <p className="text-[10px] text-text-secondary">Batas akhir ajukan klaim</p>
               </div>
 
+              <div className="space-y-1">
+                <label htmlFor="input-payout-day" className="text-xs font-bold text-text-secondary">
+                  Tanggal Gajian / Transfer <span className="text-status-error">*</span>
+                </label>
+                <input
+                  id="input-payout-day"
+                  type="number"
+                  min={1}
+                  max={31}
+                  required
+                  value={payoutDayInput}
+                  onChange={(e) => setPayoutDayInput(e.target.value)}
+                  className="w-full p-2.5 rounded-xl bg-surface-elevated border border-border-subtle text-xs sm:text-sm font-bold text-text-primary focus:outline-none focus:border-accent-magic font-mono"
+                />
+                <p className="text-[10px] text-text-secondary">Hari transfer dana reward</p>
+              </div>
+
+              <div className="space-y-1">
+                <label htmlFor="input-max-payout" className="text-xs font-bold text-text-secondary">
+                  Maksimal Penarikan (Koin) <span className="text-status-error">*</span>
+                </label>
+                <input
+                  id="input-max-payout"
+                  type="number"
+                  min={1}
+                  required
+                  value={maxPayoutInput}
+                  onChange={(e) => setMaxPayoutInput(e.target.value)}
+                  className="w-full p-2.5 rounded-xl bg-surface-elevated border border-border-subtle text-xs sm:text-sm font-bold text-text-primary focus:outline-none focus:border-accent-magic font-mono"
+                />
+                <p className="text-[10px] text-text-secondary">Batas tarik per transaksi</p>
+              </div>
+            </div>
+          </div>
+
+          {/* Group 4: Keamanan & Pengaturan Lanjutan */}
+          <div className="space-y-3 pt-3 border-t border-border-subtle">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 items-start">
               <div className="space-y-1">
                 <label htmlFor="input-auto-block" className="text-xs font-bold text-text-secondary">
-                  Auto-Block (Hari) <span className="text-status-error">*</span>
+                  Blokir Otomatis Setelah Inaktif (Hari) <span className="text-status-error">*</span>
                 </label>
                 <input
                   id="input-auto-block"
@@ -297,33 +449,67 @@ export const EconomySettingsForm: React.FC = () => {
                   onChange={(e) => setAutoBlockInput(e.target.value)}
                   className="w-full p-2.5 rounded-xl bg-surface-elevated border border-border-subtle text-xs sm:text-sm font-bold text-text-primary focus:outline-none focus:border-accent-magic font-mono"
                 />
-                <p className="text-[10px] text-text-secondary">0 = nonaktif (0–365)</p>
+                <p className="text-[10px] text-text-secondary">0 = nonaktif (otomatis blokir jika inaktif)</p>
               </div>
-            </div>
-          </div>
 
-          {/* Group 4: Progression & Bonus Cap Tingkat (Level Bonus) */}
-          <div className="space-y-3 pt-3 border-t border-border-subtle">
-            <h4 className="text-xs font-bold uppercase tracking-wider text-text-secondary flex items-center gap-1.5">
-              <Award className="w-3.5 h-3.5 text-accent-magic" />
-              <span>Progression: Bonus Batas Koin Berdasarkan Tingkat</span>
-            </h4>
-
-            <div className="space-y-2">
-              <label htmlFor="input-level-bonus" className="text-xs font-bold text-text-secondary">
-                Konfigurasi JSON Bonus Cap Tingkat (Level Threshold → Tambahan Koin)
-              </label>
-              <input
-                id="input-level-bonus"
-                type="text"
-                placeholder='{"5":300,"10":500,"20":1000}'
-                value={levelCapBonusInput}
-                onChange={(e) => setLevelCapBonusInput(e.target.value)}
-                className="w-full p-2.5 rounded-xl bg-surface-elevated border border-border-subtle text-xs sm:text-sm font-mono text-text-primary focus:outline-none focus:border-accent-magic"
-              />
-              <p className="text-[10px] text-text-secondary">
-                Format JSON object. Contoh: <code className="text-accent-magic font-mono">{'{"5":300,"10":500,"20":1000}'}</code> (Tingkat 5 dapat +300, Tingkat 10 dapat +500, Tingkat 20 dapat +1000 koin).
-              </p>
+              {/* Advanced Technical Settings Dropdown */}
+              <div className="space-y-1">
+                <button
+                  type="button"
+                  onClick={() => setShowAdvanced(!showAdvanced)}
+                  className="text-xs font-bold text-text-secondary hover:text-text-primary flex items-center gap-1.5 pt-2 cursor-pointer transition-colors"
+                >
+                  <span>Parameter Sistem Lanjutan</span>
+                  {showAdvanced ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
+                </button>
+                {showAdvanced ? (
+                  <div className="grid grid-cols-2 gap-2 pt-1">
+                    <div className="space-y-1">
+                      <label htmlFor="input-earning-period" className="text-[10px] font-bold text-text-secondary">
+                        Siklus Earning (Hari)
+                      </label>
+                      <input
+                        id="input-earning-period"
+                        type="number"
+                        min={1}
+                        max={365}
+                        required
+                        value={earningPeriodInput}
+                        onChange={(e) => setEarningPeriodInput(e.target.value)}
+                        className="w-full p-2 rounded-lg bg-surface-elevated border border-border-subtle text-xs font-mono"
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <label htmlFor="input-timezone" className="text-[10px] font-bold text-text-secondary">
+                        Zona Waktu Sistem
+                      </label>
+                      <input
+                        id="input-timezone"
+                        type="text"
+                        required
+                        value={timezoneInput}
+                        onChange={(e) => setTimezoneInput(e.target.value)}
+                        className="w-full p-2 rounded-lg bg-surface-elevated border border-border-subtle text-xs font-mono"
+                      />
+                    </div>
+                  </div>
+                ) : (
+                  <div className="hidden">
+                    <input
+                      id="input-earning-period"
+                      type="hidden"
+                      value={earningPeriodInput}
+                      onChange={(e) => setEarningPeriodInput(e.target.value)}
+                    />
+                    <input
+                      id="input-timezone"
+                      type="hidden"
+                      value={timezoneInput}
+                      onChange={(e) => setTimezoneInput(e.target.value)}
+                    />
+                  </div>
+                )}
+              </div>
             </div>
           </div>
 
@@ -364,15 +550,27 @@ export const EconomySettingsForm: React.FC = () => {
             ) : (
               <>
                 <Check className="w-4 h-4" />
-                <span>Simpan Pengaturan Periode & Progression</span>
+                <span>Simpan Pengaturan Periode & Ekonomi</span>
               </>
             )}
           </button>
         </form>
       </div>
 
-      {/* Cosmetic Catalog Management Section */}
-      <CosmeticsCatalogSection />
+      {/* Information Box linking to Hadiah Tab */}
+      <div className="p-4 rounded-2xl bg-surface border border-border-subtle shadow-2xs flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+        <div className="flex items-center gap-3">
+          <div className="w-9 h-9 rounded-xl bg-accent-gold/10 text-accent-gold flex items-center justify-center shrink-0">
+            <Award className="w-5 h-5" />
+          </div>
+          <div>
+            <h4 className="text-xs font-bold text-text-primary">Katalog Hadiah & Koleksi</h4>
+            <p className="text-[11px] text-text-secondary">
+              Kelola item bingkai avatar dan efek visual kosmetik di tab khusus <strong>Hadiah</strong> pada navigasi panel admin.
+            </p>
+          </div>
+        </div>
+      </div>
     </div>
   )
 }

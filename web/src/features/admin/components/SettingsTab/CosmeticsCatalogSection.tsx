@@ -27,7 +27,7 @@ export const CosmeticsCatalogSection: React.FC = () => {
       const res = await adminCosmeticsApi.getCosmetics()
       setItems(res.items || [])
     } catch (err: any) {
-      setErrorMsg(err?.message || 'Gagal memuat katalog kosmetik')
+      setErrorMsg(err?.message || 'Gagal memuat katalog hadiah')
     } finally {
       setIsLoading(false)
     }
@@ -46,7 +46,7 @@ export const CosmeticsCatalogSection: React.FC = () => {
       setSuccessMsg(`Status ${item.name || item.id} berhasil diubah`)
       setTimeout(() => setSuccessMsg(null), 3000)
     } catch (err: any) {
-      setErrorMsg(err?.message || 'Gagal mengubah status kosmetik')
+      setErrorMsg(err?.message || 'Gagal mengubah status hadiah')
       setTimeout(() => setErrorMsg(null), 4000)
     }
   }
@@ -60,15 +60,15 @@ export const CosmeticsCatalogSection: React.FC = () => {
     const tierNum = parseInt(newTier, 10)
 
     if (!trimmedId) {
-      setModalError('ID kosmetik wajib diisi')
+      setModalError('ID hadiah wajib diisi')
       return
     }
     if (!trimmedAsset) {
-      setModalError('Asset kosmetik wajib diisi')
+      setModalError('Asset hadiah wajib diisi')
       return
     }
-    if (isNaN(tierNum) || tierNum < 1) {
-      setModalError('Tier harus angka >= 1')
+    if (isNaN(tierNum) || tierNum < 1 || tierNum > 3) {
+      setModalError('Tier hadiah harus angka antara 1 sampai 3')
       return
     }
 
@@ -88,11 +88,11 @@ export const CosmeticsCatalogSection: React.FC = () => {
       setNewAsset('')
       setNewTier('1')
       setNewIsActive(true)
-      setSuccessMsg(`Kosmetik "${trimmedId}" berhasil ditambahkan!`)
+      setSuccessMsg(`Hadiah "${trimmedId}" berhasil ditambahkan!`)
       setTimeout(() => setSuccessMsg(null), 3000)
       loadCosmetics()
     } catch (err: any) {
-      setModalError(err?.message || 'Gagal menambahkan kosmetik')
+      setModalError(err?.message || 'Gagal menambahkan hadiah')
     } finally {
       setIsCreating(false)
     }
@@ -105,10 +105,10 @@ export const CosmeticsCatalogSection: React.FC = () => {
         <div>
           <h3 className="font-heading font-bold text-text-primary text-sm sm:text-base flex items-center gap-2">
             <Sparkles className="w-4 h-4 text-accent-gold" />
-            <span>Katalog Kosmetik Hadiah</span>
+            <span>Katalog Hadiah & Koleksi</span>
           </h3>
           <p className="text-[11px] text-text-secondary mt-0.5">
-            Kelola koleksi bingkai avatar & efek visual yang dapat diperoleh member saat membuka Hadiah.
+            Kelola koleksi bingkai avatar & efek visual yang dapat diperoleh anggota saat membuka Hadiah.
           </p>
         </div>
 
@@ -121,7 +121,7 @@ export const CosmeticsCatalogSection: React.FC = () => {
           className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-accent-magic text-white text-xs font-bold hover:brightness-110 active:scale-[0.99] transition-all cursor-pointer self-start sm:self-auto"
         >
           <Plus className="w-3.5 h-3.5" />
-          <span>Tambah Kosmetik</span>
+          <span>Tambah Hadiah</span>
         </button>
       </div>
 
@@ -144,11 +144,11 @@ export const CosmeticsCatalogSection: React.FC = () => {
       {isLoading ? (
         <div className="p-8 text-center text-text-secondary text-xs flex items-center justify-center gap-2">
           <Loader2 className="w-4 h-4 animate-spin" />
-          <span>Memuat katalog kosmetik...</span>
+          <span>Memuat katalog hadiah...</span>
         </div>
       ) : items.length === 0 ? (
         <div className="p-6 text-center text-text-secondary text-xs border border-dashed border-border-subtle rounded-xl">
-          Belum ada kosmetik yang terdaftar di database.
+          Belum ada hadiah yang terdaftar di database.
         </div>
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
@@ -184,7 +184,7 @@ export const CosmeticsCatalogSection: React.FC = () => {
 
                 <button
                   type="button"
-                  title={it.is_active ? 'Nonaktifkan kosmetik' : 'Aktifkan kosmetik'}
+                  title={it.is_active ? 'Nonaktifkan hadiah' : 'Aktifkan hadiah'}
                   onClick={() => handleToggleActive(it)}
                   className="cursor-pointer text-text-secondary hover:text-text-primary transition-colors shrink-0"
                 >
@@ -203,7 +203,7 @@ export const CosmeticsCatalogSection: React.FC = () => {
                     it.is_active ? 'text-status-success' : 'text-text-secondary'
                   }`}
                 >
-                  {it.is_active ? '● Aktif di Gacha Box' : '○ Dinonaktifkan'}
+                  {it.is_active ? '● Aktif di Kotak Hadiah' : '○ Dinonaktifkan'}
                 </span>
               </div>
             </div>
@@ -211,14 +211,14 @@ export const CosmeticsCatalogSection: React.FC = () => {
         </div>
       )}
 
-      {/* Modal Tambah Kosmetik */}
+      {/* Modal Tambah Hadiah */}
       {isModalOpen && (
         <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4">
           <div className="bg-surface border border-border-subtle rounded-2xl w-full max-w-md p-5 space-y-4 shadow-xl">
             <div className="flex items-center justify-between pb-2 border-b border-border-subtle">
               <h4 className="font-bold text-text-primary text-sm flex items-center gap-2">
                 <Plus className="w-4 h-4 text-accent-magic" />
-                <span>Tambah Kosmetik Baru</span>
+                <span>Tambah Hadiah Baru</span>
               </h4>
               <button
                 type="button"
@@ -239,7 +239,7 @@ export const CosmeticsCatalogSection: React.FC = () => {
             <form onSubmit={handleCreateCosmetic} className="space-y-3">
               <div className="space-y-1">
                 <label className="text-xs font-bold text-text-secondary">
-                  ID Kosmetik <span className="text-status-error">*</span>
+                  ID Hadiah <span className="text-status-error">*</span>
                 </label>
                 <input
                   type="text"
@@ -253,7 +253,7 @@ export const CosmeticsCatalogSection: React.FC = () => {
 
               <div className="space-y-1">
                 <label className="text-xs font-bold text-text-secondary">
-                  Nama Tampilan
+                  Nama Hadiah (Display Name)
                 </label>
                 <input
                   type="text"
@@ -267,21 +267,21 @@ export const CosmeticsCatalogSection: React.FC = () => {
               <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-1">
                   <label className="text-xs font-bold text-text-secondary">
-                    Slot <span className="text-status-error">*</span>
+                    Jenis Hadiah (Slot) <span className="text-status-error">*</span>
                   </label>
                   <select
                     value={newSlot}
                     onChange={(e) => setNewSlot(e.target.value as 'frame' | 'effect')}
                     className="w-full p-2.5 rounded-xl bg-surface-elevated border border-border-subtle text-xs font-bold text-text-primary focus:outline-none focus:border-accent-magic cursor-pointer"
                   >
-                    <option value="frame">Bingkai (frame)</option>
-                    <option value="effect">Efek (effect)</option>
+                    <option value="frame">Bingkai Avatar (frame)</option>
+                    <option value="effect">Efek Visual (effect)</option>
                   </select>
                 </div>
 
                 <div className="space-y-1">
                   <label className="text-xs font-bold text-text-secondary">
-                    Asset Key <span className="text-status-error">*</span>
+                    Kode Asset Visual <span className="text-status-error">*</span>
                   </label>
                   <input
                     type="text"
@@ -297,11 +297,12 @@ export const CosmeticsCatalogSection: React.FC = () => {
               <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-1">
                   <label className="text-xs font-bold text-text-secondary">
-                    Tier Awal <span className="text-status-error">*</span>
+                    Tingkat Hadiah Awal (Tier 1–3) <span className="text-status-error">*</span>
                   </label>
                   <input
                     type="number"
                     min={1}
+                    max={3}
                     required
                     value={newTier}
                     onChange={(e) => setNewTier(e.target.value)}
@@ -318,7 +319,7 @@ export const CosmeticsCatalogSection: React.FC = () => {
                     className="w-4 h-4 rounded text-accent-magic focus:ring-accent-magic cursor-pointer"
                   />
                   <label htmlFor="cb-is-active" className="text-xs font-bold text-text-primary cursor-pointer">
-                    Langsung Aktif
+                    Aktif di Kotak Hadiah
                   </label>
                 </div>
               </div>
@@ -336,7 +337,7 @@ export const CosmeticsCatalogSection: React.FC = () => {
                   disabled={isCreating}
                   className="px-4 py-2 rounded-xl bg-accent-magic text-white text-xs font-bold hover:brightness-110 active:scale-[0.99] disabled:opacity-50 transition-all cursor-pointer"
                 >
-                  {isCreating ? 'Menyimpan...' : 'Simpan Kosmetik'}
+                  {isCreating ? 'Menyimpan...' : 'Simpan Hadiah'}
                 </button>
               </div>
             </form>

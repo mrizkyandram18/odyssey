@@ -159,10 +159,6 @@ const DefaultPayoutTargetCoins = 3200
 const DefaultMaxPayoutCoins = 3200
 const DefaultMonthlyCoinTarget = 0
 
-// DefaultMonthlyEarningCap is the fallback monthly earning cap (coins) used
-// when odyssey_system_config has no default_monthly_earning_cap row yet
-// (e.g. DB predates migration 070). The DB value is source of truth.
-const DefaultMonthlyEarningCap = 3320
 
 // DefaultMaxUploadBytes is the single request/file size limit for task proof
 // uploads. It must stay in sync between the HTTP body-limit middleware and the

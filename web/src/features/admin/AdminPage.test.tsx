@@ -321,4 +321,80 @@ describe('AdminPage Component', () => {
       }))
     })
   })
+
+  it('navigates to Hadiah tab and renders cosmetic catalog separately from economy settings', async () => {
+    vi.mocked(useSession).mockReturnValue({
+      session: { uid: '1', family_id: '1', role: 'ADMIN', kind: 'user', expires: 9999999999, token: 'abc' },
+      profile: { uid: '1', role: 'ADMIN' },
+      loading: false,
+    } as any)
+
+    render(
+      <MemoryRouter>
+        <AdminPage />
+      </MemoryRouter>
+    )
+
+    const rewardsTabBtn = screen.getByTestId('admin-tab-rewards')
+    fireEvent.click(rewardsTabBtn)
+
+    await waitFor(() => {
+      expect(screen.getByText('Katalog Hadiah & Koleksi')).toBeInTheDocument()
+      expect(screen.getByRole('button', { name: /Tambah Hadiah/i })).toBeInTheDocument()
+    })
+  })
+
+  it('renders visual level cap bonus tiers and allows adding a tier without touching raw JSON', async () => {
+    vi.mocked(useSession).mockReturnValue({
+      session: { uid: '1', family_id: '1', role: 'ADMIN', kind: 'user', expires: 9999999999, token: 'abc' },
+      profile: { uid: '1', role: 'ADMIN' },
+      loading: false,
+    } as any)
+
+    vi.mocked(adminTasksApi.getConfig).mockResolvedValue({
+      ...mockConfig,
+      default_monthly_earning_cap: 3320,
+      max_monthly_earning_cap_ceiling: 10000,
+      level_cap_bonus: { '5': 300 },
+    })
+
+    render(
+      <MemoryRouter>
+        <AdminPage />
+      </MemoryRouter>
+    )
+
+    const settingsTabBtn = screen.getByTestId('admin-tab-settings')
+    fireEvent.click(settingsTabBtn)
+
+    await waitFor(() => {
+      expect(screen.getByText('Bonus Batas Koin Berdasarkan Tingkat')).toBeInTheDocument()
+      expect(screen.getByText('Tingkat 5')).toBeInTheDocument()
+      expect(screen.getByText('+300 Koin')).toBeInTheDocument()
+    })
+
+    // Add new tier (Tingkat 10 -> +500)
+    const levelInput = screen.getByPlaceholderText(/Tingkat \(misal: 15\)/i)
+    const bonusInput = screen.getByPlaceholderText(/Tambahan Koin \(misal: 750\)/i)
+    fireEvent.change(levelInput, { target: { value: '10' } })
+    fireEvent.change(bonusInput, { target: { value: '500' } })
+
+    const addTierBtn = screen.getByRole('button', { name: /Tambah/i })
+    fireEvent.click(addTierBtn)
+
+    await waitFor(() => {
+      expect(screen.getByText('Tingkat 10')).toBeInTheDocument()
+      expect(screen.getByText('+500 Koin')).toBeInTheDocument()
+    })
+
+    // Submit form and verify updated level_cap_bonus
+    const saveBtn = screen.getByRole('button', { name: /Simpan Pengaturan Periode & Ekonomi/i })
+    fireEvent.submit(saveBtn.closest('form')!)
+
+    await waitFor(() => {
+      expect(adminTasksApi.updateConfig).toHaveBeenCalledWith(expect.objectContaining({
+        level_cap_bonus: { '5': 300, '10': 500 },
+      }))
+    })
+  })
 })
