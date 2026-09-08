@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useCallback } from 'react'
-import { Sparkles, Plus, Check, AlertCircle, ToggleLeft, ToggleRight, Loader2 } from 'lucide-react'
+import { Sparkles, Plus, Check, AlertCircle, ToggleLeft, ToggleRight, Loader2, Award } from 'lucide-react'
 import { adminCosmeticsApi } from '../../../../shared/lib/api'
 import type { CosmeticCatalogItem } from '../../../../shared/types'
+import { Avatar } from '../../../../shared/components/atoms/Avatar'
 
 export const CosmeticsCatalogSection: React.FC = () => {
   const [items, setItems] = useState<CosmeticCatalogItem[]>([])
@@ -108,7 +109,7 @@ export const CosmeticsCatalogSection: React.FC = () => {
             <span>Katalog Hadiah & Koleksi</span>
           </h3>
           <p className="text-[11px] text-text-secondary mt-0.5">
-            Kelola koleksi bingkai avatar & efek visual yang dapat diperoleh anggota saat membuka Hadiah.
+            Koleksi visual bingkai avatar & efek animasi yang dapat diperoleh anggota saat membuka Kotak Hadiah.
           </p>
         </div>
 
@@ -147,73 +148,92 @@ export const CosmeticsCatalogSection: React.FC = () => {
           <span>Memuat katalog hadiah...</span>
         </div>
       ) : items.length === 0 ? (
-        <div className="p-6 text-center text-text-secondary text-xs border border-dashed border-border-subtle rounded-xl">
-          Belum ada hadiah yang terdaftar di database.
+        <div className="p-8 text-center text-text-secondary text-xs border border-dashed border-border-subtle rounded-xl space-y-2">
+          <Award className="w-8 h-8 text-text-secondary/40 mx-auto" />
+          <p className="font-bold text-text-primary text-sm">Belum Ada Hadiah Terdaftar</p>
+          <p>Klik &quot;Tambah Hadiah&quot; untuk menambahkan bingkai atau efek visual baru.</p>
         </div>
       ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
-          {items.map((it) => (
-            <div
-              key={it.id}
-              className={`p-3.5 rounded-xl border transition-all flex flex-col justify-between gap-2.5 ${
-                it.is_active
-                  ? 'bg-surface-elevated border-border-subtle'
-                  : 'bg-surface/60 border-border-subtle/50 opacity-60'
-              }`}
-            >
-              <div className="flex items-start justify-between gap-2">
-                <div>
-                  <div className="flex items-center gap-1.5">
-                    <span className="text-xs font-bold text-text-primary">
-                      {it.name || it.id}
-                    </span>
-                    <span
-                      className={`text-[9px] font-bold px-1.5 py-0.5 rounded-full uppercase tracking-wider ${
-                        it.slot === 'frame'
-                          ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300'
-                          : 'bg-purple-100 text-purple-700 dark:bg-purple-900/40 dark:text-purple-300'
-                      }`}
-                    >
-                      {it.slot === 'frame' ? 'Bingkai' : 'Efek'}
-                    </span>
-                  </div>
-                  <p className="text-[11px] font-mono text-text-secondary mt-0.5">
-                    ID: {it.id} • Asset: {it.asset}
-                  </p>
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
+          {items.map((it) => {
+            const stars = '★'.repeat(Math.max(1, Math.min(3, it.tier)))
+            return (
+              <div
+                key={it.id}
+                className={`p-4 rounded-2xl border transition-all flex flex-col justify-between gap-3 shadow-xs ${
+                  it.is_active
+                    ? 'bg-surface-elevated border-border-subtle hover:border-accent-magic/30'
+                    : 'bg-surface/50 border-border-subtle/50 opacity-60'
+                }`}
+              >
+                {/* Top Badge & Toggle */}
+                <div className="flex items-center justify-between gap-2">
+                  <span
+                    className={`text-[9px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider ${
+                      it.slot === 'frame'
+                        ? 'bg-accent-magic/15 text-accent-magic border border-accent-magic/20'
+                        : 'bg-accent-rare/15 text-accent-rare border border-accent-rare/20'
+                    }`}
+                  >
+                    {it.slot === 'frame' ? 'Bingkai' : 'Efek'}
+                  </span>
+
+                  <button
+                    type="button"
+                    title={it.is_active ? 'Nonaktifkan hadiah' : 'Aktifkan hadiah'}
+                    aria-label={it.is_active ? 'Nonaktifkan hadiah' : 'Aktifkan hadiah'}
+                    onClick={() => handleToggleActive(it)}
+                    className="cursor-pointer text-text-secondary hover:text-text-primary transition-colors shrink-0"
+                  >
+                    {it.is_active ? (
+                      <ToggleRight className="w-6 h-6 text-status-success" />
+                    ) : (
+                      <ToggleLeft className="w-6 h-6 text-text-secondary/50" />
+                    )}
+                  </button>
                 </div>
 
-                <button
-                  type="button"
-                  title={it.is_active ? 'Nonaktifkan hadiah' : 'Aktifkan hadiah'}
-                  onClick={() => handleToggleActive(it)}
-                  className="cursor-pointer text-text-secondary hover:text-text-primary transition-colors shrink-0"
-                >
-                  {it.is_active ? (
-                    <ToggleRight className="w-6 h-6 text-status-success" />
-                  ) : (
-                    <ToggleLeft className="w-6 h-6 text-zinc-400" />
-                  )}
-                </button>
-              </div>
+                {/* Central Live Avatar Preview */}
+                <div className="py-2 flex flex-col items-center justify-center">
+                  <Avatar
+                    seed={it.id}
+                    frame={it.slot === 'frame' ? it.asset : 'none'}
+                    effect={it.slot === 'effect' ? it.asset : 'none'}
+                    size="lg"
+                  />
+                </div>
 
-              <div className="flex items-center justify-between text-[10px] text-text-secondary pt-2 border-t border-border-subtle/40">
-                <span>Tier Awal: ★ {it.tier}</span>
-                <span
-                  className={`font-bold ${
-                    it.is_active ? 'text-status-success' : 'text-text-secondary'
-                  }`}
-                >
-                  {it.is_active ? '● Aktif di Kotak Hadiah' : '○ Dinonaktifkan'}
-                </span>
+                {/* Item Details */}
+                <div className="text-center space-y-0.5">
+                  <h4 className="text-xs font-bold text-text-primary line-clamp-1">
+                    {it.name || it.id}
+                  </h4>
+                  <div className="flex items-center justify-center gap-1.5 text-[10px] text-text-secondary">
+                    <span className="font-mono text-accent-gold">{stars}</span>
+                    <span>•</span>
+                    <span>Tier {it.tier}</span>
+                  </div>
+                </div>
+
+                {/* Footer status */}
+                <div className="pt-2 border-t border-border-subtle/60 text-center text-[10px]">
+                  <span
+                    className={`font-bold ${
+                      it.is_active ? 'text-status-success' : 'text-text-secondary'
+                    }`}
+                  >
+                    {it.is_active ? '● Aktif di Kotak Hadiah' : '○ Dinonaktifkan'}
+                  </span>
+                </div>
               </div>
-            </div>
-          ))}
+            )
+          })}
         </div>
       )}
 
       {/* Modal Tambah Hadiah */}
       {isModalOpen && (
-        <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4">
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4">
           <div className="bg-surface border border-border-subtle rounded-2xl w-full max-w-md p-5 space-y-4 shadow-xl">
             <div className="flex items-center justify-between pb-2 border-b border-border-subtle">
               <h4 className="font-bold text-text-primary text-sm flex items-center gap-2">
@@ -235,6 +255,24 @@ export const CosmeticsCatalogSection: React.FC = () => {
                 <span>{modalError}</span>
               </div>
             )}
+
+            {/* Live Visual Preview of New Reward */}
+            <div className="p-3 rounded-xl bg-surface-elevated border border-border-subtle flex items-center gap-3">
+              <Avatar
+                seed="preview-new"
+                frame={newSlot === 'frame' ? newAsset || 'none' : 'none'}
+                effect={newSlot === 'effect' ? newAsset || 'none' : 'none'}
+                size="md"
+              />
+              <div className="space-y-0.5 min-w-0">
+                <p className="text-xs font-bold text-text-primary truncate">
+                  {newName.trim() || 'Pratinjau Hadiah'}
+                </p>
+                <p className="text-[11px] text-text-secondary">
+                  Tipe: {newSlot === 'frame' ? 'Bingkai Avatar' : 'Efek Animasi'} • Tier {newTier}
+                </p>
+              </div>
+            </div>
 
             <form onSubmit={handleCreateCosmetic} className="space-y-3">
               <div className="space-y-1">
@@ -291,6 +329,27 @@ export const CosmeticsCatalogSection: React.FC = () => {
                     onChange={(e) => setNewAsset(e.target.value)}
                     className="w-full p-2.5 rounded-xl bg-surface-elevated border border-border-subtle text-xs font-mono text-text-primary focus:outline-none focus:border-accent-magic"
                   />
+                </div>
+              </div>
+
+              {/* Quick asset suggestion chips */}
+              <div className="space-y-1">
+                <span className="text-[10px] text-text-secondary">Saran asset yang sudah didukung visual:</span>
+                <div className="flex flex-wrap gap-1">
+                  {(newSlot === 'frame' ? ['gold'] : ['sparkle', 'float', 'trail']).map((sugg) => (
+                    <button
+                      key={sugg}
+                      type="button"
+                      onClick={() => {
+                        setNewAsset(sugg)
+                        if (!newId) setNewId(`${newSlot}-${sugg}`)
+                        if (!newName) setNewName(sugg === 'gold' ? 'Bingkai Emas' : `Efek ${sugg.charAt(0).toUpperCase() + sugg.slice(1)}`)
+                      }}
+                      className="px-2 py-0.5 rounded-md bg-surface-elevated border border-border-subtle text-[10px] text-text-primary hover:border-accent-magic cursor-pointer transition-colors"
+                    >
+                      {sugg}
+                    </button>
+                  ))}
                 </div>
               </div>
 

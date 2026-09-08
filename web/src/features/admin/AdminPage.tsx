@@ -1,8 +1,20 @@
 import React, { useState } from 'react'
 import { Navigate } from 'react-router-dom'
-import { ShieldCheck, CheckCircle2, Coins, Calendar, Users, Sliders, Sparkles } from 'lucide-react'
+import {
+  ShieldCheck,
+  LayoutDashboard,
+  CheckCircle2,
+  Coins,
+  Calendar,
+  Users,
+  Sliders,
+  Sparkles,
+} from 'lucide-react'
 import { useSession } from '../../shared/hooks/useSession'
 import { useAdminConfig } from './hooks/useAdminConfig'
+import { useAdminSubmissions } from './hooks/useAdminSubmissions'
+import { useAdminClaims } from './hooks/useAdminClaims'
+import { AdminOverview } from './components/DashboardTab/AdminOverview'
 import { SubmissionsQueue } from './components/SubmissionsTab/SubmissionsQueue'
 import { ClaimsQueue } from './components/ClaimsTab/ClaimsQueue'
 import { TaskScheduleList } from './components/TasksTab/TaskScheduleList'
@@ -10,12 +22,20 @@ import { MemberList } from './components/MembersTab/MemberList'
 import { EconomySettingsForm } from './components/SettingsTab/EconomySettingsForm'
 import { CosmeticsCatalogSection } from './components/SettingsTab/CosmeticsCatalogSection'
 
-type AdminTab = 'submissions' | 'claims' | 'tasks' | 'members' | 'rewards' | 'settings'
+export type AdminTab = 'overview' | 'submissions' | 'claims' | 'tasks' | 'members' | 'rewards' | 'settings'
 
-export const AdminPage: React.FC = () => {
+export interface AdminPageProps {
+  initialTab?: AdminTab
+}
+
+export const AdminPage: React.FC<AdminPageProps> = ({ initialTab = 'overview' }) => {
   const { profile, loading } = useSession()
-  const [activeTab, setActiveTab] = useState<AdminTab>('submissions')
+  const [activeTab, setActiveTab] = useState<AdminTab>(initialTab)
   const { config } = useAdminConfig()
+  const { pendingTotal: pendingSubCount } = useAdminSubmissions()
+  const { claims } = useAdminClaims()
+
+  const pendingClaimsCount = claims.filter((c) => c.status === 'PENDING').length
 
   if (loading) {
     return (
@@ -79,49 +99,90 @@ export const AdminPage: React.FC = () => {
         </div>
       </header>
 
-      {/* Single Primary Tab Navigation */}
+      {/* Horizontal Scrollable / Compact Primary Tab Navigation */}
       <nav
         aria-label="Admin Navigation"
-        className="grid grid-cols-2 sm:grid-cols-6 gap-1.5 p-1 bg-surface rounded-2xl border border-border-subtle shadow-xs"
+        className="flex items-center gap-1 p-1 bg-surface rounded-2xl border border-border-subtle shadow-xs overflow-x-auto no-scrollbar"
       >
+        {/* Ringkasan */}
+        <button
+          type="button"
+          data-testid="admin-tab-overview"
+          onClick={() => setActiveTab('overview')}
+          aria-current={activeTab === 'overview' ? 'page' : undefined}
+          className={`shrink-0 flex-1 py-2 px-3 rounded-xl font-bold text-xs flex items-center justify-center gap-1.5 transition-all cursor-pointer whitespace-nowrap ${
+            activeTab === 'overview'
+              ? 'bg-accent-magic text-white shadow-xs'
+              : 'text-text-secondary hover:text-text-primary hover:bg-surface-elevated'
+          }`}
+        >
+          <LayoutDashboard className="w-3.5 h-3.5" />
+          <span>Ringkasan</span>
+        </button>
+
+        {/* Verifikasi */}
         <button
           type="button"
           data-testid="admin-tab-submissions"
           onClick={() => setActiveTab('submissions')}
           aria-current={activeTab === 'submissions' ? 'page' : undefined}
-          className={`py-2 px-3 rounded-xl font-bold text-xs flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
+          className={`shrink-0 flex-1 py-2 px-3 rounded-xl font-bold text-xs flex items-center justify-center gap-1.5 transition-all cursor-pointer whitespace-nowrap ${
             activeTab === 'submissions'
-              ? 'bg-accent-magic text-white shadow-sm'
+              ? 'bg-accent-magic text-white shadow-xs'
               : 'text-text-secondary hover:text-text-primary hover:bg-surface-elevated'
           }`}
         >
           <CheckCircle2 className="w-3.5 h-3.5" />
           <span>Verifikasi</span>
+          {pendingSubCount != null && pendingSubCount > 0 && (
+            <span
+              className={`px-1.5 py-0.2 rounded-full text-[10px] font-extrabold ${
+                activeTab === 'submissions'
+                  ? 'bg-white/30 text-white'
+                  : 'bg-accent-magic/20 text-accent-magic'
+              }`}
+            >
+              {pendingSubCount}
+            </span>
+          )}
         </button>
 
+        {/* Pencairan */}
         <button
           type="button"
           data-testid="admin-tab-claims"
           onClick={() => setActiveTab('claims')}
           aria-current={activeTab === 'claims' ? 'page' : undefined}
-          className={`py-2 px-3 rounded-xl font-bold text-xs flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
+          className={`shrink-0 flex-1 py-2 px-3 rounded-xl font-bold text-xs flex items-center justify-center gap-1.5 transition-all cursor-pointer whitespace-nowrap ${
             activeTab === 'claims'
-              ? 'bg-accent-magic text-white shadow-sm'
+              ? 'bg-accent-magic text-white shadow-xs'
               : 'text-text-secondary hover:text-text-primary hover:bg-surface-elevated'
           }`}
         >
           <Coins className="w-3.5 h-3.5" />
           <span>Pencairan</span>
+          {pendingClaimsCount > 0 && (
+            <span
+              className={`px-1.5 py-0.2 rounded-full text-[10px] font-extrabold ${
+                activeTab === 'claims'
+                  ? 'bg-white/30 text-white'
+                  : 'bg-accent-gold/25 text-amber-700 dark:text-amber-300'
+              }`}
+            >
+              {pendingClaimsCount}
+            </span>
+          )}
         </button>
 
+        {/* Tugas */}
         <button
           type="button"
           data-testid="admin-tab-tasks"
           onClick={() => setActiveTab('tasks')}
           aria-current={activeTab === 'tasks' ? 'page' : undefined}
-          className={`py-2 px-3 rounded-xl font-bold text-xs flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
+          className={`shrink-0 flex-1 py-2 px-3 rounded-xl font-bold text-xs flex items-center justify-center gap-1.5 transition-all cursor-pointer whitespace-nowrap ${
             activeTab === 'tasks'
-              ? 'bg-accent-magic text-white shadow-sm'
+              ? 'bg-accent-magic text-white shadow-xs'
               : 'text-text-secondary hover:text-text-primary hover:bg-surface-elevated'
           }`}
         >
@@ -129,14 +190,15 @@ export const AdminPage: React.FC = () => {
           <span>Tugas</span>
         </button>
 
+        {/* Anggota */}
         <button
           type="button"
           data-testid="admin-tab-members"
           onClick={() => setActiveTab('members')}
           aria-current={activeTab === 'members' ? 'page' : undefined}
-          className={`py-2 px-3 rounded-xl font-bold text-xs flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
+          className={`shrink-0 flex-1 py-2 px-3 rounded-xl font-bold text-xs flex items-center justify-center gap-1.5 transition-all cursor-pointer whitespace-nowrap ${
             activeTab === 'members'
-              ? 'bg-accent-magic text-white shadow-sm'
+              ? 'bg-accent-magic text-white shadow-xs'
               : 'text-text-secondary hover:text-text-primary hover:bg-surface-elevated'
           }`}
         >
@@ -144,14 +206,15 @@ export const AdminPage: React.FC = () => {
           <span>Anggota</span>
         </button>
 
+        {/* Hadiah */}
         <button
           type="button"
           data-testid="admin-tab-rewards"
           onClick={() => setActiveTab('rewards')}
           aria-current={activeTab === 'rewards' ? 'page' : undefined}
-          className={`py-2 px-3 rounded-xl font-bold text-xs flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
+          className={`shrink-0 flex-1 py-2 px-3 rounded-xl font-bold text-xs flex items-center justify-center gap-1.5 transition-all cursor-pointer whitespace-nowrap ${
             activeTab === 'rewards'
-              ? 'bg-accent-magic text-white shadow-sm'
+              ? 'bg-accent-magic text-white shadow-xs'
               : 'text-text-secondary hover:text-text-primary hover:bg-surface-elevated'
           }`}
         >
@@ -159,14 +222,15 @@ export const AdminPage: React.FC = () => {
           <span>Hadiah</span>
         </button>
 
+        {/* Pengaturan */}
         <button
           type="button"
           data-testid="admin-tab-settings"
           onClick={() => setActiveTab('settings')}
           aria-current={activeTab === 'settings' ? 'page' : undefined}
-          className={`py-2 px-3 rounded-xl font-bold text-xs flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
+          className={`shrink-0 flex-1 py-2 px-3 rounded-xl font-bold text-xs flex items-center justify-center gap-1.5 transition-all cursor-pointer whitespace-nowrap ${
             activeTab === 'settings'
-              ? 'bg-accent-magic text-white shadow-sm'
+              ? 'bg-accent-magic text-white shadow-xs'
               : 'text-text-secondary hover:text-text-primary hover:bg-surface-elevated'
           }`}
         >
@@ -177,6 +241,7 @@ export const AdminPage: React.FC = () => {
 
       {/* Tab Content */}
       <main className="w-full">
+        {activeTab === 'overview' && <AdminOverview onNavigateTab={setActiveTab} />}
         {activeTab === 'submissions' && <SubmissionsQueue />}
         {activeTab === 'claims' && <ClaimsQueue />}
         {activeTab === 'tasks' && <TaskScheduleList />}

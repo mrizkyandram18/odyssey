@@ -131,12 +131,84 @@ export const EconomySettingsForm: React.FC = () => {
         </div>
 
         <form onSubmit={handleSaveConfig} className="space-y-6">
+          {/* Dynamic Formula & Visual Cap Breakdown */}
+          <div className="p-4 rounded-2xl bg-surface-elevated/60 border border-border-subtle shadow-xs space-y-3">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1 border-b border-border-subtle/60 pb-2">
+              <div className="flex items-center gap-2">
+                <Shield className="w-4 h-4 text-accent-magic" />
+                <h4 className="text-xs font-bold uppercase tracking-wider text-text-primary">
+                  Rumus Batas Perolehan Koin Bulanan
+                </h4>
+              </div>
+              <span className="text-[10px] text-text-secondary">
+                Siklus Kalender: Tgl 1 – Akhir Bulan
+              </span>
+            </div>
+
+            {/* Formula Cards */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-2.5 items-stretch">
+              <div className="p-3 rounded-xl bg-surface border border-border-subtle flex flex-col justify-between">
+                <span className="text-[11px] font-bold text-text-secondary uppercase">1. Batas Standar</span>
+                <p className="text-base font-bold text-text-primary font-mono mt-1">
+                  {baseCapNum > 0 ? `${baseCapNum.toLocaleString('id-ID')} koin` : 'Tanpa Batas'}
+                </p>
+                <span className="text-[10px] text-text-secondary mt-0.5">Batas dasar untuk semua anggota</span>
+              </div>
+
+              <div className="p-3 rounded-xl bg-surface border border-border-subtle flex flex-col justify-between">
+                <span className="text-[11px] font-bold text-text-secondary uppercase">2. Bonus Tingkat</span>
+                <p className="text-base font-bold text-accent-gold font-mono mt-1">
+                  {parsedTiers.length > 0 ? `+${parsedTiers.map((t) => t.bonus.toLocaleString('id-ID')).join(' / +')} koin` : 'Belum diatur'}
+                </p>
+                <span className="text-[10px] text-text-secondary mt-0.5">Otomatis aktif saat Tingkat tercapai</span>
+              </div>
+
+              <div className="p-3 rounded-xl bg-surface border border-border-subtle flex flex-col justify-between">
+                <span className="text-[11px] font-bold text-text-secondary uppercase">3. Plafon Maksimum</span>
+                <p className="text-base font-bold text-accent-reward font-mono mt-1">
+                  {ceilingNum > 0 ? `${ceilingNum.toLocaleString('id-ID')} koin` : 'Tanpa Plafon'}
+                </p>
+                <span className="text-[10px] text-text-secondary mt-0.5">Batas absolut tertinggi</span>
+              </div>
+            </div>
+
+            {/* Dynamic Simulation Preview Table based strictly on actual config */}
+            {baseCapNum > 0 && parsedTiers.length > 0 && (
+              <div className="p-3 rounded-xl bg-surface border border-border-subtle/80 space-y-2">
+                <p className="text-[11px] font-bold text-text-secondary">Simulasi Batas Koin Nyata Berdasarkan Tingkat:</p>
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-2">
+                  <div className="p-2 rounded-lg bg-surface-elevated border border-border-subtle/60 text-xs">
+                    <p className="text-[10px] text-text-secondary font-bold">
+                      Tingkat Awal {parsedTiers[0].level > 1 ? `(1–${parsedTiers[0].level - 1})` : ''}:
+                    </p>
+                    <p className="font-bold text-text-primary font-mono">{baseCapNum.toLocaleString('id-ID')} koin</p>
+                  </div>
+                  {parsedTiers.map((t, idx) => {
+                    const raw = baseCapNum + t.bonus
+                    const capped = ceilingNum > 0 && raw > ceilingNum ? ceilingNum : raw
+                    const isClamped = ceilingNum > 0 && raw > ceilingNum
+                    const nextTier = parsedTiers[idx + 1]
+                    const levelLabel = nextTier ? `Tingkat ${t.level}–${nextTier.level - 1}` : `Tingkat ${t.level}+`
+                    return (
+                      <div key={t.level} className="p-2 rounded-lg bg-surface-elevated border border-border-subtle/60 text-xs">
+                        <p className="text-[10px] text-text-secondary font-bold">{levelLabel}:</p>
+                        <p className="font-bold text-text-primary font-mono">
+                          {capped.toLocaleString('id-ID')} koin {isClamped ? <span className="text-[9px] text-accent-reward font-normal">(mentok plafon)</span> : ''}
+                        </p>
+                      </div>
+                    )
+                  })}
+                </div>
+              </div>
+            )}
+          </div>
+
           {/* Group 1: Batas Koin Bulanan & Bonus Tingkat */}
           <div className="space-y-4 p-4 rounded-xl bg-surface-elevated/40 border border-border-subtle">
             <div className="flex items-center justify-between">
               <h4 className="text-xs font-bold uppercase tracking-wider text-text-primary flex items-center gap-2">
                 <Shield className="w-4 h-4 text-accent-magic" />
-                <span>Batas Koin Bulanan & Bonus Tingkat</span>
+                <span>Input Batas Koin Bulanan & Bonus Tingkat</span>
               </h4>
               <span className="text-[10px] text-text-secondary font-medium">Bulan Kalender (Tgl 1 – Akhir Bulan)</span>
             </div>
@@ -155,13 +227,18 @@ export const EconomySettingsForm: React.FC = () => {
                     required
                     value={monthlyCapInput}
                     onChange={(e) => setMonthlyCapInput(e.target.value)}
-                    className="w-full p-2.5 pr-20 rounded-xl bg-surface border border-border-subtle text-xs sm:text-sm font-bold text-text-primary focus:outline-none focus:border-accent-magic font-mono"
+                    className="w-full p-2.5 pr-24 rounded-xl bg-surface border border-border-subtle text-xs sm:text-sm font-bold text-text-primary focus:outline-none focus:border-accent-magic font-mono"
                   />
                   <span className="absolute right-3 top-2.5 text-xs text-text-secondary">koin / bulan</span>
                 </div>
-                <p className="text-[10px] text-text-secondary">
-                  Jumlah maksimum koin yang dapat diperoleh anggota dalam satu bulan kalender.
-                </p>
+                <div className="flex items-center justify-between text-[10px] text-text-secondary">
+                  <span>Jumlah maksimum koin per bulan kalender.</span>
+                  {baseCapNum > 0 && (
+                    <span className="font-bold text-accent-magic">
+                      Format: {baseCapNum.toLocaleString('id-ID')} koin
+                    </span>
+                  )}
+                </div>
               </div>
 
               <div className="space-y-1">
@@ -177,13 +254,18 @@ export const EconomySettingsForm: React.FC = () => {
                     placeholder="10000"
                     value={maxCapCeilingInput}
                     onChange={(e) => setMaxCapCeilingInput(e.target.value)}
-                    className="w-full p-2.5 pr-20 rounded-xl bg-surface border border-border-subtle text-xs sm:text-sm font-bold text-text-primary focus:outline-none focus:border-accent-magic font-mono"
+                    className="w-full p-2.5 pr-24 rounded-xl bg-surface border border-border-subtle text-xs sm:text-sm font-bold text-text-primary focus:outline-none focus:border-accent-magic font-mono"
                   />
                   <span className="absolute right-3 top-2.5 text-xs text-text-secondary">koin / bulan</span>
                 </div>
-                <p className="text-[10px] text-text-secondary">
-                  Batas tertinggi koin bulanan seorang anggota, termasuk setelah ditambah bonus Tingkat.
-                </p>
+                <div className="flex items-center justify-between text-[10px] text-text-secondary">
+                  <span>Batas absolut tertinggi koin bulanan anggota.</span>
+                  {ceilingNum > 0 && (
+                    <span className="font-bold text-accent-reward">
+                      Format: {ceilingNum.toLocaleString('id-ID')} koin
+                    </span>
+                  )}
+                </div>
               </div>
             </div>
 
@@ -298,8 +380,13 @@ export const EconomySettingsForm: React.FC = () => {
 
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
               <div className="space-y-1">
-                <label htmlFor="input-conversion-rate" className="text-xs font-bold text-text-secondary">
-                  Nilai 1 Koin (Rupiah) <span className="text-status-error">*</span>
+                <label htmlFor="input-conversion-rate" className="text-xs font-bold text-text-secondary flex items-center justify-between">
+                  <span>Nilai 1 Koin (Rupiah) <span className="text-status-error">*</span></span>
+                  {convRateNum > 0 && (
+                    <span className="text-[10px] font-bold text-accent-gold">
+                      1 Koin = Rp {convRateNum.toLocaleString('id-ID')}
+                    </span>
+                  )}
                 </label>
                 <input
                   id="input-conversion-rate"
@@ -310,12 +397,17 @@ export const EconomySettingsForm: React.FC = () => {
                   onChange={(e) => setConversionRateInput(e.target.value)}
                   className="w-full p-2.5 rounded-xl bg-surface-elevated border border-border-subtle text-xs sm:text-sm font-bold text-text-primary focus:outline-none focus:border-accent-magic font-mono"
                 />
-                <p className="text-[10px] text-text-secondary">Contoh: 100 berarti 1 Koin = Rp 100</p>
+                <p className="text-[10px] text-text-secondary">Nilai rupiah untuk setiap 1 koin yang ditukarkan.</p>
               </div>
 
               <div className="space-y-1">
-                <label htmlFor="input-target-rupiah" className="text-xs font-bold text-text-secondary">
-                  Target Normal (Rupiah) <span className="text-status-error">*</span>
+                <label htmlFor="input-target-rupiah" className="text-xs font-bold text-text-secondary flex items-center justify-between">
+                  <span>Target Normal (Rupiah) <span className="text-status-error">*</span></span>
+                  {targetRpNum > 0 && (
+                    <span className="text-[10px] font-bold text-accent-magic">
+                      Rp {targetRpNum.toLocaleString('id-ID')}
+                    </span>
+                  )}
                 </label>
                 <input
                   id="input-target-rupiah"
@@ -332,8 +424,9 @@ export const EconomySettingsForm: React.FC = () => {
               </div>
 
               <div className="space-y-1">
-                <label htmlFor="input-monthly-target" className="text-xs font-bold text-text-secondary">
-                  Target Koin Awal Anggota <span className="text-status-error">*</span>
+                <label htmlFor="input-monthly-target" className="text-xs font-bold text-text-secondary flex items-center justify-between">
+                  <span>Target Koin Awal Anggota <span className="text-status-error">*</span></span>
+                  <span className="text-[10px] text-text-secondary">0 = fleksibel</span>
                 </label>
                 <input
                   id="input-monthly-target"
@@ -345,7 +438,7 @@ export const EconomySettingsForm: React.FC = () => {
                   onChange={(e) => setMonthlyTargetInput(e.target.value)}
                   className="w-full p-2.5 rounded-xl bg-surface-elevated border border-border-subtle text-xs sm:text-sm font-bold text-text-primary focus:outline-none focus:border-accent-magic font-mono"
                 />
-                <p className="text-[10px] text-text-secondary">Target default anggota baru (0–10.000)</p>
+                <p className="text-[10px] text-text-secondary">Target default anggota baru (0–10.000 koin).</p>
               </div>
             </div>
           </div>

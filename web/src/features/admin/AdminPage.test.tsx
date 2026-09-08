@@ -245,7 +245,7 @@ describe('AdminPage Component', () => {
 
     render(
       <MemoryRouter>
-        <AdminPage />
+        <AdminPage initialTab="submissions" />
       </MemoryRouter>
     )
 
@@ -278,7 +278,7 @@ describe('AdminPage Component', () => {
 
     render(
       <MemoryRouter>
-        <AdminPage />
+        <AdminPage initialTab="submissions" />
       </MemoryRouter>
     )
 

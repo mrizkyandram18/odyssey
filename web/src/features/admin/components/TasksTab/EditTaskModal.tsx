@@ -1,4 +1,4 @@
-import React from 'react'
+import React, { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { X, Edit3, Play, HelpCircle, Camera, FileText, PenLine, Gamepad2 } from 'lucide-react'
 import type { TaskView, TaskType } from '../../../../shared/types'
@@ -56,14 +56,24 @@ export const EditTaskModal: React.FC<EditTaskModalProps> = ({
   onClose,
   onSave,
 }) => {
+  const [pendingTypeChange, setPendingTypeChange] = useState<TaskType | null>(null)
+
   if (!task) return null
 
   const handleTypeChange = (newType: TaskType) => {
     if (newType === form.task_type) return
-    // Check if config is incompatible — always confirm when switching
-    const confirmMsg = 'Mengganti jenis tugas akan mengganti konfigurasi tugas yang tidak kompatibel. Konfigurasi lama tidak akan digunakan untuk jenis baru. Lanjutkan?'
-    if (!window.confirm(confirmMsg)) return
-    setForm({ ...form, task_type: newType })
+    setPendingTypeChange(newType)
+  }
+
+  const confirmTypeChange = () => {
+    if (pendingTypeChange) {
+      setForm({ ...form, task_type: pendingTypeChange })
+      setPendingTypeChange(null)
+    }
+  }
+
+  const cancelTypeChange = () => {
+    setPendingTypeChange(null)
   }
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -91,7 +101,7 @@ export const EditTaskModal: React.FC<EditTaskModalProps> = ({
                 <span>Edit Tugas</span>
               </h3>
               <p className="text-xs text-text-secondary mt-0.5">
-                #{task.step_order} — {task.task_type} {showLegacyBadge && <span className="text-[11px] bg-amber-100 text-amber-700 px-1.5 py-0.5 rounded">Legacy</span>}
+                #{task.step_order} — {task.task_type} {showLegacyBadge && <span className="text-[11px] bg-accent-gold/20 text-accent-gold px-1.5 py-0.5 rounded">Legacy</span>}
               </p>
             </div>
             <button
@@ -135,10 +145,10 @@ export const EditTaskModal: React.FC<EditTaskModalProps> = ({
             </div>
 
             {/* Jenis Tugas */}
-            <div className="space-y-1">
+            <div className="space-y-1.5">
               <label className="text-xs font-bold text-text-secondary">Jenis Tugas *</label>
               <select
-                value={form.task_type}
+                value={pendingTypeChange || form.task_type}
                 onChange={(e) => handleTypeChange(e.target.value as TaskType)}
                 className="w-full p-2.5 rounded-xl bg-surface border border-border-subtle text-xs sm:text-sm font-bold text-text-primary focus:outline-none focus:border-accent-magic"
               >
@@ -149,7 +159,35 @@ export const EditTaskModal: React.FC<EditTaskModalProps> = ({
                 ))}
                 {showLegacyBadge && <option value={task.task_type}>{task.task_type} (Legacy)</option>}
               </select>
-              <p className="text-[11px] text-text-secondary">Mengubah jenis akan mengganti konfigurasi. Perubahan hanya untuk submission berikutnya.</p>
+
+              {pendingTypeChange && (
+                <div className="p-3 rounded-xl bg-accent-gold/15 border border-accent-gold/30 text-xs space-y-2">
+                  <p className="font-bold text-text-primary">
+                    Ganti jenis tugas ke {TYPE_OPTIONS.find((o) => o.value === pendingTypeChange)?.label || pendingTypeChange}?
+                  </p>
+                  <p className="text-text-secondary text-[11px]">
+                    Konfigurasi tugas lama yang tidak kompatibel akan diganti dengan pengaturan default jenis baru.
+                  </p>
+                  <div className="flex items-center gap-2 pt-1">
+                    <button
+                      type="button"
+                      onClick={cancelTypeChange}
+                      className="px-3 py-1 rounded-lg bg-surface border border-border-subtle font-bold text-text-secondary hover:bg-surface-elevated transition-colors cursor-pointer"
+                    >
+                      Batal
+                    </button>
+                    <button
+                      type="button"
+                      onClick={confirmTypeChange}
+                      className="px-3 py-1 rounded-lg bg-accent-magic text-white font-bold hover:brightness-110 active:scale-95 transition-all cursor-pointer"
+                    >
+                      Lanjutkan Ganti
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              <p className="text-[11px] text-text-secondary">Mengubah jenis tugas hanya berlaku untuk pengumpulan tugas berikutnya.</p>
             </div>
 
             {/* Dynamic Config */}

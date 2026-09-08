@@ -129,11 +129,11 @@ export const CreateTaskModal: React.FC<CreateTaskModalProps> = ({
                     }
                     className="w-full p-2.5 rounded-xl bg-surface border border-border-subtle text-xs sm:text-sm text-text-primary font-bold focus:outline-none focus:border-accent-magic"
                     disabled
-                    title="USER targeting dinonaktifkan sementara — denominator fix belum diverifikasi"
+                    title="Tugas harian saat ini ditujukan untuk seluruh anggota keluarga"
                   >
-                    <option value="ALL">🌐 Semua Anggota</option>
+                    <option value="ALL">🌐 Seluruh Anggota Keluarga</option>
                   </select>
-                  <p className="text-[11px] text-text-secondary">Target USER dinonaktifkan sementara hingga denominator fix diverifikasi.</p>
+                  <p className="text-[11px] text-text-secondary">Tugas ini akan otomatis tersedia untuk semua anggota yang aktif.</p>
                 </div>
 
                 <div className="space-y-1">

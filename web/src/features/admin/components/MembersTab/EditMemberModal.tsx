@@ -1,8 +1,13 @@
 import React, { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { X, Edit3, Smartphone, KeyRound, Copy, Check, ShieldAlert } from 'lucide-react'
+import { X, Edit3, KeyRound, Copy, Check, ShieldAlert, User, Shield, Coins } from 'lucide-react'
 import type { MemberView } from '../../../../shared/types'
 import { adminMembersApi } from '../../../../shared/lib/api'
+import { MemberProfileSection } from './sections/MemberProfileSection'
+import { MemberCapSection } from './sections/MemberCapSection'
+import { MemberPayoutSection } from './sections/MemberPayoutSection'
+
+type EditTab = 'profile' | 'cap' | 'payout'
 
 interface EditMemberModalProps {
   member: MemberView | null
@@ -47,6 +52,7 @@ export const EditMemberModal: React.FC<EditMemberModalProps> = ({
   onClose,
   onSave,
 }) => {
+  const [activeTab, setActiveTab] = useState<EditTab>('profile')
   const [showResetConfirm, setShowResetConfirm] = useState(false)
   const [isResetting, setIsResetting] = useState(false)
   const [tempPassword, setTempPassword] = useState<string | null>(null)
@@ -95,7 +101,6 @@ export const EditMemberModal: React.FC<EditMemberModalProps> = ({
       setCopied(true)
       setTimeout(() => setCopied(false), 2000)
     } catch {
-      // fallback
       const el = document.createElement('textarea')
       el.value = tempPassword
       document.body.appendChild(el)
@@ -114,7 +119,6 @@ export const EditMemberModal: React.FC<EditMemberModalProps> = ({
   }
 
   const handleCloseModal = () => {
-    // Ensure temp password is cleared when main modal closes
     setTempPassword(null)
     setShowResetSuccess(false)
     setShowResetConfirm(false)
@@ -122,25 +126,27 @@ export const EditMemberModal: React.FC<EditMemberModalProps> = ({
     onClose()
   }
 
+  const isRegularMember = member.role === 'MEMBER' || (member.role as string) === 'SEEKER'
+
   return (
     <AnimatePresence>
-      <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+      <div key="edit-member-modal-backdrop" className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
         <motion.div
           initial={{ scale: 0.96, opacity: 0 }}
           animate={{ scale: 1, opacity: 1 }}
           exit={{ scale: 0.96, opacity: 0 }}
           transition={{ duration: 0.15 }}
-          className="w-full max-w-md bg-surface border border-border-subtle rounded-2xl shadow-xl overflow-hidden flex flex-col max-h-[90vh]"
+          className="w-full max-w-lg bg-surface border border-border-subtle rounded-2xl shadow-xl overflow-hidden flex flex-col max-h-[90vh]"
         >
           {/* Header */}
-          <div className="flex items-center justify-between px-5 py-4 border-b border-border-subtle bg-surface">
+          <div className="flex items-center justify-between px-5 py-3.5 border-b border-border-subtle bg-surface">
             <div>
               <h3 className="font-bold text-text-primary text-sm flex items-center gap-2">
                 <Edit3 className="w-4 h-4 text-accent-magic" />
                 <span>Edit Anggota @{member.username}</span>
               </h3>
-              <p className="text-xs text-text-secondary mt-0.5 font-mono">
-                UID: {member.uid}
+              <p className="text-xs text-text-secondary mt-0.5">
+                Profil & Pengaturan Akun
               </p>
             </div>
             <button
@@ -154,233 +160,87 @@ export const EditMemberModal: React.FC<EditMemberModalProps> = ({
             </button>
           </div>
 
-          {/* Form */}
-          <form onSubmit={handleSubmit} className="p-5 space-y-3.5 overflow-y-auto flex-1">
-            <div className="space-y-1">
-              <label className="text-xs font-bold text-text-secondary">Nama Lengkap</label>
-              <input
-                type="text"
-                required
-                value={form.explorer_name}
-                onChange={(e) => setForm({ ...form, explorer_name: e.target.value })}
-                className="w-full p-2.5 rounded-xl bg-surface border border-border-subtle text-xs sm:text-sm text-text-primary focus:outline-none focus:border-accent-magic"
-              />
-            </div>
-
-            <div className="space-y-1">
-              <label className="text-xs font-bold text-text-secondary">Role</label>
-              <select
-                value={form.role}
-                onChange={(e) =>
-                  setForm({ ...form, role: e.target.value as 'ADMIN' | 'MEMBER' })
-                }
-                className="w-full p-2.5 rounded-xl bg-surface border border-border-subtle text-xs sm:text-sm font-bold text-text-primary focus:outline-none focus:border-accent-magic"
-              >
-                <option value="MEMBER">MEMBER (Anggota biasa)</option>
-                <option value="ADMIN">ADMIN (Administrator)</option>
-              </select>
-            </div>
-
-            <div className="space-y-1">
-              <label className="text-xs font-bold text-text-secondary">Status Akun (Reversibel — tidak ada hapus pengguna)</label>
-              <select
-                data-testid="member-status-select"
-                value={form.is_active ? 'active' : 'inactive'}
-                onChange={(e) =>
-                  setForm({ ...form, is_active: e.target.value === 'active' })
-                }
-                className="w-full p-2.5 rounded-xl bg-surface border border-border-subtle text-xs sm:text-sm font-bold text-text-primary focus:outline-none focus:border-accent-magic"
-              >
-                <option value="active">● AKTIF (Bisa Login & Mengerjakan Tugas)</option>
-                <option value="inactive">○ BLOKIR (Akses diblokir, riwayat tetap ada)</option>
-              </select>
-              <p className="text-[11px] text-text-secondary">Blokir bersifat reversibel; histori tugas, koin, dan klaim tetap auditable.</p>
-            </div>
-
-            {(member.role === 'MEMBER' || member.role === 'SEEKER') && (
-              <>
-                <div className="space-y-2 p-3 rounded-xl bg-surface-elevated border border-border-subtle">
-                  <label className="text-xs font-bold text-text-secondary">Target Koin Bulanan (0 = ikut default system)</label>
-                  <input
-                    type="number"
-                    min={0}
-                    max={10000}
-                    value={form.monthly_coin_target}
-                    onChange={(e) => setForm({ ...form, monthly_coin_target: parseInt(e.target.value || '0', 10) })}
-                    className="w-full p-2.5 rounded-xl bg-surface border border-border-subtle text-xs sm:text-sm text-text-primary focus:outline-none focus:border-accent-magic"
-                  />
-                  {member.monthly_coin_target !== undefined && (
-                    <p className="text-[11px] text-text-secondary">Target: {member.monthly_coin_target} • Terpakai bulan ini: {member.earned_this_period ?? 0}</p>
-                  )}
-                  <p className="text-[11px] text-text-secondary">Sistem akan menghitung pembagian koin otomatis berdasarkan target dan bobot task. Perubahan berlaku bulan ini.</p>
-                </div>
-                <div className="space-y-3 p-3.5 rounded-xl bg-amber-50/70 dark:bg-amber-950/20 border border-amber-200/80">
-                  <div className="flex items-center justify-between">
-                    <label className="text-xs font-bold text-text-primary">
-                      Batas Koin Bulanan Anggota
-                    </label>
-                    <span className="text-[10px] font-semibold text-text-secondary">
-                      {form.monthly_earning_cap > 0 ? 'Batas Khusus' : 'Ikuti Batas Standar'}
-                    </span>
-                  </div>
-
-                  <div className="space-y-2">
-                    <label className="flex items-center gap-2 cursor-pointer text-xs text-text-primary">
-                      <input
-                        type="radio"
-                        name="edit_cap_mode"
-                        checked={form.monthly_earning_cap === 0}
-                        onChange={() => setForm({ ...form, monthly_earning_cap: 0 })}
-                        className="text-accent-magic cursor-pointer"
-                      />
-                      <span>Gunakan batas koin bulanan standar (global)</span>
-                    </label>
-
-                    <label className="flex items-center gap-2 cursor-pointer text-xs text-text-primary">
-                      <input
-                        type="radio"
-                        name="edit_cap_mode"
-                        checked={form.monthly_earning_cap > 0}
-                        onChange={() => setForm({ ...form, monthly_earning_cap: form.monthly_earning_cap > 0 ? form.monthly_earning_cap : 3000 })}
-                        className="text-accent-magic cursor-pointer"
-                      />
-                      <span>Atur batas koin khusus untuk anggota ini</span>
-                    </label>
-                  </div>
-
-                  {form.monthly_earning_cap > 0 && (
-                    <div className="pt-2">
-                      <div className="relative">
-                        <input
-                          type="number"
-                          min={1}
-                          max={10000}
-                          value={form.monthly_earning_cap}
-                          onChange={(e) => setForm({ ...form, monthly_earning_cap: Math.max(0, parseInt(e.target.value || '0', 10)) })}
-                          placeholder="Contoh: 3500"
-                          className="w-full p-2.5 pr-24 rounded-xl bg-surface border border-border-subtle text-xs sm:text-sm font-bold text-text-primary focus:outline-none focus:border-accent-magic"
-                        />
-                        <span className="absolute right-3 top-2.5 text-xs text-text-secondary">koin / bulan</span>
-                      </div>
-                      <p className="text-[10px] text-text-secondary mt-1">
-                        Batas khusus ini hanya berlaku untuk anggota ini dan menggantikan batas global.
-                      </p>
-                    </div>
-                  )}
-
-                  {member.monthly_earning_cap !== undefined && (
-                    <div className="pt-2 border-t border-amber-200/60 flex items-center justify-between text-[11px] text-text-secondary">
-                      <span>Perolehan bulan ini: <strong className="text-text-primary font-bold">{member.earned_this_period ?? 0} koin</strong></span>
-                      <span className={`font-bold ${member.earning_locked ? 'text-amber-600' : 'text-emerald-600'}`}>
-                        {member.earning_locked ? '🔒 Batas Tercapai' : '✓ Masih Aktif'}
-                      </span>
-                    </div>
-                  )}
-
-                  <p className="text-[11px] text-text-secondary leading-relaxed">
-                    Jika perolehan koin bulan ini mencapai batas, anggota tidak dapat memperoleh koin tambahan sampai awal bulan berikutnya. Saldo koin yang telah diperoleh tetap aman dan tidak berkurang.
-                  </p>
-                </div>
-                <div className="space-y-2 p-3 rounded-xl bg-violet-50 dark:bg-violet-950/20 border border-violet-200">
-                  <label className="text-xs font-bold text-text-secondary">Pengaturan Pencairan Per-User</label>
-                  <div className="grid grid-cols-2 gap-2">
-                    <div className="space-y-1">
-                      <label className="text-[11px] font-bold text-text-secondary">Frekuensi</label>
-                      <select value={form.payout_frequency} onChange={(e) => setForm({ ...form, payout_frequency: e.target.value as any })} className="w-full p-2 rounded-lg border border-border-subtle text-xs font-bold">
-                        <option value="THRESHOLD">THRESHOLD</option>
-                        <option value="WEEKLY">WEEKLY</option>
-                        <option value="MONTHLY">MONTHLY</option>
-                      </select>
-                    </div>
-                    <div className="space-y-1">
-                      <label className="text-[11px] font-bold text-text-secondary">Min Withdrawal</label>
-                      <input type="number" min={1} max={100000} value={form.minimum_withdrawal_coins} onChange={(e) => setForm({ ...form, minimum_withdrawal_coins: parseInt(e.target.value || '500', 10) })} className="w-full p-2 rounded-lg border border-border-subtle text-xs" />
-                    </div>
-                  </div>
-                  {form.payout_frequency === 'WEEKLY' && (
-                    <div className="space-y-1">
-                      <label className="text-[11px] font-bold text-text-secondary">Hari Payout (0=Sun..6=Sat)</label>
-                      <input type="number" min={0} max={6} value={form.payout_weekday} onChange={(e) => setForm({ ...form, payout_weekday: parseInt(e.target.value || '1', 10) })} className="w-full p-2 rounded-lg border border-border-subtle text-xs" />
-                    </div>
-                  )}
-                  {form.payout_frequency === 'MONTHLY' && (
-                    <div className="grid grid-cols-2 gap-2">
-                      <div className="space-y-1">
-                        <label className="text-[11px] font-bold text-text-secondary">Start Day 1-31</label>
-                        <input type="number" min={1} max={31} value={form.payout_month_start_day} onChange={(e) => setForm({ ...form, payout_month_start_day: parseInt(e.target.value || '24', 10) })} className="w-full p-2 rounded-lg border border-border-subtle text-xs" />
-                      </div>
-                      <div className="space-y-1">
-                        <label className="text-[11px] font-bold text-text-secondary">End Day 1-31</label>
-                        <input type="number" min={1} max={31} value={form.payout_month_end_day} onChange={(e) => setForm({ ...form, payout_month_end_day: parseInt(e.target.value || '26', 10) })} className="w-full p-2 rounded-lg border border-border-subtle text-xs" />
-                      </div>
-                    </div>
-                  )}
-                  {member.payout_frequency && (
-                    <p className="text-[11px] text-text-secondary">Efektif: {member.payout_frequency} • {member.minimum_withdrawal_coins} koin • source: {member.payout_config_source}</p>
-                  )}
-                </div>
-              </>
-            )}
-
-            {/* Reset Password section - separate from device binding */}
-            <div className="p-3.5 rounded-xl bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800/40 space-y-2.5">
-              <div className="flex items-start gap-2.5">
-                <KeyRound className="w-4 h-4 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
-                <div className="flex-1 min-w-0">
-                  <p className="text-xs font-bold text-text-primary">Reset Password</p>
-                  <p className="text-[11px] text-text-secondary leading-relaxed">
-                    Atur ulang password akun member jika lupa password.
-                  </p>
-                </div>
-              </div>
+          {/* Tab Navigation */}
+          {isRegularMember && (
+            <div className="flex items-center border-b border-border-subtle bg-surface-elevated/40 px-5 pt-2 gap-2 text-xs">
               <button
                 type="button"
-                onClick={handleOpenResetConfirm}
-                disabled={isResetting}
-                data-testid="reset-password-button"
-                className="w-full py-2.5 rounded-xl bg-white dark:bg-surface border border-amber-300 dark:border-amber-700 text-amber-700 dark:text-amber-300 font-bold text-xs hover:bg-amber-50 dark:hover:bg-amber-900/20 active:scale-[0.98] transition-all cursor-pointer flex items-center justify-center gap-1.5 disabled:opacity-50"
+                onClick={() => setActiveTab('profile')}
+                className={`pb-2 px-2 font-bold transition-all border-b-2 cursor-pointer flex items-center gap-1.5 ${
+                  activeTab === 'profile'
+                    ? 'border-accent-magic text-accent-magic'
+                    : 'border-transparent text-text-secondary hover:text-text-primary'
+                }`}
               >
-                <KeyRound className="w-3.5 h-3.5" />
-                Reset Password
+                <User className="w-3.5 h-3.5" />
+                <span>Profil & Akun</span>
               </button>
-              {resetError && !showResetConfirm && (
-                <p className="text-[11px] text-red-600 dark:text-red-400 font-medium">{resetError}</p>
-              )}
+              <button
+                type="button"
+                onClick={() => setActiveTab('cap')}
+                className={`pb-2 px-2 font-bold transition-all border-b-2 cursor-pointer flex items-center gap-1.5 ${
+                  activeTab === 'cap'
+                    ? 'border-accent-magic text-accent-magic'
+                    : 'border-transparent text-text-secondary hover:text-text-primary'
+                }`}
+              >
+                <Shield className="w-3.5 h-3.5" />
+                <span>Batas Koin</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setActiveTab('payout')}
+                className={`pb-2 px-2 font-bold transition-all border-b-2 cursor-pointer flex items-center gap-1.5 ${
+                  activeTab === 'payout'
+                    ? 'border-accent-magic text-accent-magic'
+                    : 'border-transparent text-text-secondary hover:text-text-primary'
+                }`}
+              >
+                <Coins className="w-3.5 h-3.5" />
+                <span>Pencairan</span>
+              </button>
             </div>
+          )}
 
-            {/* Device reset option */}
-            <div className="p-3 rounded-xl bg-accent-gold/10 border border-accent-gold/20 flex items-center justify-between gap-3">
-              <div className="flex items-center gap-2.5">
-                <Smartphone className="w-4 h-4 text-accent-gold shrink-0" />
-                <div>
-                  <p className="text-xs font-bold text-text-primary">Reset Binding Perangkat</p>
-                  <p className="text-[11px] text-text-secondary">
-                    Izinkan akun login di HP/perangkat baru
-                  </p>
-                </div>
-              </div>
-              <input
-                type="checkbox"
-                id="reset-device-checkbox"
-                checked={form.reset_device}
-                onChange={(e) => setForm({ ...form, reset_device: e.target.checked })}
-                className="w-4 h-4 rounded border-border-subtle text-accent-magic focus:ring-accent-magic cursor-pointer"
+          {/* Form Content */}
+          <form onSubmit={handleSubmit} className="p-5 overflow-y-auto flex-1 space-y-4">
+            {(!isRegularMember || activeTab === 'profile') && (
+              <MemberProfileSection
+                member={member}
+                form={form}
+                setForm={setForm}
+                onOpenResetPassword={handleOpenResetConfirm}
               />
-            </div>
+            )}
 
-            {/* Sticky Footer */}
-            <div className="sticky bottom-0 -mx-5 -mb-5 mt-4 px-5 py-3.5 border-t border-border-subtle bg-surface flex gap-3">
+            {isRegularMember && activeTab === 'cap' && (
+              <MemberCapSection
+                member={member}
+                form={form}
+                setForm={setForm}
+              />
+            )}
+
+            {isRegularMember && activeTab === 'payout' && (
+              <MemberPayoutSection
+                form={form}
+                setForm={setForm}
+              />
+            )}
+
+            {/* Sticky Action Buttons */}
+            <div className="pt-4 border-t border-border-subtle flex items-center justify-end gap-2.5">
               <button
                 type="button"
                 onClick={handleCloseModal}
-                className="flex-1 py-2.5 rounded-xl bg-surface-elevated border border-border-subtle text-text-primary font-bold text-xs hover:bg-surface transition-colors cursor-pointer"
+                className="px-4 py-2.5 rounded-xl border border-border-subtle bg-surface-elevated text-xs font-bold text-text-secondary hover:text-text-primary hover:bg-surface transition-colors cursor-pointer"
               >
                 Batal
               </button>
               <button
                 type="submit"
                 disabled={isSaving}
-                className="flex-1 py-2.5 rounded-xl bg-accent-magic text-white font-bold text-xs shadow-xs hover:brightness-110 disabled:opacity-50 transition-all cursor-pointer"
+                className="px-5 py-2.5 rounded-xl bg-accent-magic text-white text-xs font-bold hover:brightness-110 active:scale-[0.98] shadow-xs transition-all disabled:opacity-50 cursor-pointer"
               >
                 {isSaving ? 'Menyimpan...' : 'Simpan Perubahan'}
               </button>
@@ -389,139 +249,120 @@ export const EditMemberModal: React.FC<EditMemberModalProps> = ({
         </motion.div>
       </div>
 
-      {/* Confirmation Dialog */}
-      <AnimatePresence>
-        {showResetConfirm && (
-          <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
-            <motion.div
-              initial={{ scale: 0.95, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              exit={{ scale: 0.95, opacity: 0 }}
-              transition={{ duration: 0.15 }}
-              className="w-full max-w-sm bg-surface border border-border-subtle rounded-2xl shadow-xl overflow-hidden"
-              role="dialog"
-              aria-modal="true"
-              aria-labelledby="reset-password-title"
-            >
-              <div className="p-5 space-y-3">
-                <div className="w-10 h-10 rounded-full bg-amber-100 dark:bg-amber-900/30 flex items-center justify-center mx-auto">
-                  <ShieldAlert className="w-5 h-5 text-amber-600 dark:text-amber-400" />
-                </div>
-                <h4 id="reset-password-title" className="text-sm font-bold text-text-primary text-center">
-                  Reset Password?
-                </h4>
-                <p className="text-xs text-text-secondary text-center leading-relaxed">
-                  Password akun <span className="font-bold text-text-primary">{member.explorer_name}</span> akan diganti dengan temporary password baru.
-                  <br />
-                  <br />
-                  Member akan diwajibkan mengganti password saat login berikutnya.
-                </p>
-                {resetError && (
-                  <p className="text-xs text-red-600 dark:text-red-400 text-center font-medium">{resetError}</p>
+      {/* Confirmation Modal for Reset Password */}
+      {showResetConfirm && (
+        <div key="reset-confirm-backdrop" className="fixed inset-0 z-60 flex items-center justify-center p-4 bg-black/70 backdrop-blur-xs">
+          <motion.div
+            initial={{ scale: 0.95, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            exit={{ scale: 0.95, opacity: 0 }}
+            className="w-full max-w-sm bg-surface border border-border-subtle rounded-2xl p-5 shadow-2xl space-y-4"
+          >
+            <div className="flex items-center gap-3 text-status-error">
+              <div className="w-10 h-10 rounded-xl bg-status-error/10 flex items-center justify-center shrink-0">
+                <ShieldAlert className="w-5 h-5 text-status-error" />
+              </div>
+              <div>
+                <h4 className="font-bold text-sm text-text-primary">Reset Password?</h4>
+                <p className="text-xs text-text-secondary">Tindakan ini memerlukan perhatian.</p>
+              </div>
+            </div>
+
+            <p className="text-xs text-text-secondary leading-relaxed">
+              Password akun <strong>{member.explorer_name}</strong> (@{member.username}) akan direset ke password sementara otomatis. Anda harus memberikan password baru tersebut kepada pengguna.
+            </p>
+
+            {resetError && (
+              <p className="text-xs text-status-error p-2.5 rounded-lg bg-status-error/10 border border-status-error/20">
+                {resetError}
+              </p>
+            )}
+
+            <div className="flex items-center justify-end gap-2 pt-2">
+              <button
+                type="button"
+                data-testid="reset-cancel-button"
+                disabled={isResetting}
+                onClick={handleCancelReset}
+                className="px-3.5 py-2 rounded-xl text-xs font-bold text-text-secondary hover:bg-surface-elevated transition-colors cursor-pointer"
+              >
+                Batal
+              </button>
+              <button
+                type="button"
+                data-testid="reset-confirm-button"
+                disabled={isResetting}
+                onClick={handleConfirmReset}
+                className="px-4 py-2 rounded-xl bg-status-error text-white text-xs font-bold hover:brightness-110 active:scale-95 transition-all disabled:opacity-50 cursor-pointer flex items-center gap-1.5"
+              >
+                <KeyRound className="w-3.5 h-3.5" />
+                <span>{isResetting ? 'Mereset...' : 'Ya, Reset Password'}</span>
+              </button>
+            </div>
+          </motion.div>
+        </div>
+      )}
+
+      {/* Success Modal Showing Temporary Password */}
+      {showResetSuccess && tempPassword && (
+        <div key="reset-success-backdrop" className="fixed inset-0 z-60 flex items-center justify-center p-4 bg-black/70 backdrop-blur-xs">
+          <motion.div
+            initial={{ scale: 0.95, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            exit={{ scale: 0.95, opacity: 0 }}
+            className="w-full max-w-sm bg-surface border border-border-subtle rounded-2xl p-5 shadow-2xl space-y-4"
+          >
+            <div className="flex items-center gap-2.5 text-status-success">
+              <div className="w-9 h-9 rounded-xl bg-status-success/15 flex items-center justify-center shrink-0">
+                <Check className="w-5 h-5 text-status-success" />
+              </div>
+              <h4 className="font-bold text-sm text-text-primary">Password Berhasil Di-reset</h4>
+            </div>
+
+            <p className="text-xs text-text-secondary leading-relaxed">
+              Berikan password sementara berikut kepada anggota. Pengguna akan diminta mengganti password pada saat login berikutnya.
+            </p>
+
+            <div className="p-3 rounded-xl bg-surface-elevated border border-border-subtle flex items-center justify-between gap-2">
+              <span
+                data-testid="temporary-password-display"
+                className="font-mono text-sm font-bold text-text-primary tracking-wider"
+              >
+                {tempPassword}
+              </span>
+              <button
+                type="button"
+                data-testid="copy-password-button"
+                onClick={handleCopy}
+                className="px-3 py-1.5 rounded-lg bg-surface border border-border-subtle text-xs font-bold text-text-primary hover:bg-surface-elevated transition-all flex items-center gap-1 cursor-pointer"
+              >
+                {copied ? (
+                  <>
+                    <Check className="w-3.5 h-3.5 text-status-success" />
+                    <span className="text-status-success">Tersalin</span>
+                  </>
+                ) : (
+                  <>
+                    <Copy className="w-3.5 h-3.5" />
+                    <span>Salin</span>
+                  </>
                 )}
-              </div>
-              <div className="flex gap-3 p-4 border-t border-border-subtle bg-surface">
-                <button
-                  type="button"
-                  onClick={handleCancelReset}
-                  disabled={isResetting}
-                  data-testid="reset-cancel-button"
-                  className="flex-1 py-2.5 rounded-xl bg-surface-elevated border border-border-subtle text-text-primary font-bold text-xs hover:bg-surface transition-colors cursor-pointer disabled:opacity-50"
-                >
-                  Batal
-                </button>
-                <button
-                  type="button"
-                  onClick={handleConfirmReset}
-                  disabled={isResetting}
-                  data-testid="reset-confirm-button"
-                  className="flex-1 py-2.5 rounded-xl bg-amber-600 hover:bg-amber-700 text-white font-bold text-xs shadow-xs transition-colors cursor-pointer disabled:opacity-50"
-                >
-                  {isResetting ? 'Memproses...' : 'Reset Password'}
-                </button>
-              </div>
-            </motion.div>
-          </div>
-        )}
-      </AnimatePresence>
+              </button>
+            </div>
 
-      {/* Success Result */}
-      <AnimatePresence>
-        {showResetSuccess && tempPassword && (
-          <div className="fixed inset-0 z-[70] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
-            <motion.div
-              initial={{ scale: 0.95, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              exit={{ scale: 0.95, opacity: 0 }}
-              transition={{ duration: 0.15 }}
-              className="w-full max-w-sm bg-surface border border-border-subtle rounded-2xl shadow-xl overflow-hidden"
-              role="dialog"
-              aria-modal="true"
-              aria-labelledby="reset-success-title"
-            >
-              <div className="p-5 space-y-4">
-                <div className="w-10 h-10 rounded-full bg-green-100 dark:bg-green-900/30 flex items-center justify-center mx-auto">
-                  <Check className="w-5 h-5 text-green-600 dark:text-green-400" />
-                </div>
-                <h4 id="reset-success-title" className="text-sm font-bold text-text-primary text-center">
-                  Password Berhasil Di-reset
-                </h4>
-
-                <div>
-                  <p className="text-xs font-semibold text-text-secondary mb-1.5">Temporary password:</p>
-                  <div
-                    data-testid="temporary-password-display"
-                    className="flex items-center gap-2 p-3 rounded-xl bg-surface-elevated border border-border-subtle"
-                  >
-                    <span className="flex-1 font-mono text-sm font-bold text-text-primary break-all select-all">
-                      {tempPassword}
-                    </span>
-                    <button
-                      type="button"
-                      onClick={handleCopy}
-                      data-testid="copy-password-button"
-                      className="shrink-0 px-3 py-1.5 rounded-lg bg-white dark:bg-surface border border-border-subtle text-xs font-bold text-text-primary hover:bg-surface-elevated transition-colors cursor-pointer flex items-center gap-1"
-                    >
-                      {copied ? (
-                        <>
-                          <Check className="w-3.5 h-3.5 text-green-600" />
-                          <span className="text-green-600">Tersalin</span>
-                        </>
-                      ) : (
-                        <>
-                          <Copy className="w-3.5 h-3.5" />
-                          Copy
-                        </>
-                      )}
-                    </button>
-                  </div>
-                  {copied && (
-                    <p className="text-[11px] text-green-600 dark:text-green-400 mt-1.5 font-medium flex items-center gap-1">
-                      <Check className="w-3 h-3" /> Tersalin
-                    </p>
-                  )}
-                </div>
-
-                <div className="p-3 rounded-xl bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800/30">
-                  <p className="text-[11px] text-amber-800 dark:text-amber-300 leading-relaxed">
-                    Berikan password ini kepada member. Password hanya ditampilkan sekarang dan member wajib menggantinya saat login. Sampaikan secara aman.
-                  </p>
-                </div>
-              </div>
-              <div className="p-4 border-t border-border-subtle bg-surface">
-                <button
-                  type="button"
-                  onClick={handleCloseSuccess}
-                  data-testid="close-success-button"
-                  className="w-full py-2.5 rounded-xl bg-accent-magic text-white font-bold text-xs hover:brightness-110 transition-all cursor-pointer"
-                >
-                  Tutup
-                </button>
-              </div>
-            </motion.div>
-          </div>
-        )}
-      </AnimatePresence>
+            <div className="pt-2 flex justify-end">
+              <button
+                type="button"
+                data-testid="close-success-button"
+                onClick={handleCloseSuccess}
+                className="w-full py-2.5 rounded-xl bg-accent-magic text-white text-xs font-bold hover:brightness-110 transition-all cursor-pointer"
+              >
+                Selesai & Tutup
+              </button>
+            </div>
+          </motion.div>
+        </div>
+      )}
     </AnimatePresence>
   )
 }
