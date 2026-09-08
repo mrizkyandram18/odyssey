@@ -13,6 +13,8 @@ import { CameraCaptureModal } from './CameraCaptureModal'
 import { LiveCameraCaptureModal } from './LiveCameraCaptureModal'
 import { TextResponseModal } from './TextResponseModal'
 import { MiniGameModal } from './MiniGameModal'
+import { TicketCard } from '../home/TicketCard'
+import { levelProgress } from '../../shared/lib/level'
 
 // Helper: greeting by time
 function getGreeting() {
@@ -160,12 +162,8 @@ export const LinearPath: React.FC = () => {
     return { total, completed, pending, rejected, nextTask, isAllDone, progressPercent }
   }, [tasks])
 
-  // XP bar still as secondary info
-  const currentLevelBaseXP = Math.pow(userLevel - 1, 2) * 100
-  const nextLevelXP = Math.pow(userLevel, 2) * 100
-  const xpInCurrentLevel = Math.max(0, userXP - currentLevelBaseXP)
-  const xpRequiredForLevel = Math.max(1, nextLevelXP - currentLevelBaseXP)
-  const xpProgressPercent = Math.min(100, Math.round((xpInCurrentLevel / xpRequiredForLevel) * 100))
+  // Level progress curve based on server-side formula: level = floor(sqrt(xp/100)) + 1
+  const userProgress = levelProgress(userXP, userLevel)
 
   return (
     <div className="w-full flex flex-col gap-4">
@@ -228,8 +226,11 @@ export const LinearPath: React.FC = () => {
             <Link to="/shop" className="inline-flex items-center justify-center gap-1.5 py-3 rounded-xl bg-accent-magic text-white font-bold text-sm shadow-sm hover:brightness-110 transition-colors min-h-[44px]">
               <Coins className="w-4 h-4" /> Tukar Koin
             </Link>
-            <Link to="/profile" className="inline-flex items-center justify-center gap-1.5 py-3 rounded-xl bg-surface-elevated border border-border-subtle text-text-primary font-bold text-sm hover:bg-surface transition-colors min-h-[44px]">
-              <Trophy className="w-4 h-4" /> Perkembangan
+            <Link to="/koleksi" className="inline-flex items-center justify-center gap-1.5 py-3 rounded-xl bg-accent-gold text-white font-bold text-sm shadow-sm hover:brightness-110 transition-colors min-h-[44px]">
+              🎁 Buka Hadiah
+            </Link>
+            <Link to="/profile" className="col-span-2 inline-flex items-center justify-center gap-1.5 py-2.5 rounded-xl bg-surface-elevated border border-border-subtle text-text-primary font-bold text-xs hover:bg-surface transition-colors">
+              <Trophy className="w-3.5 h-3.5" /> Perkembangan
             </Link>
           </div>
         </Card>
@@ -250,7 +251,7 @@ export const LinearPath: React.FC = () => {
               {getTaskIcon(stats.nextTask.task_type)} {stats.nextTask.title}
             </span>
             <span className="text-[11px] font-semibold text-text-secondary whitespace-nowrap">
-              <span className="text-accent-gold font-bold">+{stats.nextTask.reward_coins} koin</span> • +{stats.nextTask.reward_xp} XP
+              <span className="text-accent-gold font-bold">+{stats.nextTask.reward_coins} koin</span> • +{stats.nextTask.reward_xp} Bintang
             </span>
           </div>
           <Button onClick={() => handleTaskClick(stats.nextTask!)} size="lg" className="w-full mt-4" disabled={earningLocked}>
@@ -270,6 +271,9 @@ export const LinearPath: React.FC = () => {
         </Card>
       )}
 
+      {/* Ticket Card — single SOT ledger CTA */}
+      <TicketCard />
+
       {/* Earning cap HALTED banner — authoritative from backend */}
       {earningLocked && !loading && (
         <Card className="p-4 border-amber-200 bg-amber-50">
@@ -278,7 +282,7 @@ export const LinearPath: React.FC = () => {
               <Lock className="w-4 h-4 text-amber-700" />
             </div>
             <div className="flex-1 min-w-0">
-              <h3 className="text-sm font-extrabold text-zinc-900">Batas earning bulanan tercapai</h3>
+              <h3 className="text-sm font-extrabold text-zinc-900">Batas Koin Bulanan tercapai</h3>
               <p className="text-xs text-zinc-600 mt-1 leading-relaxed">
                 Kamu sudah mencapai {earned ?? '—'} / {earningCap ?? '—'} koin periode ini (1–24). Tugas tetap terlihat, tapi tidak menghasilkan koin sampai periode berikutnya. Saldo {userCoins.toLocaleString('id-ID')} koin tetap aman.
               </p>
@@ -300,15 +304,15 @@ export const LinearPath: React.FC = () => {
           <div className="mt-2.5 flex items-center justify-between text-[11px] gap-2">
             <span className="inline-flex items-center gap-1.5 text-text-secondary">
               <Trophy className="w-3.5 h-3.5 text-accent-magic shrink-0" />
-              <span className="font-bold text-text-primary">Lv. {userLevel}</span>
-              <span>{xpInCurrentLevel}/{xpRequiredForLevel} XP</span>
+              <span className="font-bold text-text-primary">Tingkat {userProgress.level}</span>
+              <span>{userProgress.have}/{userProgress.required} Bintang</span>
             </span>
             <span className="inline-flex items-center gap-1 text-text-secondary shrink-0">
               <Flame className="w-3.5 h-3.5 text-accent-danger" /> <span className="font-bold">{userStreak} Hari</span>
             </span>
           </div>
           <div className="mt-2 h-1 bg-surface-elevated rounded-full overflow-hidden">
-            <div className="h-full bg-accent-magic/35 rounded-full transition-all" style={{ width: `${xpProgressPercent}%` }} />
+            <div className="h-full bg-accent-magic/35 rounded-full transition-all" style={{ width: `${userProgress.percent}%` }} />
           </div>
         </div>
       )}

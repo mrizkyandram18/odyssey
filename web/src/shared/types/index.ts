@@ -39,6 +39,32 @@ export interface LoginResponse {
   message?: string
 }
 
+export interface TicketStatus {
+  tickets: number
+}
+
+export interface ClaimTicketResponse {
+  granted: boolean
+  tickets: number
+}
+
+export interface OpenRewardResponse {
+  cosmetic_id: string
+  slot: 'frame' | 'effect'
+  asset: string
+  tier: number
+  is_new: boolean
+}
+
+export interface CollectionItem {
+  cosmetic_id: string
+  slot: 'frame' | 'effect'
+  asset: string
+  tier: number
+  owned?: boolean
+  equipped: boolean
+}
+
 export interface Family {
   id: string
   name?: string
@@ -173,6 +199,9 @@ export interface MemberView {
   payout_frequency?: 'THRESHOLD' | 'WEEKLY' | 'MONTHLY'
   minimum_withdrawal_coins?: number
   payout_config_source?: string
+  avatar_seed?: string
+  avatar_frame?: string
+  avatar_effect?: string
   created_at: string
 }
 
@@ -260,6 +289,8 @@ export interface RedemptionConfig {
   timezone: string
   default_monthly_coin_target?: number
   default_monthly_earning_cap?: number
+  max_monthly_earning_cap_ceiling?: number
+  level_cap_bonus?: Record<string, number>
   target_earning_start_day?: number
   target_earning_end_day?: number
   auto_block_inactivity_days?: number
@@ -271,6 +302,16 @@ export interface RedemptionConfig {
   effective_window_end?: number
   effective_weekday?: number
   effective_monthly_target?: number
+}
+
+export interface CosmeticCatalogItem {
+  id: string
+  name?: string
+  slot: 'frame' | 'effect'
+  asset: string
+  tier: number
+  is_active: boolean
+  created_at?: string
 }
 
 export interface RewardCatalogItem {

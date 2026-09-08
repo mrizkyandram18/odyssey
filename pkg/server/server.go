@@ -13,6 +13,7 @@ import (
 	"odyssey/internal/api/me"
 	apiPayoutConfig "odyssey/internal/api/payout_config"
 	"odyssey/internal/api/push"
+	apiRewards "odyssey/internal/api/rewards"
 	apiShop "odyssey/internal/api/shop"
 	"odyssey/internal/api/status"
 	"odyssey/pkg/auth"
@@ -36,7 +37,6 @@ func BuildHandler() (*Server, error) {
 
 	supabaseClient := db.NewClient(config.SupabaseURL, config.SupabaseServiceKey)
 	profileStore := db.NewProfileStore(supabaseClient)
-	localUserStore := db.NewLocalUserStore(supabaseClient)
 	familyStore := db.NewFamilyStore(supabaseClient)
 	pushStore := db.NewPushSubscriptionStore(supabaseClient)
 
@@ -60,7 +60,7 @@ func BuildHandler() (*Server, error) {
 
 	authenticator := auth.NewLocalAuthProviderWithBinder(
 		auth.NewBcryptHasher(),
-		localUserStore,
+		profileStore,
 		profileStore,
 	)
 
@@ -79,6 +79,7 @@ func BuildHandler() (*Server, error) {
 	familyTasksAPI := apiFamilyTasks.NewAPI(supabaseClient)
 	adminTasksAPI := apiAdminTasks.NewAPI(supabaseClient)
 	adminMembersAPI := apiAdminMembers.NewAPI(supabaseClient)
+	rewardsAPI := apiRewards.NewAPI(supabaseClient)
 	shopAPI := apiShop.NewAPI(supabaseClient)
 	payoutConfigAPI := apiPayoutConfig.NewAPI(supabaseClient)
 
@@ -191,6 +192,10 @@ func BuildHandler() (*Server, error) {
 	mux.HandleFunc("/api/shop", secure(mw.RequireAuth(shopAPI.Handler)))
 	mux.HandleFunc("/api/shop/", secure(mw.RequireAuth(shopAPI.Handler)))
 
+	// Reward tickets & collection (progression loop)
+	mux.HandleFunc("/api/rewards", secure(mw.RequireAuth(rewardsAPI.Handler)))
+	mux.HandleFunc("/api/rewards/", secure(mw.RequireAuth(rewardsAPI.Handler)))
+
 	// Admin Panel: Members, Tasks, Verification Queue, Claims Payout
 	mux.HandleFunc("/api/admin/members", secure(rateLimit(adminLimiter, mw.RequireAuth(adminMembersAPI.Handler))))
 	mux.HandleFunc("/api/admin/members/", secure(rateLimit(adminLimiter, mw.RequireAuth(adminMembersAPI.Handler))))
@@ -202,6 +207,8 @@ func BuildHandler() (*Server, error) {
 	mux.HandleFunc("/api/admin/claims/", secure(rateLimit(adminLimiter, mw.RequireAuth(shopAPI.Handler))))
 	mux.HandleFunc("/api/admin/config", secure(rateLimit(adminLimiter, mw.RequireAuth(adminTasksAPI.Handler))))
 	mux.HandleFunc("/api/admin/config/", secure(rateLimit(adminLimiter, mw.RequireAuth(adminTasksAPI.Handler))))
+	mux.HandleFunc("/api/admin/cosmetics", secure(rateLimit(adminLimiter, mw.RequireAuth(adminTasksAPI.Handler))))
+	mux.HandleFunc("/api/admin/cosmetics/", secure(rateLimit(adminLimiter, mw.RequireAuth(adminTasksAPI.Handler))))
 	mux.HandleFunc("/api/admin/payout-config", secure(rateLimit(adminLimiter, mw.RequireAuth(payoutConfigAPI.Handler))))
 	mux.HandleFunc("/api/admin/payout-config/", secure(rateLimit(adminLimiter, mw.RequireAuth(payoutConfigAPI.Handler))))
 

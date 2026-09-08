@@ -5,7 +5,7 @@ const SUPABASE_KEY = process.env.SUPABASE_SERVICE_KEY;
 
 async function fixHashes() {
   const hashVal = '$2a$10$tfuTDHMLQ0oW0WJqJz20seP0NvP5P2zdWNNxOuOd3bUa5TR1rB..W'; // admin123
-  const url = `${SUPABASE_URL}/rest/v1/odyssey_local_users?username=in.(admin,user_testing)`;
+  const url = `${SUPABASE_URL}/rest/v1/odyssey_user_profiles?username=in.(admin,user_testing)`;
   const headers = {
     'apikey': SUPABASE_KEY,
     'Authorization': `Bearer ${SUPABASE_KEY}`,
@@ -19,9 +19,9 @@ async function fixHashes() {
   console.log('Update status:', res.status);
 
   // Verify
-  const checkRes = await fetch(`${SUPABASE_URL}/rest/v1/odyssey_local_users?select=username,password_hash`, { headers });
+  const checkRes = await fetch(`${SUPABASE_URL}/rest/v1/odyssey_user_profiles?select=username,password_hash`, { headers });
   const checkData = await checkRes.json();
-  console.log('Updated local user rows:', checkData);
+  console.log('Updated profile rows:', checkData.map((r) => r.username));
 }
 
 fixHashes().catch(console.error);

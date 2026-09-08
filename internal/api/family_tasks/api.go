@@ -39,34 +39,91 @@ func fetchSystemTimezone(ctx context.Context, client db.SupabaseClient) string {
 }
 
 func getEffectiveEarningCap(ctx context.Context, client db.SupabaseClient, uid string) int {
+	baseCap := -1
+	userLevel := 1
 	// Try per-user cap directly
 	if uid != "" {
-		raw, err := client.Get(ctx, "odyssey_user_profiles", fmt.Sprintf("uid=eq.%s&select=monthly_earning_cap", uid))
+		raw, err := client.Get(ctx, "odyssey_user_profiles", fmt.Sprintf("uid=eq.%s&select=monthly_earning_cap,level", uid))
 		if err == nil && len(raw) > 0 && strings.Contains(string(raw), "monthly_earning_cap") {
 			var rows []struct {
 				MonthlyEarningCap *int `json:"monthly_earning_cap"`
+				Level             *int `json:"level"`
 			}
 			if err := json.Unmarshal(raw, &rows); err == nil && len(rows) > 0 {
 				if rows[0].MonthlyEarningCap != nil {
-					return *rows[0].MonthlyEarningCap
+					baseCap = *rows[0].MonthlyEarningCap
+				}
+				if rows[0].Level != nil && *rows[0].Level > 1 {
+					userLevel = *rows[0].Level
 				}
 			}
 		}
 	}
-	// Fallback to global default
-	raw, err := client.Get(ctx, "odyssey_system_config", "key=eq.default_monthly_earning_cap&select=value")
-	if err == nil && len(raw) > 0 {
-		var rows []struct {
-			Value string `json:"value"`
-		}
-		if err := json.Unmarshal(raw, &rows); err == nil && len(rows) > 0 {
-			if v, err := strconv.Atoi(strings.TrimSpace(rows[0].Value)); err == nil && v >= 0 && v <= 10000 {
-				return v
+	// Fallback to global default from odyssey_system_config
+	if baseCap < 0 {
+		raw, err := client.Get(ctx, "odyssey_system_config", "key=eq.default_monthly_earning_cap&select=value")
+		if err == nil && len(raw) > 0 {
+			var rows []struct {
+				Value string `json:"value"`
+			}
+			if err := json.Unmarshal(raw, &rows); err == nil && len(rows) > 0 {
+				if v, err := strconv.Atoi(strings.TrimSpace(rows[0].Value)); err == nil && v >= 0 {
+					baseCap = v
+				}
 			}
 		}
 	}
-	// Fallback constant if DB not migrated yet (DB value is source of truth)
-	return shared.DefaultMonthlyEarningCap
+	// If baseCap is still < 0, config is missing/invalid. Do not default to 0 (unlimited).
+	if baseCap < 0 {
+		return -1
+	}
+	// 0 = unlimited; bonus must not cap or alter unlimited
+	if baseCap == 0 {
+		return 0
+	}
+
+	// Level bonus from odyssey_system_config key 'level_cap_bonus'
+	levelBonus := 0
+	bonusRaw, err := client.Get(ctx, "odyssey_system_config", "key=eq.level_cap_bonus&select=value")
+	if err == nil && len(bonusRaw) > 0 {
+		var rows []struct {
+			Value string `json:"value"`
+		}
+		if err := json.Unmarshal(bonusRaw, &rows); err == nil && len(rows) > 0 && strings.TrimSpace(rows[0].Value) != "" {
+			var cfgMap map[string]int
+			if err := json.Unmarshal([]byte(rows[0].Value), &cfgMap); err == nil {
+				highestThreshold := -1
+				for k, bonusVal := range cfgMap {
+					if th, err := strconv.Atoi(k); err == nil && th <= userLevel && bonusVal >= 0 {
+						if th > highestThreshold {
+							highestThreshold = th
+							levelBonus = bonusVal
+						}
+					}
+				}
+			}
+		}
+	}
+
+	// Ceiling from odyssey_system_config key 'max_monthly_earning_cap_ceiling'
+	ceiling := -1
+	ceilingRaw, err := client.Get(ctx, "odyssey_system_config", "key=eq.max_monthly_earning_cap_ceiling&select=value")
+	if err == nil && len(ceilingRaw) > 0 {
+		var rows []struct {
+			Value string `json:"value"`
+		}
+		if err := json.Unmarshal(ceilingRaw, &rows); err == nil && len(rows) > 0 {
+			if v, err := strconv.Atoi(strings.TrimSpace(rows[0].Value)); err == nil && v > 0 {
+				ceiling = v
+			}
+		}
+	}
+
+	effective := baseCap + levelBonus
+	if ceiling > 0 && effective > ceiling {
+		return ceiling
+	}
+	return effective
 }
 
 func getEarnedThisPeriodForUser(ctx context.Context, client db.SupabaseClient, uid string) int {
@@ -524,6 +581,17 @@ func (a *API) HandleSubmit(w http.ResponseWriter, r *http.Request) {
 		}
 		var result map[string]any
 		_ = json.Unmarshal(rpcRes, &result)
+		// Post-task ticket claim hook (server-authoritative daily ticket)
+		if ok, _ := result["success"].(bool); ok {
+			claimRes, claimErr := a.client.RPC(ctx, "odyssey_claim_daily_ticket", map[string]any{"p_user_uid": uid})
+			if claimErr == nil && len(claimRes) > 0 {
+				var claimData map[string]any
+				if err := json.Unmarshal(claimRes, &claimData); err == nil {
+					result["ticket_granted"] = claimData["granted"]
+					result["ticket_balance"] = claimData["tickets"]
+				}
+			}
+		}
 		shared.WriteJSON(w, http.StatusOK, result)
 		return
 	}

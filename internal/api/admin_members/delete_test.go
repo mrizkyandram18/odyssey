@@ -31,13 +31,13 @@ func newDeleteTestClient(profiles []db.UserProfile, hasCredential bool, rpcErr e
 	c := &deleteTestClient{}
 	c.getFunc = func(ctx context.Context, table string, params string) ([]byte, error) {
 		if table == "odyssey_user_profiles" {
-			return json.Marshal(profiles)
-		}
-		if table == "odyssey_local_users" {
-			if hasCredential {
-				return json.Marshal([]map[string]any{{"profile_uid": "usr_target"}})
+			if strings.Contains(params, "password_hash") {
+				if hasCredential {
+					return json.Marshal([]map[string]any{{"password_hash": "$2a$10$testhash"}})
+				}
+				return []byte("[]"), nil
 			}
-			return []byte("[]"), nil
+			return json.Marshal(profiles)
 		}
 		return []byte("[]"), nil
 	}
@@ -84,17 +84,28 @@ func TestHandleDeleteMember_Success(t *testing.T) {
 	if res["success"] != true || res["deleted"] != true || res["is_active"] != false {
 		t.Fatalf("expected deleted soft-delete response, got %v", res)
 	}
-	// Exactly one credential DELETE; profile row itself is never hard-deleted.
-	dels := tablesMutated(c, http.MethodDelete)
-	if len(dels) != 1 || dels["odyssey_local_users"] != 1 {
-		t.Fatalf("expected single odyssey_local_users DELETE, got %v (all mutates %v)", dels, c.mutates)
+	// Credential is revoked via PATCH profiles.password_hash=NULL; profile row itself is never hard-deleted.
+	patches := tablesMutated(c, http.MethodPatch)
+	if patches["odyssey_user_profiles"] < 1 {
+		t.Fatalf("expected odyssey_user_profiles PATCH revoking credential, got %v (all mutates %v)", patches, c.mutates)
 	}
+	foundRevoke := false
 	for _, m := range c.mutates {
-		if m.table == "odyssey_task_submissions" || m.table == "odyssey_claims" ||
-			m.table == "odyssey_coin_transactions" || m.table == "odyssey_tasks" ||
-			m.table == "odyssey_user_profiles" {
-			t.Fatalf("history/profile must never be deleted, got %s %s", m.method, m.table)
+		if m.method == http.MethodPatch && m.table == "odyssey_user_profiles" {
+			if pm, ok := m.payload.(map[string]any); ok {
+				if v, exists := pm["password_hash"]; exists && v == nil {
+					if u, uexists := pm["username"]; uexists && u == nil {
+						foundRevoke = true
+					}
+				}
+			}
 		}
+		if m.method == http.MethodDelete {
+			t.Fatalf("profile/credential must never be hard-deleted, got %s %s", m.method, m.table)
+		}
+	}
+	if !foundRevoke {
+		t.Fatalf("expected password_hash=nil + username=nil revoke PATCH, got %v", c.mutates)
 	}
 }
 
@@ -105,24 +116,22 @@ func TestHandleDeleteMember_FallbackPatch(t *testing.T) {
 	if w.Code != http.StatusOK {
 		t.Fatalf("expected 200 got %d body %s", w.Code, w.Body.String())
 	}
-	var profilePatch, credDelete bool
+	var profilePatch, credRevoke bool
 	for _, m := range c.mutates {
 		if m.method == http.MethodPatch && m.table == "odyssey_user_profiles" {
-			profilePatch = true
 			pm, _ := m.payload.(map[string]any)
-			if pm["is_active"] != false {
-				t.Fatalf("expected is_active=false patch, got %v", pm)
+			if pm["is_active"] == false {
+				profilePatch = true
 			}
-			if !strings.Contains(m.params, "uid=eq.usr_target") || !strings.Contains(m.params, "is_active=eq.true") {
-				t.Fatalf("expected conditional deactivation params, got %s", m.params)
+			if v, exists := pm["password_hash"]; exists && v == nil {
+				if u, uexists := pm["username"]; uexists && u == nil {
+					credRevoke = true
+				}
 			}
-		}
-		if m.method == http.MethodDelete && m.table == "odyssey_local_users" {
-			credDelete = true
 		}
 	}
-	if !profilePatch || !credDelete {
-		t.Fatalf("expected profile PATCH + credential DELETE, got %v", c.mutates)
+	if !profilePatch || !credRevoke {
+		t.Fatalf("expected profile PATCH (deactivate) + credential revoke (password_hash=nil, username=nil), got %v", c.mutates)
 	}
 }
 
@@ -154,8 +163,20 @@ func TestHandleDeleteMember_BlockedWithCredentialUpgrades(t *testing.T) {
 	if res["deleted"] != true {
 		t.Fatalf("expected deleted:true, got %v", res)
 	}
-	if tablesMutated(c, http.MethodDelete)["odyssey_local_users"] != 1 {
-		t.Fatalf("expected credential DELETE, got %v", c.mutates)
+	foundRevoke := false
+	for _, m := range c.mutates {
+		if m.method == http.MethodPatch && m.table == "odyssey_user_profiles" {
+			if pm, ok := m.payload.(map[string]any); ok {
+				if v, exists := pm["password_hash"]; exists && v == nil {
+					if u, uexists := pm["username"]; uexists && u == nil {
+						foundRevoke = true
+					}
+				}
+			}
+		}
+	}
+	if !foundRevoke {
+		t.Fatalf("expected credential revoke (password_hash=nil, username=nil), got %v", c.mutates)
 	}
 }
 
@@ -262,12 +283,12 @@ type listFilterMock struct {
 
 func newListFilterMock() *listFilterMock {
 	profiles := []map[string]any{
-		{"uid": "u1", "family_id": "fam_1", "explorer_name": "Active", "role": "MEMBER", "is_active": true, "level": 1, "xp": 0, "coins": 0, "created_at": "2026-09-03T00:00:00Z"},
-		{"uid": "u2", "family_id": "fam_1", "explorer_name": "Blocked", "role": "MEMBER", "is_active": false, "level": 1, "xp": 0, "coins": 0, "created_at": "2026-09-02T00:00:00Z"},
-		{"uid": "u3", "family_id": "fam_1", "explorer_name": "Deleted", "role": "MEMBER", "is_active": false, "level": 1, "xp": 0, "coins": 0, "created_at": "2026-09-05T00:00:00Z"},
-		{"uid": "u4", "family_id": "fam_1", "explorer_name": "Admin", "role": "ADMIN", "is_active": true, "level": 1, "xp": 0, "coins": 0, "created_at": "2026-09-04T00:00:00Z"},
-		{"uid": "u5", "family_id": "fam_1", "explorer_name": "Guide", "role": "GUIDE", "is_active": true, "level": 1, "xp": 0, "coins": 0, "created_at": "2026-09-01T00:00:00Z"},
-		{"uid": "u9", "family_id": "fam_2", "explorer_name": "Other", "role": "MEMBER", "is_active": true, "level": 1, "xp": 0, "coins": 0, "created_at": "2026-09-06T00:00:00Z"},
+		{"uid": "u1", "username": "user_u1", "password_hash": "$2a$10$h1", "family_id": "fam_1", "explorer_name": "Active", "role": "MEMBER", "is_active": true, "level": 1, "xp": 0, "coins": 0, "created_at": "2026-09-03T00:00:00Z"},
+		{"uid": "u2", "username": "user_u2", "password_hash": "$2a$10$h2", "family_id": "fam_1", "explorer_name": "Blocked", "role": "MEMBER", "is_active": false, "level": 1, "xp": 0, "coins": 0, "created_at": "2026-09-02T00:00:00Z"},
+		{"uid": "u3", "username": "user_u3", "password_hash": nil, "family_id": "fam_1", "explorer_name": "Deleted", "role": "MEMBER", "is_active": false, "level": 1, "xp": 0, "coins": 0, "created_at": "2026-09-05T00:00:00Z"},
+		{"uid": "u4", "username": "user_u4", "password_hash": "$2a$10$h4", "family_id": "fam_1", "explorer_name": "Admin", "role": "ADMIN", "is_active": true, "level": 1, "xp": 0, "coins": 0, "created_at": "2026-09-04T00:00:00Z"},
+		{"uid": "u5", "username": "user_u5", "password_hash": "$2a$10$h5", "family_id": "fam_1", "explorer_name": "Guide", "role": "GUIDE", "is_active": true, "level": 1, "xp": 0, "coins": 0, "created_at": "2026-09-01T00:00:00Z"},
+		{"uid": "u9", "username": "user_u9", "password_hash": "$2a$10$h9", "family_id": "fam_2", "explorer_name": "Other", "role": "MEMBER", "is_active": true, "level": 1, "xp": 0, "coins": 0, "created_at": "2026-09-06T00:00:00Z"},
 	}
 	return &listFilterMock{
 		profiles:    profiles,
@@ -304,17 +325,19 @@ func listExcludedUIDs(params string) map[string]bool {
 
 func listCredentialUIDs(params string) map[string]bool {
 	out := map[string]bool{}
-	idx := strings.Index(params, "profile_uid=in.(")
-	if idx < 0 {
-		return out
-	}
-	seg := params[idx+len("profile_uid=in.("):]
-	if end := strings.Index(seg, ")"); end >= 0 {
-		seg = seg[:end]
-	}
-	for _, s := range strings.Split(seg, ",") {
-		if s = strings.TrimSpace(s); s != "" {
-			out[s] = true
+	for _, key := range []string{"uid=in.(", "profile_uid=in.("} {
+		idx := strings.Index(params, key)
+		if idx < 0 {
+			continue
+		}
+		seg := params[idx+len(key):]
+		if end := strings.Index(seg, ")"); end >= 0 {
+			seg = seg[:end]
+		}
+		for _, s := range strings.Split(seg, ",") {
+			if s = strings.TrimSpace(s); s != "" {
+				out[s] = true
+			}
 		}
 	}
 	return out
@@ -323,6 +346,32 @@ func listCredentialUIDs(params string) map[string]bool {
 func (m *listFilterMock) Get(ctx context.Context, table string, params string) ([]byte, error) {
 	switch table {
 	case "odyssey_user_profiles":
+		// Credential-presence query (select includes password_hash): answer from credentials map.
+		if strings.Contains(params, "password_hash") {
+			uids := listCredentialUIDs(params)
+			// Plain uid=eq.X form (unblock/delete guards).
+			for _, part := range strings.Split(params, "&") {
+				if strings.HasPrefix(part, "uid=eq.") {
+					uids[strings.TrimPrefix(part, "uid=eq.")] = true
+				}
+			}
+			rows := make([]map[string]any, 0)
+			for uid := range uids {
+				if m.credentials[uid] {
+					rows = append(rows, map[string]any{"uid": uid, "password_hash": "$2a$10$testhash"})
+				}
+			}
+			// Fallback: derive from profile rows when no explicit uid filter matched.
+			if len(uids) == 0 {
+				for _, p := range m.profiles {
+					uid, _ := p["uid"].(string)
+					if m.credentials[uid] {
+						rows = append(rows, map[string]any{"uid": uid, "password_hash": "$2a$10$testhash"})
+					}
+				}
+			}
+			return json.Marshal(rows)
+		}
 		fam := listFamilyParam(params)
 		excluded := listExcludedUIDs(params)
 		filtered := make([]map[string]any, 0)
@@ -364,24 +413,6 @@ func (m *listFilterMock) Get(ctx context.Context, table string, params string) (
 			return json.Marshal(filtered[offset:end])
 		}
 		return json.Marshal(filtered)
-	case "odyssey_local_users":
-		uids := listCredentialUIDs(params)
-		rows := make([]map[string]any, 0)
-		for uid := range uids {
-			if m.credentials[uid] {
-				rows = append(rows, map[string]any{"username": "user_" + uid, "profile_uid": uid})
-			}
-		}
-		// verificationUIDs-style fallback: plain profile_uid=eq.X
-		for _, part := range strings.Split(params, "&") {
-			if strings.HasPrefix(part, "profile_uid=eq.") {
-				uid := strings.TrimPrefix(part, "profile_uid=eq.")
-				if m.credentials[uid] {
-					rows = append(rows, map[string]any{"username": "user_" + uid, "profile_uid": uid})
-				}
-			}
-		}
-		return json.Marshal(rows)
 	}
 	return json.Marshal([]map[string]any{})
 }

@@ -3,6 +3,7 @@ import { Users, UserPlus, Coins, Edit3, Trash2, ChevronLeft, ChevronRight, Refre
 import { useAdminMembers } from '../../hooks/useAdminMembers'
 import { CreateMemberModal } from './CreateMemberModal'
 import { EditMemberModal } from './EditMemberModal'
+import { Avatar } from '../../../../shared/components/atoms/Avatar'
 
 function formatCycle(start?: string, end?: string): string {
   if (!start || !end) return '—'
@@ -180,11 +181,19 @@ export const MemberList: React.FC = () => {
                     return (
                       <tr key={member.uid} className="transition-colors hover:bg-zinc-50/60">
                         <td className="px-4 py-3">
-                          <div className="min-w-0">
-                            <p className="truncate text-xs font-semibold text-zinc-900">{member.explorer_name}</p>
-                            <p className="truncate text-[11px] text-zinc-500" title={`@${member.username}`}>
-                              @{member.username}
-                            </p>
+                          <div className="flex items-center gap-2.5 min-w-0">
+                            <Avatar
+                              seed={member.avatar_seed || member.uid}
+                              frame={member.avatar_frame || 'none'}
+                              effect={member.avatar_effect || 'none'}
+                              size="sm"
+                            />
+                            <div className="min-w-0">
+                              <p className="truncate text-xs font-semibold text-zinc-900">{member.explorer_name}</p>
+                              <p className="truncate text-[11px] text-zinc-500" title={`@${member.username}`}>
+                                @{member.username}
+                              </p>
+                            </div>
                           </div>
                         </td>
                         <td className="px-3 py-3">
@@ -232,7 +241,7 @@ export const MemberList: React.FC = () => {
                               Lv {member.level}
                             </span>
                             <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full border ${member.earning_locked ? 'bg-amber-100 text-amber-700 border-amber-200' : 'bg-emerald-50 text-emerald-700 border-emerald-200'}`}>
-                              {member.earned_this_period ?? 0}/{member.monthly_earning_cap ?? 3320} {member.earning_locked ? '🔒 HALTED' : '✓'}
+                              {member.earned_this_period ?? 0}/{member.monthly_earning_cap != null ? member.monthly_earning_cap : '—'} {member.earning_locked ? '🔒 HALTED' : '✓'}
                             </span>
                           </div>
                         </td>
@@ -400,7 +409,7 @@ export const MemberList: React.FC = () => {
                         </span>
                       </p>
                       <p className={`mt-1 text-[10px] font-bold inline-flex px-2 py-0.5 rounded-full border ${member.earning_locked ? 'bg-amber-100 text-amber-700 border-amber-200' : 'bg-emerald-50 text-emerald-700 border-emerald-200'}`}>
-                        {member.earned_this_period ?? 0}/{member.monthly_earning_cap ?? 3320} {member.earning_locked ? '🔒 HALTED' : '✓ ACTIVE'}
+                        {member.earned_this_period ?? 0}/{member.monthly_earning_cap != null ? member.monthly_earning_cap : '—'} {member.earning_locked ? '🔒 HALTED' : '✓ ACTIVE'}
                       </p>
                     </div>
                   </div>

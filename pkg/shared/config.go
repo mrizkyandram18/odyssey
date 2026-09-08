@@ -140,11 +140,13 @@ type RedemptionConfig struct {
 	PayoutTargetCoins        int    `json:"payout_target_coins"`
 	MaxPayoutCoins           int    `json:"max_payout_coins"`
 	Timezone                 string `json:"timezone"`
-	DefaultMonthlyCoinTarget int    `json:"default_monthly_coin_target"`
-	DefaultMonthlyEarningCap int    `json:"default_monthly_earning_cap,omitempty"`
-	TargetEarningStartDay    int    `json:"target_earning_start_day"`
-	TargetEarningEndDay      int    `json:"target_earning_end_day"`
-	AutoBlockInactivityDays  int    `json:"auto_block_inactivity_days"`
+	DefaultMonthlyCoinTarget    int            `json:"default_monthly_coin_target"`
+	DefaultMonthlyEarningCap    int            `json:"default_monthly_earning_cap,omitempty"`
+	MaxMonthlyEarningCapCeiling int            `json:"max_monthly_earning_cap_ceiling,omitempty"`
+	LevelCapBonus               map[string]int `json:"level_cap_bonus,omitempty"`
+	TargetEarningStartDay       int            `json:"target_earning_start_day"`
+	TargetEarningEndDay         int            `json:"target_earning_end_day"`
+	AutoBlockInactivityDays     int            `json:"auto_block_inactivity_days"`
 }
 
 const DefaultRedemptionStartDay = 24

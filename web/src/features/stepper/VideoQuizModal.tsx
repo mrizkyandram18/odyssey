@@ -1,10 +1,11 @@
 import React, { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import confetti from 'canvas-confetti'
-import { Play, CheckCircle2, XCircle, Award, Sparkles, ChevronRight, HelpCircle, X } from 'lucide-react'
+import { Play, CheckCircle2, XCircle, Award, Sparkles, ChevronRight, HelpCircle, X, Gift } from 'lucide-react'
 import type { TaskView, QuizQuestion } from '../../shared/types'
 import { tasksApi } from '../../shared/lib/api'
 import { isEarningCapError, EARNING_CAP_MESSAGE } from '../../shared/lib/earning'
+import { CapsuleModal } from '../collection/CapsuleModal'
 
 interface VideoQuizModalProps {
   task: TaskView
@@ -43,6 +44,8 @@ export const VideoQuizModal: React.FC<VideoQuizModalProps> = ({ task, onClose, o
   const [submitting, setSubmitting] = useState(false)
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
   const [earnedRewards, setEarnedRewards] = useState<{ coins: number; xp: number } | null>(null)
+  const [ticketGranted, setTicketGranted] = useState(false)
+  const [showCapsule, setShowCapsule] = useState(false)
 
   const handleSelectOption = (questionId: string | number, option: string) => {
     const match = option.match(/^([A-Za-z])[.)]\s*(.*)/)
@@ -68,6 +71,9 @@ export const VideoQuizModal: React.FC<VideoQuizModalProps> = ({ task, onClose, o
           coins: res.coins_earned || task.reward_coins,
           xp: res.xp_earned || task.reward_xp,
         })
+        if ((res as any).ticket_granted) {
+          setTicketGranted(true)
+        }
         setCurrentStep('result')
         confetti({
           particleCount: 80,
@@ -288,9 +294,31 @@ export const VideoQuizModal: React.FC<VideoQuizModalProps> = ({ task, onClose, o
                   <div className="w-px h-5 bg-border-subtle" />
                   <div className="flex items-center gap-1.5 text-accent-magic font-bold">
                     <Sparkles className="w-5 h-5" />
-                    <span>+{earnedRewards?.xp || task.xp_earned || task.reward_xp} EXP</span>
+                    <span>+{earnedRewards?.xp || task.xp_earned || task.reward_xp} Bintang</span>
                   </div>
                 </div>
+
+                {ticketGranted && (
+                  <div className="p-3.5 rounded-2xl bg-accent-magic/10 border border-accent-magic/20 space-y-2">
+                    <div className="flex items-center justify-center gap-2 text-accent-magic font-extrabold text-sm">
+                      <Gift className="w-5 h-5" />
+                      <span>🎁 Kamu mendapat Tiket Hadiah!</span>
+                    </div>
+                    <p className="text-xs text-text-secondary leading-relaxed">
+                      Gunakan tiketmu untuk membuka hadiah kejutan berisi hiasan profil.
+                    </p>
+                    <button
+                      type="button"
+                      onClick={() => setShowCapsule(true)}
+                      className="px-4 py-2 rounded-xl bg-accent-magic text-white font-bold text-xs shadow hover:brightness-110 active:scale-95 transition-all"
+                    >
+                      Buka Hadiah
+                    </button>
+                    <p className="text-[11px] text-text-secondary">
+                      Tiket tersimpan. Kamu bisa membukanya kapan saja.
+                    </p>
+                  </div>
+                )}
 
                 <div className="space-y-2 pt-2">
                   <button
@@ -323,6 +351,12 @@ export const VideoQuizModal: React.FC<VideoQuizModalProps> = ({ task, onClose, o
           </AnimatePresence>
         </div>
       </motion.div>
+      {showCapsule && (
+        <CapsuleModal
+          onClose={() => setShowCapsule(false)}
+          onOpened={() => setShowCapsule(false)}
+        />
+      )}
     </div>
   )
 }

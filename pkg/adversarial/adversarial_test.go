@@ -184,6 +184,9 @@ func (m *mockAdversarialDB) Get(ctx context.Context, table string, params string
 			if targetUID != "" && p.UID != targetUID {
 				continue
 			}
+			if targetUsername != "" && p.Username != targetUsername {
+				continue
+			}
 			prof := *p
 			// Default IsActive to true for test-seeded profiles where omission means active (zero value false would incorrectly block)
 			if !prof.IsActive && prof.BlockedAt == nil && prof.CreatedAt.IsZero() {
@@ -759,6 +762,17 @@ func (m *mockAdversarialDB) UploadStorage(ctx context.Context, bucket string, st
 func (m *mockAdversarialDB) GetLocalUserByUsername(ctx context.Context, username string) (*auth.LocalUser, error) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
+	// Profiles SOT first; legacy localUsers map as fallback for directly-seeded fixtures.
+	for _, p := range m.profiles {
+		if p != nil && p.Username == username {
+			return &auth.LocalUser{
+				ID:           p.UID,
+				Username:     p.Username,
+				PasswordHash: p.PasswordHash,
+				ProfileUID:   p.UID,
+			}, nil
+		}
+	}
 	u, ok := m.localUsers[username]
 	if !ok {
 		return nil, auth.ErrLocalUserNotFound
@@ -783,6 +797,9 @@ func (m *mockAdversarialDB) GetUserProfile(ctx context.Context, uid string) (*db
 func (m *mockAdversarialDB) GetPasswordHash(ctx context.Context, uid string) (string, error) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
+	if p, ok := m.profiles[uid]; ok && p != nil && p.PasswordHash != "" {
+		return p.PasswordHash, nil
+	}
 	for _, u := range m.localUsers {
 		if fmt.Sprintf("%v", u["profile_uid"]) == uid {
 			return fmt.Sprintf("%v", u["password_hash"]), nil

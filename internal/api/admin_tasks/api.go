@@ -1156,6 +1156,26 @@ func (a *API) Handler(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
+	// Cosmetics management
+	if path == "/api/admin/cosmetics" {
+		if r.Method == http.MethodGet {
+			a.HandleListCosmetics(w, r)
+			return
+		}
+		if r.Method == http.MethodPost {
+			a.HandleCreateCosmetic(w, r)
+			return
+		}
+	}
+
+	if strings.HasPrefix(path, "/api/admin/cosmetics/") {
+		cosmeticID := strings.TrimPrefix(path, "/api/admin/cosmetics/")
+		if cosmeticID != "" && (r.Method == http.MethodPatch || r.Method == http.MethodPut) {
+			a.HandleUpdateCosmetic(w, r, cosmeticID)
+			return
+		}
+	}
+
 	// Task management
 	if path == "/api/admin/tasks" {
 		if r.Method == http.MethodGet {
@@ -1218,8 +1238,11 @@ func (a *API) HandleGetAdminConfig(w http.ResponseWriter, r *http.Request) {
 	timezone := shared.DefaultTimezone
 	autoBlockDays := shared.DefaultAutoBlockInactivityDays
 	monthlyCoinTarget := shared.DefaultMonthlyCoinTarget
-	monthlyEarningCap := shared.DefaultMonthlyEarningCap
-	raw, err := a.client.Get(ctx, "odyssey_system_config", "key=in.(redemption_start_day,redemption_end_day,payout_day,earning_period_days,coin_conversion_rate,payout_target_rupiah,payout_target_coins,max_payout_coins,timezone,auto_block_inactivity_days,AUTO_BLOCK_INACTIVITY_DAYS,default_monthly_coin_target,default_monthly_earning_cap)")
+	monthlyEarningCap := -1
+	maxMonthlyEarningCapCeiling := 0
+	var levelCapBonus map[string]int
+
+	raw, err := a.client.Get(ctx, "odyssey_system_config", "key=in.(redemption_start_day,redemption_end_day,payout_day,earning_period_days,coin_conversion_rate,payout_target_rupiah,payout_target_coins,max_payout_coins,timezone,auto_block_inactivity_days,AUTO_BLOCK_INACTIVITY_DAYS,default_monthly_coin_target,default_monthly_earning_cap,max_monthly_earning_cap_ceiling,level_cap_bonus)")
 	if err == nil && len(raw) > 0 {
 		type ConfigRow struct {
 			Key   string `json:"key"`
@@ -1279,8 +1302,17 @@ func (a *API) HandleGetAdminConfig(w http.ResponseWriter, r *http.Request) {
 						monthlyCoinTarget = v
 					}
 				case "default_monthly_earning_cap":
-					if v, err := strconv.Atoi(strings.TrimSpace(row.Value)); err == nil && v >= 0 && v <= 10000 {
+					if v, err := strconv.Atoi(strings.TrimSpace(row.Value)); err == nil && v >= 0 {
 						monthlyEarningCap = v
+					}
+				case "max_monthly_earning_cap_ceiling":
+					if v, err := strconv.Atoi(strings.TrimSpace(row.Value)); err == nil && v >= 0 {
+						maxMonthlyEarningCapCeiling = v
+					}
+				case "level_cap_bonus":
+					var m map[string]int
+					if err := json.Unmarshal([]byte(row.Value), &m); err == nil {
+						levelCapBonus = m
 					}
 				}
 			}
@@ -1306,6 +1338,8 @@ func (a *API) HandleGetAdminConfig(w http.ResponseWriter, r *http.Request) {
 	})
 	cfg.DefaultMonthlyCoinTarget = monthlyCoinTarget
 	cfg.DefaultMonthlyEarningCap = monthlyEarningCap
+	cfg.MaxMonthlyEarningCapCeiling = maxMonthlyEarningCapCeiling
+	cfg.LevelCapBonus = levelCapBonus
 	shared.WriteJSON(w, http.StatusOK, cfg)
 }
 
@@ -1317,18 +1351,20 @@ func (a *API) HandleUpdateAdminConfig(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 
 	var req struct {
-		StartDay                *int    `json:"start_day"`
-		EndDay                  *int    `json:"end_day"`
-		PayoutDay               *int    `json:"payout_day"`
-		EarningPeriodDays       *int    `json:"earning_period_days"`
-		ConversionRate          *int    `json:"conversion_rate"`
-		PayoutTargetRupiah      *int    `json:"payout_target_rupiah"`
-		PayoutTargetCoins       *int    `json:"payout_target_coins"`
-		MaxPayoutCoins          *int    `json:"max_payout_coins"`
-		Timezone                *string `json:"timezone"`
-		AutoBlockInactivityDays *int    `json:"auto_block_inactivity_days"`
-		MonthlyCoinTarget       *int    `json:"default_monthly_coin_target"`
-		MonthlyEarningCap       *int    `json:"default_monthly_earning_cap"`
+		StartDay                    *int            `json:"start_day"`
+		EndDay                      *int            `json:"end_day"`
+		PayoutDay                   *int            `json:"payout_day"`
+		EarningPeriodDays           *int            `json:"earning_period_days"`
+		ConversionRate              *int            `json:"conversion_rate"`
+		PayoutTargetRupiah          *int            `json:"payout_target_rupiah"`
+		PayoutTargetCoins           *int            `json:"payout_target_coins"`
+		MaxPayoutCoins              *int            `json:"max_payout_coins"`
+		Timezone                    *string         `json:"timezone"`
+		AutoBlockInactivityDays     *int            `json:"auto_block_inactivity_days"`
+		MonthlyCoinTarget           *int            `json:"default_monthly_coin_target"`
+		MonthlyEarningCap           *int            `json:"default_monthly_earning_cap"`
+		MaxMonthlyEarningCapCeiling *int            `json:"max_monthly_earning_cap_ceiling"`
+		LevelCapBonus               *map[string]int `json:"level_cap_bonus"`
 	}
 	if err := shared.ReadJSON(r, &req); err != nil {
 		shared.WriteJSONError(w, "invalid request payload: "+err.Error(), http.StatusBadRequest)
@@ -1336,7 +1372,7 @@ func (a *API) HandleUpdateAdminConfig(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Fetch current config to merge
-	currentRaw, _ := a.client.Get(ctx, "odyssey_system_config", "key=in.(redemption_start_day,redemption_end_day,payout_day,earning_period_days,coin_conversion_rate,payout_target_rupiah,max_payout_coins,timezone)")
+	currentRaw, _ := a.client.Get(ctx, "odyssey_system_config", "key=in.(redemption_start_day,redemption_end_day,payout_day,earning_period_days,coin_conversion_rate,payout_target_rupiah,max_payout_coins,timezone,default_monthly_earning_cap,max_monthly_earning_cap_ceiling)")
 	curMap := map[string]string{}
 	if len(currentRaw) > 0 {
 		var typed []struct {
@@ -1483,14 +1519,219 @@ func (a *API) HandleUpdateAdminConfig(w http.ResponseWriter, r *http.Request) {
 		}
 		upsert("default_monthly_coin_target", strconv.Itoa(*req.MonthlyCoinTarget))
 	}
+	if req.MaxMonthlyEarningCapCeiling != nil {
+		if *req.MaxMonthlyEarningCapCeiling < 0 {
+			shared.WriteJSONError(w, "max_monthly_earning_cap_ceiling must be >= 0", http.StatusBadRequest)
+			return
+		}
+		upsert("max_monthly_earning_cap_ceiling", strconv.Itoa(*req.MaxMonthlyEarningCapCeiling))
+	}
 	if req.MonthlyEarningCap != nil {
-		if *req.MonthlyEarningCap < 0 || *req.MonthlyEarningCap > 10000 {
-			shared.WriteJSONError(w, "default_monthly_earning_cap must be 0..10000", http.StatusBadRequest)
+		if *req.MonthlyEarningCap < 0 {
+			shared.WriteJSONError(w, "default_monthly_earning_cap must be >= 0", http.StatusBadRequest)
+			return
+		}
+		effectiveCeiling := -1
+		if req.MaxMonthlyEarningCapCeiling != nil {
+			effectiveCeiling = *req.MaxMonthlyEarningCapCeiling
+		} else if v, err := strconv.Atoi(curMap["max_monthly_earning_cap_ceiling"]); err == nil {
+			effectiveCeiling = v
+		}
+		if effectiveCeiling > 0 && *req.MonthlyEarningCap > effectiveCeiling {
+			shared.WriteJSONError(w, fmt.Sprintf("default_monthly_earning_cap (%d) cannot exceed ceiling (%d)", *req.MonthlyEarningCap, effectiveCeiling), http.StatusBadRequest)
 			return
 		}
 		upsert("default_monthly_earning_cap", strconv.Itoa(*req.MonthlyEarningCap))
 	}
+	if req.MaxMonthlyEarningCapCeiling != nil && *req.MaxMonthlyEarningCapCeiling > 0 {
+		effectiveCap := -1
+		if req.MonthlyEarningCap != nil {
+			effectiveCap = *req.MonthlyEarningCap
+		} else if v, err := strconv.Atoi(curMap["default_monthly_earning_cap"]); err == nil {
+			effectiveCap = v
+		}
+		if effectiveCap > *req.MaxMonthlyEarningCapCeiling {
+			shared.WriteJSONError(w, fmt.Sprintf("ceiling (%d) cannot be lower than default_monthly_earning_cap (%d)", *req.MaxMonthlyEarningCapCeiling, effectiveCap), http.StatusBadRequest)
+			return
+		}
+	}
+	if req.LevelCapBonus != nil {
+		for k, v := range *req.LevelCapBonus {
+			lvl, err := strconv.Atoi(k)
+			if err != nil || lvl <= 0 {
+				shared.WriteJSONError(w, "level_cap_bonus keys must be positive integers", http.StatusBadRequest)
+				return
+			}
+			if v < 0 {
+				shared.WriteJSONError(w, "level_cap_bonus values must be >= 0", http.StatusBadRequest)
+				return
+			}
+		}
+		b, err := json.Marshal(*req.LevelCapBonus)
+		if err != nil {
+			shared.WriteJSONError(w, "invalid level_cap_bonus format", http.StatusBadRequest)
+			return
+		}
+		upsert("level_cap_bonus", string(b))
+	}
 
 	// Return updated config
 	a.HandleGetAdminConfig(w, r)
+}
+
+// CosmeticItemDTO represents cosmetic items returned to admin
+type CosmeticItemDTO struct {
+	ID        string `json:"id"`
+	Name      string `json:"name,omitempty"`
+	Slot      string `json:"slot"`
+	Asset     string `json:"asset"`
+	Tier      int    `json:"tier"`
+	IsActive  bool   `json:"is_active"`
+	CreatedAt string `json:"created_at,omitempty"`
+}
+
+func (a *API) HandleListCosmetics(w http.ResponseWriter, r *http.Request) {
+	_, ok := a.requireAdmin(w, r)
+	if !ok {
+		return
+	}
+	ctx := r.Context()
+	raw, err := a.client.Get(ctx, "cosmetic_items", "order=created_at.desc&select=*")
+	if err != nil {
+		shared.WriteJSONError(w, "gagal memuat daftar kosmetik: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+	var items []CosmeticItemDTO
+	if err := json.Unmarshal(raw, &items); err != nil {
+		items = []CosmeticItemDTO{}
+	}
+	shared.WriteJSON(w, http.StatusOK, map[string]any{"items": items})
+}
+
+func (a *API) HandleCreateCosmetic(w http.ResponseWriter, r *http.Request) {
+	_, ok := a.requireAdmin(w, r)
+	if !ok {
+		return
+	}
+	var req struct {
+		ID       string `json:"id"`
+		Name     string `json:"name"`
+		Slot     string `json:"slot"`
+		Asset    string `json:"asset"`
+		Tier     *int   `json:"tier"`
+		IsActive *bool  `json:"is_active"`
+	}
+	if err := shared.ReadJSON(r, &req); err != nil {
+		shared.WriteJSONError(w, "invalid request body: "+err.Error(), http.StatusBadRequest)
+		return
+	}
+	id := strings.TrimSpace(req.ID)
+	if id == "" {
+		shared.WriteJSONError(w, "id wajib diisi", http.StatusBadRequest)
+		return
+	}
+	slot := strings.TrimSpace(req.Slot)
+	if slot != "frame" && slot != "effect" {
+		shared.WriteJSONError(w, "slot harus 'frame' atau 'effect'", http.StatusBadRequest)
+		return
+	}
+	asset := strings.TrimSpace(req.Asset)
+	if asset == "" {
+		shared.WriteJSONError(w, "asset wajib diisi", http.StatusBadRequest)
+		return
+	}
+	tier := 1
+	if req.Tier != nil {
+		if *req.Tier < 1 {
+			shared.WriteJSONError(w, "tier harus >= 1", http.StatusBadRequest)
+			return
+		}
+		tier = *req.Tier
+	}
+	isActive := true
+	if req.IsActive != nil {
+		isActive = *req.IsActive
+	}
+
+	payload := map[string]any{
+		"id":        id,
+		"name":      strings.TrimSpace(req.Name),
+		"slot":      slot,
+		"asset":     asset,
+		"tier":      tier,
+		"is_active": isActive,
+	}
+	ctx := r.Context()
+	res, err := a.client.Mutate(ctx, http.MethodPost, "cosmetic_items", payload, "")
+	if err != nil {
+		shared.WriteJSONError(w, "gagal membuat kosmetik: "+err.Error(), http.StatusBadRequest)
+		return
+	}
+	w.WriteHeader(http.StatusCreated)
+	w.Header().Set("Content-Type", "application/json")
+	_, _ = w.Write(res)
+}
+
+func (a *API) HandleUpdateCosmetic(w http.ResponseWriter, r *http.Request, id string) {
+	_, ok := a.requireAdmin(w, r)
+	if !ok {
+		return
+	}
+	if strings.TrimSpace(id) == "" {
+		shared.WriteJSONError(w, "id tidak valid", http.StatusBadRequest)
+		return
+	}
+	var req struct {
+		Name     *string `json:"name"`
+		Slot     *string `json:"slot"`
+		Asset    *string `json:"asset"`
+		Tier     *int    `json:"tier"`
+		IsActive *bool   `json:"is_active"`
+	}
+	if err := shared.ReadJSON(r, &req); err != nil {
+		shared.WriteJSONError(w, "invalid request body: "+err.Error(), http.StatusBadRequest)
+		return
+	}
+	patch := map[string]any{}
+	if req.Name != nil {
+		patch["name"] = strings.TrimSpace(*req.Name)
+	}
+	if req.Slot != nil {
+		slot := strings.TrimSpace(*req.Slot)
+		if slot != "frame" && slot != "effect" {
+			shared.WriteJSONError(w, "slot harus 'frame' atau 'effect'", http.StatusBadRequest)
+			return
+		}
+		patch["slot"] = slot
+	}
+	if req.Asset != nil {
+		asset := strings.TrimSpace(*req.Asset)
+		if asset == "" {
+			shared.WriteJSONError(w, "asset tidak boleh kosong", http.StatusBadRequest)
+			return
+		}
+		patch["asset"] = asset
+	}
+	if req.Tier != nil {
+		if *req.Tier < 1 {
+			shared.WriteJSONError(w, "tier harus >= 1", http.StatusBadRequest)
+			return
+		}
+		patch["tier"] = *req.Tier
+	}
+	if req.IsActive != nil {
+		patch["is_active"] = *req.IsActive
+	}
+	if len(patch) == 0 {
+		shared.WriteJSONError(w, "tidak ada field yang diubah", http.StatusBadRequest)
+		return
+	}
+
+	ctx := r.Context()
+	res, err := a.client.Mutate(ctx, http.MethodPatch, "cosmetic_items", patch, "id=eq."+id)
+	if err != nil {
+		shared.WriteJSONError(w, "gagal memperbarui kosmetik: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+	shared.WriteJSON(w, http.StatusOK, map[string]any{"status": "ok", "result": string(res)})
 }

@@ -20,7 +20,9 @@ export function useAdminConfig() {
   const [timezoneInput, setTimezoneInput] = useState('Asia/Jakarta')
   const [autoBlockInput, setAutoBlockInput] = useState('5')
   const [monthlyTargetInput, setMonthlyTargetInput] = useState('0')
-  const [monthlyCapInput, setMonthlyCapInput] = useState('3320')
+  const [monthlyCapInput, setMonthlyCapInput] = useState('0')
+  const [maxCapCeilingInput, setMaxCapCeilingInput] = useState('')
+  const [levelCapBonusInput, setLevelCapBonusInput] = useState('')
 
   const fetchConfig = useCallback(async () => {
     setIsFetching(true)
@@ -39,7 +41,9 @@ export function useAdminConfig() {
         setTimezoneInput(res.timezone || 'Asia/Jakarta')
         setAutoBlockInput(String(res.auto_block_inactivity_days ?? 5))
         setMonthlyTargetInput(String(res.default_monthly_coin_target ?? 0))
-        setMonthlyCapInput(String(res.default_monthly_earning_cap ?? 3320))
+        setMonthlyCapInput(res.default_monthly_earning_cap != null && res.default_monthly_earning_cap >= 0 ? String(res.default_monthly_earning_cap) : '0')
+        setMaxCapCeilingInput(res.max_monthly_earning_cap_ceiling != null ? String(res.max_monthly_earning_cap_ceiling) : '')
+        setLevelCapBonusInput(res.level_cap_bonus ? JSON.stringify(res.level_cap_bonus) : '')
       }
     } catch (err: any) {
       setErrorMsg(err?.message || 'Gagal memuat konfigurasi ekonomi')
@@ -67,6 +71,7 @@ export function useAdminConfig() {
     const autoBlock = parseInt(autoBlockInput, 10)
     const monthlyTarget = parseInt(monthlyTargetInput, 10)
     const monthlyCap = parseInt(monthlyCapInput, 10)
+    const ceiling = maxCapCeilingInput.trim() !== '' ? parseInt(maxCapCeilingInput, 10) : undefined
 
     if (isNaN(start) || start < 1 || start > 31) {
       setErrorMsg('Tanggal mulai harus antara 1 sampai 31')
@@ -108,9 +113,40 @@ export function useAdminConfig() {
       setErrorMsg('Target koin bulanan default harus antara 0 sampai 10000')
       return
     }
-    if (isNaN(monthlyCap) || monthlyCap < 0 || monthlyCap > 10000) {
-      setErrorMsg('Batas earning bulanan default harus antara 0 sampai 10000')
+    if (isNaN(monthlyCap) || monthlyCap < 0) {
+      setErrorMsg('Batas earning bulanan default harus >= 0 (0 = unlimited)')
       return
+    }
+    if (ceiling !== undefined && (isNaN(ceiling) || ceiling < 0)) {
+      setErrorMsg('Plafon earning cap ceiling harus >= 0')
+      return
+    }
+    if (ceiling !== undefined && ceiling > 0 && monthlyCap > ceiling) {
+      setErrorMsg(`Batas earning bulanan default (${monthlyCap}) tidak boleh melebihi ceiling (${ceiling})`)
+      return
+    }
+
+    let parsedBonusMap: Record<string, number> | undefined
+    if (levelCapBonusInput.trim() !== '') {
+      try {
+        const parsed = JSON.parse(levelCapBonusInput)
+        if (typeof parsed !== 'object' || parsed === null || Array.isArray(parsed)) {
+          throw new Error('Format harus objek JSON')
+        }
+        for (const [k, v] of Object.entries(parsed)) {
+          const numKey = parseInt(k, 10)
+          if (isNaN(numKey) || numKey <= 0) {
+            throw new Error(`Level threshold "${k}" harus bilangan bulat positif`)
+          }
+          if (typeof v !== 'number' || v < 0) {
+            throw new Error(`Bonus koin untuk level ${k} harus angka >= 0`)
+          }
+        }
+        parsedBonusMap = parsed as Record<string, number>
+      } catch (err: any) {
+        setErrorMsg(`Format level bonus tidak valid: ${err?.message || 'JSON error'}`)
+        return
+      }
     }
 
     setIsSaving(true)
@@ -128,6 +164,8 @@ export function useAdminConfig() {
         auto_block_inactivity_days: autoBlock,
         default_monthly_coin_target: monthlyTarget,
         default_monthly_earning_cap: monthlyCap,
+        max_monthly_earning_cap_ceiling: ceiling,
+        level_cap_bonus: parsedBonusMap,
       })
       setConfig(updated)
       setSuccessMsg('Konfigurasi ekonomi berhasil disimpan!')
@@ -167,6 +205,10 @@ export function useAdminConfig() {
     setMonthlyTargetInput,
     monthlyCapInput,
     setMonthlyCapInput,
+    maxCapCeilingInput,
+    setMaxCapCeilingInput,
+    levelCapBonusInput,
+    setLevelCapBonusInput,
     handleSaveConfig,
     fetchConfig,
   }

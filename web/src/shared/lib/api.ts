@@ -12,6 +12,11 @@ import type {
   CreateMemberInput,
   UpdateMemberInput,
   PaginatedResponse,
+  TicketStatus,
+  ClaimTicketResponse,
+  OpenRewardResponse,
+  CollectionItem,
+  CosmeticCatalogItem,
 } from '../types'
 import { getSession, isSessionExpired } from './session'
 
@@ -172,6 +177,14 @@ export const tasksApi = {
     apiClient.post<SubmitTaskResponse>(`/api/tasks/${taskId}/submit`, data),
 }
 
+export const rewardsApi = {
+  status: () => apiClient.get<TicketStatus>('/api/rewards'),
+  claimTicket: () => apiClient.post<ClaimTicketResponse>('/api/rewards/claim', {}),
+  openReward: () => apiClient.post<OpenRewardResponse>('/api/rewards/open', {}),
+  collection: () => apiClient.get<{ items: CollectionItem[] }>('/api/rewards/collection'),
+  equip: (cosmetic_id: string) => apiClient.post<{ status: string }>('/api/rewards/equip', { cosmetic_id }),
+}
+
 export const shopApi = {
   getConfig: () => apiClient.get<RedemptionConfig>('/api/shop/config'),
   getCatalog: () => apiClient.get<RewardCatalogItem[]>('/api/shop/items'),
@@ -198,8 +211,22 @@ export const adminMembersApi = {
 
 export const adminTasksApi = {
   getConfig: () => apiClient.get<RedemptionConfig>('/api/admin/config'),
-  updateConfig: (data: { start_day?: number; end_day?: number; payout_day?: number; earning_period_days?: number; conversion_rate?: number; payout_target_rupiah?: number; payout_target_coins?: number; max_payout_coins?: number; timezone?: string; auto_block_inactivity_days?: number; default_monthly_coin_target?: number; default_monthly_earning_cap?: number }) =>
-    apiClient.post<RedemptionConfig>('/api/admin/config', data),
+  updateConfig: (data: {
+    start_day?: number
+    end_day?: number
+    payout_day?: number
+    earning_period_days?: number
+    conversion_rate?: number
+    payout_target_rupiah?: number
+    payout_target_coins?: number
+    max_payout_coins?: number
+    timezone?: string
+    auto_block_inactivity_days?: number
+    default_monthly_coin_target?: number
+    default_monthly_earning_cap?: number
+    max_monthly_earning_cap_ceiling?: number
+    level_cap_bonus?: Record<string, number>
+  }) => apiClient.post<RedemptionConfig>('/api/admin/config', data),
   getTasks: (date?: string) => apiClient.get<TaskView[]>(`/api/admin/tasks${date ? '?date=' + date : ''}`),
   createTask: (data: any) => apiClient.post<TaskView>('/api/admin/tasks', data),
   updateTask: (id: number, patch: any) => apiClient.patch<any>(`/api/admin/tasks/${id}`, patch),
@@ -254,4 +281,20 @@ export const adminTasksApi = {
   },
   processClaim: (id: number, status: 'APPROVED' | 'REJECTED', notes?: string) =>
     apiClient.post<{ success: boolean; status: string }>(`/api/admin/claims/${id}/process`, { status, notes }),
+}
+
+export const adminCosmeticsApi = {
+  getCosmetics: () => apiClient.get<{ items: CosmeticCatalogItem[] }>('/api/admin/cosmetics'),
+  createCosmetic: (payload: {
+    id: string
+    name?: string
+    slot: 'frame' | 'effect'
+    asset: string
+    tier?: number
+    is_active?: boolean
+  }) => apiClient.post<CosmeticCatalogItem>('/api/admin/cosmetics', payload),
+  updateCosmetic: (
+    id: string,
+    patch: Partial<{ name: string; slot: 'frame' | 'effect'; asset: string; tier: number; is_active: boolean }>
+  ) => apiClient.patch<{ status: string }>(`/api/admin/cosmetics/${id}`, patch),
 }

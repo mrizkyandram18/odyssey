@@ -6,6 +6,7 @@ import (
 
 type UserProfile struct {
 	UID                string     `json:"uid"`
+	Username           string     `json:"username,omitempty"`
 	FamilyID           string     `json:"family_id"`
 	ExplorerName       string     `json:"explorer_name"`
 	Role               string     `json:"role"`

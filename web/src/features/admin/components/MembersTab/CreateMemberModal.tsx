@@ -156,10 +156,10 @@ export const CreateMemberModal: React.FC<CreateMemberModalProps> = ({
                     onChange={(e) => setForm({ ...form, monthly_coin_target: parseInt(e.target.value || '0', 10) })}
                     className="w-full p-2.5 rounded-xl bg-surface border border-border-subtle text-xs sm:text-sm text-text-primary focus:outline-none focus:border-accent-magic"
                   />
-                  <p className="text-[11px] text-text-secondary">Sistem akan menghitung pembagian koin otomatis berdasarkan target dan bobot task. Default 0 (admin set per-user, Selvi 3320 tetap).</p>
+                  <p className="text-[11px] text-text-secondary">Sistem akan menghitung pembagian koin otomatis berdasarkan target dan bobot task. Nilai 0 berarti mengikuti pengaturan default sistem.</p>
                 </div>
                 <div className="space-y-1">
-                  <label className="text-xs font-bold text-text-secondary">Batas Earning Bulanan (0 = unlimited, 3320 default)</label>
+                  <label className="text-xs font-bold text-text-secondary">Batas Earning Bulanan (0 = unlimited / ikuti default sistem)</label>
                   <input
                     type="number"
                     min={0}

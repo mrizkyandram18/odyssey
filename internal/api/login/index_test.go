@@ -45,6 +45,13 @@ func (m *mockProfileStore) GetUserProfile(ctx context.Context, uid string) (*db.
 	return m.profile, m.err
 }
 
+func (m *mockProfileStore) GetLocalUserByUsername(ctx context.Context, username string) (*auth.LocalUser, error) {
+	if m.profile != nil {
+		return &auth.LocalUser{ID: m.profile.UID, Username: m.profile.Username, PasswordHash: m.profile.PasswordHash, ProfileUID: m.profile.UID}, nil
+	}
+	return nil, auth.ErrLocalUserNotFound
+}
+
 func (m *mockProfileStore) GetPasswordHash(ctx context.Context, uid string) (string, error) {
 	if m.profile != nil {
 		return m.profile.PasswordHash, nil

@@ -38,6 +38,11 @@ vi.mock('../../shared/lib/api', () => ({
     createMember: vi.fn(),
     updateMember: vi.fn(),
   },
+  adminCosmeticsApi: {
+    getCosmetics: vi.fn().mockResolvedValue({ items: [] }),
+    createCosmetic: vi.fn(),
+    updateCosmetic: vi.fn(),
+  },
   tasksApi: {
     getToday: vi.fn(),
     submit: vi.fn(),

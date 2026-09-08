@@ -9,7 +9,7 @@ export function useAdminMembers() {
   const [error, setError] = useState<string | null>(null)
   const [processingId, setProcessingId] = useState<string | null>(null)
 
-  // Create member modal - default 0 biar configurable, admin set per-user (Selvi 3320 tetap)
+  // Create member modal - default 0
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false)
   const [newMember, setNewMember] = useState({
     username: '',
@@ -17,7 +17,7 @@ export function useAdminMembers() {
     explorer_name: '',
     role: 'MEMBER' as 'ADMIN' | 'MEMBER',
     monthly_coin_target: 0,
-    monthly_earning_cap: 3320,
+    monthly_earning_cap: 0,
     payout_frequency: 'THRESHOLD' as 'THRESHOLD' | 'WEEKLY' | 'MONTHLY',
     minimum_withdrawal_coins: 500,
     payout_weekday: 1,
@@ -34,7 +34,7 @@ export function useAdminMembers() {
     is_active: true,
     reset_device: false,
     monthly_coin_target: 0,
-    monthly_earning_cap: 3320,
+    monthly_earning_cap: 0,
     payout_frequency: 'THRESHOLD' as 'THRESHOLD' | 'WEEKLY' | 'MONTHLY',
     minimum_withdrawal_coins: 500,
     payout_weekday: 1,
@@ -87,7 +87,7 @@ export function useAdminMembers() {
       explorer_name: '',
       role: 'MEMBER',
       monthly_coin_target: 0,
-      monthly_earning_cap: 3320,
+      monthly_earning_cap: 0,
       payout_frequency: 'THRESHOLD',
       minimum_withdrawal_coins: 500,
       payout_weekday: 1,
@@ -153,7 +153,7 @@ export function useAdminMembers() {
       is_active: member.is_active,
       reset_device: false,
       monthly_coin_target: member.monthly_coin_target ?? 0,
-      monthly_earning_cap: member.monthly_earning_cap ?? 3320,
+      monthly_earning_cap: member.monthly_earning_cap ?? 0,
       payout_frequency: (member.payout_frequency as any) || 'THRESHOLD',
       minimum_withdrawal_coins: member.minimum_withdrawal_coins ?? 500,
       payout_weekday: 1,

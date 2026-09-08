@@ -85,9 +85,6 @@ func TestHandleCreateMember_SuccessAsMemberByDefault(t *testing.T) {
 	createdProfile := false
 	mockClient := &mockSupabaseClient{
 		getFunc: func(ctx context.Context, table string, params string) ([]byte, error) {
-			if table == "odyssey_local_users" {
-				return []byte("[]"), nil
-			}
 			return []byte("[]"), nil
 		},
 		mutateAtomicFunc: func(ctx context.Context, method string, table string, payload any, params string, extraHeader string) ([]byte, error) {
@@ -247,16 +244,22 @@ func TestHandleUpdateMember_ResetDevice(t *testing.T) {
 }
 
 func TestHandleListMembers_TenantIsolation(t *testing.T) {
-	var requestedProfileParams string
-	var requestedLocalParams string
+	var requestedProfileParams []string
 
 	mockClient := &mockSupabaseClient{
 		getFunc: func(ctx context.Context, table string, params string) ([]byte, error) {
 			if table == "odyssey_user_profiles" {
-				requestedProfileParams = params
+				requestedProfileParams = append(requestedProfileParams, params)
+				if strings.Contains(params, "password_hash") {
+					return json.Marshal([]map[string]any{
+						{"uid": "usr_fam1_a", "password_hash": "$2a$10$testhash"},
+					})
+				}
 				profiles := []map[string]any{
 					{
 						"uid":           "usr_fam1_a",
+						"username":      "fam1_user",
+						"password_hash": "$2a$10$testhash",
 						"family_id":     "fam_1",
 						"explorer_name": "Family 1 Member",
 						"role":          "MEMBER",
@@ -264,12 +267,6 @@ func TestHandleListMembers_TenantIsolation(t *testing.T) {
 					},
 				}
 				return json.Marshal(profiles)
-			}
-			if table == "odyssey_local_users" {
-				requestedLocalParams = params
-				return json.Marshal([]map[string]any{
-					{"username": "fam1_user", "profile_uid": "usr_fam1_a"},
-				})
 			}
 			return []byte("[]"), nil
 		},
@@ -291,11 +288,14 @@ func TestHandleListMembers_TenantIsolation(t *testing.T) {
 		t.Fatalf("expected 200 OK, got %d: %s", w.Code, w.Body.String())
 	}
 
-	if !strings.Contains(requestedProfileParams, "family_id=eq.fam_1") {
-		t.Errorf("expected profile query to be strictly scoped to fam_1, got %s", requestedProfileParams)
+	scoped := false
+	for _, p := range requestedProfileParams {
+		if strings.Contains(p, "family_id=eq.fam_1") {
+			scoped = true
+		}
 	}
-	if !strings.Contains(requestedLocalParams, "profile_uid=in.(usr_fam1_a)") {
-		t.Errorf("expected local_users query to be strictly scoped to profile_uid in (usr_fam1_a), got %s", requestedLocalParams)
+	if !scoped {
+		t.Errorf("expected profile query to be strictly scoped to fam_1, got %v", requestedProfileParams)
 	}
 
 	var res struct {
@@ -307,27 +307,33 @@ func TestHandleListMembers_TenantIsolation(t *testing.T) {
 	if len(res.Items) != 1 || res.Items[0].UID != "usr_fam1_a" {
 		t.Errorf("expected 1 member usr_fam1_a, got %v", res.Items)
 	}
+	if res.Items[0].Username != "fam1_user" {
+		t.Errorf("expected username fam1_user from profiles SOT, got %q", res.Items[0].Username)
+	}
 }
 
 func TestHandleListMembers_Pagination(t *testing.T) {
 	mockClient := &mockSupabaseClient{
 		getFunc: func(ctx context.Context, table string, params string) ([]byte, error) {
 			if table == "odyssey_user_profiles" {
+				if strings.Contains(params, "password_hash") {
+					return json.Marshal([]map[string]any{
+						{"uid": "usr_3", "password_hash": "$2a$10$h3"},
+						{"uid": "usr_4", "password_hash": "$2a$10$h4"},
+					})
+				}
 				// The paginated page query carries order=+limit/offset; the
 				// lightweight pre-query (uid/is_active) does not.
 				if strings.Contains(params, "order=created_at.desc") && !strings.Contains(params, "limit=2&offset=2") {
 					t.Errorf("expected limit=2&offset=2 for page 2, got %s", params)
 				}
 				profiles := []map[string]any{
-					{"uid": "usr_3", "family_id": "fam_1", "explorer_name": "Member 3"},
-					{"uid": "usr_4", "family_id": "fam_1", "explorer_name": "Member 4"},
+					{"uid": "usr_3", "username": "m3", "password_hash": "$2a$10$h3", "family_id": "fam_1", "explorer_name": "Member 3"},
+					{"uid": "usr_4", "username": "m4", "password_hash": "$2a$10$h4", "family_id": "fam_1", "explorer_name": "Member 4"},
 				}
 				return json.Marshal(profiles)
 			}
-			return json.Marshal([]map[string]any{
-				{"username": "m3", "profile_uid": "usr_3"},
-				{"username": "m4", "profile_uid": "usr_4"},
-			})
+			return []byte("[]"), nil
 		},
 	}
 	api := NewAPI(mockClient)
@@ -380,7 +386,7 @@ func profileJSON(uid, familyID string) []byte {
 }
 
 func TestAdminResetPassword_Success(t *testing.T) {
-	var capturedLocalHash string
+	var capturedProfileHash string
 	var capturedMustChange interface{}
 	mockClient := &mockSupabaseClient{
 		getFunc: func(ctx context.Context, table string, params string) ([]byte, error) {
@@ -392,12 +398,10 @@ func TestAdminResetPassword_Success(t *testing.T) {
 		mutateFunc: func(ctx context.Context, method string, table string, payload any, params string) ([]byte, error) {
 			m, ok := payload.(map[string]any)
 			if ok {
-				if table == "odyssey_local_users" {
-					if v, exists := m["password_hash"]; exists {
-						capturedLocalHash, _ = v.(string)
-					}
-				}
 				if table == "odyssey_user_profiles" {
+					if v, exists := m["password_hash"]; exists {
+						capturedProfileHash, _ = v.(string)
+					}
 					capturedMustChange = m["must_change_password"]
 				}
 			}
@@ -420,8 +424,8 @@ func TestAdminResetPassword_Success(t *testing.T) {
 	if len(tmp) < 12 {
 		t.Fatalf("expected temporary_password >=12 chars, got %q len %d", tmp, len(tmp))
 	}
-	if capturedLocalHash == "" {
-		t.Fatal("expected password_hash to be stored")
+	if capturedProfileHash == "" {
+		t.Fatal("expected password_hash to be stored on profiles")
 	}
 	if capturedMustChange != true {
 		t.Fatalf("expected must_change_password true, got %v", capturedMustChange)
@@ -532,7 +536,7 @@ func TestAdminResetPassword_PasswordIsNotStoredPlaintext(t *testing.T) {
 			return profileJSON("usr_target", "fam_1"), nil
 		},
 		mutateFunc: func(ctx context.Context, method string, table string, payload any, params string) ([]byte, error) {
-			if table == "odyssey_local_users" {
+			if table == "odyssey_user_profiles" {
 				if m, ok := payload.(map[string]any); ok {
 					if v, exists := m["password_hash"]; exists {
 						storedHash, _ = v.(string)

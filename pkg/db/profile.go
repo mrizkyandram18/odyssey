@@ -16,6 +16,7 @@ var ErrProfileNotFound = errors.New("profile not found")
 
 type ProfileStore interface {
 	GetUserProfile(ctx context.Context, uid string) (*UserProfile, error)
+	GetLocalUserByUsername(ctx context.Context, username string) (*auth.LocalUser, error)
 	GetPasswordHash(ctx context.Context, uid string) (string, error)
 	GetBoundDeviceID(ctx context.Context, uid string) (string, error)
 	BindOrVerifyDevice(ctx context.Context, uid, deviceID string) (bool, error)
@@ -56,10 +57,10 @@ func (s *supabaseProfileStore) GetUserProfile(ctx context.Context, uid string) (
 
 func (s *supabaseProfileStore) GetPasswordHash(ctx context.Context, uid string) (string, error) {
 	v := url.Values{}
-	v.Set("profile_uid", "eq."+uid)
+	v.Set("uid", "eq."+uid)
 	v.Set("select", "password_hash")
 	params := v.Encode()
-	raw, err := s.client.Get(ctx, "odyssey_local_users", params)
+	raw, err := s.client.Get(ctx, "odyssey_user_profiles", params)
 	if err != nil {
 		return "", fmt.Errorf("get password hash: %w", err)
 	}
@@ -73,6 +74,37 @@ func (s *supabaseProfileStore) GetPasswordHash(ctx context.Context, uid string) 
 		return "", nil
 	}
 	return rows[0].PasswordHash, nil
+}
+
+// GetLocalUserByUsername implements auth.LocalUserStore against user profiles
+// (username SOT). Preserves the LocalUser contract so LocalAuthProvider is unchanged.
+func (s *supabaseProfileStore) GetLocalUserByUsername(ctx context.Context, username string) (*auth.LocalUser, error) {
+	v := url.Values{}
+	v.Set("username", "eq."+username)
+	v.Set("select", "uid,username,password_hash")
+	params := v.Encode()
+	raw, err := s.client.Get(ctx, "odyssey_user_profiles", params)
+	if err != nil {
+		return nil, fmt.Errorf("get local user: %w", err)
+	}
+	var users []struct {
+		UID          string `json:"uid"`
+		Username     string `json:"username"`
+		PasswordHash string `json:"password_hash"`
+	}
+	if err := json.Unmarshal(raw, &users); err != nil {
+		return nil, fmt.Errorf("parse local user: %w", err)
+	}
+	if len(users) == 0 {
+		return nil, auth.ErrLocalUserNotFound
+	}
+	u := users[0]
+	return &auth.LocalUser{
+		ID:           u.UID,
+		Username:     u.Username,
+		PasswordHash: u.PasswordHash,
+		ProfileUID:   u.UID,
+	}, nil
 }
 
 func (s *supabaseProfileStore) GetBoundDeviceID(ctx context.Context, uid string) (string, error) {
@@ -179,23 +211,15 @@ func (s *supabaseProfileStore) ChangePassword(ctx context.Context, uid string, n
 		return fmt.Errorf("hash password: %w", err)
 	}
 
-	// 1. Update password in local users table (bcrypt hashed)
-	localPayload := map[string]string{
-		"password_hash": hash,
-	}
-	_, err = s.client.Mutate(ctx, "PATCH", "odyssey_local_users", localPayload, fmt.Sprintf("profile_uid=eq.%s", uid))
-	if err != nil {
-		return fmt.Errorf("update local user password: %w", err)
-	}
-
-	// 2. Clear must_change_password flag on user profile
+	// Update password hash + clear must_change_password flag on user profile (single PATCH).
 	profilePayload := map[string]any{
+		"password_hash":        hash,
 		"must_change_password": false,
 	}
 	params := s.buildFilter(uid)
 	_, err = s.client.Mutate(ctx, "PATCH", "odyssey_user_profiles", profilePayload, params)
 	if err != nil {
-		return fmt.Errorf("update user profile must_change_password: %w", err)
+		return fmt.Errorf("update user profile password: %w", err)
 	}
 
 	return nil

@@ -90,6 +90,9 @@ func TestHandleBlockMember_Unauthorized(t *testing.T) {
 func TestHandleUnblockMember_Success(t *testing.T) {
 	mockClient := &mockSupabaseClient{
 		getFunc: func(ctx context.Context, table string, params string) ([]byte, error) {
+			if strings.Contains(params, "password_hash") {
+				return json.Marshal([]map[string]any{{"password_hash": "$2a$10$testhash"}})
+			}
 			profiles := []db.UserProfile{{UID: "usr_target", FamilyID: "fam_1", Role: "MEMBER", IsActive: false}}
 			return json.Marshal(profiles)
 		},
@@ -145,13 +148,13 @@ func TestInactivityTrackingCycleAware(t *testing.T) {
 				return []byte("[]"), nil
 			}
 			if table == "odyssey_user_profiles" {
+				if strings.Contains(params, "password_hash") {
+					return json.Marshal([]map[string]any{{"uid": "usr1", "password_hash": "$2a$10$testhash"}})
+				}
 				// Return one active member
 				return json.Marshal([]map[string]any{
-					{"uid": "usr1", "family_id": "fam_1", "explorer_name": "User1", "role": "MEMBER", "is_active": true, "level": 1, "xp": 0, "coins": 0, "created_at": "2026-10-25T00:00:00Z"},
+					{"uid": "usr1", "username": "user1", "password_hash": "$2a$10$testhash", "family_id": "fam_1", "explorer_name": "User1", "role": "MEMBER", "is_active": true, "level": 1, "xp": 0, "coins": 0, "created_at": "2026-10-25T00:00:00Z"},
 				})
-			}
-			if table == "odyssey_local_users" {
-				return json.Marshal([]map[string]any{{"username": "user1", "profile_uid": "usr1"}})
 			}
 			if table == "odyssey_coin_transactions" {
 				return []byte("[]"), nil
@@ -203,12 +206,12 @@ func TestInactivityTrackingDoesNotMutateIsActive(t *testing.T) {
 	mockClient := &mockSupabaseClient{
 		getFunc: func(ctx context.Context, table string, params string) ([]byte, error) {
 			if table == "odyssey_user_profiles" {
+				if strings.Contains(params, "password_hash") {
+					return json.Marshal([]map[string]any{{"uid": "usr1", "password_hash": "$2a$10$testhash"}})
+				}
 				return json.Marshal([]map[string]any{
-					{"uid": "usr1", "family_id": "fam_1", "explorer_name": "U1", "role": "MEMBER", "is_active": true, "level": 1, "xp": 0, "coins": 0, "created_at": "2026-11-01T00:00:00Z"},
+					{"uid": "usr1", "username": "u1", "password_hash": "$2a$10$testhash", "family_id": "fam_1", "explorer_name": "U1", "role": "MEMBER", "is_active": true, "level": 1, "xp": 0, "coins": 0, "created_at": "2026-11-01T00:00:00Z"},
 				})
-			}
-			if table == "odyssey_local_users" {
-				return json.Marshal([]map[string]any{{"username": "u1", "profile_uid": "usr1"}})
 			}
 			return []byte("[]"), nil
 		},
@@ -244,17 +247,17 @@ func TestBlockedUserHistoryIntact(t *testing.T) {
 	mockClient := &mockSupabaseClient{
 		getFunc: func(ctx context.Context, table string, params string) ([]byte, error) {
 			if table == "odyssey_user_profiles" {
+				if strings.Contains(params, "password_hash") {
+					return json.Marshal([]map[string]any{
+						{"uid": "usr_blocked", "password_hash": "$2a$10$h1"},
+						{"uid": "usr_active", "password_hash": "$2a$10$h2"},
+					})
+				}
 				profiles := []map[string]any{
-					{"uid": "usr_blocked", "family_id": "fam_1", "explorer_name": "Blocked User", "role": "MEMBER", "is_active": false, "blocked_at": "2026-09-01T00:00:00Z", "block_reason": "spam"},
-					{"uid": "usr_active", "family_id": "fam_1", "explorer_name": "Active User", "role": "MEMBER", "is_active": true},
+					{"uid": "usr_blocked", "username": "blocked", "password_hash": "$2a$10$h1", "family_id": "fam_1", "explorer_name": "Blocked User", "role": "MEMBER", "is_active": false, "blocked_at": "2026-09-01T00:00:00Z", "block_reason": "spam"},
+					{"uid": "usr_active", "username": "active", "password_hash": "$2a$10$h2", "family_id": "fam_1", "explorer_name": "Active User", "role": "MEMBER", "is_active": true},
 				}
 				return json.Marshal(profiles)
-			}
-			if table == "odyssey_local_users" {
-				return json.Marshal([]map[string]any{
-					{"username": "blocked", "profile_uid": "usr_blocked"},
-					{"username": "active", "profile_uid": "usr_active"},
-				})
 			}
 			return []byte("[]"), nil
 		},

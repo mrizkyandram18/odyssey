@@ -215,7 +215,7 @@ export const EditMemberModal: React.FC<EditMemberModalProps> = ({
                   <p className="text-[11px] text-text-secondary">Sistem akan menghitung pembagian koin otomatis berdasarkan target dan bobot task. Perubahan berlaku bulan ini.</p>
                 </div>
                 <div className="space-y-2 p-3 rounded-xl bg-amber-50 border border-amber-200">
-                  <label className="text-xs font-bold text-text-secondary">Batas Earning Bulanan (0 = unlimited, 3320 default)</label>
+                  <label className="text-xs font-bold text-text-secondary">Batas Earning Bulanan (0 = unlimited / ikuti default sistem)</label>
                   <input
                     type="number"
                     min={0}

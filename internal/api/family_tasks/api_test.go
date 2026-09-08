@@ -570,11 +570,15 @@ type rpcRecordingClient struct {
 	mockSupabaseClient
 	lastRPC     string
 	lastRPCBody any
+	allRPC      []string
 }
 
 func (m *rpcRecordingClient) RPC(ctx context.Context, fnName string, payload any) ([]byte, error) {
-	m.lastRPC = fnName
-	m.lastRPCBody = payload
+	m.allRPC = append(m.allRPC, fnName)
+	if m.lastRPC == "" || fnName != "odyssey_claim_daily_ticket" {
+		m.lastRPC = fnName
+		m.lastRPCBody = payload
+	}
 	if m.rpcErr != nil {
 		return nil, m.rpcErr
 	}

@@ -6,6 +6,7 @@ import { LoginPage } from '../features/login/LoginPage'
 import { HomePage } from '../features/home/HomePage'
 import { RewardShopPage } from '../features/shop/RewardShopPage'
 import { ProfilePage } from '../features/profile/ProfilePage'
+import { CollectionPage } from '../features/collection/CollectionPage'
 import { AdminPage } from '../features/admin/AdminPage'
 import { PWAUpdatePrompt } from '../shared/components/PWAUpdatePrompt'
 
@@ -21,6 +22,7 @@ export function App() {
           <Route index element={<HomePage />} />
           <Route path="/shop" element={<RewardShopPage />} />
           <Route path="/profile" element={<ProfilePage />} />
+          <Route path="/koleksi" element={<CollectionPage />} />
           <Route path="/admin" element={<AdminPage />} />
         </Route>
 

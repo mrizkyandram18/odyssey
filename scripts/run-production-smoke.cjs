@@ -68,12 +68,14 @@ async function runSmokeTest() {
     allPassed = false;
   }
 
-  // Setup test user in Production DB
+  // Setup test user in Production DB (profiles SOT: username + password_hash on profile)
   await fetch(`${SUPABASE_URL}/rest/v1/odyssey_user_profiles`, {
     method: 'POST',
     headers: { ...dbHeaders, 'Prefer': 'resolution=merge-duplicates' },
     body: JSON.stringify([{
       uid: createdUserUid,
+      username: testUsername,
+      password_hash: '$2a$10$tfuTDHMLQ0oW0WJqJz20seP0NvP5P2zdWNNxOuOd3bUa5TR1rB..W', // admin123
       explorer_name: testExplorerName,
       role: 'MEMBER',
       family_id: testFamilyId,
@@ -81,16 +83,6 @@ async function runSmokeTest() {
       xp: 0,
       level: 1,
       is_active: true
-    }])
-  });
-  await fetch(`${SUPABASE_URL}/rest/v1/odyssey_local_users`, {
-    method: 'POST',
-    headers: { ...dbHeaders, 'Prefer': 'resolution=merge-duplicates' },
-    body: JSON.stringify([{
-      id: `local-${createdUserUid}`,
-      username: testUsername,
-      password_hash: '$2a$10$tfuTDHMLQ0oW0WJqJz20seP0NvP5P2zdWNNxOuOd3bUa5TR1rB..W', // admin123
-      profile_uid: createdUserUid
     }])
   });
   console.log(`\n2. Setup Test User ${testUsername} in Production DB: PASS 🟢`);
@@ -350,7 +342,6 @@ async function runSmokeTest() {
   if (createdUserUid) {
     await fetch(`${SUPABASE_URL}/rest/v1/odyssey_task_completions?user_uid=eq.${createdUserUid}`, { method: 'DELETE', headers: dbHeaders });
     await fetch(`${SUPABASE_URL}/rest/v1/odyssey_claims?user_uid=eq.${createdUserUid}`, { method: 'DELETE', headers: dbHeaders });
-    await fetch(`${SUPABASE_URL}/rest/v1/odyssey_local_users?profile_uid=eq.${createdUserUid}`, { method: 'DELETE', headers: dbHeaders });
     await fetch(`${SUPABASE_URL}/rest/v1/odyssey_user_profiles?uid=eq.${createdUserUid}`, { method: 'DELETE', headers: dbHeaders });
     console.log(`   Cleaned up test user ${createdUserUid} 🟢`);
   }

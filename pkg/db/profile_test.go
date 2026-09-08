@@ -120,13 +120,17 @@ func TestProfileStore_GetPasswordHash_Found(t *testing.T) {
 	}{
 		{PasswordHash: "$2a$10$hashvalue"},
 	})
-	store := NewProfileStore(&mockSupabaseClient{data: data})
+	client := &mockSupabaseClient{data: data}
+	store := NewProfileStore(client)
 	hash, err := store.GetPasswordHash(context.Background(), "user-1")
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
 	if hash != "$2a$10$hashvalue" {
 		t.Errorf("expected hash, got %s", hash)
+	}
+	if len(client.getCalls) != 1 || len(client.getCalls[0]) < len("odyssey_user_profiles") || client.getCalls[0][:len("odyssey_user_profiles")] != "odyssey_user_profiles" {
+		t.Errorf("expected query against odyssey_user_profiles SOT, got %v", client.getCalls)
 	}
 }
 
@@ -176,4 +180,50 @@ func TestProfileStore_GetBoundDeviceID_NotFound(t *testing.T) {
 
 func TestProfileStore_ImplementsProfileStore(t *testing.T) {
 	var _ ProfileStore = NewProfileStore(&mockSupabaseClient{})
+}
+
+func TestProfileStore_GetLocalUserByUsername_Found(t *testing.T) {
+	data, _ := json.Marshal([]map[string]any{
+		{"uid": "user-1", "username": "alice", "password_hash": "$2a$10$hashvalue"},
+	})
+	client := &mockSupabaseClient{data: data}
+	store := NewProfileStore(client)
+	u, err := store.GetLocalUserByUsername(context.Background(), "alice")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if u.ProfileUID != "user-1" || u.Username != "alice" || u.PasswordHash != "$2a$10$hashvalue" {
+		t.Errorf("unexpected user %+v", u)
+	}
+	if len(client.getCalls) != 1 || len(client.getCalls[0]) < len("odyssey_user_profiles") || client.getCalls[0][:len("odyssey_user_profiles")] != "odyssey_user_profiles" {
+		t.Errorf("expected query against odyssey_user_profiles SOT, got %v", client.getCalls)
+	}
+}
+
+func TestProfileStore_GetLocalUserByUsername_NotFound(t *testing.T) {
+	data, _ := json.Marshal([]map[string]any{})
+	store := NewProfileStore(&mockSupabaseClient{data: data})
+	_, err := store.GetLocalUserByUsername(context.Background(), "ghost")
+	if err == nil {
+		t.Fatal("expected error for unknown username")
+	}
+}
+
+func TestProfileStore_ChangePassword_WritesProfilesSOT(t *testing.T) {
+	client := &mockSupabaseClient{data: []byte("{}")}
+	store := NewProfileStore(client)
+	if err := store.ChangePassword(context.Background(), "user-1", "newpass123"); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if client.lastMutateTable != "odyssey_user_profiles" {
+		t.Fatalf("expected PATCH odyssey_user_profiles, got %s", client.lastMutateTable)
+	}
+	payload, _ := client.lastMutatePayload.(map[string]any)
+	hash, _ := payload["password_hash"].(string)
+	if hash == "" || hash == "newpass123" {
+		t.Fatalf("expected bcrypt password_hash in payload, got %v", payload)
+	}
+	if payload["must_change_password"] != false {
+		t.Fatalf("expected must_change_password=false, got %v", payload)
+	}
 }

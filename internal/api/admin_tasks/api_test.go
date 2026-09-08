@@ -482,8 +482,8 @@ func TestAdminConfig_UpdateSuccessAndValidation(t *testing.T) {
 }
 
 func TestAdminConfig_MonthlyDefaults_MissingReturnsZero(t *testing.T) {
-	// Missing default_monthly_coin_target row must resolve to global default 0
-	// (legacy 3200 retired); earning-cap fallback stays 3320 (untouched).
+	// Missing default_monthly_coin_target resolves to 0.
+	// Missing default_monthly_earning_cap resolves to -1 (unconfigured error state; never 0=unlimited).
 	client := &mockSupabaseClient{
 		getResp: []byte(`[]`),
 	}
@@ -507,14 +507,14 @@ func TestAdminConfig_MonthlyDefaults_MissingReturnsZero(t *testing.T) {
 	if v, ok := res["default_monthly_coin_target"]; !ok || v != float64(0) {
 		t.Fatalf("expected default_monthly_coin_target 0 for missing row, got %v", res)
 	}
-	if v, ok := res["default_monthly_earning_cap"]; !ok || v != float64(3320) {
-		t.Fatalf("expected default_monthly_earning_cap 3320 fallback, got %v", res)
+	if v, ok := res["default_monthly_earning_cap"]; !ok || v != float64(-1) {
+		t.Fatalf("expected default_monthly_earning_cap -1 (unconfigured), got %v", res)
 	}
 }
 
 func TestAdminConfig_UpdateMonthlyDefaults_Validation(t *testing.T) {
 	client := &mockSupabaseClient{
-		getResp: []byte(`[]`),
+		getResp: []byte(`[{"key":"max_monthly_earning_cap_ceiling","value":"10000"},{"key":"default_monthly_earning_cap","value":"3320"}]`),
 	}
 	api := NewAPI(client)
 	guideClaims := &auth.SessionClaims{UID: "admin-1", Role: "ADMIN"}
@@ -540,13 +540,33 @@ func TestAdminConfig_UpdateMonthlyDefaults_Validation(t *testing.T) {
 			expectCode: http.StatusBadRequest,
 		},
 		{
-			name:       "Reject monthly earning cap above 10000",
+			name:       "Reject monthly earning cap above dynamic ceiling 10000",
 			payload:    `{"default_monthly_earning_cap":10001}`,
+			expectCode: http.StatusBadRequest,
+		},
+		{
+			name:       "Reject negative max monthly earning cap ceiling",
+			payload:    `{"max_monthly_earning_cap_ceiling":-1}`,
+			expectCode: http.StatusBadRequest,
+		},
+		{
+			name:       "Reject invalid level_cap_bonus key",
+			payload:    `{"level_cap_bonus":{"non_int":500}}`,
+			expectCode: http.StatusBadRequest,
+		},
+		{
+			name:       "Reject negative level_cap_bonus value",
+			payload:    `{"level_cap_bonus":{"5":-100}}`,
 			expectCode: http.StatusBadRequest,
 		},
 		{
 			name:       "Accept explicit zero for both member defaults",
 			payload:    `{"default_monthly_coin_target":0,"default_monthly_earning_cap":0}`,
+			expectCode: http.StatusOK,
+		},
+		{
+			name:       "Accept valid dynamic ceiling and level_cap_bonus",
+			payload:    `{"max_monthly_earning_cap_ceiling":8000,"default_monthly_earning_cap":3500,"level_cap_bonus":{"5":300,"10":500}}`,
 			expectCode: http.StatusOK,
 		},
 	}
@@ -564,6 +584,60 @@ func TestAdminConfig_UpdateMonthlyDefaults_Validation(t *testing.T) {
 				t.Fatalf("expected code %d, got %d: %s", tc.expectCode, rec.Code, rec.Body.String())
 			}
 		})
+	}
+}
+
+func TestAdminCosmetics_CRUD_And_Auth(t *testing.T) {
+	client := &mockSupabaseClient{
+		getResp: []byte(`[{"id":"frame-gold","slot":"frame","asset":"gold","tier":1,"is_active":true}]`),
+	}
+	api := NewAPI(client)
+	userClaims := &auth.SessionClaims{UID: "user-1", Role: "USER"}
+	adminClaims := &auth.SessionClaims{UID: "admin-1", Role: "ADMIN"}
+
+	// 1. Non-admin forbidden
+	req := httptest.NewRequest(http.MethodGet, "/api/admin/cosmetics", nil)
+	req = req.WithContext(auth.ContextWithClaims(req.Context(), userClaims))
+	rec := httptest.NewRecorder()
+	api.Handler(rec, req)
+	if rec.Code != http.StatusForbidden {
+		t.Fatalf("expected 403 Forbidden for non-admin, got %d", rec.Code)
+	}
+
+	// 2. Admin list cosmetics
+	req = httptest.NewRequest(http.MethodGet, "/api/admin/cosmetics", nil)
+	req = req.WithContext(auth.ContextWithClaims(req.Context(), adminClaims))
+	rec = httptest.NewRecorder()
+	api.Handler(rec, req)
+	if rec.Code != http.StatusOK {
+		t.Fatalf("expected 200 OK, got %d: %s", rec.Code, rec.Body.String())
+	}
+
+	// 3. Create cosmetic invalid slot
+	badReq := httptest.NewRequest(http.MethodPost, "/api/admin/cosmetics", strings.NewReader(`{"id":"c1","slot":"invalid","asset":"test"}`))
+	badReq = badReq.WithContext(auth.ContextWithClaims(badReq.Context(), adminClaims))
+	rec = httptest.NewRecorder()
+	api.Handler(rec, badReq)
+	if rec.Code != http.StatusBadRequest {
+		t.Fatalf("expected 400 Bad Request, got %d", rec.Code)
+	}
+
+	// 4. Create cosmetic valid
+	goodReq := httptest.NewRequest(http.MethodPost, "/api/admin/cosmetics", strings.NewReader(`{"id":"c1","name":"Golden Crown","slot":"frame","asset":"gold","tier":1,"is_active":true}`))
+	goodReq = goodReq.WithContext(auth.ContextWithClaims(goodReq.Context(), adminClaims))
+	rec = httptest.NewRecorder()
+	api.Handler(rec, goodReq)
+	if rec.Code != http.StatusCreated {
+		t.Fatalf("expected 201 Created, got %d: %s", rec.Code, rec.Body.String())
+	}
+
+	// 5. Update cosmetic valid
+	patchReq := httptest.NewRequest(http.MethodPatch, "/api/admin/cosmetics/c1", strings.NewReader(`{"is_active":false}`))
+	patchReq = patchReq.WithContext(auth.ContextWithClaims(patchReq.Context(), adminClaims))
+	rec = httptest.NewRecorder()
+	api.Handler(rec, patchReq)
+	if rec.Code != http.StatusOK {
+		t.Fatalf("expected 200 OK, got %d: %s", rec.Code, rec.Body.String())
 	}
 }
 

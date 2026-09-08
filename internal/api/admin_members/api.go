@@ -60,6 +60,8 @@ type MemberView struct {
 	PayoutFrequency            string     `json:"payout_frequency,omitempty"`
 	MinimumWithdrawalCoins     *int       `json:"minimum_withdrawal_coins,omitempty"`
 	PayoutConfigSource         string     `json:"payout_config_source,omitempty"`
+	AvatarFrame                string     `json:"avatar_frame,omitempty"`
+	AvatarEffect               string     `json:"avatar_effect,omitempty"`
 	CreatedAt                  time.Time  `json:"created_at"`
 }
 
@@ -138,13 +140,13 @@ func getDefaultMonthlyEarningCap(ctx context.Context, client db.SupabaseClient) 
 		}
 		if err := json.Unmarshal(raw, &rows); err == nil && len(rows) > 0 {
 			var n int
-			if _, err := fmt.Sscanf(strings.TrimSpace(rows[0].Value), "%d", &n); err == nil && n >= 0 && n <= 10000 {
+			if _, err := fmt.Sscanf(strings.TrimSpace(rows[0].Value), "%d", &n); err == nil && n >= 0 {
 				return n
 			}
 		}
 	}
-	// Fallback constant if DB not migrated yet (DB value is source of truth)
-	return shared.DefaultMonthlyEarningCap
+	// Return -1 to indicate unconfigured state (never silently default to 0 = unlimited)
+	return -1
 }
 
 func resolveEarningCap(ctx context.Context, client db.SupabaseClient, profileCap *int) (eff int, isLimited bool) {
@@ -152,11 +154,17 @@ func resolveEarningCap(ctx context.Context, client db.SupabaseClient, profileCap
 		return *profileCap, *profileCap > 0
 	}
 	def := getDefaultMonthlyEarningCap(ctx, client)
+	if def < 0 {
+		return -1, false
+	}
 	return def, def > 0
 }
 
 func earningStatus(cap, earned int) (status string, locked bool) {
-	if cap <= 0 {
+	if cap < 0 {
+		return "CONFIG_ERROR", false
+	}
+	if cap == 0 {
 		return "ACTIVE", false
 	}
 	if earned >= cap {
@@ -768,15 +776,18 @@ func (a *API) HandleListMembers(w http.ResponseWriter, r *http.Request) {
 			inactiveSet[f.UID] = true
 		}
 	}
-	// Step 1b: credential presence for family UIDs only (no global dump).
-	credParams := fmt.Sprintf("profile_uid=in.(%s)&select=profile_uid", strings.Join(famUIDs, ","))
-	credRaw, _ := a.client.Get(ctx, "odyssey_local_users", credParams)
+	// Step 1b: credential presence for family UIDs only (password_hash on profiles SOT).
+	credParams := fmt.Sprintf("uid=in.(%s)&select=uid,password_hash", strings.Join(famUIDs, ","))
+	credRaw, _ := a.client.Get(ctx, "odyssey_user_profiles", credParams)
 	var credRows []struct {
-		ProfileUID string `json:"profile_uid"`
+		UID          string  `json:"uid"`
+		PasswordHash *string `json:"password_hash"`
 	}
 	_ = json.Unmarshal(credRaw, &credRows)
 	for _, c := range credRows {
-		delete(inactiveSet, c.ProfileUID)
+		if c.PasswordHash != nil && strings.TrimSpace(*c.PasswordHash) != "" {
+			delete(inactiveSet, c.UID)
+		}
 	}
 	// Remaining inactiveSet = deleted members (inactive + no credential).
 	excludeClause := ""
@@ -797,20 +808,23 @@ func (a *API) HandleListMembers(w http.ResponseWriter, r *http.Request) {
 	}
 
 	type ProfRow struct {
-		UID                string     `json:"uid"`
-		FamilyID           string     `json:"family_id"`
-		ExplorerName       string     `json:"explorer_name"`
-		Role               string     `json:"role"`
-		IsActive           bool       `json:"is_active"`
-		Level              int        `json:"level"`
-		XP                 int64      `json:"xp"`
-		Coins              int64      `json:"coins"`
-		MonthlyCoinTarget  *int       `json:"monthly_coin_target"`
-		MonthlyEarningCap  *int       `json:"monthly_earning_cap"`
-		BlockedAt          *time.Time `json:"blocked_at"`
-		BlockedBy          *string    `json:"blocked_by"`
-		BlockReason        *string    `json:"block_reason"`
-		CreatedAt          time.Time  `json:"created_at"`
+		UID               string     `json:"uid"`
+		Username          string     `json:"username"`
+		FamilyID          string     `json:"family_id"`
+		ExplorerName      string     `json:"explorer_name"`
+		Role              string     `json:"role"`
+		IsActive          bool       `json:"is_active"`
+		Level             int        `json:"level"`
+		XP                int64      `json:"xp"`
+		Coins             int64      `json:"coins"`
+		MonthlyCoinTarget *int       `json:"monthly_coin_target"`
+		MonthlyEarningCap *int       `json:"monthly_earning_cap"`
+		BlockedAt         *time.Time `json:"blocked_at"`
+		BlockedBy         *string    `json:"blocked_by"`
+		BlockReason       *string    `json:"block_reason"`
+		AvatarFrame       string     `json:"avatar_frame"`
+		AvatarEffect      string     `json:"equipped_explorer_effect"`
+		CreatedAt         time.Time  `json:"created_at"`
 	}
 	var profs []ProfRow
 	_ = json.Unmarshal(profRaw, &profs)
@@ -828,23 +842,14 @@ func (a *API) HandleListMembers(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// 2. Fetch local user credentials ONLY for the retrieved profile UIDs (strictly targeted, no global dump)
+	// 2. Username comes from the profile row itself (profiles.username SOT).
 	uids := make([]string, len(profs))
 	for i, p := range profs {
 		uids[i] = p.UID
 	}
-	localParams := fmt.Sprintf("profile_uid=in.(%s)&select=username,profile_uid", strings.Join(uids, ","))
-	localRaw, _ := a.client.Get(ctx, "odyssey_local_users", localParams)
-	type LocalRow struct {
-		Username   string `json:"username"`
-		ProfileUID string `json:"profile_uid"`
-	}
-	var locals []LocalRow
-	_ = json.Unmarshal(localRaw, &locals)
-
-	userMap := make(map[string]string, len(locals))
-	for _, l := range locals {
-		userMap[l.ProfileUID] = l.Username
+	userMap := make(map[string]string, len(profs))
+	for _, p := range profs {
+		userMap[p.UID] = p.Username
 	}
 
 	// Hoist system config reads to avoid duplicate Supabase calls per member
@@ -929,6 +934,8 @@ func (a *API) HandleListMembers(w http.ResponseWriter, r *http.Request) {
 			PayoutFrequency:            string(pc.Frequency),
 			MinimumWithdrawalCoins:     pcMin,
 			PayoutConfigSource:         pc.Source,
+			AvatarFrame:                p.AvatarFrame,
+			AvatarEffect:               p.AvatarEffect,
 			CreatedAt:                  p.CreatedAt,
 		}
 	}
@@ -1030,8 +1037,8 @@ func (a *API) HandleCreateMember(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// 1. Check username uniqueness
-	existingRaw, err := a.client.Get(ctx, "odyssey_local_users", fmt.Sprintf("username=eq.%s", req.Username))
+	// 1. Check username uniqueness (profiles.username SOT)
+	existingRaw, err := a.client.Get(ctx, "odyssey_user_profiles", fmt.Sprintf("username=eq.%s&select=uid", req.Username))
 	if err == nil && len(existingRaw) > 2 && string(existingRaw) != "[]" {
 		shared.WriteJSONError(w, "username sudah digunakan, pilih username lain", http.StatusBadRequest)
 		return
@@ -1062,10 +1069,12 @@ func (a *API) HandleCreateMember(w http.ResponseWriter, r *http.Request) {
 		targetVal = &q
 	}
 
-	// 4. Insert user profile
+	// 4. Insert user profile (username + password_hash SOT on profiles)
 	now := time.Now().UTC()
 	profPayload := map[string]any{
 		"uid":                  uid,
+		"username":             req.Username,
+		"password_hash":        passHash,
 		"family_id":            familyID,
 		"explorer_name":        req.ExplorerName,
 		"role":                 role,
@@ -1088,25 +1097,6 @@ func (a *API) HandleCreateMember(w http.ResponseWriter, r *http.Request) {
 	_, err = a.client.MutateAtomic(ctx, http.MethodPost, "odyssey_user_profiles", profPayload, "", "return=representation")
 	if err != nil {
 		shared.WriteJSONError(w, "gagal membuat profil anggota: "+err.Error(), http.StatusInternalServerError)
-		return
-	}
-
-	// 5. Insert local auth user
-	localID := generateID("loc")
-	localPayload := map[string]any{
-		"id":            localID,
-		"username":      req.Username,
-		"password_hash": passHash,
-		"profile_uid":   uid,
-		"created_at":    now.Format(time.RFC3339),
-		"updated_at":    now.Format(time.RFC3339),
-	}
-
-	_, err = a.client.MutateAtomic(ctx, http.MethodPost, "odyssey_local_users", localPayload, "", "return=representation")
-	if err != nil {
-		// Rollback profile on auth insertion failure
-		_, _ = a.client.Mutate(ctx, http.MethodDelete, "odyssey_user_profiles", nil, fmt.Sprintf("uid=eq.%s", uid))
-		shared.WriteJSONError(w, "gagal membuat kredensial login: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
 
@@ -1332,15 +1322,8 @@ func (a *API) HandleUpdateMember(w http.ResponseWriter, r *http.Request, targetU
 			shared.WriteJSONError(w, "gagal memproses password", http.StatusInternalServerError)
 			return
 		}
-		localPatch := map[string]any{
-			"password_hash": hash,
-			"updated_at":    time.Now().UTC().Format(time.RFC3339),
-		}
-		_, err = a.client.Mutate(ctx, http.MethodPatch, "odyssey_local_users", localPatch, fmt.Sprintf("profile_uid=eq.%s", targetUID))
-		if err != nil {
-			shared.WriteJSONError(w, "gagal update password anggota: "+err.Error(), http.StatusInternalServerError)
-			return
-		}
+		profPatch["password_hash"] = hash
+		profPatch["updated_at"] = time.Now().UTC().Format(time.RFC3339)
 	}
 
 	if len(profPatch) > 0 {
@@ -1409,13 +1392,8 @@ func (a *API) HandleUpdateMember(w http.ResponseWriter, r *http.Request, targetU
 	_ = json.Unmarshal(updatedRaw, &updatedProfs)
 
 	var username string
-	localRaw, _ := a.client.Get(ctx, "odyssey_local_users", fmt.Sprintf("profile_uid=eq.%s", targetUID))
-	var locals []struct {
-		Username string `json:"username"`
-	}
-	_ = json.Unmarshal(localRaw, &locals)
-	if len(locals) > 0 {
-		username = locals[0].Username
+	if len(updatedProfs) > 0 && strings.TrimSpace(updatedProfs[0].Username) != "" {
+		username = updatedProfs[0].Username
 	} else {
 		username = targetUID
 	}
@@ -1565,9 +1543,15 @@ func (a *API) HandleUnblockMember(w http.ResponseWriter, r *http.Request, target
 		return
 	}
 	// A deleted member (login credential revoked) must not be resurrected into
-	// an active-but-locked-out state: unblock requires the credential to exist.
-	credRaw, _ := a.client.Get(ctx, "odyssey_local_users", fmt.Sprintf("profile_uid=eq.%s&select=profile_uid", targetUID))
-	if len(credRaw) <= 2 || strings.TrimSpace(string(credRaw)) == "[]" {
+	// an active-but-locked-out state: unblock requires the credential to exist
+	// (profiles.password_hash IS NOT NULL).
+	credRaw, _ := a.client.Get(ctx, "odyssey_user_profiles", fmt.Sprintf("uid=eq.%s&select=password_hash", targetUID))
+	var credRows []struct {
+		PasswordHash *string `json:"password_hash"`
+	}
+	_ = json.Unmarshal(credRaw, &credRows)
+	hasCred := len(credRows) > 0 && credRows[0].PasswordHash != nil && strings.TrimSpace(*credRows[0].PasswordHash) != ""
+	if !hasCred {
 		shared.WriteJSONError(w, "anggota sudah dihapus dan tidak dapat diaktifkan kembali", http.StatusBadRequest)
 		return
 	}
@@ -1635,9 +1619,13 @@ func (a *API) HandleDeleteMember(w http.ResponseWriter, r *http.Request, targetU
 	}
 
 	// Idempotency discriminator: a deleted member is inactive AND has no login
-	// credential row (block alone never removes the credential).
-	credRaw, _ := a.client.Get(ctx, "odyssey_local_users", fmt.Sprintf("profile_uid=eq.%s&select=profile_uid", targetUID))
-	hasCredential := len(credRaw) > 2 && strings.TrimSpace(string(credRaw)) != "[]"
+	// credential (profiles.password_hash IS NULL). Block alone never clears the hash.
+	credRaw, _ := a.client.Get(ctx, "odyssey_user_profiles", fmt.Sprintf("uid=eq.%s&select=password_hash", targetUID))
+	var credRows []struct {
+		PasswordHash *string `json:"password_hash"`
+	}
+	_ = json.Unmarshal(credRaw, &credRows)
+	hasCredential := len(credRows) > 0 && credRows[0].PasswordHash != nil && strings.TrimSpace(*credRows[0].PasswordHash) != ""
 	if !checks[0].IsActive && !hasCredential {
 		shared.WriteJSON(w, http.StatusOK, map[string]any{"success": true, "uid": targetUID, "already_deleted": true, "is_active": false})
 		return
@@ -1665,11 +1653,17 @@ func (a *API) HandleDeleteMember(w http.ResponseWriter, r *http.Request, targetU
 		}
 	}
 
-	// 2. Revoke the login credential. Nothing references odyssey_local_users,
-	// so this orphans no records; it prevents any future login and frees the
-	// username for reuse. Profile + submissions + claims + ledger stay intact.
+	// 2. Revoke the login credential by clearing profiles.password_hash and
+	// profiles.username (mirrors the old DELETE local_users row, which removed
+	// both the hash and the username and freed it for reuse).
+	// Profile + submissions + claims + ledger stay intact.
 	if hasCredential {
-		if _, err := a.client.Mutate(ctx, http.MethodDelete, "odyssey_local_users", nil, fmt.Sprintf("profile_uid=eq.%s", targetUID)); err != nil {
+		revokePatch := map[string]any{
+			"password_hash": nil,
+			"username":      nil,
+			"updated_at":    time.Now().UTC().Format(time.RFC3339),
+		}
+		if _, err := a.client.Mutate(ctx, http.MethodPatch, "odyssey_user_profiles", revokePatch, fmt.Sprintf("uid=eq.%s", targetUID)); err != nil {
 			shared.WriteJSONError(w, "gagal menghapus kredensial anggota: "+err.Error(), http.StatusInternalServerError)
 			return
 		}
@@ -1736,25 +1730,15 @@ func (a *API) HandleResetPassword(w http.ResponseWriter, r *http.Request, target
 		return
 	}
 
-	// Update password hash in local users table
-	localPatch := map[string]any{
-		"password_hash": hash,
-		"updated_at":    time.Now().UTC().Format(time.RFC3339),
-	}
-	_, err = a.client.Mutate(ctx, http.MethodPatch, "odyssey_local_users", localPatch, fmt.Sprintf("profile_uid=eq.%s", targetUID))
-	if err != nil {
-		shared.WriteJSONError(w, "gagal reset password anggota: "+err.Error(), http.StatusInternalServerError)
-		return
-	}
-
-	// Set force change flag on profile
+	// Update password hash + force-change flag on user profile (SOT).
 	profPatch := map[string]any{
+		"password_hash":        hash,
 		"must_change_password": true,
 		"updated_at":           time.Now().UTC().Format(time.RFC3339),
 	}
 	_, err = a.client.Mutate(ctx, http.MethodPatch, "odyssey_user_profiles", profPatch, fmt.Sprintf("uid=eq.%s", targetUID))
 	if err != nil {
-		shared.WriteJSONError(w, "gagal memperbarui flag password: "+err.Error(), http.StatusInternalServerError)
+		shared.WriteJSONError(w, "gagal reset password anggota: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
 

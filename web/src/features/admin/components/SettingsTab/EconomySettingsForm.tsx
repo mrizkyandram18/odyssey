@@ -1,6 +1,7 @@
 import React from 'react'
-import { Sliders, AlertCircle, Check, Calendar, Coins, ArrowRight } from 'lucide-react'
+import { Sliders, AlertCircle, Check, Calendar, Coins, ArrowRight, Shield, Award } from 'lucide-react'
 import { useAdminConfig } from '../../hooks/useAdminConfig'
+import { CosmeticsCatalogSection } from './CosmeticsCatalogSection'
 
 export const EconomySettingsForm: React.FC = () => {
   const {
@@ -30,6 +31,10 @@ export const EconomySettingsForm: React.FC = () => {
     setMonthlyTargetInput,
     monthlyCapInput,
     setMonthlyCapInput,
+    maxCapCeilingInput,
+    setMaxCapCeilingInput,
+    levelCapBonusInput,
+    setLevelCapBonusInput,
     handleSaveConfig,
   } = useAdminConfig()
 
@@ -227,7 +232,7 @@ export const EconomySettingsForm: React.FC = () => {
               <span>Batas Default Member & Auto-Block</span>
             </h4>
 
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
               <div className="space-y-1">
                 <label htmlFor="input-monthly-target" className="text-xs font-bold text-text-secondary">
                   Target Koin Bulanan Default <span className="text-status-error">*</span>
@@ -253,18 +258,34 @@ export const EconomySettingsForm: React.FC = () => {
                   id="input-monthly-cap"
                   type="number"
                   min={0}
-                  max={10000}
                   required
                   value={monthlyCapInput}
                   onChange={(e) => setMonthlyCapInput(e.target.value)}
                   className="w-full p-2.5 rounded-xl bg-surface-elevated border border-border-subtle text-xs sm:text-sm font-bold text-text-primary focus:outline-none focus:border-accent-magic font-mono"
                 />
-                <p className="text-[10px] text-text-secondary">0 = unlimited (0–10000)</p>
+                <p className="text-[10px] text-text-secondary">0 = unlimited</p>
+              </div>
+
+              <div className="space-y-1">
+                <label htmlFor="input-max-ceiling" className="text-xs font-bold text-text-secondary flex items-center gap-1">
+                  <Shield className="w-3 h-3 text-accent-magic" />
+                  <span>Plafon Ceiling Keras</span>
+                </label>
+                <input
+                  id="input-max-ceiling"
+                  type="number"
+                  min={0}
+                  placeholder="10000"
+                  value={maxCapCeilingInput}
+                  onChange={(e) => setMaxCapCeilingInput(e.target.value)}
+                  className="w-full p-2.5 rounded-xl bg-surface-elevated border border-border-subtle text-xs sm:text-sm font-bold text-text-primary focus:outline-none focus:border-accent-magic font-mono"
+                />
+                <p className="text-[10px] text-text-secondary">Cap total tertinggi + bonus</p>
               </div>
 
               <div className="space-y-1">
                 <label htmlFor="input-auto-block" className="text-xs font-bold text-text-secondary">
-                  Auto-Block Inaktivitas (Hari) <span className="text-status-error">*</span>
+                  Auto-Block (Hari) <span className="text-status-error">*</span>
                 </label>
                 <input
                   id="input-auto-block"
@@ -281,6 +302,31 @@ export const EconomySettingsForm: React.FC = () => {
             </div>
           </div>
 
+          {/* Group 4: Progression & Bonus Cap Tingkat (Level Bonus) */}
+          <div className="space-y-3 pt-3 border-t border-border-subtle">
+            <h4 className="text-xs font-bold uppercase tracking-wider text-text-secondary flex items-center gap-1.5">
+              <Award className="w-3.5 h-3.5 text-accent-magic" />
+              <span>Progression: Bonus Batas Koin Berdasarkan Tingkat</span>
+            </h4>
+
+            <div className="space-y-2">
+              <label htmlFor="input-level-bonus" className="text-xs font-bold text-text-secondary">
+                Konfigurasi JSON Bonus Cap Tingkat (Level Threshold → Tambahan Koin)
+              </label>
+              <input
+                id="input-level-bonus"
+                type="text"
+                placeholder='{"5":300,"10":500,"20":1000}'
+                value={levelCapBonusInput}
+                onChange={(e) => setLevelCapBonusInput(e.target.value)}
+                className="w-full p-2.5 rounded-xl bg-surface-elevated border border-border-subtle text-xs sm:text-sm font-mono text-text-primary focus:outline-none focus:border-accent-magic"
+              />
+              <p className="text-[10px] text-text-secondary">
+                Format JSON object. Contoh: <code className="text-accent-magic font-mono">{'{"5":300,"10":500,"20":1000}'}</code> (Tingkat 5 dapat +300, Tingkat 10 dapat +500, Tingkat 20 dapat +1000 koin).
+              </p>
+            </div>
+          </div>
+
           {/* Compact Live KPI Preview */}
           <div className="p-3 rounded-xl bg-surface-elevated border border-border-subtle text-xs flex flex-col sm:flex-row sm:items-center justify-between gap-2">
             <div className="flex items-center gap-1.5 text-text-secondary font-bold text-[11px] uppercase tracking-wider">
@@ -289,8 +335,7 @@ export const EconomySettingsForm: React.FC = () => {
             </div>
             <div className="font-bold text-text-primary text-[11px] sm:text-xs">
               Target Rp {targetRpNum.toLocaleString('id-ID')} ({targetCoinsCalc} koin) • Maks{' '}
-              {maxPayoutInput} koin • Gajian tgl {payoutDayInput} • Penukaran tgl {startDayInput}–
-              {endDayInput} • {earningPeriodInput} hari ({timezoneInput})
+              {maxPayoutInput} koin • Cap {monthlyCapInput || 'unlimited'} (Ceiling {maxCapCeilingInput || 'none'}) • Gajian tgl {payoutDayInput}
             </div>
           </div>
 
@@ -319,12 +364,15 @@ export const EconomySettingsForm: React.FC = () => {
             ) : (
               <>
                 <Check className="w-4 h-4" />
-                <span>Simpan Pengaturan Periode</span>
+                <span>Simpan Pengaturan Periode & Progression</span>
               </>
             )}
           </button>
         </form>
       </div>
+
+      {/* Cosmetic Catalog Management Section */}
+      <CosmeticsCatalogSection />
     </div>
   )
 }

@@ -9,6 +9,8 @@ import { Avatar } from '../../shared/components/atoms/Avatar'
 import { Shuffle, ArrowLeft, LogOut, Banknote, Flame, ShieldCheck } from 'lucide-react'
 import { PushNotificationToggle } from '../../shared/components/molecules/PushNotificationToggle'
 
+import { levelProgress } from '../../shared/lib/level'
+
 export function ProfilePage() {
   const { profile, loading, error, refreshProfile, logout } = useSession()
   const [activeView, setActiveView] = useState<'overview' | 'settings'>('overview')
@@ -108,7 +110,6 @@ export function ProfilePage() {
 
   const isAdmin = profile.role === 'ADMIN' || profile.role === 'GUIDE' || profile.role === 'BUILDER'
   const roleLabel = isAdmin ? 'Administrator' : 'Anggota'
-  const xpPercent = Math.min(100, (profile.xp ?? 0) % 100)
   const streakDays = profile.streak_days ?? 0
 
   // Shared Change Password — compact grouping
@@ -191,6 +192,8 @@ export function ProfilePage() {
               <Avatar
                 seed={profile.avatar_seed || profile.uid}
                 style={profile.avatar_style || 'adventurer'}
+                frame={profile.avatar_frame || 'none'}
+                effect={profile.equipped_explorer_effect || 'none'}
                 size="xl"
               />
               <button
@@ -287,6 +290,8 @@ export function ProfilePage() {
                 <Avatar
                   seed={profile.avatar_seed || profile.uid}
                   style={profile.avatar_style || 'adventurer'}
+                  frame={profile.avatar_frame || 'none'}
+                  effect={profile.equipped_explorer_effect || 'none'}
                   size="xl"
                 />
                 <button
@@ -311,13 +316,30 @@ export function ProfilePage() {
                   )}
                 </div>
               </div>
-              <div className="w-full bg-bg-app/60 p-3 rounded-xl border border-border-subtle mt-1">
-                <div className="flex justify-between text-xs font-bold mb-2">
-                  <span className="text-accent-magic">Level {profile.level ?? 1}</span>
-                  <span className="text-text-secondary">{profile.xp ?? 0} XP</span>
-                </div>
-                <ProgressBar progress={xpPercent} colorClass="bg-accent-magic" />
-              </div>
+              {(() => {
+                const progress = levelProgress(profile.xp ?? 0, profile.level ?? 1)
+                return (
+                  <div className="w-full bg-bg-app/60 p-3 rounded-xl border border-border-subtle mt-1 text-left">
+                    <div className="flex justify-between items-center text-xs font-bold mb-1">
+                      <span className="text-accent-magic">Level {profile.level ?? 1}</span>
+                      <span className="text-text-secondary">{profile.xp ?? 0} XP</span>
+                    </div>
+                    <div className="flex justify-between items-center text-[11px] text-text-secondary mb-2">
+                      <span className="font-semibold text-text-primary">Tingkat {progress.level}</span>
+                      <span>{progress.have}/{progress.required} Bintang</span>
+                    </div>
+                    <ProgressBar progress={progress.percent} colorClass="bg-accent-magic" />
+                    <p className="text-[11px] text-text-secondary mt-2 text-center leading-relaxed">
+                      Naik Tingkat untuk mendapatkan Batas Koin Bulanan yang lebih besar.
+                    </p>
+                    <div className="mt-2.5 pt-2 border-t border-border-subtle text-center">
+                      <Link to="/koleksi" className="inline-flex items-center gap-1 text-xs font-bold text-accent-magic hover:underline">
+                        🎨 Buka Koleksi Saya →
+                      </Link>
+                    </div>
+                  </div>
+                )
+              })()}
             </div>
           </div>
 
