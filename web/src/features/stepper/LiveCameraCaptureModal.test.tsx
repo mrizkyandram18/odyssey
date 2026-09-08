@@ -159,6 +159,33 @@ describe('Camera Facing Configuration', () => {
     await screen.findByTestId('capture-button')
     expect(getUserMedia).toHaveBeenCalledWith({ video: { facingMode: { ideal: 'environment' } } })
   })
+
+  it('renders switch camera buttons and toggles between rear and front camera', async () => {
+    const stopTrack = vi.fn()
+    const getUserMedia = vi.fn().mockResolvedValue({ getTracks: () => [{ stop: stopTrack }] })
+    vi.stubGlobal('navigator', { mediaDevices: { getUserMedia } })
+    vi.spyOn(HTMLVideoElement.prototype, 'play').mockResolvedValue(undefined as any)
+
+    renderLiveModal({ config: { camera_only: true, camera_facing: 'environment' } })
+    fireEvent.click(screen.getByTestId('open-camera-button'))
+
+    await screen.findByTestId('capture-button')
+    expect(screen.getByTestId('switch-camera-button')).toBeInTheDocument()
+    expect(screen.getByTestId('switch-camera-overlay-button')).toBeInTheDocument()
+    expect(getUserMedia).toHaveBeenCalledWith({ video: { facingMode: { ideal: 'environment' } } })
+
+    // Click switch camera -> flips to front ('user')
+    fireEvent.click(screen.getByTestId('switch-camera-button'))
+    await waitFor(() => {
+      expect(getUserMedia).toHaveBeenCalledWith({ video: { facingMode: { ideal: 'user' } } })
+    })
+
+    // Click switch camera again -> flips back to rear ('environment')
+    fireEvent.click(screen.getByTestId('switch-camera-overlay-button'))
+    await waitFor(() => {
+      expect(getUserMedia).toHaveBeenCalledWith({ video: { facingMode: { ideal: 'environment' } } })
+    })
+  })
 })
 
 

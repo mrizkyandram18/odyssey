@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Camera, RefreshCw, X, CheckCircle2, AlertCircle, Clock, ArrowRight } from 'lucide-react'
+import { Camera, RefreshCw, X, CheckCircle2, AlertCircle, Clock, ArrowRight, SwitchCamera } from 'lucide-react'
 import type { TaskView } from '../../shared/types'
 import { tasksApi } from '../../shared/lib/api'
 import { compressImage, uploadTaskProof } from '../../shared/lib/compress'
@@ -33,6 +33,13 @@ export const LiveCameraCaptureModal: React.FC<LiveCameraCaptureModalProps> = ({ 
   // are taken of other people/objects. Front camera ('user') is only used when explicitly configured.
   const rawFacing = task.config?.camera_facing || task.config?.photo_camera_facing
   const cameraFacing: 'user' | 'environment' = rawFacing === 'user' ? 'user' : 'environment'
+  const [activeFacing, setActiveFacing] = useState<'user' | 'environment'>(cameraFacing)
+  const [isSwitchingCamera, setIsSwitchingCamera] = useState(false)
+
+  useEffect(() => {
+    setActiveFacing(cameraFacing)
+  }, [cameraFacing])
+
   const customInstruction =
     (task.config?.camera_instruction as string | undefined)?.trim() ||
     (task.config?.instruction as string | undefined)?.trim() ||
@@ -84,12 +91,12 @@ export const LiveCameraCaptureModal: React.FC<LiveCameraCaptureModalProps> = ({ 
     setIsRequesting(true)
     setErrorMessage(null)
     try {
-      // Use { ideal: cameraFacing } so the browser selects the preferred camera without
+      // Use { ideal: activeFacing } so the browser selects the preferred camera without
       // throwing OverconstrainedError. The 'ideal' hint is honored on Android Chrome and
       // iOS Safari — front ('user') and rear ('environment') are both correctly resolved.
       // Do NOT fall back to { video: true } here: that silently opens the wrong camera.
       const stream = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode: { ideal: cameraFacing } },
+        video: { facingMode: { ideal: activeFacing } },
       })
       streamRef.current = stream
       setIsCameraOpen(true)
@@ -102,7 +109,7 @@ export const LiveCameraCaptureModal: React.FC<LiveCameraCaptureModalProps> = ({ 
       } else if (name === 'OverconstrainedError') {
         // Device does not have the requested camera (e.g. no front camera).
         // Report clearly — do NOT silently open the wrong camera.
-        const requested = cameraFacing === 'user' ? 'depan' : 'belakang'
+        const requested = activeFacing === 'user' ? 'depan' : 'belakang'
         setErrorMessage(`Kamera ${requested} tidak tersedia di perangkat ini. Pastikan perangkat memiliki kamera ${requested}.`)
       } else if (name === 'NotReadableError') {
         setErrorMessage('Kamera sedang digunakan aplikasi lain. Tutup aplikasi kamera lain lalu coba lagi.')
@@ -114,6 +121,45 @@ export const LiveCameraCaptureModal: React.FC<LiveCameraCaptureModalProps> = ({ 
     }
   }
 
+  const handleSwitchCamera = async () => {
+    if (isSwitchingCamera || isRequesting) return
+    const targetFacing = activeFacing === 'user' ? 'environment' : 'user'
+    setIsSwitchingCamera(true)
+    setErrorMessage(null)
+    try {
+      if (streamRef.current) {
+        streamRef.current.getTracks().forEach((track) => track.stop())
+        streamRef.current = null
+      }
+      if (videoRef.current) {
+        videoRef.current.srcObject = null
+      }
+      const newStream = await navigator.mediaDevices.getUserMedia({
+        video: { facingMode: { ideal: targetFacing } },
+      })
+      streamRef.current = newStream
+      setActiveFacing(targetFacing)
+      if (videoRef.current) {
+        videoRef.current.srcObject = newStream
+        videoRef.current.onloadedmetadata = () => {
+          videoRef.current?.play().catch((err) => console.warn('Video play error:', err))
+        }
+        videoRef.current.play().catch((err) => console.warn('Video play error:', err))
+      }
+    } catch (err: any) {
+      const name = err?.name || ''
+      const requested = targetFacing === 'user' ? 'depan' : 'belakang'
+      if (name === 'OverconstrainedError' || name === 'NotFoundError') {
+        setErrorMessage(`Kamera ${requested} tidak tersedia di perangkat ini.`)
+      } else if (name === 'NotAllowedError' || name === 'PermissionDeniedError') {
+        setErrorMessage('Izin kamera belum aktif. Berikan izin akses kamera pada browser.')
+      } else {
+        setErrorMessage(`Gagal mengganti ke kamera ${requested}: ` + (err?.message || 'Terjadi kesalahan'))
+      }
+    } finally {
+      setIsSwitchingCamera(false)
+    }
+  }
 
   const handleCancelCamera = () => {
     stopStream()
@@ -138,7 +184,13 @@ export const LiveCameraCaptureModal: React.FC<LiveCameraCaptureModalProps> = ({ 
       setErrorMessage('Gagal memproses gambar.')
       return
     }
+    if (ctx.save) ctx.save()
+    if (activeFacing === 'user') {
+      if (ctx.translate) ctx.translate(width, 0)
+      if (ctx.scale) ctx.scale(-1, 1)
+    }
     ctx.drawImage(video, 0, 0, width, height)
+    if (ctx.restore) ctx.restore()
     canvas.toBlob(
       async (blob) => {
         if (!blob) {
@@ -308,24 +360,49 @@ export const LiveCameraCaptureModal: React.FC<LiveCameraCaptureModalProps> = ({ 
                             autoPlay
                             playsInline
                             muted
-                            className="w-full h-full object-cover"
+                            className={`w-full h-full object-cover transition-transform ${activeFacing === 'user' ? 'scale-x-[-1]' : ''}`}
                             data-testid="camera-preview"
                           />
+                          {/* Floating Switch Camera Button on Viewfinder */}
+                          <button
+                            type="button"
+                            data-testid="switch-camera-overlay-button"
+                            onClick={handleSwitchCamera}
+                            disabled={isSwitchingCamera || isRequesting}
+                            className="absolute top-2.5 right-2.5 z-10 px-3 py-1.5 rounded-full bg-black/65 hover:bg-black/85 active:scale-95 text-white backdrop-blur-md flex items-center gap-1.5 text-xs font-bold transition-all shadow-md cursor-pointer border border-white/20"
+                            title="Putar Kamera (Depan / Belakang)"
+                            aria-label="Putar Kamera"
+                          >
+                            <SwitchCamera className={`w-3.5 h-3.5 text-accent-magic ${isSwitchingCamera ? 'animate-spin' : ''}`} />
+                            <span>{activeFacing === 'user' ? 'Kamera Depan' : 'Kamera Belakang'}</span>
+                          </button>
                         </div>
                         <div className="flex gap-2">
                           <button
                             type="button"
                             onClick={handleCancelCamera}
-                            className="flex-1 py-3 rounded-xl bg-surface-elevated border border-border-subtle text-text-secondary font-bold hover:bg-surface"
+                            className="py-3 px-3.5 rounded-xl bg-surface-elevated border border-border-subtle text-text-secondary font-bold hover:bg-surface cursor-pointer"
                           >
                             Batal
                           </button>
                           <button
                             type="button"
+                            data-testid="switch-camera-button"
+                            onClick={handleSwitchCamera}
+                            disabled={isSwitchingCamera || isRequesting}
+                            className="py-3 px-3 rounded-xl bg-surface-elevated border border-border-subtle text-text-primary font-bold hover:bg-surface flex items-center justify-center gap-1.5 cursor-pointer shadow-xs active:scale-95 transition-all"
+                            title="Putar Kamera Depan / Belakang"
+                            aria-label="Putar Kamera"
+                          >
+                            <SwitchCamera className={`w-4 h-4 text-accent-magic ${isSwitchingCamera ? 'animate-spin' : ''}`} />
+                            <span className="text-xs whitespace-nowrap">Putar Kamera</span>
+                          </button>
+                          <button
+                            type="button"
                             data-testid="capture-button"
                             onClick={handleCapture}
-                            disabled={compressing}
-                            className="flex-1 py-3 rounded-xl bg-accent-magic text-white font-bold shadow hover:brightness-110 disabled:opacity-50 flex items-center justify-center gap-2"
+                            disabled={compressing || isSwitchingCamera}
+                            className="flex-1 py-3 rounded-xl bg-accent-magic text-white font-bold shadow hover:brightness-110 disabled:opacity-50 flex items-center justify-center gap-2 cursor-pointer active:scale-95 transition-all"
                           >
                             <Camera className="w-4 h-4" /> Ambil Foto
                           </button>
