@@ -5,6 +5,7 @@ import type { TaskView } from '../../shared/types'
 import { tasksApi } from '../../shared/lib/api'
 import { compressImage, uploadTaskProof } from '../../shared/lib/compress'
 import { isEarningCapError, EARNING_CAP_MESSAGE } from '../../shared/lib/earning'
+import { TaskRevisionBanner } from './TaskRevisionBanner'
 
 interface CameraCaptureModalProps {
   task: TaskView
@@ -14,6 +15,7 @@ interface CameraCaptureModalProps {
 }
 
 export const CameraCaptureModal: React.FC<CameraCaptureModalProps> = ({ task, onClose, onSuccess, onNextTask }) => {
+  const isRevision = task.status === 'REJECTED'
   const isAlreadyDone = task.status === 'APPROVED' || task.status === 'PENDING'
   const cameraInputRef = useRef<HTMLInputElement>(null)
   const [capturedFile, setCapturedFile] = useState<File | null>(null)
@@ -127,6 +129,8 @@ export const CameraCaptureModal: React.FC<CameraCaptureModalProps> = ({ task, on
                   </div>
                 </div>
 
+                {isRevision && <TaskRevisionBanner adminNotes={task.admin_notes} />}
+
                 {task.description && (
                   <p className="text-sm text-text-secondary bg-surface p-4 rounded-2xl border border-border-subtle leading-relaxed">
                     {task.description}
@@ -154,10 +158,12 @@ export const CameraCaptureModal: React.FC<CameraCaptureModalProps> = ({ task, on
                     </div>
                     <div>
                       <p className="font-heading font-bold text-text-primary text-base">
-                        Buka Kamera HP
+                        {isRevision ? 'Ambil Foto Ulang' : 'Buka Kamera HP'}
                       </p>
                       <p className="text-xs text-text-secondary mt-1">
-                        Ketuk untuk mengambil foto bukti langsung
+                        {isRevision
+                          ? 'Ketuk untuk mengambil foto perbaikan langsung'
+                          : 'Ketuk untuk mengambil foto bukti langsung'}
                       </p>
                     </div>
                   </div>
@@ -210,7 +216,7 @@ export const CameraCaptureModal: React.FC<CameraCaptureModalProps> = ({ task, on
                   ) : (
                     <>
                       <Sparkles className="w-4 h-4" />
-                      <span>Kirim Foto Bukti</span>
+                      <span>{isRevision ? 'Kirim Ulang Foto' : 'Kirim Foto Bukti'}</span>
                     </>
                   )}
                 </button>

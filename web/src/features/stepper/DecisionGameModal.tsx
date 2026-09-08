@@ -5,6 +5,7 @@ import { Wallet, CheckCircle2, X, Sparkles, Award, AlertCircle, ChevronRight, Ro
 import type { TaskView, DecisionScenario } from '../../shared/types'
 import { tasksApi } from '../../shared/lib/api'
 import { isEarningCapError, EARNING_CAP_MESSAGE } from '../../shared/lib/earning'
+import { TaskRevisionBanner } from './TaskRevisionBanner'
 
 interface DecisionGameModalProps {
   task: TaskView
@@ -135,6 +136,9 @@ export const DecisionGameModal: React.FC<DecisionGameModalProps> = ({ task, onCl
           <AnimatePresence mode="wait">
             {!earnedRewards ? (
               <motion.div key="decision-panel" initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-4">
+                {task.status === 'REJECTED' && eventIndex === 0 && (
+                  <TaskRevisionBanner adminNotes={task.admin_notes} />
+                )}
                 <div className="flex items-center justify-between p-3 rounded-2xl bg-surface border border-border-subtle">
                   <div>
                     <span className="text-[10px] uppercase tracking-wider font-extrabold text-accent-magic block">

@@ -5,6 +5,7 @@ import type { TaskView } from '../../shared/types'
 import { tasksApi } from '../../shared/lib/api'
 import { uploadTaskProof } from '../../shared/lib/compress'
 import { isEarningCapError, EARNING_CAP_MESSAGE } from '../../shared/lib/earning'
+import { TaskRevisionBanner } from './TaskRevisionBanner'
 
 interface DocUploadModalProps {
   task: TaskView
@@ -14,6 +15,7 @@ interface DocUploadModalProps {
 }
 
 export const DocUploadModal: React.FC<DocUploadModalProps> = ({ task, onClose, onSuccess, onNextTask }) => {
+  const isRevision = task.status === 'REJECTED'
   const isAlreadyDone = task.status === 'APPROVED' || task.status === 'PENDING'
   const fileInputRef = useRef<HTMLInputElement>(null)
   const [selectedFile, setSelectedFile] = useState<File | null>(null)
@@ -122,6 +124,8 @@ export const DocUploadModal: React.FC<DocUploadModalProps> = ({ task, onClose, o
                   </div>
                 </div>
 
+                {isRevision && <TaskRevisionBanner adminNotes={task.admin_notes} />}
+
                 {task.description && (
                   <p className="text-sm text-text-secondary bg-surface p-4 rounded-2xl border border-border-subtle leading-relaxed">
                     {task.description}
@@ -221,7 +225,7 @@ export const DocUploadModal: React.FC<DocUploadModalProps> = ({ task, onClose, o
                   ) : (
                     <>
                       <Sparkles className="w-4 h-4" />
-                      <span>Kirim Dokumen Bukti</span>
+                      <span>{isRevision ? 'Kirim Ulang Dokumen' : 'Kirim Dokumen Bukti'}</span>
                     </>
                   )}
                 </button>

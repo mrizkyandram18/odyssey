@@ -143,7 +143,7 @@ export const SubmissionsQueue: React.FC = () => {
                 : 'text-text-secondary hover:text-text-primary'
             }`}
           >
-            Ditolak
+            Perlu Revisi
           </button>
         </div>
       </div>

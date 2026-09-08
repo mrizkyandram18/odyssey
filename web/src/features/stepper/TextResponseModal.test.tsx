@@ -83,4 +83,37 @@ describe('TextResponseModal', () => {
     }))
     await waitFor(() => expect(screen.getByText(/Jawaban Berhasil Terkirim!/i)).toBeInTheDocument())
   })
+
+  it('renders TaskRevisionBanner when task status is REJECTED and shows revision CTA', async () => {
+    const rejectedTask = {
+      ...baseTask,
+      status: 'REJECTED',
+      admin_notes: 'Jawaban kurang detail, tolong sebutkan contoh konkret.',
+    } as unknown as TaskView
+
+    const submitMock = tasksApi.submit as unknown as ReturnType<typeof vi.fn>
+    submitMock.mockResolvedValue({ success: true, status: 'PENDING' })
+
+    render(<TextResponseModal task={rejectedTask} onClose={vi.fn()} onSuccess={vi.fn()} />)
+
+    // Revision banner must be visible
+    expect(screen.getByTestId('task-revision-banner')).toBeInTheDocument()
+    expect(screen.getByText(/Jawaban kurang detail, tolong sebutkan contoh konkret/)).toBeInTheDocument()
+    expect(screen.getByText(/Perlu Diperbaiki/)).toBeInTheDocument()
+
+    // Button should be contextual
+    const textarea = screen.getByPlaceholderText(/Tuliskan respon kamu di sini dengan jelas/i)
+    fireEvent.change(textarea, { target: { value: 'Contoh konkret: warung makan Bu Siti masih pakai nota robek manual.' } })
+
+    const submitBtn = screen.getByRole('button', { name: /Kirim Revisi Jawaban/i })
+    expect(submitBtn).not.toBeDisabled()
+
+    fireEvent.click(submitBtn)
+    await waitFor(() => expect(submitMock).toHaveBeenCalledTimes(1))
+  })
+
+  it('regression: does not render TaskRevisionBanner when task status is UNLOCKED or PENDING', () => {
+    render(<TextResponseModal task={baseTask} onClose={vi.fn()} onSuccess={vi.fn()} />)
+    expect(screen.queryByTestId('task-revision-banner')).toBeNull()
+  })
 })

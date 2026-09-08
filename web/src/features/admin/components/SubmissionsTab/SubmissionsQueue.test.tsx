@@ -131,3 +131,88 @@ describe('SubmissionsQueue pagination', () => {
     })
   })
 })
+
+describe('SubmissionsQueue Minta Revisi flow', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+  })
+
+  afterEach(() => {
+    cleanup()
+  })
+
+  it('renders Minta Revisi button and Penalti Koin jika Revisi', async () => {
+    vi.mocked(adminTasksApi.getSubmissions).mockResolvedValue(
+      paged([sub(1)], 1, 1, false)
+    )
+    render(<SubmissionsQueue />)
+    await waitFor(() => {
+      expect(screen.getByText('Tugas 1')).toBeInTheDocument()
+    })
+
+    expect(screen.getByRole('button', { name: 'Minta revisi Tugas 1' })).toBeInTheDocument()
+    expect(screen.getByText('Minta Revisi')).toBeInTheDocument()
+    expect(screen.getByText('Penalti Koin jika Revisi:')).toBeInTheDocument()
+  })
+
+  it('blocks verification and displays error when note is empty', async () => {
+    vi.mocked(adminTasksApi.getSubmissions).mockResolvedValue(
+      paged([sub(1)], 1, 1, false)
+    )
+    render(<SubmissionsQueue />)
+    await waitFor(() => {
+      expect(screen.getByText('Tugas 1')).toBeInTheDocument()
+    })
+
+    const mintaRevisiBtn = screen.getByRole('button', { name: 'Minta revisi Tugas 1' })
+    fireEvent.click(mintaRevisiBtn)
+
+    // Verify error message is shown
+    expect(screen.getByText('Catatan revisi wajib diisi agar anggota tahu apa yang perlu diperbaiki.')).toBeInTheDocument()
+    // Verify API is NOT called
+    expect(adminTasksApi.verifySubmission).not.toHaveBeenCalled()
+  })
+
+  it('submits REJECTED verification with note and penalty when note is provided', async () => {
+    vi.mocked(adminTasksApi.getSubmissions).mockResolvedValue(
+      paged([sub(1)], 1, 1, false)
+    )
+    vi.mocked(adminTasksApi.verifySubmission).mockResolvedValue({ success: true } as any)
+
+    render(<SubmissionsQueue />)
+    await waitFor(() => {
+      expect(screen.getByText('Tugas 1')).toBeInTheDocument()
+    })
+
+    const noteInput = screen.getByPlaceholderText('Jelaskan apa yang perlu diperbaiki agar anggota tahu apa yang harus dilakukan...')
+    fireEvent.change(noteInput, { target: { value: 'Foto kurang jelas, tolong ambil ulang.' } })
+
+    const penaltyInput = screen.getByLabelText('Penalti Koin jika Revisi:')
+    fireEvent.change(penaltyInput, { target: { value: '10' } })
+
+    const mintaRevisiBtn = screen.getByRole('button', { name: 'Minta revisi Tugas 1' })
+    fireEvent.click(mintaRevisiBtn)
+
+    await waitFor(() => {
+      expect(adminTasksApi.verifySubmission).toHaveBeenCalledWith(1, 'REJECTED', 'Foto kurang jelas, tolong ambil ulang.', 10)
+    })
+  })
+
+  it('renders Submission Revisi badge when pending submission has reviewed_at', async () => {
+    const resubmittedSub = {
+      ...sub(2),
+      reviewed_at: '2026-09-08T10:00:00Z',
+    }
+    vi.mocked(adminTasksApi.getSubmissions).mockResolvedValue(
+      paged([resubmittedSub], 1, 1, false)
+    )
+
+    render(<SubmissionsQueue />)
+    await waitFor(() => {
+      expect(screen.getByText('Tugas 2')).toBeInTheDocument()
+    })
+
+    expect(screen.getByTestId('submission-revisi-badge')).toBeInTheDocument()
+    expect(screen.getByText('Submission Revisi')).toBeInTheDocument()
+  })
+})

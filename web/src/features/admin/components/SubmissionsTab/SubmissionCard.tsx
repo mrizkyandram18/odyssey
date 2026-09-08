@@ -1,7 +1,6 @@
-import React from 'react'
+import React, { useState } from 'react'
 import {
   CheckCircle2,
-  XCircle,
   Clock,
   ExternalLink,
   PenLine,
@@ -9,7 +8,7 @@ import {
   FileText,
   Edit3,
   Check,
-  X,
+  RotateCcw,
 } from 'lucide-react'
 import type { PendingSubmissionView } from '../../../../shared/types'
 import { TaskTypeBadge } from '../shared/TaskTypeBadge'
@@ -37,6 +36,7 @@ export const SubmissionCard: React.FC<SubmissionCardProps> = ({
   onOpenEdit,
   onPreviewImage,
 }) => {
+  const [noteError, setNoteError] = useState<string | null>(null)
   const isSubApproved = submission.status === 'APPROVED'
   const isSubPending = submission.status === 'PENDING'
   const isSubRejected = submission.status === 'REJECTED'
@@ -84,11 +84,20 @@ export const SubmissionCard: React.FC<SubmissionCardProps> = ({
               </>
             ) : (
               <>
-                <XCircle className="w-3 h-3" />
-                <span>Ditolak</span>
+                <RotateCcw className="w-3 h-3" />
+                <span>Perlu Revisi</span>
               </>
             )}
           </span>
+          {isSubPending && submission.reviewed_at && (
+            <span
+              data-testid="submission-revisi-badge"
+              className="inline-flex items-center gap-1 text-[11px] font-bold px-2 py-0.5 rounded-md bg-blue-500/15 text-blue-700 dark:text-blue-300 border border-blue-500/25"
+            >
+              <RotateCcw className="w-3 h-3" />
+              <span>Submission Revisi</span>
+            </span>
+          )}
           <span className="text-xs text-text-secondary">
             Oleh: <strong className="text-text-primary font-bold">{submission.user_name}</strong>
           </span>
@@ -310,16 +319,28 @@ export const SubmissionCard: React.FC<SubmissionCardProps> = ({
                   htmlFor={`note-${submission.id}`}
                   className="text-[11px] font-bold text-text-secondary block"
                 >
-                  Catatan untuk anggota (opsional, wajib jika menolak)
+                  Catatan untuk anggota (wajib untuk Minta Revisi)
                 </label>
                 <input
                   id={`note-${submission.id}`}
                   type="text"
-                  placeholder="Contoh: Foto kurang jelas, ulangi dari sudut lain"
+                  placeholder="Jelaskan apa yang perlu diperbaiki agar anggota tahu apa yang harus dilakukan..."
                   value={actionNote || ''}
-                  onChange={(e) => onNoteChange(e.target.value)}
-                  className="w-full p-2 rounded-xl bg-surface-elevated border border-border-subtle text-xs text-text-primary placeholder:text-text-secondary/50 focus:outline-none focus:border-accent-magic"
+                  onChange={(e) => {
+                    if (noteError) setNoteError(null)
+                    onNoteChange(e.target.value)
+                  }}
+                  className={`w-full p-2 rounded-xl bg-surface-elevated border text-xs text-text-primary placeholder:text-text-secondary/50 focus:outline-none ${
+                    noteError
+                      ? 'border-status-error focus:border-status-error ring-1 ring-status-error/30'
+                      : 'border-border-subtle focus:border-accent-magic'
+                  }`}
                 />
+                {noteError && (
+                  <p className="text-[11px] text-status-error font-medium mt-1 animate-fadeIn" role="alert">
+                    {noteError}
+                  </p>
+                )}
               </div>
 
               <div className="space-y-1">
@@ -327,7 +348,7 @@ export const SubmissionCard: React.FC<SubmissionCardProps> = ({
                   htmlFor={`penalty-${submission.id}`}
                   className="text-[11px] font-bold text-status-error block"
                 >
-                  Penalti Koin jika Ditolak:
+                  Penalti Koin jika Revisi:
                 </label>
                 <div className="flex items-center gap-1.5">
                   <input
@@ -360,20 +381,32 @@ export const SubmissionCard: React.FC<SubmissionCardProps> = ({
 
               <button
                 type="button"
-                aria-label={`Tolak verifikasi ${submission.task_title}`}
+                aria-label={`Minta revisi ${submission.task_title}`}
                 disabled={processingId === submission.id}
-                onClick={() => onVerify(submission.id, 'REJECTED')}
-                className="px-4 py-2 rounded-xl bg-surface border border-status-error/30 text-status-error hover:bg-status-error/10 font-bold text-xs flex items-center justify-center gap-1.5 transition-colors disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+                onClick={() => {
+                  if (!actionNote || !actionNote.trim()) {
+                    setNoteError('Catatan revisi wajib diisi agar anggota tahu apa yang perlu diperbaiki.')
+                    const el = document.getElementById(`note-${submission.id}`)
+                    if (el) el.focus()
+                    return
+                  }
+                  setNoteError(null)
+                  onVerify(submission.id, 'REJECTED')
+                }}
+                className="px-4 py-2 rounded-xl bg-surface border border-amber-500/40 text-amber-700 dark:text-amber-400 hover:bg-amber-500/10 font-bold text-xs flex items-center justify-center gap-1.5 transition-colors disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
               >
-                <X className="w-3.5 h-3.5" />
-                <span>Tolak</span>
+                <RotateCcw className="w-3.5 h-3.5" />
+                <span>Minta Revisi</span>
               </button>
 
               <button
                 type="button"
                 aria-label={`Setujui verifikasi ${submission.task_title}`}
                 disabled={processingId === submission.id}
-                onClick={() => onVerify(submission.id, 'APPROVED')}
+                onClick={() => {
+                  setNoteError(null)
+                  onVerify(submission.id, 'APPROVED')
+                }}
                 className="px-4 py-2 rounded-xl bg-status-success text-white font-bold text-xs flex items-center justify-center gap-1.5 shadow-xs hover:brightness-110 transition-all disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
               >
                 <Check className="w-3.5 h-3.5" />

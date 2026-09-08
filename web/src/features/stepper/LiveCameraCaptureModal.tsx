@@ -5,6 +5,7 @@ import type { TaskView } from '../../shared/types'
 import { tasksApi } from '../../shared/lib/api'
 import { compressImage, uploadTaskProof } from '../../shared/lib/compress'
 import { isEarningCapError, EARNING_CAP_MESSAGE } from '../../shared/lib/earning'
+import { TaskRevisionBanner } from './TaskRevisionBanner'
 
 interface LiveCameraCaptureModalProps {
   task: TaskView
@@ -14,6 +15,7 @@ interface LiveCameraCaptureModalProps {
 }
 
 export const LiveCameraCaptureModal: React.FC<LiveCameraCaptureModalProps> = ({ task, onClose, onSuccess, onNextTask }) => {
+  const isRevision = task.status === 'REJECTED'
   const isAlreadyDone = task.status === 'APPROVED' || task.status === 'PENDING'
   const videoRef = useRef<HTMLVideoElement>(null)
   const canvasRef = useRef<HTMLCanvasElement>(null)
@@ -291,6 +293,8 @@ export const LiveCameraCaptureModal: React.FC<LiveCameraCaptureModalProps> = ({ 
                   <div className="text-xs text-text-secondary font-bold">+{task.reward_coins} 🪙 | +{task.reward_xp} XP</div>
                 </div>
 
+                {isRevision && <TaskRevisionBanner adminNotes={task.admin_notes} />}
+
                 {task.description && <p className="text-sm text-text-secondary bg-surface p-4 rounded-2xl border border-border-subtle leading-relaxed">{task.description}</p>}
 
                 <div className="rounded-xl bg-amber-50 border border-amber-200 p-3 text-xs leading-relaxed text-amber-800">
@@ -338,10 +342,10 @@ export const LiveCameraCaptureModal: React.FC<LiveCameraCaptureModalProps> = ({ 
                         data-testid="open-camera-button"
                         onClick={handleOpenCamera}
                         disabled={isRequesting || !isSupported}
-                        className="w-full py-4 rounded-2xl bg-accent-magic text-white font-bold shadow-lg shadow-accent-magic/30 hover:brightness-110 disabled:opacity-50 flex items-center justify-center gap-2"
+                        className="w-full py-4 rounded-2xl bg-accent-magic text-white font-bold shadow-lg shadow-accent-magic/30 hover:brightness-110 disabled:opacity-50 flex items-center justify-center gap-2 cursor-pointer"
                       >
                         <Camera className="w-5 h-5" />
-                        {isRequesting ? 'Membuka Kamera...' : 'Buka Kamera'}
+                        {isRequesting ? 'Membuka Kamera...' : isRevision ? 'Ambil Foto Ulang' : 'Buka Kamera'}
                       </button>
                     ) : (
                       <div className="space-y-3">

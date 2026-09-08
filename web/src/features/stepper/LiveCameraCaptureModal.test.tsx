@@ -338,4 +338,22 @@ describe('Failure Handling: Clear error displayed without crash', () => {
     expect(errorBox).toBeInTheDocument()
     expect(errorBox).toHaveTextContent(/Kamera sedang digunakan aplikasi lain/i)
   })
+
+  it('renders TaskRevisionBanner and Ambil Foto Ulang CTA when status is REJECTED', () => {
+    renderLiveModal({
+      status: 'REJECTED',
+      admin_notes: 'Foto harus bersama rekan diskusi, bukan selfie sendiri.',
+      config: { camera_only: true },
+    })
+
+    expect(screen.getByTestId('task-revision-banner')).toBeInTheDocument()
+    expect(screen.getByText(/Foto harus bersama rekan diskusi, bukan selfie sendiri/)).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /Ambil Foto Ulang/i })).toBeInTheDocument()
+  })
+
+  it('regression: does not render TaskRevisionBanner when task status is UNLOCKED', () => {
+    renderLiveModal({ status: 'UNLOCKED', config: { camera_only: true } })
+    expect(screen.queryByTestId('task-revision-banner')).toBeNull()
+    expect(screen.getByRole('button', { name: /Buka Kamera/i })).toBeInTheDocument()
+  })
 })

@@ -5,6 +5,7 @@ import type { TaskView } from '../../shared/types'
 import { tasksApi } from '../../shared/lib/api'
 import { uploadTaskProof } from '../../shared/lib/compress'
 import { isEarningCapError, EARNING_CAP_MESSAGE } from '../../shared/lib/earning'
+import { TaskRevisionBanner } from './TaskRevisionBanner'
 
 interface VideoRecordModalProps {
   task: TaskView
@@ -57,6 +58,7 @@ export const VideoRecordModal: React.FC<VideoRecordModalProps> = ({
   onNextTask,
   countdownSeconds = 3,
 }) => {
+  const isRevision = task.status === 'REJECTED'
   const isAlreadyDone = task.status === 'APPROVED' || task.status === 'PENDING'
   const videoRef = useRef<HTMLVideoElement>(null)
   const previewRef = useRef<HTMLVideoElement>(null)
@@ -317,6 +319,8 @@ export const VideoRecordModal: React.FC<VideoRecordModalProps> = ({
                   <div className="text-xs text-text-secondary font-bold">+{task.reward_coins} 🪙 | +{task.reward_xp} XP</div>
                 </div>
 
+                {isRevision && <TaskRevisionBanner adminNotes={task.admin_notes} />}
+
                 <div className="rounded-2xl bg-surface border border-border-subtle p-4 space-y-3">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-1.5 text-accent-magic font-bold text-xs">
@@ -383,7 +387,7 @@ export const VideoRecordModal: React.FC<VideoRecordModalProps> = ({
                         className="w-full py-4 rounded-2xl bg-accent-magic text-white font-bold shadow-lg shadow-accent-magic/30 hover:brightness-110 disabled:opacity-50 flex items-center justify-center gap-2"
                       >
                         <Video className="w-5 h-5" />
-                        {isRequesting ? 'Membuka Kamera...' : 'Buka Kamera'}
+                        {isRequesting ? 'Membuka Kamera...' : isRevision ? 'Rekam Video Ulang' : 'Buka Kamera'}
                       </button>
                     ) : (
                       <div className="space-y-3">

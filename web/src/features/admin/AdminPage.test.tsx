@@ -217,7 +217,7 @@ describe('AdminPage Component', () => {
     expect(sent.default_monthly_earning_cap).toBe(3320)
   })
 
-  it('renders pending submission with edit and reject with penalty buttons', async () => {
+  it('renders pending submission with edit and minta revisi with penalty buttons', async () => {
     vi.mocked(useSession).mockReturnValue({
       session: { uid: '1', family_id: '1', role: 'ADMIN', kind: 'user', expires: 9999999999, token: 'abc' },
       profile: { uid: '1', role: 'ADMIN' },
@@ -252,7 +252,8 @@ describe('AdminPage Component', () => {
     await waitFor(() => {
       expect(screen.getByText('Tugas Menulis')).toBeInTheDocument()
       expect(screen.getByText('Edit Jawaban')).toBeInTheDocument()
-      expect(screen.getByText(/Penalti Koin jika Ditolak/i)).toBeInTheDocument()
+      expect(screen.getByText('Minta Revisi')).toBeInTheDocument()
+      expect(screen.getByText(/Penalti Koin jika Revisi/i)).toBeInTheDocument()
     })
 
     // Click Edit Jawaban button

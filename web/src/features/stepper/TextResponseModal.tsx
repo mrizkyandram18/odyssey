@@ -4,6 +4,7 @@ import { FileEdit, CheckCircle2, X, Clock, Sparkles, AlertCircle, ArrowRight } f
 import type { TaskView } from '../../shared/types'
 import { tasksApi } from '../../shared/lib/api'
 import { isEarningCapError, EARNING_CAP_MESSAGE } from '../../shared/lib/earning'
+import { TaskRevisionBanner } from './TaskRevisionBanner'
 
 interface TextResponseModalProps {
   task: TaskView
@@ -13,6 +14,7 @@ interface TextResponseModalProps {
 }
 
 export const TextResponseModal: React.FC<TextResponseModalProps> = ({ task, onClose, onSuccess, onNextTask }) => {
+  const isRevision = task.status === 'REJECTED'
   const isAlreadyDone = task.status === 'APPROVED' || task.status === 'PENDING'
   const [response, setResponse] = useState('')
   const [submitting, setSubmitting] = useState(false)
@@ -127,6 +129,8 @@ export const TextResponseModal: React.FC<TextResponseModalProps> = ({ task, onCl
                   </div>
                 </div>
 
+                {isRevision && <TaskRevisionBanner adminNotes={task.admin_notes} />}
+
                 {embedUrl && (
                   <div className="relative aspect-video rounded-2xl overflow-hidden shadow-inner border border-border-subtle bg-black">
                     <iframe src={embedUrl} title={task.title} className="w-full h-full" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowFullScreen />
@@ -193,7 +197,7 @@ export const TextResponseModal: React.FC<TextResponseModalProps> = ({ task, onCl
                   ) : (
                     <>
                       <Sparkles className="w-4 h-4" />
-                      <span>Kirim Jawaban Teks</span>
+                      <span>{isRevision ? 'Kirim Revisi Jawaban' : 'Kirim Jawaban Teks'}</span>
                     </>
                   )}
                 </button>
