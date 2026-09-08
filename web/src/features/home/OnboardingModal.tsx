@@ -85,15 +85,15 @@ export function OnboardingModal() {
                   <div className="mb-6">
                     <span className="text-6xl block mb-6">⏱️</span>
                     <h2 className="font-heading text-2xl font-bold text-text-primary mb-2">Setiap hari cukup beberapa menit.</h2>
-                    <div className="mt-6 flex items-center justify-center gap-2 text-sm font-semibold text-text-secondary">
-                       <span className="bg-surface border border-border-subtle px-3 py-1 rounded-full">Belajar</span>
+                    <div className="mt-6 flex items-center justify-center gap-2 text-xs md:text-sm font-semibold text-text-secondary flex-wrap">
+                       <span className="bg-surface border border-border-subtle px-3 py-1 rounded-full">Selesaikan Misi</span>
                        <span>→</span>
-                       <span className="bg-surface border border-border-subtle px-3 py-1 rounded-full">Latihan</span>
+                       <span className="bg-amber-500/10 text-amber-700 dark:text-amber-300 px-3 py-1 rounded-full font-bold">Koin & Bintang</span>
                        <span>→</span>
-                       <span className="bg-accent-reward/10 text-accent-reward px-3 py-1 rounded-full">Poin</span>
+                       <span className="bg-accent-magic/10 text-accent-magic px-3 py-1 rounded-full font-bold">Buka Hadiah</span>
                     </div>
                     <p className="text-sm text-text-secondary mt-6">
-                      Lihat perkembangan dan pencapaian belajarmu!
+                      Kumpulkan koin, naikkan tingkat avatarmu, dan buka hadiah hiasan profil!
                     </p>
                   </div>
                   <Button size="lg" className="w-full text-lg shadow-sm" onClick={handleStart}>

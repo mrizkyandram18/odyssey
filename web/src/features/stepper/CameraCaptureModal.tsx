@@ -123,7 +123,7 @@ export const CameraCaptureModal: React.FC<CameraCaptureModalProps> = ({ task, on
                     📸 Ambil Foto Bukti
                   </span>
                   <div className="text-xs text-text-secondary font-bold">
-                    +{task.reward_coins} 🪙 | +{task.reward_xp} XP
+                    +{task.reward_coins} Koin • +{task.reward_xp} Bintang
                   </div>
                 </div>
 
@@ -231,8 +231,8 @@ export const CameraCaptureModal: React.FC<CameraCaptureModalProps> = ({ task, on
                   </h4>
                   <p className="text-sm text-text-secondary mt-1">
                     {task.status === 'APPROVED'
-                      ? `Tugas telah disetujui dan kamu mendapatkan +${task.coins_earned || task.reward_coins} Koin & +${task.xp_earned || task.reward_xp} EXP.`
-                      : 'Bukti foto telah masuk ke antrean verifikasi admin. Koin & EXP akan otomatis masuk saat disetujui.'}
+                      ? `Tugas telah disetujui dan kamu mendapatkan +${task.coins_earned || task.reward_coins} Koin & +${task.xp_earned || task.reward_xp} Bintang.`
+                      : 'Bukti foto telah masuk ke antrean verifikasi admin. Koin & Bintang akan otomatis masuk saat disetujui.'}
                   </p>
                 </div>
 

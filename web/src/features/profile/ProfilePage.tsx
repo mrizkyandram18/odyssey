@@ -1,13 +1,13 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import { Button } from '../../shared/components/atoms/Button'
-import { ProgressBar } from '../../shared/components/atoms/ProgressBar'
 import { Card } from '../../shared/components/atoms/Card'
 import { useSession } from '../../shared/hooks/useSession'
-import { apiClient } from '../../shared/lib/api'
+import { apiClient, crewsApi } from '../../shared/lib/api'
 import { Avatar } from '../../shared/components/atoms/Avatar'
 import { Shuffle, ArrowLeft, LogOut, Banknote, Flame, ShieldCheck } from 'lucide-react'
 import { PushNotificationToggle } from '../../shared/components/molecules/PushNotificationToggle'
+import type { Explorer } from '../../shared/types'
 
 import { levelProgress } from '../../shared/lib/level'
 
@@ -21,6 +21,11 @@ export function ProfilePage() {
   const [changing, setChanging] = useState(false)
   const [changeError, setChangeError] = useState<string | null>(null)
   const [changeSuccess, setChangeSuccess] = useState<string | null>(null)
+  const [familyMembers, setFamilyMembers] = useState<Explorer[]>([])
+
+  useEffect(() => {
+    crewsApi.members().then((m) => setFamilyMembers(m || [])).catch(() => {})
+  }, [profile?.family_id])
 
   const handleRandomizeAvatar = async () => {
     setRandomizing(true)
@@ -284,9 +289,11 @@ export function ProfilePage() {
 
       {activeView === 'overview' && (
         <>
-          <div className="rounded-2xl bg-surface border border-border-subtle p-5">
+          {/* 1. Adventurer Passport Hero Card */}
+          <div className="relative overflow-hidden rounded-3xl bg-surface border border-border-subtle p-6 shadow-sm">
             <div className="flex flex-col items-center text-center gap-3">
-              <div className="relative">
+              {/* Avatar with equipped Frame & Effect */}
+              <div className="relative p-1">
                 <Avatar
                   seed={profile.avatar_seed || profile.uid}
                   style={profile.avatar_style || 'adventurer'}
@@ -298,43 +305,59 @@ export function ProfilePage() {
                   onClick={handleRandomizeAvatar}
                   disabled={randomizing}
                   aria-label="Acak avatar"
-                  className="absolute -bottom-1 -right-1 p-1.5 bg-accent-magic text-white rounded-full shadow-sm hover:brightness-110 transition-all active:scale-95 disabled:opacity-50"
+                  className="absolute -bottom-1 -right-1 p-2 bg-accent-magic text-white rounded-full shadow-md hover:brightness-110 transition-all active:scale-95 disabled:opacity-50 border-2 border-white"
                 >
-                  <Shuffle size={12} className={randomizing ? 'animate-spin' : ''} />
+                  <Shuffle size={13} className={randomizing ? 'animate-spin' : ''} />
                 </button>
               </div>
+
+              {/* Explorer Name & Badges */}
               <div>
-                <h2 className="text-xl font-bold text-text-primary tracking-tight">{profile.explorer_name}</h2>
+                <h2 className="text-2xl font-extrabold text-text-primary tracking-tight">{profile.explorer_name}</h2>
                 <div className="flex items-center justify-center gap-2 mt-1.5 flex-wrap">
-                  <span className="text-[11px] font-bold px-2.5 py-1 rounded-full bg-accent-magic/10 text-accent-magic border border-accent-magic/15">
+                  <span className="text-[11px] font-extrabold px-3 py-1 rounded-full bg-accent-magic/10 text-accent-magic border border-accent-magic/20">
                     {roleLabel}
                   </span>
                   {streakDays > 0 && (
-                    <span className="text-[11px] font-bold px-2.5 py-1 rounded-full bg-accent-danger/10 text-accent-danger border border-accent-danger/15 inline-flex items-center gap-1">
-                      <Flame size={12} /> {streakDays} Hari Streak
+                    <span className="text-[11px] font-extrabold px-3 py-1 rounded-full bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20 inline-flex items-center gap-1 shadow-xs">
+                      <Flame size={12} className="fill-amber-500 text-amber-500" />
+                      <span>{streakDays} Hari Streak</span>
                     </span>
                   )}
                 </div>
               </div>
+
+              {/* Tingkat & Bintang Progression Card */}
               {(() => {
                 const progress = levelProgress(profile.xp ?? 0, profile.level ?? 1)
                 return (
-                  <div className="w-full bg-bg-app/60 p-3 rounded-xl border border-border-subtle mt-1 text-left">
-                    <div className="flex justify-between items-center text-xs font-bold mb-1">
-                      <span className="text-accent-magic">Level {profile.level ?? 1}</span>
+                  <div className="w-full bg-surface-elevated/70 p-4 rounded-2xl border border-border-subtle mt-2 text-left space-y-2">
+                    <div className="flex justify-between items-center text-xs font-bold">
+                      <span className="text-accent-magic font-extrabold">Level {profile.level ?? 1}</span>
                       <span className="text-text-secondary">{profile.xp ?? 0} XP</span>
                     </div>
-                    <div className="flex justify-between items-center text-[11px] text-text-secondary mb-2">
-                      <span className="font-semibold text-text-primary">Tingkat {progress.level}</span>
-                      <span>{progress.have}/{progress.required} Bintang</span>
+
+                    <div className="flex justify-between items-center text-xs">
+                      <span className="font-extrabold text-text-primary">Tingkat {progress.level}</span>
+                      <span className="font-semibold text-accent-magic">{progress.have}/{progress.required} Bintang</span>
                     </div>
-                    <ProgressBar progress={progress.percent} colorClass="bg-accent-magic" />
-                    <p className="text-[11px] text-text-secondary mt-2 text-center leading-relaxed">
-                      Naik Tingkat untuk mendapatkan Batas Koin Bulanan yang lebih besar.
+
+                    <div className="h-2.5 w-full bg-surface rounded-full overflow-hidden border border-border-subtle/50">
+                      <div
+                        className="h-full bg-gradient-to-r from-accent-magic to-sky-400 rounded-full transition-all duration-500"
+                        style={{ width: `${progress.percent}%` }}
+                      />
+                    </div>
+
+                    <p className="text-[11px] text-text-secondary text-center leading-relaxed pt-1">
+                      {progress.required - progress.have} Bintang lagi menuju Tingkat {progress.level + 1}
                     </p>
-                    <div className="mt-2.5 pt-2 border-t border-border-subtle text-center">
-                      <Link to="/koleksi" className="inline-flex items-center gap-1 text-xs font-bold text-accent-magic hover:underline">
-                        🎨 Buka Koleksi Saya →
+
+                    <div className="pt-2 border-t border-border-subtle flex items-center justify-between text-xs">
+                      <span className="text-text-secondary font-medium">Hiasan profil aktif</span>
+                      <Link to="/koleksi" className="font-extrabold text-accent-magic hover:underline inline-flex items-center gap-1">
+                        <span>🎨 Koleksi Saya</span>
+                        <span>→</span>
                       </Link>
                     </div>
                   </div>
@@ -343,23 +366,97 @@ export function ProfilePage() {
             </div>
           </div>
 
-          <div className="rounded-2xl bg-surface border border-border-subtle p-4">
-            <div className="flex items-center gap-3">
-              <span className="w-10 h-10 rounded-xl bg-accent-gold/12 border border-accent-gold/15 flex items-center justify-center text-lg shrink-0">🪙</span>
-              <div className="flex-1 min-w-0">
-                <p className="flex items-baseline gap-1">
-                  <span className="text-lg font-extrabold text-text-primary leading-none">{profile.coins ?? 0}</span>
-                  <span className="text-xs font-semibold text-text-secondary">Koin</span>
-                </p>
-                <p className="text-[11px] text-text-secondary mt-0.5">Tukarkan koin menjadi uang tunai</p>
+          {/* 2. Coin Balance & Redemption Card */}
+          <div className="rounded-3xl bg-surface border border-border-subtle p-5 shadow-sm">
+            <div className="flex items-center justify-between gap-3">
+              <div className="flex items-center gap-3">
+                <div className="w-12 h-12 rounded-2xl bg-amber-500/10 text-amber-500 flex items-center justify-center text-2xl shrink-0 border border-amber-500/20">
+                  🪙
+                </div>
+                <div className="min-w-0">
+                  <p className="text-[11px] font-black uppercase tracking-wider text-text-secondary">Saldo Koin Petualang</p>
+                  <p className="flex items-baseline gap-1.5 mt-0.5">
+                    <span className="text-2xl font-black text-text-primary leading-none">{profile.coins ?? 0}</span>
+                    <span className="text-xs font-bold text-text-secondary">Koin</span>
+                  </p>
+                  <p className="text-[11px] text-text-secondary mt-0.5">Tukarkan koin menjadi uang tunai atau saldo digital</p>
+                </div>
               </div>
+
               <Link
                 to="/shop"
-                className="shrink-0 inline-flex items-center gap-1.5 px-3.5 py-2.5 rounded-xl bg-accent-magic hover:brightness-110 text-white font-bold text-xs shadow-sm transition-all active:scale-95 min-h-[38px]"
+                className="shrink-0 inline-flex items-center gap-1.5 px-4 py-3 rounded-2xl bg-accent-magic hover:brightness-110 text-white font-black text-xs shadow-md shadow-accent-magic/25 transition-all active:scale-95 min-h-[42px]"
               >
-                <Banknote size={14} /> Pencairan Koin
+                <Banknote size={15} />
+                <span>Pencairan Koin</span>
               </Link>
             </div>
+          </div>
+
+          {/* 3. Family Showcase Section */}
+          <div className="rounded-3xl bg-surface border border-border-subtle p-5 shadow-sm">
+            <div className="flex items-center justify-between mb-3.5">
+              <div className="flex items-center gap-2">
+                <span className="text-lg">👨‍👩‍👧‍👦</span>
+                <h3 className="font-extrabold text-text-primary text-sm tracking-tight">
+                  Keluarga Petualang
+                </h3>
+              </div>
+              <span className="text-[11px] font-bold text-text-secondary">
+                {familyMembers.length > 0 ? `${familyMembers.length} Anggota` : 'Keluarga'}
+              </span>
+            </div>
+
+            {familyMembers.length === 0 ? (
+              <p className="text-xs text-text-secondary text-center py-4 leading-relaxed">
+                Jelajahi misi harian bersama seluruh anggota keluargamu!
+              </p>
+            ) : (
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                {familyMembers.map((member) => {
+                  const isCurrent = member.uid === profile.uid
+                  return (
+                    <div
+                      key={member.uid}
+                      className={`flex items-center gap-3 p-3 rounded-2xl border transition-all ${
+                        isCurrent
+                          ? 'bg-accent-magic/[0.06] border-accent-magic/30 shadow-xs ring-1 ring-accent-magic/20'
+                          : 'bg-surface-elevated/60 border-border-subtle'
+                      }`}
+                    >
+                      <Avatar
+                        seed={member.avatar_seed || member.uid}
+                        style={member.avatar_style || 'adventurer'}
+                        frame={member.avatar_frame || 'none'}
+                        effect={member.equipped_explorer_effect || 'none'}
+                        size="md"
+                      />
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center gap-1.5">
+                          <p className="text-xs font-extrabold text-text-primary truncate">
+                            {member.explorer_name}
+                          </p>
+                          {isCurrent && (
+                            <span className="text-[9.5px] font-black px-1.5 py-0.2 rounded-md bg-accent-magic/20 text-accent-magic">
+                              Kamu
+                            </span>
+                          )}
+                        </div>
+                        <div className="flex items-center gap-2 mt-0.5 text-[11px] text-text-secondary">
+                          <span className="font-bold text-accent-magic">⭐ Tingkat {member.level}</span>
+                          {member.streak_days && member.streak_days > 0 ? (
+                            <span className="inline-flex items-center gap-0.5 text-amber-600 dark:text-amber-400 font-bold">
+                              <Flame size={11} className="fill-amber-500 text-amber-500" />
+                              <span>{member.streak_days}h</span>
+                            </span>
+                          ) : null}
+                        </div>
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+            )}
           </div>
         </>
       )}

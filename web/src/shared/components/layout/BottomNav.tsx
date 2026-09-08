@@ -1,5 +1,5 @@
 import { Link, useLocation } from 'react-router-dom'
-import { Home, Banknote, User, ShieldCheck } from 'lucide-react'
+import { Home, Sparkles, Banknote, User, ShieldCheck } from 'lucide-react'
 import { useSession } from '../../hooks/useSession'
 
 export function BottomNav() {
@@ -14,12 +14,13 @@ export function BottomNav() {
       ]
     : [
         { label: 'Beranda', to: '/', icon: Home },
+        { label: 'Koleksi', to: '/koleksi', icon: Sparkles },
         { label: 'Pencairan Koin', to: '/shop', icon: Banknote },
         { label: 'Profil', to: '/profile', icon: User },
       ]
 
   return (
-    <nav aria-label="Navigasi Utama" className="flex items-center justify-around py-2 px-2 safe-pb">
+    <nav aria-label="Navigasi Utama" className="flex items-center justify-around py-1.5 px-2 safe-pb">
       {navItems.map((item) => {
         const Icon = item.icon
         const isActive = location.pathname === item.to
@@ -28,14 +29,18 @@ export function BottomNav() {
             key={item.to}
             to={item.to}
             aria-current={isActive ? 'page' : undefined}
-            className={`flex flex-col items-center gap-1 py-2 px-4 rounded-xl transition-colors min-w-[64px] ${
+            className={`flex flex-col items-center justify-center gap-1 py-1.5 px-2.5 rounded-2xl transition-all duration-200 flex-1 max-w-[90px] min-h-[48px] ${
               isActive
-                ? 'text-accent-magic bg-accent-magic/10 font-bold'
-                : 'text-text-secondary hover:text-text-primary hover:bg-surface'
+                ? 'text-accent-magic bg-accent-magic/10 font-bold shadow-sm'
+                : 'text-text-secondary hover:text-text-primary hover:bg-surface/60'
             }`}
           >
-            <Icon size={20} className={isActive ? 'stroke-[2.5]' : 'stroke-2'} />
-            <span className="text-[11px] font-semibold tracking-tight leading-none">{item.label}</span>
+            <div className={`p-1 rounded-xl transition-transform ${isActive ? 'scale-110' : ''}`}>
+              <Icon size={19} className={isActive ? 'stroke-[2.5]' : 'stroke-2'} />
+            </div>
+            <span className="text-[10.5px] tracking-tight leading-none text-center truncate max-w-full">
+              {item.label}
+            </span>
           </Link>
         )
       })}

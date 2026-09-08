@@ -118,7 +118,7 @@ export const DocUploadModal: React.FC<DocUploadModalProps> = ({ task, onClose, o
                     📄 Upload Dokumen Tugas
                   </span>
                   <div className="text-xs text-text-secondary font-bold">
-                    +{task.reward_coins} 🪙 | +{task.reward_xp} XP
+                    +{task.reward_coins} Koin • +{task.reward_xp} Bintang
                   </div>
                 </div>
 
@@ -242,8 +242,8 @@ export const DocUploadModal: React.FC<DocUploadModalProps> = ({ task, onClose, o
                   </h4>
                   <p className="text-sm text-text-secondary mt-1">
                     {task.status === 'APPROVED'
-                      ? `Tugas telah disetujui dan kamu mendapatkan +${task.coins_earned || task.reward_coins} Koin & +${task.xp_earned || task.reward_xp} EXP.`
-                      : 'Dokumenmu sedang dalam antrean verifikasi admin. Koin & EXP akan otomatis masuk setelah disetujui.'}
+                      ? `Tugas telah disetujui dan kamu mendapatkan +${task.coins_earned || task.reward_coins} Koin & +${task.xp_earned || task.reward_xp} Bintang.`
+                      : 'Dokumenmu sedang dalam antrean verifikasi admin. Koin & Bintang akan otomatis masuk setelah disetujui.'}
                   </p>
                 </div>
 
