@@ -126,6 +126,13 @@ export interface VideoConfig {
   youtube_url?: string
   minimum_duration_seconds?: number
   minimum_watch_seconds?: number
+  /** User-recorded video mode (e.g. 60s self-intro). When recording.enabled, member records via camera and admin reviews. */
+  recording?: {
+    enabled?: boolean
+    max_duration_seconds?: number
+    camera_facing?: 'user' | 'environment'
+    instruction?: string
+  }
 }
 
 export interface QuizConfig {
@@ -159,11 +166,33 @@ export interface TextResponseConfig {
   maximum_characters?: number
 }
 
+export interface DecisionOption {
+  id: string
+  label: string
+  delta: number
+  hint?: string
+}
+
+export interface DecisionEvent {
+  id: string
+  title: string
+  description?: string
+  options: DecisionOption[]
+}
+
+export interface DecisionScenario {
+  initial_balance: number
+  currency?: string
+  events: DecisionEvent[]
+}
+
 export interface MiniGameConfig {
-  game?: 'MEMORY' | 'MEMORY_CHALLENGE' | string
+  game?: 'MEMORY' | 'MEMORY_CHALLENGE' | 'DECISION_FINANCE' | string
   difficulty?: 'EASY' | 'MEDIUM' | 'HARD'
   target_score?: number
   time_limit_seconds?: number
+  /** Decision/finance scenario. When present, member plays DecisionGameModal instead of memory-match. */
+  scenario?: DecisionScenario
 }
 
 export interface TaskConfig extends VideoConfig, QuizConfig, PhotoUploadConfig, DocUploadConfig, TextResponseConfig, MiniGameConfig {
@@ -359,6 +388,12 @@ export interface PendingSubmissionView {
     score?: number
     game?: string
     moves?: number
+    /** User-recorded video metadata (client-reported, admin verifies by watching). */
+    duration_seconds?: number
+    camera_facing?: string
+    /** Decision/finance game result (server recomputes final_balance authoritatively). */
+    choices?: Record<string, string>
+    final_balance?: number
     [key: string]: any
   }
   created_at: string

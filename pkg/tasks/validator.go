@@ -57,6 +57,22 @@ func (e *Engine) RegisterDefaultValidators() {
 		if dur, ok := cfg["minimum_duration_seconds"].(float64); ok && dur < 0 {
 			return fmt.Errorf("minimum_duration_seconds tidak boleh negatif")
 		}
+		// Video recording mode (user-recorded video, e.g. 60s self-intro).
+		// youtube_url/video_url is NOT required when recording is enabled.
+		if recRaw, ok := cfg["recording"]; ok && recRaw != nil {
+			recMap, ok := recRaw.(map[string]any)
+			if !ok {
+				return fmt.Errorf("config.recording harus berupa object")
+			}
+			if enabled, _ := recMap["enabled"].(bool); enabled {
+				if md, ok := recMap["max_duration_seconds"].(float64); ok && (md < 1 || md > 600) {
+					return fmt.Errorf("recording.max_duration_seconds harus antara 1 dan 600 detik")
+				}
+				if facing, ok := recMap["camera_facing"].(string); ok && facing != "" && facing != "user" && facing != "environment" {
+					return fmt.Errorf("recording.camera_facing harus 'user' atau 'environment'")
+				}
+			}
+		}
 		return nil
 	})
 
@@ -149,6 +165,13 @@ func (e *Engine) RegisterDefaultValidators() {
 	e.RegisterCapability("game", func(cfg map[string]any) error {
 		if ts, ok := cfg["target_score"].(float64); ok && (ts < 0 || ts > 1000000) {
 			return fmt.Errorf("target_score harus antara 0 dan 1,000,000")
+		}
+		// Decision/finance scenario mode (e.g. DECISION_FINANCE): a fixed
+		// sequence of events with options carrying balance deltas.
+		// The server recomputes the final balance from the authoritative
+		// config, so the client can never spoof the score.
+		if scRaw, ok := cfg["scenario"]; ok && scRaw != nil {
+			return validateDecisionScenario(scRaw)
 		}
 		return nil
 	})
@@ -311,6 +334,221 @@ func contains(slice []string, val string) bool {
 	return false
 }
 
+// --- Decision / finance scenario (MINI_GAME + config.scenario) ---
+
+// DecisionOption is one selectable choice inside a scenario event.
+type DecisionOption struct {
+	ID    string
+	Label string
+	Delta int
+}
+
+// DecisionEvent is a single decision point inside a scenario.
+type DecisionEvent struct {
+	ID      string
+	Title   string
+	Options []DecisionOption
+}
+
+// DecisionScenario is the authoritative server-side view of config.scenario.
+type DecisionScenario struct {
+	InitialBalance int
+	Events         []DecisionEvent
+}
+
+func toInt(v any) (int, bool) {
+	switch n := v.(type) {
+	case float64:
+		return int(n), true
+	case int:
+		return n, true
+	case int64:
+		return int(n), true
+	}
+	return 0, false
+}
+
+// validateDecisionScenario validates the raw config.scenario value.
+func validateDecisionScenario(scRaw any) error {
+	scMap, ok := scRaw.(map[string]any)
+	if !ok {
+		return fmt.Errorf("config.scenario harus berupa object")
+	}
+	eventsRaw, ok := scMap["events"]
+	if !ok || eventsRaw == nil {
+		return fmt.Errorf("config.scenario.events wajib memiliki minimal 1 event")
+	}
+	events, ok := eventsRaw.([]any)
+	if !ok || len(events) == 0 {
+		return fmt.Errorf("config.scenario.events wajib memiliki minimal 1 event")
+	}
+	if len(events) > 30 {
+		return fmt.Errorf("config.scenario.events maksimal 30 event")
+	}
+	if ib, ok := scMap["initial_balance"]; ok && ib != nil {
+		if _, ok := toInt(ib); !ok {
+			return fmt.Errorf("config.scenario.initial_balance harus berupa angka")
+		}
+	}
+	seenEvents := make(map[string]bool)
+	for i, eRaw := range events {
+		eMap, ok := eRaw.(map[string]any)
+		if !ok {
+			return fmt.Errorf("event #%d tidak valid", i+1)
+		}
+		eID := strings.TrimSpace(fmt.Sprintf("%v", eMap["id"]))
+		if eID == "" || eID == "<nil>" {
+			return fmt.Errorf("event #%d wajib memiliki id", i+1)
+		}
+		if seenEvents[eID] {
+			return fmt.Errorf("event #%d memiliki id duplikat: %s", i+1, eID)
+		}
+		seenEvents[eID] = true
+		optsRaw, ok := eMap["options"]
+		if !ok || optsRaw == nil {
+			return fmt.Errorf("event #%d (%s) wajib memiliki minimal 2 pilihan", i+1, eID)
+		}
+		opts, ok := optsRaw.([]any)
+		if !ok || len(opts) < 2 {
+			return fmt.Errorf("event #%d (%s) wajib memiliki minimal 2 pilihan", i+1, eID)
+		}
+		if len(opts) > 6 {
+			return fmt.Errorf("event #%d (%s) maksimal 6 pilihan", i+1, eID)
+		}
+		seenOpts := make(map[string]bool)
+		for j, oRaw := range opts {
+			oMap, ok := oRaw.(map[string]any)
+			if !ok {
+				return fmt.Errorf("event %s pilihan #%d tidak valid", eID, j+1)
+			}
+			oID := strings.TrimSpace(fmt.Sprintf("%v", oMap["id"]))
+			if oID == "" || oID == "<nil>" {
+				return fmt.Errorf("event %s pilihan #%d wajib memiliki id", eID, j+1)
+			}
+			if seenOpts[oID] {
+				return fmt.Errorf("event %s memiliki id pilihan duplikat: %s", eID, oID)
+			}
+			seenOpts[oID] = true
+			if _, ok := toInt(oMap["delta"]); !ok {
+				return fmt.Errorf("event %s pilihan %s wajib memiliki delta angka", eID, oID)
+			}
+		}
+	}
+	return nil
+}
+
+// GetDecisionScenario parses config.scenario into a DecisionScenario.
+// Returns ok=false when the task has no scenario (e.g. legacy memory game).
+func GetDecisionScenario(config map[string]any) (sc DecisionScenario, ok bool) {
+	if config == nil {
+		return DecisionScenario{}, false
+	}
+	scRaw, exists := config["scenario"]
+	if !exists || scRaw == nil {
+		return DecisionScenario{}, false
+	}
+	scMap, ok := scRaw.(map[string]any)
+	if !ok {
+		return DecisionScenario{}, false
+	}
+	eventsRaw, ok := scMap["events"].([]any)
+	if !ok || len(eventsRaw) == 0 {
+		return DecisionScenario{}, false
+	}
+	if ib, ok := toInt(scMap["initial_balance"]); ok {
+		sc.InitialBalance = ib
+	}
+	for _, eRaw := range eventsRaw {
+		eMap, ok := eRaw.(map[string]any)
+		if !ok {
+			return DecisionScenario{}, false
+		}
+		ev := DecisionEvent{
+			ID:    strings.TrimSpace(fmt.Sprintf("%v", eMap["id"])),
+			Title: fmt.Sprintf("%v", eMap["title"]),
+		}
+		optsRaw, _ := eMap["options"].([]any)
+		for _, oRaw := range optsRaw {
+			oMap, ok := oRaw.(map[string]any)
+			if !ok {
+				continue
+			}
+			delta, _ := toInt(oMap["delta"])
+			ev.Options = append(ev.Options, DecisionOption{
+				ID:    strings.TrimSpace(fmt.Sprintf("%v", oMap["id"])),
+				Label: fmt.Sprintf("%v", oMap["label"]),
+				Delta: delta,
+			})
+		}
+		sc.Events = append(sc.Events, ev)
+	}
+	if len(sc.Events) == 0 {
+		return DecisionScenario{}, false
+	}
+	return sc, true
+}
+
+// ValidateDecisionChoices verifies that choices covers every scenario event
+// exactly once with a valid option id, and returns the authoritative final
+// balance (initial + sum of deltas). The client-reported score/balance is
+// NEVER trusted.
+func ValidateDecisionChoices(config map[string]any, choices map[string]any) (finalBalance int, err error) {
+	sc, ok := GetDecisionScenario(config)
+	if !ok {
+		return 0, fmt.Errorf("tugas ini tidak memiliki skenario keputusan")
+	}
+	if choices == nil {
+		return 0, fmt.Errorf("pilihan keputusan tidak boleh kosong")
+	}
+	if len(choices) != len(sc.Events) {
+		return 0, fmt.Errorf("jumlah pilihan (%d) harus sama dengan jumlah event (%d)", len(choices), len(sc.Events))
+	}
+	balance := sc.InitialBalance
+	seen := make(map[string]bool)
+	for _, ev := range sc.Events {
+		raw, exists := choices[ev.ID]
+		if !exists {
+			return 0, fmt.Errorf("event %s belum dijawab", ev.ID)
+		}
+		optID := strings.TrimSpace(fmt.Sprintf("%v", raw))
+		if seen[ev.ID] {
+			return 0, fmt.Errorf("event %s dijawab lebih dari sekali", ev.ID)
+		}
+		seen[ev.ID] = true
+		found := false
+		for _, opt := range ev.Options {
+			if opt.ID == optID {
+				balance += opt.Delta
+				found = true
+				break
+			}
+		}
+		if !found {
+			return 0, fmt.Errorf("pilihan tidak valid untuk event %s", ev.ID)
+		}
+	}
+	return balance, nil
+}
+
+// HasVideoRecording reports whether a task config enables user video
+// recording (config.recording.enabled = true). Such tasks require the
+// member to record via camera and are always admin-reviewed.
+func HasVideoRecording(config map[string]any) bool {
+	if config == nil {
+		return false
+	}
+	recRaw, ok := config["recording"]
+	if !ok || recRaw == nil {
+		return false
+	}
+	recMap, ok := recRaw.(map[string]any)
+	if !ok {
+		return false
+	}
+	enabled, _ := recMap["enabled"].(bool)
+	return enabled
+}
+
 // HasEssayPrompt reports whether a task config carries a non-empty essay
 // question (config.prompt). This is the frontend's video_answer_mode='essay'
 // marker: useAdminTasks writes config.prompt/minimum_characters/
@@ -344,12 +582,15 @@ func ResolveEvaluationType(taskType string, explicitEvalType string) string {
 }
 
 // ResolveEvaluationTypeForConfig is the config-aware evaluation resolver.
-// VIDEO tasks carrying an essay prompt (VIDEO + Esai Teks Panjang) always
-// resolve to ADMIN_REVIEW — even when the stored evaluation_type says AUTO
-// (legacy rows created before essay forced review). All other tasks fall
-// back to ResolveEvaluationType.
+// VIDEO tasks carrying an essay prompt (VIDEO + Esai Teks Panjang) or an
+// enabled video recording (VIDEO + Rekam Video) always resolve to
+// ADMIN_REVIEW — even when the stored evaluation_type says AUTO (legacy
+// rows). All other tasks fall back to ResolveEvaluationType.
 func ResolveEvaluationTypeForConfig(taskType string, explicitEvalType string, config map[string]any) string {
 	if IsVideoEssayTask(taskType, config) {
+		return "ADMIN_REVIEW"
+	}
+	if strings.EqualFold(strings.TrimSpace(taskType), "VIDEO") && HasVideoRecording(config) {
 		return "ADMIN_REVIEW"
 	}
 	return ResolveEvaluationType(taskType, explicitEvalType)

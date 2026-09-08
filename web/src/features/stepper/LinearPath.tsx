@@ -7,6 +7,8 @@ import { useSession } from '../../shared/hooks/useSession'
 import { Card } from '../../shared/components/atoms/Card'
 import { Button } from '../../shared/components/atoms/Button'
 import { VideoQuizModal } from './VideoQuizModal'
+import { VideoRecordModal } from './VideoRecordModal'
+import { DecisionGameModal } from './DecisionGameModal'
 import { DocUploadModal } from './DocUploadModal'
 import { CameraCaptureModal } from './CameraCaptureModal'
 import { LiveCameraCaptureModal } from './LiveCameraCaptureModal'
@@ -581,12 +583,16 @@ export const LinearPath: React.FC = () => {
             : isLegacyCameraOnlyTask(activeModalTask)
         const isDoc = activeModalTask.task_type === 'DOCUMENT_UPLOAD' || Boolean(cfg.attachment_url)
         const isPhoto = activeModalTask.task_type === 'PHOTO_UPLOAD' || activeModalTask.task_type === 'PHOTO_PROOF'
+        const isVideoRecording = activeModalTask.task_type === 'VIDEO' && Boolean(cfg.recording?.enabled)
+        const hasDecisionScenario = activeModalTask.task_type === 'MINI_GAME' && Array.isArray(cfg.scenario?.events) && cfg.scenario.events.length > 0
         const isGame = activeModalTask.task_type === 'MINI_GAME' || Boolean(cfg.game)
         const isText = activeModalTask.task_type === 'TEXT_RESPONSE' || (!isDoc && !isPhoto && Boolean(cfg.minimum_characters || cfg.prompt))
         // eslint-disable-next-line react-hooks/refs -- onNextTask is event handler, not ref read during render
+        if (isVideoRecording) return <VideoRecordModal task={activeModalTask} onClose={() => setActiveModalTask(null)} onSuccess={handleModalSuccess} onNextTask={() => handleNextTask(activeModalTask)} />
         if (isLiveCamera && isPhoto) return <LiveCameraCaptureModal task={activeModalTask} onClose={() => setActiveModalTask(null)} onSuccess={handleModalSuccess} onNextTask={() => handleNextTask(activeModalTask)} />
         if (isDoc) return <DocUploadModal task={activeModalTask} onClose={() => setActiveModalTask(null)} onSuccess={handleModalSuccess} onNextTask={() => handleNextTask(activeModalTask)} />
         if (isPhoto) return <CameraCaptureModal task={activeModalTask} onClose={() => setActiveModalTask(null)} onSuccess={handleModalSuccess} onNextTask={() => handleNextTask(activeModalTask)} />
+        if (hasDecisionScenario) return <DecisionGameModal task={activeModalTask} onClose={() => setActiveModalTask(null)} onSuccess={handleModalSuccess} onNextTask={() => handleNextTask(activeModalTask)} />
         if (isText) return <TextResponseModal task={activeModalTask} onClose={() => setActiveModalTask(null)} onSuccess={handleModalSuccess} onNextTask={() => handleNextTask(activeModalTask)} />
         if (isGame) return <MiniGameModal task={activeModalTask} onClose={() => setActiveModalTask(null)} onSuccess={handleModalSuccess} onNextTask={() => handleNextTask(activeModalTask)} />
         return <VideoQuizModal task={activeModalTask} onClose={() => setActiveModalTask(null)} onSuccess={handleModalSuccess} onNextTask={() => handleNextTask(activeModalTask)} />

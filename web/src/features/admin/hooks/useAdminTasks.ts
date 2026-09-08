@@ -15,6 +15,10 @@ export interface NewTaskFormState {
   // Config fields
   video_url: string
   video_answer_mode: 'none' | 'quiz' | 'essay'
+  video_mode: 'youtube' | 'recording'
+  video_max_duration: number
+  video_camera_facing: 'user' | 'environment'
+  video_instruction: string
   questions: Array<{ id: string; question: string; options: string[]; correct_answer: string }>
   photo_min_count: number
   photo_camera_only: boolean
@@ -28,6 +32,8 @@ export interface NewTaskFormState {
   game_type: string
   game_target_score: number
   game_max_moves: number
+  /** Raw JSON for decision/finance scenario. When non-empty, parsed as config.scenario (MINI_GAME). */
+  game_scenario_json: string
 }
 
 const getInitialNewTask = (date: string): NewTaskFormState => ({
@@ -35,6 +41,10 @@ const getInitialNewTask = (date: string): NewTaskFormState => ({
   description: '',
   task_type: 'VIDEO',
   video_answer_mode: 'none',
+  video_mode: 'youtube',
+  video_max_duration: 60,
+  video_camera_facing: 'user',
+  video_instruction: '',
   reward_coins: 50,
   reward_xp: 100,
   target_scope: 'ALL',
@@ -62,6 +72,7 @@ const getInitialNewTask = (date: string): NewTaskFormState => ({
   game_type: 'MEMORY_MATCH',
   game_target_score: 500,
   game_max_moves: 20,
+  game_scenario_json: '',
 })
 
 const getLocalTodayString = (): string =>
@@ -89,6 +100,10 @@ export function useAdminTasks() {
     reward_xp: number
     video_url: string
     video_answer_mode: 'none' | 'quiz' | 'essay'
+    video_mode: 'youtube' | 'recording'
+    video_max_duration: number
+    video_camera_facing: 'user' | 'environment'
+    video_instruction: string
     questions: any[]
     photo_min_count: number
     photo_camera_only: boolean
@@ -102,6 +117,7 @@ export function useAdminTasks() {
     game_type: string
     game_target_score: number
     game_max_moves: number
+    game_scenario_json: string
     config: Record<string, any>
   }>({
     title: '',
@@ -111,6 +127,10 @@ export function useAdminTasks() {
     reward_xp: 100,
     video_url: '',
     video_answer_mode: 'none',
+    video_mode: 'youtube',
+    video_max_duration: 60,
+    video_camera_facing: 'user',
+    video_instruction: '',
     questions: [{ id: '1', question: '', options: ['', ''], correct_answer: '' }],
     photo_min_count: 1,
     photo_camera_only: false,
@@ -124,6 +144,7 @@ export function useAdminTasks() {
     game_type: 'MEMORY_MATCH',
     game_target_score: 500,
     game_max_moves: 20,
+    game_scenario_json: '',
     config: {},
   })
   const [isSavingTask, setIsSavingTask] = useState(false)
@@ -164,12 +185,25 @@ export function useAdminTasks() {
 
     let config: Record<string, any> = {}
     if (newTask.task_type === 'VIDEO') {
-      if (!newTask.video_url.trim()) {
-        alert('URL Video YouTube wajib diisi')
-        return
-      }
-      config = { video_url: newTask.video_url.trim(), youtube_url: newTask.video_url.trim() }
-      if (newTask.video_answer_mode === 'quiz') {
+      if (newTask.video_mode === 'recording') {
+        // User-recorded video (e.g. 60s self-intro): YouTube URL NOT required.
+        // Backend forces ADMIN_REVIEW for recording tasks (ResolveEvaluationTypeForConfig).
+        const recording: Record<string, any> = {
+          enabled: true,
+          max_duration_seconds: Math.max(1, Math.min(600, Number(newTask.video_max_duration) || 60)),
+          camera_facing: newTask.video_camera_facing,
+        }
+        if (newTask.video_instruction.trim()) {
+          recording.instruction = newTask.video_instruction.trim()
+        }
+        config = { recording }
+      } else {
+        if (!newTask.video_url.trim()) {
+          alert('URL Video YouTube wajib diisi')
+          return
+        }
+        config = { video_url: newTask.video_url.trim(), youtube_url: newTask.video_url.trim() }
+        if (newTask.video_answer_mode === 'quiz') {
         for (let i = 0; i < newTask.questions.length; i++) {
           const q = newTask.questions[i]
           if (!q.question.trim()) { alert(`Pertanyaan ke-${i + 1} belum diisi`); return }
@@ -182,6 +216,7 @@ export function useAdminTasks() {
         config.prompt = newTask.text_prompt.trim()
         config.minimum_characters = newTask.text_min_chars
         config.maximum_characters = newTask.text_max_chars
+      }
       }
     } else if (newTask.task_type === 'QUIZ') {
       for (let i = 0; i < newTask.questions.length; i++) {
@@ -235,6 +270,23 @@ export function useAdminTasks() {
         game: newTask.game_type,
         target_score: newTask.game_target_score,
         max_moves: newTask.game_max_moves,
+      }
+      // Decision/finance scenario (optional): raw JSON parsed into config.scenario.
+      // Server validates structure (ValidateTaskInput) and recomputes results.
+      if (newTask.game_scenario_json.trim()) {
+        let parsed: any
+        try {
+          parsed = JSON.parse(newTask.game_scenario_json)
+        } catch {
+          alert('Scenario JSON tidak valid. Periksa format JSON.')
+          return
+        }
+        const scenario = parsed && typeof parsed === 'object' && parsed.scenario ? parsed.scenario : parsed
+        if (!scenario || typeof scenario !== 'object' || !Array.isArray(scenario.events)) {
+          alert('Scenario harus memiliki object dengan key "events" (array).')
+          return
+        }
+        config.scenario = scenario
       }
     }
 
@@ -333,6 +385,8 @@ export function useAdminTasks() {
       if (Array.isArray(cfg.questions) && cfg.questions.length > 0) vMode = 'quiz'
       else if (cfg.prompt) vMode = 'essay'
     }
+    const rec = (cfg.recording || {}) as Record<string, any>
+    const isRecording = Boolean(rec.enabled)
     setEditTaskForm({
       title: task.title,
       description: task.description || '',
@@ -341,6 +395,10 @@ export function useAdminTasks() {
       reward_xp: task.reward_xp || 100,
       video_url: cfg.video_url || cfg.youtube_url || '',
       video_answer_mode: vMode,
+      video_mode: isRecording ? 'recording' : 'youtube',
+      video_max_duration: Number(rec.max_duration_seconds) || 60,
+      video_camera_facing: rec.camera_facing === 'environment' ? 'environment' : 'user',
+      video_instruction: (rec.instruction as string) || '',
       questions: Array.isArray(cfg.questions) && cfg.questions.length > 0 ? cfg.questions as any[] : [{ id: '1', question: '', options: ['', ''], correct_answer: '' }],
       photo_min_count: (cfg.min_photos as number) || (cfg.max_files as number) || 1,
       photo_camera_only: Boolean(cfg.camera_only),
@@ -354,6 +412,7 @@ export function useAdminTasks() {
       game_type: (cfg.game as string) || 'MEMORY_MATCH',
       game_target_score: (cfg.target_score as number) || 500,
       game_max_moves: (cfg.max_moves as number) || 20,
+      game_scenario_json: cfg.scenario ? JSON.stringify({ scenario: cfg.scenario }, null, 2) : '',
       config: cfg,
     })
   }
@@ -372,12 +431,31 @@ export function useAdminTasks() {
     let config: Record<string, any> = {}
     const t = editTaskForm.task_type
     if (t === 'VIDEO') {
-      if (editTaskForm.video_url.trim() && !editTaskForm.video_url.trim().startsWith('http')) {
-        alert('URL video harus http(s)')
-        return
-      }
-      config = { video_url: editTaskForm.video_url.trim() }
-      if (editTaskForm.video_url.trim()) config.youtube_url = editTaskForm.video_url.trim()
+      if (editTaskForm.video_mode === 'recording') {
+        const recording: Record<string, any> = {
+          enabled: true,
+          max_duration_seconds: Math.max(1, Math.min(600, Number(editTaskForm.video_max_duration) || 60)),
+          camera_facing: editTaskForm.video_camera_facing,
+        }
+        if (editTaskForm.video_instruction.trim()) {
+          recording.instruction = editTaskForm.video_instruction.trim()
+        }
+        config = { recording }
+        // Preserve any non-YouTube custom keys already on the task (defensive).
+        if (editTaskForm.config && typeof editTaskForm.config === 'object') {
+          for (const [k, v] of Object.entries(editTaskForm.config)) {
+            if (k !== 'video_url' && k !== 'youtube_url' && k !== 'questions' && k !== 'prompt' && !(k in config)) {
+              config[k] = v
+            }
+          }
+        }
+      } else {
+        if (editTaskForm.video_url.trim() && !editTaskForm.video_url.trim().startsWith('http')) {
+          alert('URL video harus http(s)')
+          return
+        }
+        config = { video_url: editTaskForm.video_url.trim() }
+        if (editTaskForm.video_url.trim()) config.youtube_url = editTaskForm.video_url.trim()
       if (editTaskForm.video_answer_mode === 'quiz') {
         for (let i = 0; i < editTaskForm.questions.length; i++) {
           const q = editTaskForm.questions[i]
@@ -391,6 +469,7 @@ export function useAdminTasks() {
         config.prompt = editTaskForm.text_prompt.trim()
         config.minimum_characters = editTaskForm.text_min_chars
         config.maximum_characters = editTaskForm.text_max_chars
+      }
       }
     } else if (t === 'QUIZ') {
       for (let i = 0; i < editTaskForm.questions.length; i++) {
@@ -421,6 +500,21 @@ export function useAdminTasks() {
       config = { prompt: editTaskForm.text_prompt.trim(), minimum_characters: editTaskForm.text_min_chars, maximum_characters: editTaskForm.text_max_chars }
     } else if (t === 'MINI_GAME') {
       config = { game: editTaskForm.game_type, target_score: editTaskForm.game_target_score, max_moves: editTaskForm.game_max_moves }
+      if (editTaskForm.game_scenario_json.trim()) {
+        let parsed: any
+        try {
+          parsed = JSON.parse(editTaskForm.game_scenario_json)
+        } catch {
+          alert('Scenario JSON tidak valid. Periksa format JSON.')
+          return
+        }
+        const scenario = parsed && typeof parsed === 'object' && parsed.scenario ? parsed.scenario : parsed
+        if (!scenario || typeof scenario !== 'object' || !Array.isArray(scenario.events)) {
+          alert('Scenario harus memiliki object dengan key "events" (array).')
+          return
+        }
+        config.scenario = scenario
+      }
     } else {
       config = editTaskForm.config || {}
     }

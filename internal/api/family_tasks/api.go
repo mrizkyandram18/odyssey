@@ -569,6 +569,28 @@ func (a *API) HandleSubmit(w http.ResponseWriter, r *http.Request) {
 			answers = make(map[string]any)
 		}
 
+		// Decision/finance scenario (MINI_GAME + config.scenario): never trust
+		// the client-reported score/balance. Recompute authoritatively from
+		// the task config stored in DB and force the completion score.
+		if targetTask.TaskType == "MINI_GAME" {
+			if _, hasScenario := tasks.GetDecisionScenario(targetTask.Config); hasScenario {
+				var choices map[string]any
+				if cRaw, ok := answers["choices"]; ok && cRaw != nil {
+					if cMap, ok := cRaw.(map[string]any); ok {
+						choices = cMap
+					}
+				}
+				finalBalance, err := tasks.ValidateDecisionChoices(targetTask.Config, choices)
+				if err != nil {
+					shared.WriteJSONError(w, "hasil permainan tidak valid: "+err.Error(), http.StatusBadRequest)
+					return
+				}
+				answers["choices"] = choices
+				answers["final_balance"] = finalBalance
+				answers["score"] = 100
+			}
+		}
+
 		rpcPayload := map[string]any{
 			"p_task_id":  taskID,
 			"p_user_uid": uid,

@@ -11,6 +11,10 @@ export interface EditTaskFormState {
   reward_xp: number
   video_url: string
   video_answer_mode: 'none' | 'quiz' | 'essay'
+  video_mode: 'youtube' | 'recording'
+  video_max_duration: number
+  video_camera_facing: 'user' | 'environment'
+  video_instruction: string
   questions: Array<{ id: string; question: string; options: string[]; correct_answer: string }>
   photo_min_count: number
   photo_camera_only: boolean
@@ -24,6 +28,7 @@ export interface EditTaskFormState {
   game_type: string
   game_target_score: number
   game_max_moves: number
+  game_scenario_json: string
   config: Record<string, any>
 }
 
@@ -197,6 +202,33 @@ export const EditTaskModal: React.FC<EditTaskModalProps> = ({
                   <h4 className="text-xs font-bold uppercase tracking-wider text-text-secondary flex items-center gap-1.5">
                     <Play className="w-3.5 h-3.5 text-accent-magic" /> Video
                   </h4>
+                  <div className="space-y-1">
+                    <label className="text-[11px] font-bold text-text-secondary">Mode Video:</label>
+                    <select value={form.video_mode} onChange={(e) => setForm({ ...form, video_mode: e.target.value as any })} className="w-full p-2.5 rounded-xl bg-surface border border-border-subtle text-xs font-bold">
+                      <option value="youtube">Video YouTube (ditonton)</option>
+                      <option value="recording">Rekaman Video Anggota (direkam via kamera)</option>
+                    </select>
+                  </div>
+                  {form.video_mode === 'recording' && (
+                    <div className="space-y-2 pt-2 border-t border-border-subtle">
+                      <div className="grid grid-cols-2 gap-2">
+                        <div className="space-y-1">
+                          <label className="text-[10px] text-text-secondary">Maks Durasi (detik):</label>
+                          <input type="number" min={1} max={600} value={form.video_max_duration} onChange={(e)=>setForm({...form, video_max_duration:Number(e.target.value)||60})} className="p-2 rounded-xl bg-surface border border-border-subtle text-xs text-text-primary w-full font-mono" />
+                        </div>
+                        <div className="space-y-1">
+                          <label className="text-[10px] text-text-secondary">Kamera:</label>
+                          <select value={form.video_camera_facing} onChange={(e)=>setForm({...form, video_camera_facing:e.target.value as any})} className="p-2 rounded-xl bg-surface border border-border-subtle text-xs font-bold w-full">
+                            <option value="user">Depan (selfie)</option>
+                            <option value="environment">Belakang</option>
+                          </select>
+                        </div>
+                      </div>
+                      <textarea value={form.video_instruction} onChange={(e)=>setForm({...form, video_instruction:e.target.value})} rows={3} placeholder="Instruksi perekaman..." className="w-full p-2.5 rounded-xl bg-surface border border-border-subtle text-xs" />
+                    </div>
+                  )}
+                  {form.video_mode !== 'recording' && (
+                  <>
                   <input
                     type="url"
                     value={form.video_url}
@@ -248,6 +280,8 @@ export const EditTaskModal: React.FC<EditTaskModalProps> = ({
                         </div>
                       </div>
                     </div>
+                  )}
+                  </>
                   )}
                 </div>
               )}
@@ -415,10 +449,18 @@ export const EditTaskModal: React.FC<EditTaskModalProps> = ({
               {form.task_type === 'MINI_GAME' && (
                 <div className="p-3.5 rounded-2xl bg-surface-elevated border border-border-subtle space-y-2.5">
                   <h4 className="text-xs font-bold uppercase tracking-wider text-text-secondary flex items-center gap-1.5"><Gamepad2 className="w-3.5 h-3.5 text-status-success" /> Mini Game</h4>
-                  <input type="text" value={form.game_type} onChange={(e) => setForm({ ...form, game_type: e.target.value })} placeholder="MEMORY" className="w-full p-2.5 rounded-xl bg-surface border border-border-subtle text-xs" />
+                  <select value={form.game_type} onChange={(e) => setForm({ ...form, game_type: e.target.value, game_target_score: e.target.value === 'DECISION_FINANCE' ? 100 : form.game_target_score })} className="w-full p-2.5 rounded-xl bg-surface border border-border-subtle text-xs font-bold">
+                    <option value="MEMORY_MATCH">Memory Match (default)</option>
+                    <option value="DECISION_FINANCE">Simulasi Keputusan Keuangan</option>
+                    <option value={form.game_type}>{form.game_type} (kustom)</option>
+                  </select>
                   <div className="grid grid-cols-2 gap-2">
                     <input type="number" value={form.game_target_score} onChange={(e) => setForm({ ...form, game_target_score: Number(e.target.value) || 0 })} className="p-2 rounded-xl bg-surface border border-border-subtle text-xs font-mono" placeholder="Target score" />
                     <input type="number" value={form.game_max_moves} onChange={(e) => setForm({ ...form, game_max_moves: Number(e.target.value) || 0 })} className="p-2 rounded-xl bg-surface border border-border-subtle text-xs font-mono" placeholder="Max moves" />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-[11px] text-text-secondary">Scenario Keputusan (JSON, opsional):</label>
+                    <textarea value={form.game_scenario_json} onChange={(e) => setForm({ ...form, game_scenario_json: e.target.value })} rows={5} spellCheck={false} placeholder='{"scenario": {"initial_balance": 500000, "events": [...]}}' className="w-full p-2 rounded-xl bg-surface border border-border-subtle text-[11px] font-mono" />
                   </div>
                 </div>
               )}

@@ -134,8 +134,46 @@ export const SubmissionCard: React.FC<SubmissionCardProps> = ({
             </div>
           )}
 
+        {/* 2b. VIDEO (user-recorded, e.g. 60s self-intro) */}
+        {submission.payload?.file_url &&
+          submission.payload.file_url.match(/\.(webm|mp4|mov|m4v)(\?|$)/i) && (
+            <div className="flex flex-col gap-3 p-2.5 rounded-xl bg-surface-elevated border border-border-subtle">
+              <div className="w-full max-w-sm rounded-lg overflow-hidden bg-black">
+                <video
+                  src={submission.payload.file_url}
+                  controls
+                  playsInline
+                  preload="metadata"
+                  className="w-full max-h-64"
+                />
+              </div>
+              <div className="flex-1 text-xs space-y-1">
+                <p className="font-bold text-text-primary">Video Rekaman Anggota</p>
+                {submission.payload.duration_seconds !== undefined && (
+                  <p className="text-[11px] text-text-secondary">
+                    Durasi lapor: {Math.round(Number(submission.payload.duration_seconds) || 0)} detik (verifikasi dengan menonton)
+                  </p>
+                )}
+                {submission.payload.file_size && (
+                  <p className="text-[11px] text-text-secondary">
+                    Ukuran file: {(submission.payload.file_size / 1024 / 1024).toFixed(1)} MB
+                  </p>
+                )}
+                <a
+                  href={submission.payload.file_url}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="text-xs font-bold text-accent-magic hover:underline inline-flex items-center gap-1 mt-1"
+                >
+                  Buka di tab baru <ExternalLink className="w-3 h-3" />
+                </a>
+              </div>
+            </div>
+          )}
+
         {/* 2. PHOTO or IMAGE */}
         {submission.payload?.file_url &&
+          !submission.payload.file_url.match(/\.(webm|mp4|mov|m4v)(\?|$)/i) &&
           (submission.task_type === 'PHOTO_UPLOAD' ||
             submission.payload.file_url.match(/\.(jpg|jpeg|png|webp)$/i)) && (
             <div className="flex flex-col sm:flex-row items-start gap-3 p-2.5 rounded-xl bg-surface-elevated border border-border-subtle">
@@ -173,6 +211,7 @@ export const SubmissionCard: React.FC<SubmissionCardProps> = ({
 
         {/* 3. DOCUMENT */}
         {submission.payload?.file_url &&
+          !submission.payload.file_url.match(/\.(webm|mp4|mov|m4v)(\?|$)/i) &&
           !(
             submission.task_type === 'PHOTO_UPLOAD' ||
             submission.payload.file_url.match(/\.(jpg|jpeg|png|webp)$/i)
@@ -225,7 +264,28 @@ export const SubmissionCard: React.FC<SubmissionCardProps> = ({
             </span>
             <span className="font-bold text-status-success">
               {submission.payload.score} Poin {submission.payload.moves ? `(${submission.payload.moves} langkah)` : ''}
+              {submission.payload.final_balance !== undefined
+                ? ` • Saldo akhir Rp${Number(submission.payload.final_balance).toLocaleString('id-ID')}`
+                : ''}
             </span>
+          </div>
+        )}
+
+        {/* 5b. DECISION GAME CHOICES */}
+        {submission.payload?.choices && typeof submission.payload.choices === 'object' && (
+          <div className="p-2.5 rounded-xl bg-surface-elevated border border-border-subtle space-y-1.5 text-xs">
+            <p className="font-bold text-text-secondary text-[11px]">Pilihan Simulasi Keuangan:</p>
+            <div className="flex flex-wrap gap-1.5">
+              {Object.entries(submission.payload.choices).map(([k, v]) => (
+                <span
+                  key={k}
+                  className="px-2 py-0.5 rounded-md bg-surface border border-border-subtle font-mono text-[11px] font-bold text-text-primary flex items-center gap-1"
+                >
+                  <span className="text-text-secondary uppercase">{k}:</span>
+                  <span className="text-accent-magic">{String(v)}</span>
+                </span>
+              ))}
+            </div>
           </div>
         )}
 

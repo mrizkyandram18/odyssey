@@ -148,7 +148,7 @@ export const CreateTaskModal: React.FC<CreateTaskModalProps> = ({
                     }
                     className="w-full p-2.5 rounded-xl bg-surface border border-border-subtle text-xs sm:text-sm text-text-primary font-bold focus:outline-none focus:border-accent-magic"
                   >
-                    <option value="VIDEO">🎥 Video YouTube</option>
+                    <option value="VIDEO">🎥 Video (YouTube / Rekaman)</option>
                     <option value="QUIZ">🧠 Kuis Pilihan Ganda</option>
                     <option value="PHOTO_UPLOAD">📸 Upload Foto Bukti</option>
                     <option value="DOCUMENT_UPLOAD">📄 Upload Dokumen</option>
@@ -223,8 +223,60 @@ export const CreateTaskModal: React.FC<CreateTaskModalProps> = ({
               {newTask.task_type === 'VIDEO' && (
                 <div className="p-3.5 rounded-2xl bg-surface-elevated border border-border-subtle space-y-3">
                   <h4 className="text-xs font-bold uppercase tracking-wider text-text-secondary flex items-center gap-1.5">
-                    <Play className="w-3.5 h-3.5 text-accent-magic" /> Konfigurasi Video YouTube
+                    <Play className="w-3.5 h-3.5 text-accent-magic" /> Konfigurasi Video
                   </h4>
+                  <div className="space-y-1">
+                    <label className="text-[11px] font-bold text-text-secondary">Mode Video:</label>
+                    <select
+                      value={newTask.video_mode}
+                      onChange={(e) => setNewTask({ ...newTask, video_mode: e.target.value as any })}
+                      className="w-full p-2.5 rounded-xl bg-surface border border-border-subtle text-xs font-bold"
+                    >
+                      <option value="youtube">Video YouTube (ditonton)</option>
+                      <option value="recording">Rekaman Video Anggota (direkam via kamera)</option>
+                    </select>
+                  </div>
+                  {newTask.video_mode === 'recording' && (
+                    <div className="space-y-2 pt-2 border-t border-border-subtle">
+                      <div className="grid grid-cols-2 gap-2">
+                        <div className="space-y-1">
+                          <label className="text-[11px] text-text-secondary">Maks Durasi (detik):</label>
+                          <input
+                            type="number"
+                            min={1}
+                            max={600}
+                            value={newTask.video_max_duration}
+                            onChange={(e) => setNewTask({ ...newTask, video_max_duration: Number(e.target.value) || 60 })}
+                            className="p-2 rounded-xl bg-surface border border-border-subtle text-xs text-text-primary w-full font-mono"
+                          />
+                        </div>
+                        <div className="space-y-1">
+                          <label className="text-[11px] text-text-secondary">Kamera:</label>
+                          <select
+                            value={newTask.video_camera_facing}
+                            onChange={(e) => setNewTask({ ...newTask, video_camera_facing: e.target.value as any })}
+                            className="p-2 rounded-xl bg-surface border border-border-subtle text-xs font-bold w-full"
+                          >
+                            <option value="user">Depan (selfie)</option>
+                            <option value="environment">Belakang</option>
+                          </select>
+                        </div>
+                      </div>
+                      <div className="space-y-1">
+                        <label className="text-[11px] text-text-secondary">Instruksi Perekaman:</label>
+                        <textarea
+                          value={newTask.video_instruction}
+                          onChange={(e) => setNewTask({ ...newTask, video_instruction: e.target.value })}
+                          placeholder="Contoh: Perkenalkan dirimu dalam maksimal 60 detik..."
+                          rows={3}
+                          className="w-full p-2.5 rounded-xl bg-surface border border-border-subtle text-xs text-text-primary focus:outline-none focus:border-accent-magic"
+                        />
+                      </div>
+                      <p className="text-[11px] text-text-secondary">Tugas rekaman selalu membutuhkan review admin (ADMIN_REVIEW). Reward diberikan setelah disetujui.</p>
+                    </div>
+                  )}
+                  {newTask.video_mode !== 'recording' && (
+                  <>
                   <div className="space-y-1">
                     <label className="text-[11px] text-text-secondary">Link YouTube:</label>
                     <input
@@ -287,6 +339,8 @@ export const CreateTaskModal: React.FC<CreateTaskModalProps> = ({
                         </div>
                       </div>
                     </div>
+                  )}
+                  </>
                   )}
                 </div>
               )}
@@ -557,6 +611,24 @@ export const CreateTaskModal: React.FC<CreateTaskModalProps> = ({
                   <h4 className="text-xs font-bold uppercase tracking-wider text-text-secondary flex items-center gap-1.5">
                     <Gamepad2 className="w-3.5 h-3.5 text-status-success" /> Konfigurasi Mini Game
                   </h4>
+                  <div className="space-y-1">
+                    <label className="text-[11px] text-text-secondary">Jenis Game:</label>
+                    <select
+                      value={newTask.game_type}
+                      onChange={(e) => {
+                        const gt = e.target.value
+                        setNewTask({
+                          ...newTask,
+                          game_type: gt,
+                          game_target_score: gt === 'DECISION_FINANCE' ? 100 : newTask.game_target_score,
+                        })
+                      }}
+                      className="w-full p-2 rounded-xl bg-surface border border-border-subtle text-xs font-bold"
+                    >
+                      <option value="MEMORY_MATCH">Memory Match (default)</option>
+                      <option value="DECISION_FINANCE">Simulasi Keputusan Keuangan</option>
+                    </select>
+                  </div>
                   <div className="grid grid-cols-2 gap-2">
                     <div className="space-y-1">
                       <label className="text-[11px] text-text-secondary">Target Skor Minimum:</label>
@@ -582,6 +654,20 @@ export const CreateTaskModal: React.FC<CreateTaskModalProps> = ({
                         className="p-2 rounded-xl bg-surface border border-border-subtle text-xs text-text-primary w-full font-mono"
                       />
                     </div>
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-[11px] text-text-secondary">
+                      Scenario Keputusan (JSON, opsional — wajib untuk Simulasi Keuangan):
+                    </label>
+                    <textarea
+                      value={newTask.game_scenario_json}
+                      onChange={(e) => setNewTask({ ...newTask, game_scenario_json: e.target.value })}
+                      placeholder='{"scenario": {"initial_balance": 500000, "events": [{"id": "day_1", "title": "...", "options": [{"id": "a", "label": "...", "delta": -75000}]}]}}'
+                      rows={5}
+                      spellCheck={false}
+                      className="w-full p-2 rounded-xl bg-surface border border-border-subtle text-[11px] text-text-primary w-full font-mono focus:outline-none focus:border-accent-magic"
+                    />
+                    <p className="text-[11px] text-text-secondary">Server memvalidasi struktur & menghitung saldo akhir dari config ini. Skor client tidak dipercaya.</p>
                   </div>
                 </div>
               )}
