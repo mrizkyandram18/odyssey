@@ -5,7 +5,12 @@ import { SubmissionCard } from './SubmissionCard'
 import { EditSubmissionModal } from './EditSubmissionModal'
 import { ImagePreviewModal } from '../shared/ImagePreviewModal'
 
-export const SubmissionsQueue: React.FC = () => {
+export interface SubmissionsQueueProps {
+  controller?: ReturnType<typeof useAdminSubmissions>
+}
+
+export const SubmissionsQueue: React.FC<SubmissionsQueueProps> = ({ controller }) => {
+  const defaultController = useAdminSubmissions({ enabled: !controller })
   const {
     submissions,
     pagination,
@@ -32,7 +37,7 @@ export const SubmissionsQueue: React.FC = () => {
     previewImage,
     setPreviewImage,
     fetchSubmissions,
-  } = useAdminSubmissions()
+  } = controller || defaultController
 
   // Total is the exact backend total (pagination.total), never submissions.length.
   // Menunggu is the exact global pending count (pendingTotal), never the

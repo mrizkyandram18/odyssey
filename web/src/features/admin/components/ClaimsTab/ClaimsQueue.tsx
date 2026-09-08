@@ -3,10 +3,16 @@ import { CheckCircle2, ChevronLeft, ChevronRight, RefreshCw } from 'lucide-react
 import { useAdminClaims } from '../../hooks/useAdminClaims'
 import { ClaimCard } from './ClaimCard'
 
-export const ClaimsQueue: React.FC = () => {
+export interface ClaimsQueueProps {
+  controller?: ReturnType<typeof useAdminClaims>
+}
+
+export const ClaimsQueue: React.FC<ClaimsQueueProps> = ({ controller }) => {
+  const defaultController = useAdminClaims({ enabled: !controller })
   const {
     claims,
     pagination,
+    pendingTotal,
     filter,
     setFilter,
     isFetching,
@@ -16,9 +22,10 @@ export const ClaimsQueue: React.FC = () => {
     setNote,
     handleProcess,
     fetchClaims,
-  } = useAdminClaims()
+  } = controller || defaultController
 
-  const pendingCount = claims.filter((c) => c.status === 'PENDING').length
+  const pagePendingCount = claims.filter((c) => c.status === 'PENDING').length
+  const pendingCount = pendingTotal ?? pagePendingCount
 
   return (
     <div className="space-y-3.5">

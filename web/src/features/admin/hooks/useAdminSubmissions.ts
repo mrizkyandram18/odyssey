@@ -2,7 +2,12 @@ import { useState, useCallback, useEffect } from 'react'
 import { adminTasksApi } from '../../../shared/lib/api'
 import type { PendingSubmissionView, PaginationMeta } from '../../../shared/types'
 
-export function useAdminSubmissions() {
+export interface UseAdminSubmissionsOptions {
+  enabled?: boolean
+}
+
+export function useAdminSubmissions(options?: UseAdminSubmissionsOptions) {
+  const enabled = options?.enabled ?? true
   const [submissions, setSubmissions] = useState<PendingSubmissionView[]>([])
   const [pagination, setPagination] = useState<PaginationMeta>({ page: 1, limit: 50, total: 0, has_next: false })
   const [pendingTotal, setPendingTotal] = useState<number | null>(null)
@@ -61,8 +66,21 @@ export function useAdminSubmissions() {
   }, [filter])
 
   useEffect(() => {
-    fetchSubmissions(filter, 1)
-  }, [filter, fetchSubmissions])
+    if (enabled) {
+      fetchSubmissions(filter, 1)
+    }
+  }, [filter, fetchSubmissions, enabled])
+
+  useEffect(() => {
+    if (!enabled) return
+    const onSubmissionsChanged = () => {
+      fetchSubmissions(filter, pagination.page)
+    }
+    window.addEventListener('odyssey:submissions-changed', onSubmissionsChanged)
+    return () => {
+      window.removeEventListener('odyssey:submissions-changed', onSubmissionsChanged)
+    }
+  }, [enabled, fetchSubmissions, filter, pagination.page])
 
   const setNote = (id: number, note: string) => {
     setActionNotes((prev) => ({ ...prev, [id]: note }))
@@ -78,6 +96,7 @@ export function useAdminSubmissions() {
       const notes = actionNotes[id]
       const penaltyCoins = status === 'REJECTED' ? actionPenalties[id] : undefined
       await adminTasksApi.verifySubmission(id, status, notes, penaltyCoins)
+      window.dispatchEvent(new CustomEvent('odyssey:submissions-changed'))
       // Refresh current page
       await fetchSubmissions(filter, pagination.page)
     } catch (err: any) {
@@ -105,6 +124,7 @@ export function useAdminSubmissions() {
     try {
       await adminTasksApi.editSubmission(editingSubmission.id, editPayloadForm, editSubmissionNotes || undefined)
       closeEditModal()
+      window.dispatchEvent(new CustomEvent('odyssey:submissions-changed'))
       await fetchSubmissions(filter, pagination.page)
     } catch (err: any) {
       alert(`Gagal menyimpan perubahan submission: ${err?.message || 'Terjadi kesalahan'}`)

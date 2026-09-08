@@ -266,6 +266,67 @@ describe('AdminPage Component', () => {
     })
   })
 
+  it('synchronizes Verifikasi tab badge count and removes badge when queue becomes empty', async () => {
+    vi.mocked(useSession).mockReturnValue({
+      session: { uid: '1', family_id: '1', role: 'ADMIN', kind: 'user', expires: 9999999999, token: 'abc' },
+      profile: { uid: '1', role: 'ADMIN' },
+      loading: false,
+    } as any)
+
+    const mockPending = [
+      {
+        id: 99,
+        task_id: 10,
+        task_title: 'Tugas Menulis',
+        task_type: 'TEXT_RESPONSE',
+        user_uid: 'u1',
+        user_name: 'Anak 1',
+        submission_type: 'MANUAL_VERIFY',
+        status: 'PENDING',
+        payload: { text: 'Jawaban' },
+        created_at: new Date().toISOString(),
+        reward_coins: 50,
+        reward_xp: 100,
+      } as any,
+    ]
+
+    // First call returns 1 pending item
+    vi.mocked(adminTasksApi.getSubmissions).mockResolvedValueOnce({
+      items: mockPending,
+      pagination: { page: 1, limit: 50, total: 1, has_next: false },
+    } as any)
+
+    render(
+      <MemoryRouter>
+        <AdminPage initialTab="submissions" />
+      </MemoryRouter>
+    )
+
+    // Tab button should display the badge "1"
+    const tabBtn = screen.getByTestId('admin-tab-submissions')
+    await waitFor(() => {
+      expect(tabBtn).toHaveTextContent('1')
+    })
+
+    // Mock verification action and subsequent getSubmissions returning 0 items
+    vi.mocked(adminTasksApi.verifySubmission).mockResolvedValueOnce({} as any)
+    vi.mocked(adminTasksApi.getSubmissions).mockResolvedValueOnce({
+      items: [],
+      pagination: { page: 1, limit: 50, total: 0, has_next: false },
+    } as any)
+
+    // Approve the submission using exact aria-label
+    const approveBtn = screen.getByRole('button', { name: /Setujui verifikasi Tugas Menulis/i })
+    fireEvent.click(approveBtn)
+
+    // After approval, verifySubmission is called and tab badge '1' disappears
+    await waitFor(() => {
+      expect(adminTasksApi.verifySubmission).toHaveBeenCalledWith(99, 'APPROVED', undefined, undefined)
+      expect(tabBtn).not.toHaveTextContent('1')
+      expect(screen.getByText('Tidak Ada Antrean Verifikasi')).toBeInTheDocument()
+    })
+  })
+
   it('hides XP inputs and badges from Admin UI while preserving default reward_xp', async () => {
     vi.mocked(useSession).mockReturnValue({
       session: { uid: '1', family_id: '1', role: 'ADMIN', kind: 'user', expires: 9999999999, token: 'abc' },

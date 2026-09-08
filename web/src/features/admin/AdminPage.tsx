@@ -32,10 +32,11 @@ export const AdminPage: React.FC<AdminPageProps> = ({ initialTab = 'overview' })
   const { profile, loading } = useSession()
   const [activeTab, setActiveTab] = useState<AdminTab>(initialTab)
   const { config } = useAdminConfig()
-  const { pendingTotal: pendingSubCount } = useAdminSubmissions()
-  const { claims } = useAdminClaims()
+  const submissionsController = useAdminSubmissions()
+  const claimsController = useAdminClaims()
 
-  const pendingClaimsCount = claims.filter((c) => c.status === 'PENDING').length
+  const pendingSubCount = submissionsController.pendingTotal
+  const pendingClaimsCount = claimsController.pendingTotal ?? claimsController.claims.filter((c) => c.status === 'PENDING').length
 
   if (loading) {
     return (
@@ -241,9 +242,15 @@ export const AdminPage: React.FC<AdminPageProps> = ({ initialTab = 'overview' })
 
       {/* Tab Content */}
       <main className="w-full">
-        {activeTab === 'overview' && <AdminOverview onNavigateTab={setActiveTab} />}
-        {activeTab === 'submissions' && <SubmissionsQueue />}
-        {activeTab === 'claims' && <ClaimsQueue />}
+        {activeTab === 'overview' && (
+          <AdminOverview
+            onNavigateTab={setActiveTab}
+            submissionsController={submissionsController}
+            claimsController={claimsController}
+          />
+        )}
+        {activeTab === 'submissions' && <SubmissionsQueue controller={submissionsController} />}
+        {activeTab === 'claims' && <ClaimsQueue controller={claimsController} />}
         {activeTab === 'tasks' && <TaskScheduleList />}
         {activeTab === 'members' && <MemberList />}
         {activeTab === 'rewards' && <CosmeticsCatalogSection />}

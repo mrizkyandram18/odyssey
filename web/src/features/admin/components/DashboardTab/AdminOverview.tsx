@@ -17,13 +17,21 @@ import { useAdminConfig } from '../../hooks/useAdminConfig'
 
 export type AdminTab = 'overview' | 'submissions' | 'claims' | 'tasks' | 'members' | 'rewards' | 'settings'
 
-interface AdminOverviewProps {
+export interface AdminOverviewProps {
   onNavigateTab: (tab: AdminTab) => void
+  submissionsController?: ReturnType<typeof useAdminSubmissions>
+  claimsController?: ReturnType<typeof useAdminClaims>
 }
 
-export const AdminOverview: React.FC<AdminOverviewProps> = ({ onNavigateTab }) => {
-  const { submissions, pendingTotal, isFetching: isFetchingSubs } = useAdminSubmissions()
-  const { claims, isFetching: isFetchingClaims } = useAdminClaims()
+export const AdminOverview: React.FC<AdminOverviewProps> = ({
+  onNavigateTab,
+  submissionsController,
+  claimsController,
+}) => {
+  const defaultSubmissions = useAdminSubmissions({ enabled: !submissionsController })
+  const defaultClaims = useAdminClaims({ enabled: !claimsController })
+  const { submissions, pendingTotal, isFetching: isFetchingSubs } = submissionsController || defaultSubmissions
+  const { claims, pendingTotal: pendingClaimsTotal, isFetching: isFetchingClaims } = claimsController || defaultClaims
   const { members, isFetching: isFetchingMembers } = useAdminMembers()
   const { config, isFetching: isFetchingConfig } = useAdminConfig()
 
@@ -35,7 +43,7 @@ export const AdminOverview: React.FC<AdminOverviewProps> = ({ onNavigateTab }) =
 
   // 2. Pending Claims (Pencairan)
   const pendingClaims = claims.filter((c) => c.status === 'PENDING')
-  const pendingClaimsCount = pendingClaims.length
+  const pendingClaimsCount = pendingClaimsTotal ?? pendingClaims.length
   const totalCoinsRequested = pendingClaims.reduce(
     (sum, c) => sum + (c.coins_redeemed ?? (c as any).coins_requested ?? 0),
     0
