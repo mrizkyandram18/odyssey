@@ -1,4 +1,4 @@
-﻿// @vitest-environment jsdom
+// @vitest-environment jsdom
 import '@testing-library/jest-dom/vitest'
 import React from 'react'
 import { describe, it, expect, vi, afterEach, beforeEach } from 'vitest'
@@ -131,7 +131,8 @@ describe('Camera Facing Configuration', () => {
     fireEvent.click(screen.getByTestId('open-camera-button'))
 
     await screen.findByTestId('capture-button')
-    expect(getUserMedia).toHaveBeenCalledWith({ video: { facingMode: 'environment' } })
+    // Uses { ideal } so the browser gracefully picks the right camera without OverconstrainedError
+    expect(getUserMedia).toHaveBeenCalledWith({ video: { facingMode: { ideal: 'environment' } } })
   })
 
   it('requests user (front) camera when camera_facing is user', async () => {
@@ -143,9 +144,23 @@ describe('Camera Facing Configuration', () => {
     fireEvent.click(screen.getByTestId('open-camera-button'))
 
     await screen.findByTestId('capture-button')
-    expect(getUserMedia).toHaveBeenCalledWith({ video: { facingMode: 'user' } })
+    expect(getUserMedia).toHaveBeenCalledWith({ video: { facingMode: { ideal: 'user' } } })
+  })
+
+  it('defaults to rear camera (environment) when camera_facing is not configured', async () => {
+    const getUserMedia = vi.fn().mockResolvedValue({ getTracks: () => [] })
+    vi.stubGlobal('navigator', { mediaDevices: { getUserMedia } })
+    vi.spyOn(HTMLVideoElement.prototype, 'play').mockResolvedValue(undefined as any)
+
+    // No camera_facing in config — should default to 'environment'
+    renderLiveModal({ config: { camera_only: true } })
+    fireEvent.click(screen.getByTestId('open-camera-button'))
+
+    await screen.findByTestId('capture-button')
+    expect(getUserMedia).toHaveBeenCalledWith({ video: { facingMode: { ideal: 'environment' } } })
   })
 })
+
 
 describe('Camera Flow: Open -> Take Photo -> Preview -> Retake -> Take Photo -> Use Photo -> Upload -> PENDING', () => {
   beforeEach(() => {

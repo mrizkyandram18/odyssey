@@ -29,9 +29,10 @@ export const LiveCameraCaptureModal: React.FC<LiveCameraCaptureModalProps> = ({ 
   const [submitted, setSubmitted] = useState(isAlreadyDone)
   const [isSupported, setIsSupported] = useState(true)
 
-  // Per-task camera params (optional). Defaults preserve legacy behavior.
+  // Per-task camera params (optional). Default to rear camera ('environment') — most photo-proof tasks
+  // are taken of other people/objects. Front camera ('user') is only used when explicitly configured.
   const rawFacing = task.config?.camera_facing || task.config?.photo_camera_facing
-  const cameraFacing: 'user' | 'environment' = rawFacing === 'environment' ? 'environment' : 'user'
+  const cameraFacing: 'user' | 'environment' = rawFacing === 'user' ? 'user' : 'environment'
   const customInstruction =
     (task.config?.camera_instruction as string | undefined)?.trim() ||
     (task.config?.instruction as string | undefined)?.trim() ||
@@ -83,23 +84,26 @@ export const LiveCameraCaptureModal: React.FC<LiveCameraCaptureModalProps> = ({ 
     setIsRequesting(true)
     setErrorMessage(null)
     try {
-      let stream: MediaStream
-      try {
-        stream = await navigator.mediaDevices.getUserMedia({
-          video: { facingMode: cameraFacing },
-        })
-      } catch {
-        // Fallback to basic video for ANY constraint or device-specific error
-        stream = await navigator.mediaDevices.getUserMedia({ video: true })
-      }
+      // Use { ideal: cameraFacing } so the browser selects the preferred camera without
+      // throwing OverconstrainedError. The 'ideal' hint is honored on Android Chrome and
+      // iOS Safari — front ('user') and rear ('environment') are both correctly resolved.
+      // Do NOT fall back to { video: true } here: that silently opens the wrong camera.
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: { facingMode: { ideal: cameraFacing } },
+      })
       streamRef.current = stream
       setIsCameraOpen(true)
     } catch (err: any) {
       const name = err?.name || ''
       if (name === 'NotAllowedError' || name === 'PermissionDeniedError') {
         setErrorMessage('Izin kamera belum aktif. Ketuk ikon gembok 🔒 di sebelah alamat web (atas browser) lalu pilih Izinkan akses kamera pada browser/perangkat Anda.')
-      } else if (name === 'NotFoundError' || name === 'OverconstrainedError') {
+      } else if (name === 'NotFoundError') {
         setErrorMessage('Kamera tidak ditemukan di perangkat ini.')
+      } else if (name === 'OverconstrainedError') {
+        // Device does not have the requested camera (e.g. no front camera).
+        // Report clearly — do NOT silently open the wrong camera.
+        const requested = cameraFacing === 'user' ? 'depan' : 'belakang'
+        setErrorMessage(`Kamera ${requested} tidak tersedia di perangkat ini. Pastikan perangkat memiliki kamera ${requested}.`)
       } else if (name === 'NotReadableError') {
         setErrorMessage('Kamera sedang digunakan aplikasi lain. Tutup aplikasi kamera lain lalu coba lagi.')
       } else {
@@ -109,6 +113,7 @@ export const LiveCameraCaptureModal: React.FC<LiveCameraCaptureModalProps> = ({ 
       setIsRequesting(false)
     }
   }
+
 
   const handleCancelCamera = () => {
     stopStream()
