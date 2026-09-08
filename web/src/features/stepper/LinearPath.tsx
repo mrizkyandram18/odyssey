@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react'
 import { Link } from 'react-router-dom'
-import { Flame, Coins, Trophy, Calendar, RefreshCw, CheckCircle2, Clock, Lock, ArrowRight, AlertTriangle, Play, FileText, Camera, HelpCircle, PenLine, Gamepad2, Sparkles, Banknote } from 'lucide-react'
+import { Flame, Coins, Trophy, Calendar, RefreshCw, CheckCircle2, Clock, Lock, ArrowRight, AlertTriangle, Play, Video, FileText, Camera, HelpCircle, PenLine, Gamepad2, Sparkles, Banknote } from 'lucide-react'
 import type { TaskView, RedemptionConfig } from '../../shared/types'
 import { tasksApi, shopApi } from '../../shared/lib/api'
 import { useSession } from '../../shared/hooks/useSession'
@@ -26,8 +26,11 @@ function getGreeting() {
   return 'Selamat malam'
 }
 
-function getTaskIcon(taskType: string) {
-  switch (taskType) {
+function getTaskIcon(task: TaskView) {
+  if (task.task_type === 'VIDEO' && (task.config as any)?.recording?.enabled) {
+    return <Video className="w-4 h-4" />
+  }
+  switch (task.task_type) {
     case 'VIDEO':
     case 'VIDEO_QUIZ':
     case 'YOUTUBE_VIDEO': return <Play className="w-4 h-4" />
@@ -513,7 +516,7 @@ export const LinearPath: React.FC = () => {
                     ) : isRejected ? (
                       <AlertTriangle className="w-4 h-4" />
                     ) : (
-                      getTaskIcon(task.task_type)
+                      getTaskIcon(task)
                     )}
                   </span>
 

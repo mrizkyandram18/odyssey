@@ -136,20 +136,30 @@ export const DecisionGameModal: React.FC<DecisionGameModalProps> = ({ task, onCl
             {!earnedRewards ? (
               <motion.div key="decision-panel" initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-4">
                 <div className="flex items-center justify-between p-3 rounded-2xl bg-surface border border-border-subtle">
-                  <div className="flex items-center gap-1.5 text-accent-magic font-bold text-sm">
-                    <Wallet className="w-4 h-4" />
-                    <span data-testid="current-balance">{formatRupiah(currentBalance)}</span>
+                  <div>
+                    <span className="text-[10px] uppercase tracking-wider font-extrabold text-accent-magic block">
+                      Saldo Simulasi (Uang Virtual)
+                    </span>
+                    <div className="flex items-center gap-1.5 text-text-primary font-heading font-bold text-base mt-0.5">
+                      <Wallet className="w-4 h-4 text-accent-magic" />
+                      <span data-testid="current-balance">{formatRupiah(currentBalance)}</span>
+                    </div>
                   </div>
-                  <div className="text-xs font-bold text-text-secondary" data-testid="progress">
-                    {Object.keys(choices).length}/{events.length} situasi
+                  <div className="text-right">
+                    <span className="text-[10px] uppercase tracking-wider font-extrabold text-text-secondary block">
+                      Progres
+                    </span>
+                    <span className="text-xs font-bold text-text-secondary mt-0.5 block" data-testid="progress">
+                      {Object.keys(choices).length}/{events.length} situasi
+                    </span>
                   </div>
                 </div>
                 <div className="h-2 w-full bg-surface rounded-full overflow-hidden border border-border-subtle/50">
                   <div className="h-full bg-gradient-to-r from-accent-magic to-sky-400 rounded-full transition-all duration-300" style={{ width: `${progress}%` }} />
                 </div>
 
-                {task.description && !finished && (
-                  <p className="text-xs text-text-secondary leading-relaxed bg-surface p-3 rounded-xl">{task.description}</p>
+                {task.description && eventIndex === 0 && !finished && (
+                  <p className="text-xs text-text-secondary leading-relaxed bg-surface p-3 rounded-xl border border-border-subtle">{task.description}</p>
                 )}
 
                 {!finished && currentEvent ? (
@@ -164,6 +174,7 @@ export const DecisionGameModal: React.FC<DecisionGameModalProps> = ({ task, onCl
                     <div className="space-y-2">
                       {currentEvent.options?.map((opt) => {
                         const delta = Number(opt.delta) || 0
+                        const displayLabel = String(opt.label || '').replace(/\s*\([+-]?Rp[0-9.]+\)\s*$/i, '')
                         return (
                           <button
                             key={opt.id}
@@ -173,7 +184,7 @@ export const DecisionGameModal: React.FC<DecisionGameModalProps> = ({ task, onCl
                             className="w-full text-left p-3.5 rounded-xl border border-border-subtle hover:border-accent-magic/50 bg-surface-elevated text-text-primary transition-all active:scale-[0.99]"
                           >
                             <span className="flex items-center justify-between gap-2">
-                              <span className="text-sm font-bold">{opt.label}</span>
+                              <span className="text-sm font-bold">{displayLabel}</span>
                               <span className={`inline-flex items-center gap-1 text-xs font-extrabold shrink-0 ${delta < 0 ? 'text-status-error' : delta > 0 ? 'text-status-success' : 'text-text-secondary'}`}>
                                 {delta < 0 ? <TrendingDown className="w-3.5 h-3.5" /> : delta > 0 ? <TrendingUp className="w-3.5 h-3.5" /> : <Minus className="w-3.5 h-3.5" />}
                                 {delta === 0 ? 'Rp0' : `${delta > 0 ? '+' : ''}${formatRupiah(delta)}`}

@@ -21,8 +21,14 @@ export const TextResponseModal: React.FC<TextResponseModalProps> = ({ task, onCl
 
   const minChars = task.config?.minimum_characters || 10
   const maxChars = task.config?.maximum_characters || 5000
-  // Hotfix: description holds the real instruction (prompt in DB is just title duplicate for 520/521). Prioritize description
-  const prompt = task.config?.prompt || task.description || 'Tuliskan jawaban atau refleksi kamu:'
+  const descriptionText = task.description?.trim() || ''
+  const promptText = (task.config?.prompt as string | undefined)?.trim() || ''
+  const hasDistinctDescription = Boolean(
+    descriptionText &&
+    promptText &&
+    descriptionText.toLowerCase() !== promptText.toLowerCase()
+  )
+  const displayPrompt = promptText || descriptionText || 'Tuliskan jawaban atau refleksi kamu:'
   const videoUrl = task.config?.video_url || task.config?.youtube_url || ''
   const getEmbedUrl = (url: string) => {
     if (!url) return ''
@@ -127,13 +133,25 @@ export const TextResponseModal: React.FC<TextResponseModalProps> = ({ task, onCl
                   </div>
                 )}
 
+                {hasDistinctDescription && (
+                  <div className="rounded-xl bg-surface border border-border-subtle p-3.5 space-y-1">
+                    <div className="flex items-center gap-1.5 text-text-secondary font-bold text-xs">
+                      <Sparkles className="w-3.5 h-3.5 text-accent-magic" />
+                      <span>Konteks Refleksi</span>
+                    </div>
+                    <p className="text-xs text-text-secondary leading-relaxed whitespace-pre-wrap">
+                      {descriptionText}
+                    </p>
+                  </div>
+                )}
+
                 <div className="rounded-xl bg-surface border border-border-subtle p-3.5 space-y-1.5">
                   <div className="flex items-center gap-1.5 text-accent-magic font-bold text-xs">
                     <FileEdit className="w-3.5 h-3.5" />
-                    <span>Petunjuk</span>
+                    <span>Petunjuk / Panduan Jawaban</span>
                   </div>
                   <p className="text-sm text-text-primary leading-relaxed font-medium whitespace-pre-wrap">
-                    {prompt}
+                    {displayPrompt}
                   </p>
                 </div>
 

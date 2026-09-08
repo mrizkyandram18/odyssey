@@ -2,7 +2,7 @@
 import '@testing-library/jest-dom/vitest'
 import React from 'react'
 import { describe, it, expect, vi, afterEach, beforeEach } from 'vitest'
-import { render, screen, cleanup, fireEvent, waitFor } from '@testing-library/react'
+import { render, screen, cleanup, fireEvent, waitFor, act } from '@testing-library/react'
 import { VideoRecordModal } from './VideoRecordModal'
 import type { TaskView } from '../../shared/types'
 import { tasksApi } from '../../shared/lib/api'
@@ -19,6 +19,7 @@ vi.mock('../../shared/lib/api', () => ({
 
 afterEach(() => {
   cleanup()
+  vi.useRealTimers()
   vi.restoreAllMocks()
   vi.unstubAllGlobals()
 })
@@ -42,9 +43,9 @@ const baseTask = {
   },
 } as unknown as TaskView
 
-function renderModal(taskOverrides: Partial<TaskView> = {}) {
+function renderModal(taskOverrides: Partial<TaskView> = {}, extraProps: Partial<React.ComponentProps<typeof VideoRecordModal>> = {}) {
   const task = { ...baseTask, ...taskOverrides } as TaskView
-  return render(<VideoRecordModal task={task} onClose={vi.fn()} onSuccess={vi.fn()} onNextTask={vi.fn()} />)
+  return render(<VideoRecordModal task={task} onClose={vi.fn()} onSuccess={vi.fn()} onNextTask={vi.fn()} {...extraProps} />)
 }
 
 class FakeRecorder {
@@ -114,6 +115,70 @@ describe('VideoRecordModal', () => {
     await waitFor(() => expect(screen.getByTestId('camera-error')).toHaveTextContent(/Izin kamera/))
   })
 
+  it('countdown 3 -> 2 -> 1 before recording starts, recorder not started before countdown', async () => {
+    stubCameraOk()
+    renderModal({}, { countdownSeconds: 3 })
+    fireEvent.click(screen.getByTestId('open-camera-button'))
+    await waitFor(() => expect(screen.getByTestId('start-recording-button')).toBeInTheDocument())
+
+    vi.useFakeTimers()
+    try {
+      fireEvent.click(screen.getByTestId('start-recording-button'))
+      // Overlay shows 3, recorder not started
+      expect(screen.getByTestId('countdown-number')).toHaveTextContent('3')
+      expect(FakeRecorder.instances.length).toBe(0)
+      expect(screen.queryByTestId('recording-indicator')).toBeNull()
+
+      // Advance 1s -> 2
+      await act(async () => {
+        vi.advanceTimersByTime(1000)
+      })
+      expect(screen.getByTestId('countdown-number')).toHaveTextContent('2')
+      expect(FakeRecorder.instances.length).toBe(0)
+
+      // Advance 1s -> 1
+      await act(async () => {
+        vi.advanceTimersByTime(1000)
+      })
+      expect(screen.getByTestId('countdown-number')).toHaveTextContent('1')
+      expect(FakeRecorder.instances.length).toBe(0)
+
+      // Advance 1s -> recording starts
+      await act(async () => {
+        vi.advanceTimersByTime(1000)
+      })
+      expect(screen.queryByTestId('countdown-overlay')).toBeNull()
+      expect(FakeRecorder.instances.length).toBe(1)
+      expect(screen.getByTestId('recording-indicator')).toBeInTheDocument()
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+
+  it('cleans up countdown when cancelled before countdown finishes', async () => {
+    stubCameraOk()
+    renderModal({}, { countdownSeconds: 3 })
+    fireEvent.click(screen.getByTestId('open-camera-button'))
+    await waitFor(() => expect(screen.getByTestId('start-recording-button')).toBeInTheDocument())
+
+    vi.useFakeTimers()
+    try {
+      fireEvent.click(screen.getByTestId('start-recording-button'))
+      expect(screen.getByTestId('countdown-overlay')).toBeInTheDocument()
+
+      // Click cancel
+      fireEvent.click(screen.getByTestId('cancel-countdown-button'))
+      expect(screen.queryByTestId('countdown-overlay')).toBeNull()
+      expect(FakeRecorder.instances.length).toBe(0)
+
+      // Advance time to ensure timer was truly cleared
+      await vi.advanceTimersByTimeAsync(5000)
+      expect(FakeRecorder.instances.length).toBe(0)
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+
   it('full flow: open camera -> record -> stop -> preview -> submit PENDING', async () => {
     stubCameraOk()
     const uploadMock = compressModule.uploadTaskProof as unknown as ReturnType<typeof vi.fn>
@@ -121,7 +186,7 @@ describe('VideoRecordModal', () => {
     const submitMock = tasksApi.submit as unknown as ReturnType<typeof vi.fn>
     submitMock.mockResolvedValue({ success: true, status: 'PENDING' })
 
-    renderModal()
+    renderModal({}, { countdownSeconds: 0 })
     fireEvent.click(screen.getByTestId('open-camera-button'))
     await waitFor(() => expect(screen.getByTestId('start-recording-button')).toBeInTheDocument())
 
@@ -154,7 +219,7 @@ describe('VideoRecordModal', () => {
   it('falls back when isTypeSupported reports false for all codecs', async () => {
     stubCameraOk()
     ;(FakeRecorder.isTypeSupported as any).mockReturnValue(false)
-    renderModal()
+    renderModal({}, { countdownSeconds: 0 })
     fireEvent.click(screen.getByTestId('open-camera-button'))
     await waitFor(() => expect(screen.getByTestId('start-recording-button')).toBeInTheDocument())
     fireEvent.click(screen.getByTestId('start-recording-button'))

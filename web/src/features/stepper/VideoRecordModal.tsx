@@ -11,6 +11,7 @@ interface VideoRecordModalProps {
   onClose: () => void
   onSuccess: () => void
   onNextTask?: () => void
+  countdownSeconds?: number
 }
 
 function pickSupportedMimeType(): { mimeType?: string; extension: string } {
@@ -49,7 +50,13 @@ function formatTimer(totalSeconds: number): string {
   return `${m}:${String(s).padStart(2, '0')}`
 }
 
-export const VideoRecordModal: React.FC<VideoRecordModalProps> = ({ task, onClose, onSuccess, onNextTask }) => {
+export const VideoRecordModal: React.FC<VideoRecordModalProps> = ({
+  task,
+  onClose,
+  onSuccess,
+  onNextTask,
+  countdownSeconds = 3,
+}) => {
   const isAlreadyDone = task.status === 'APPROVED' || task.status === 'PENDING'
   const videoRef = useRef<HTMLVideoElement>(null)
   const previewRef = useRef<HTMLVideoElement>(null)
@@ -57,6 +64,7 @@ export const VideoRecordModal: React.FC<VideoRecordModalProps> = ({ task, onClos
   const recorderRef = useRef<MediaRecorder | null>(null)
   const chunksRef = useRef<Blob[]>([])
   const timerRef = useRef<number | null>(null)
+  const countdownTimerRef = useRef<number | null>(null)
 
   const recordingCfg = task.config?.recording || {}
   const maxDuration = Math.max(1, Math.min(600, Number(recordingCfg.max_duration_seconds) || 60))
@@ -69,6 +77,7 @@ export const VideoRecordModal: React.FC<VideoRecordModalProps> = ({ task, onClos
   const [isCameraOpen, setIsCameraOpen] = useState(false)
   const [isRequesting, setIsRequesting] = useState(false)
   const [isRecording, setIsRecording] = useState(false)
+  const [countdown, setCountdown] = useState<number | null>(null)
   const [elapsed, setElapsed] = useState(0)
   const [recordedFile, setRecordedFile] = useState<File | null>(null)
   const [previewUrl, setPreviewUrl] = useState<string | null>(null)
@@ -77,9 +86,18 @@ export const VideoRecordModal: React.FC<VideoRecordModalProps> = ({ task, onClos
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
   const [submitted, setSubmitted] = useState(isAlreadyDone)
 
+  const clearCountdown = useCallback(() => {
+    if (countdownTimerRef.current !== null) {
+      clearInterval(countdownTimerRef.current)
+      countdownTimerRef.current = null
+    }
+    setCountdown(null)
+  }, [])
+
   const stopStream = useCallback(() => {
+    clearCountdown()
     if (timerRef.current !== null) {
-      window.clearInterval(timerRef.current)
+      clearInterval(timerRef.current)
       timerRef.current = null
     }
     try { recorderRef.current?.stream?.getTracks()?.forEach((t) => t.stop()) } catch { /* ignore */ }
@@ -89,7 +107,7 @@ export const VideoRecordModal: React.FC<VideoRecordModalProps> = ({ task, onClos
       streamRef.current = null
     }
     if (videoRef.current) videoRef.current.srcObject = null
-  }, [])
+  }, [clearCountdown])
 
   useEffect(() => {
     return () => {
@@ -154,7 +172,7 @@ export const VideoRecordModal: React.FC<VideoRecordModalProps> = ({ task, onClos
     setIsRecording(false)
   }, [])
 
-  const handleStartRecording = () => {
+  const startActualRecording = useCallback(() => {
     if (!streamRef.current) return
     setErrorMessage(null)
     chunksRef.current = []
@@ -185,11 +203,11 @@ export const VideoRecordModal: React.FC<VideoRecordModalProps> = ({ task, onClos
       rec.start(500)
       setIsRecording(true)
       setElapsed(0)
-      timerRef.current = window.setInterval(() => {
+      timerRef.current = setInterval(() => {
         setElapsed((prev) => {
           const next = prev + 1
           if (next >= maxDuration) {
-            window.setTimeout(() => stopRecording(), 0)
+            setTimeout(() => stopRecording(), 0)
           }
           return Math.min(next, maxDuration)
         })
@@ -197,6 +215,30 @@ export const VideoRecordModal: React.FC<VideoRecordModalProps> = ({ task, onClos
     } catch (err: any) {
       setErrorMessage('Tidak dapat memulai perekaman: ' + (err?.message || 'browser tidak mendukung format video'))
     }
+  }, [maxDuration, stopRecording, stopStream])
+
+  const handleStartRecording = () => {
+    if (!streamRef.current || countdown !== null) return
+    setErrorMessage(null)
+    if (countdownSeconds <= 0) {
+      startActualRecording()
+      return
+    }
+    let count = countdownSeconds
+    setCountdown(count)
+    countdownTimerRef.current = setInterval(() => {
+      count -= 1
+      if (count <= 0) {
+        if (countdownTimerRef.current !== null) {
+          clearInterval(countdownTimerRef.current)
+          countdownTimerRef.current = null
+        }
+        setCountdown(null)
+        startActualRecording()
+      } else {
+        setCountdown(count)
+      }
+    }, 1000)
   }
 
   const handleRetake = () => {
@@ -275,21 +317,54 @@ export const VideoRecordModal: React.FC<VideoRecordModalProps> = ({ task, onClos
                   <div className="text-xs text-text-secondary font-bold">+{task.reward_coins} 🪙 | +{task.reward_xp} XP</div>
                 </div>
 
-                {task.description && <p className="text-sm text-text-secondary bg-surface p-4 rounded-2xl border border-border-subtle leading-relaxed">{task.description}</p>}
+                <div className="rounded-2xl bg-surface border border-border-subtle p-4 space-y-3">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-1.5 text-accent-magic font-bold text-xs">
+                      <Video className="w-3.5 h-3.5" />
+                      <span>Panduan Rekam Solo (Maksimal {maxDuration} Detik)</span>
+                    </div>
+                    <span className="text-[10px] font-semibold bg-accent-magic/10 text-accent-magic px-2 py-0.5 rounded-full">
+                      Kamera Depan
+                    </span>
+                  </div>
 
-                <div className="rounded-xl bg-amber-50 border border-amber-200 p-3 text-xs leading-relaxed text-amber-800">
-                  <p className="font-bold">Petunjuk (maksimal {maxDuration} detik):</p>
-                  {instruction ? (
-                    <p className="mt-1 whitespace-pre-wrap">{instruction}</p>
-                  ) : (
-                    <ol className="list-decimal list-inside space-y-1 mt-1">
-                      <li>Perkenalkan siapa kamu.</li>
-                      <li>Ceritakan satu hal yang kamu kuasai.</li>
-                      <li>Ceritakan satu hal yang sedang kamu pelajari.</li>
-                      <li>Ceritakan pekerjaan/aktivitas yang ingin kamu coba.</li>
-                    </ol>
+                  {task.description && (
+                    <p className="text-xs text-text-secondary leading-relaxed">
+                      {task.description}
+                    </p>
                   )}
-                  <p className="mt-2 text-[11px] text-amber-700">Video harus direkam langsung dari kamera — bukan upload file.</p>
+
+                  <div className="space-y-1.5 text-xs text-text-primary">
+                    <p className="font-semibold text-[11px] text-text-secondary">Poin yang bisa kamu ceritakan:</p>
+                    {instruction ? (
+                      <p className="whitespace-pre-wrap leading-relaxed text-xs text-text-primary bg-surface-elevated/60 p-2.5 rounded-xl border border-border-subtle">
+                        {instruction}
+                      </p>
+                    ) : (
+                      <div className="grid grid-cols-1 gap-1.5 text-xs">
+                        <div className="flex items-start gap-2 bg-surface-elevated/60 p-2 rounded-xl border border-border-subtle">
+                          <span className="w-5 h-5 rounded-full bg-accent-magic/10 text-accent-magic font-bold text-[11px] flex items-center justify-center shrink-0">1</span>
+                          <span>Nama & aktivitas sehari-harimu saat ini</span>
+                        </div>
+                        <div className="flex items-start gap-2 bg-surface-elevated/60 p-2 rounded-xl border border-border-subtle">
+                          <span className="w-5 h-5 rounded-full bg-accent-magic/10 text-accent-magic font-bold text-[11px] flex items-center justify-center shrink-0">2</span>
+                          <span>Satu keahlian atau hal yang kamu sukai</span>
+                        </div>
+                        <div className="flex items-start gap-2 bg-surface-elevated/60 p-2 rounded-xl border border-border-subtle">
+                          <span className="w-5 h-5 rounded-full bg-accent-magic/10 text-accent-magic font-bold text-[11px] flex items-center justify-center shrink-0">3</span>
+                          <span>Satu hal baru yang sedang kamu pelajari</span>
+                        </div>
+                        <div className="flex items-start gap-2 bg-surface-elevated/60 p-2 rounded-xl border border-border-subtle">
+                          <span className="w-5 h-5 rounded-full bg-accent-magic/10 text-accent-magic font-bold text-[11px] flex items-center justify-center shrink-0">4</span>
+                          <span>Pekerjaan atau aktivitas yang ingin kamu coba</span>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="p-2.5 rounded-xl bg-accent-magic/5 border border-accent-magic/15 text-[11px] text-text-secondary leading-relaxed">
+                    💬 <strong className="text-text-primary">Tips:</strong> Rekam sendiri dengan santai seperti video story. Tidak ada jawaban salah!
+                  </div>
                 </div>
 
                 {!isSupported || !recorderSupported ? (
@@ -314,6 +389,23 @@ export const VideoRecordModal: React.FC<VideoRecordModalProps> = ({ task, onClos
                       <div className="space-y-3">
                         <div className="relative aspect-[4/3] w-full max-w-[360px] mx-auto rounded-2xl overflow-hidden border-2 border-accent-magic bg-black">
                           <video ref={videoRef} autoPlay playsInline muted className="w-full h-full object-cover" data-testid="camera-preview" />
+                          {countdown !== null && (
+                            <div
+                              data-testid="countdown-overlay"
+                              className="absolute inset-0 z-20 flex flex-col items-center justify-center bg-black/60 backdrop-blur-xs"
+                            >
+                              <div
+                                key={countdown}
+                                data-testid="countdown-number"
+                                className="w-20 h-20 rounded-full bg-accent-magic text-white flex items-center justify-center font-extrabold text-4xl shadow-2xl border-2 border-white/50 animate-pulse"
+                              >
+                                {countdown}
+                              </div>
+                              <p className="mt-3 text-white text-xs font-semibold tracking-wide drop-shadow">
+                                Siap-siap bicara santai...
+                              </p>
+                            </div>
+                          )}
                           {isRecording && (
                             <div className="absolute top-2 left-2 flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-black/60 text-xs text-white font-bold" data-testid="recording-indicator">
                               <Circle className="w-2.5 h-2.5 fill-red-500 text-red-500 animate-pulse" />
@@ -322,7 +414,16 @@ export const VideoRecordModal: React.FC<VideoRecordModalProps> = ({ task, onClos
                           )}
                         </div>
                         <div className="flex gap-2">
-                          {!isRecording ? (
+                          {countdown !== null ? (
+                            <button
+                              type="button"
+                              data-testid="cancel-countdown-button"
+                              onClick={clearCountdown}
+                              className="w-full py-3 rounded-xl bg-surface-elevated border border-border-subtle text-text-secondary font-bold hover:bg-surface flex items-center justify-center gap-2"
+                            >
+                              <X className="w-4 h-4" /> Batal Mulai ({countdown})
+                            </button>
+                          ) : !isRecording ? (
                             <>
                               <button type="button" onClick={() => { stopStream(); setIsCameraOpen(false) }} className="flex-1 py-3 rounded-xl bg-surface-elevated border border-border-subtle text-text-secondary font-bold hover:bg-surface">
                                 Batal
