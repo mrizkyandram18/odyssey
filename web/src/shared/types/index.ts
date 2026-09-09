@@ -119,6 +119,7 @@ export interface QuizQuestion {
   id: string | number
   question: string
   options: string[]
+  explanation?: string
 }
 
 export interface VideoConfig {

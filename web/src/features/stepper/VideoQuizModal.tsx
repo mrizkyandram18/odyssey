@@ -224,6 +224,20 @@ export const VideoQuizModal: React.FC<VideoQuizModalProps> = ({ task, onClose, o
                           )
                         })}
                       </div>
+                      {answers[String(q.id)] && q.explanation && (
+                        <div
+                          data-testid={`explanation-${q.id}`}
+                          className="mt-2.5 p-3 rounded-xl bg-accent-magic/10 border border-accent-magic/20 text-xs text-text-secondary leading-relaxed flex items-start gap-2 animate-fadeIn"
+                        >
+                          <span className="text-sm shrink-0">💡</span>
+                          <div>
+                            <span className="font-bold text-text-primary block text-[11px] uppercase tracking-wider mb-0.5">
+                              Penjelasan:
+                            </span>
+                            <span>{q.explanation}</span>
+                          </div>
+                        </div>
+                      )}
                     </div>
                   ))
                 )}
