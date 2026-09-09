@@ -139,10 +139,20 @@ export const VideoRecordModal: React.FC<VideoRecordModalProps> = ({
     setErrorMessage(null)
     try {
       let stream: MediaStream
+      const videoConstraints: MediaTrackConstraints = {
+        facingMode: cameraFacing,
+        width: { ideal: 640, max: 720 },
+        height: { ideal: 480, max: 1280 },
+        frameRate: { ideal: 24, max: 30 },
+      }
       try {
-        stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: cameraFacing }, audio: true })
+        stream = await navigator.mediaDevices.getUserMedia({ video: videoConstraints, audio: true })
       } catch {
-        stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true })
+        try {
+          stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: cameraFacing }, audio: true })
+        } catch {
+          stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true })
+        }
       }
       streamRef.current = stream
       setIsCameraOpen(true)
@@ -178,15 +188,37 @@ export const VideoRecordModal: React.FC<VideoRecordModalProps> = ({
     if (!streamRef.current) return
     setErrorMessage(null)
     chunksRef.current = []
+    let totalRecordedBytes = 0
+    const MAX_RECORDED_BYTES = 4.0 * 1024 * 1024 // 4 MB safety limit for Vercel 4.5 MB payload limit
+
     const picked = pickSupportedMimeType()
     try {
-      const rec = picked.mimeType
-        ? new MediaRecorder(streamRef.current, { mimeType: picked.mimeType, videoBitsPerSecond: 800_000 })
-        : new MediaRecorder(streamRef.current)
+      // 350 kbps video + 48 kbps audio yields ~3 MB for 60s, safe below Vercel's 4.5 MB limit
+      let rec: MediaRecorder
+      try {
+        const options: MediaRecorderOptions = {
+          videoBitsPerSecond: 350_000,
+          audioBitsPerSecond: 48_000,
+        }
+        if (picked.mimeType) options.mimeType = picked.mimeType
+        rec = new MediaRecorder(streamRef.current, options)
+      } catch {
+        rec = picked.mimeType
+          ? new MediaRecorder(streamRef.current, { mimeType: picked.mimeType })
+          : new MediaRecorder(streamRef.current)
+      }
       recorderRef.current = rec
       setActualMime(rec.mimeType || picked.mimeType || '')
       rec.ondataavailable = (e: BlobEvent) => {
-        if (e.data && e.data.size > 0) chunksRef.current.push(e.data)
+        if (e.data && e.data.size > 0) {
+          chunksRef.current.push(e.data)
+          totalRecordedBytes += e.data.size
+          // Automatically stop recording if size reaches 4 MB to prevent upload failure
+          if (totalRecordedBytes >= MAX_RECORDED_BYTES && rec.state !== 'inactive') {
+            stopRecording()
+            setErrorMessage('Batas ukuran video (4 MB) tercapai. Rekaman otomatis dihentikan agar dapat diunggah.')
+          }
+        }
       }
       rec.onerror = () => setErrorMessage('Perekaman gagal. Coba lagi.')
       rec.onstop = () => {
@@ -254,6 +286,12 @@ export const VideoRecordModal: React.FC<VideoRecordModalProps> = ({
 
   const handleSubmit = async () => {
     if (!recordedFile) return
+    if (recordedFile.size > 4.2 * 1024 * 1024) {
+      setErrorMessage(
+        `Ukuran video (${(recordedFile.size / 1024 / 1024).toFixed(1)} MB) melebihi batas upload (maks 4.2 MB). Silakan rekam ulang dengan durasi lebih singkat.`
+      )
+      return
+    }
     setUploading(true)
     setErrorMessage(null)
     try {
@@ -462,6 +500,11 @@ export const VideoRecordModal: React.FC<VideoRecordModalProps> = ({
                     </div>
                     <p className="text-center text-[11px] text-text-secondary">
                       Durasi: {formatTimer(elapsed)} • Ukuran: {recordedFile ? (recordedFile.size / 1024 / 1024).toFixed(1) : 0} MB
+                      {recordedFile && recordedFile.size > 4.0 * 1024 * 1024 && (
+                        <span className="block text-amber-500 font-semibold mt-0.5">
+                          ⚠️ Mendekati batas maksimum upload (4.2 MB)
+                        </span>
+                      )}
                     </p>
                     <div className="flex gap-2">
                       <button

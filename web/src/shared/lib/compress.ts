@@ -112,7 +112,7 @@ export async function uploadTaskProof(
   const formData = new FormData()
   formData.append('file', file)
 
-  const token = localStorage.getItem('odyssey_session_token') || ''
+  const token = typeof localStorage !== 'undefined' ? localStorage.getItem('odyssey_session_token') || '' : ''
   const response = await fetch('/api/tasks/upload', {
     method: 'POST',
     headers: {
@@ -124,6 +124,14 @@ export async function uploadTaskProof(
 
   if (!response.ok) {
     const errText = await response.text()
+    if (
+      response.status === 413 ||
+      errText.includes('FUNCTION_PAYLOAD_TOO_LARGE') ||
+      errText.toLowerCase().includes('payload too large') ||
+      errText.toLowerCase().includes('entity too large')
+    ) {
+      throw new Error('Ukuran file melebihi batas server (maksimal 4 MB). Silakan perkecil atau rekam ulang file bukti.')
+    }
     throw new Error('Gagal mengunggah file bukti: ' + errText)
   }
 

@@ -51,20 +51,23 @@ function renderModal(taskOverrides: Partial<TaskView> = {}, extraProps: Partial<
 class FakeRecorder {
   static isTypeSupported = vi.fn(() => true)
   static instances: FakeRecorder[] = []
+  static defaultBlob: Blob = new Blob(['x'], { type: 'video/webm' })
   state = 'inactive'
   mimeType = 'video/webm;codecs=vp9'
   stream: any
+  options?: any
   ondataavailable: ((e: any) => void) | null = null
   onstop: (() => void) | null = null
   onerror: (() => void) | null = null
-  constructor(stream: any) {
+  constructor(stream: any, options?: any) {
     this.stream = stream
+    this.options = options
     FakeRecorder.instances.push(this)
   }
   start() { this.state = 'recording' }
   stop() {
     this.state = 'inactive'
-    this.ondataavailable?.({ data: new Blob(['x'], { type: 'video/webm' }) })
+    this.ondataavailable?.({ data: FakeRecorder.defaultBlob })
     this.onstop?.()
   }
 }
@@ -224,5 +227,66 @@ describe('VideoRecordModal', () => {
     await waitFor(() => expect(screen.getByTestId('start-recording-button')).toBeInTheDocument())
     fireEvent.click(screen.getByTestId('start-recording-button'))
     expect(screen.getByTestId('stop-recording-button')).toBeInTheDocument()
+  })
+
+  it('configures MediaRecorder with low bitrate options (350kbps video, 48kbps audio)', async () => {
+    stubCameraOk()
+    renderModal({}, { countdownSeconds: 0 })
+    fireEvent.click(screen.getByTestId('open-camera-button'))
+    await waitFor(() => expect(screen.getByTestId('start-recording-button')).toBeInTheDocument())
+    fireEvent.click(screen.getByTestId('start-recording-button'))
+    expect(FakeRecorder.instances.length).toBe(1)
+    const opts = FakeRecorder.instances[0].options
+    expect(opts).toBeDefined()
+    expect(opts.videoBitsPerSecond).toBe(350_000)
+    expect(opts.audioBitsPerSecond).toBe(48_000)
+  })
+
+  it('blocks upload and displays friendly error when recorded file exceeds 4.2 MB', async () => {
+    stubCameraOk()
+    // Create an oversized blob (5 MB)
+    const oversizedBlob = new Blob([new Uint8Array(5 * 1024 * 1024)], { type: 'video/webm' })
+    FakeRecorder.defaultBlob = oversizedBlob
+
+    const uploadMock = compressModule.uploadTaskProof as unknown as ReturnType<typeof vi.fn>
+    renderModal({}, { countdownSeconds: 0 })
+    fireEvent.click(screen.getByTestId('open-camera-button'))
+    await waitFor(() => expect(screen.getByTestId('start-recording-button')).toBeInTheDocument())
+    fireEvent.click(screen.getByTestId('start-recording-button'))
+    fireEvent.click(screen.getByTestId('stop-recording-button'))
+
+    await waitFor(() => expect(screen.getByTestId('use-video-button')).toBeInTheDocument())
+    fireEvent.click(screen.getByTestId('use-video-button'))
+
+    // Upload must NOT be called
+    expect(uploadMock).not.toHaveBeenCalled()
+    // Error message should be displayed
+    await waitFor(() => {
+      expect(screen.getByTestId('camera-error')).toHaveTextContent(/melebihi batas upload/i)
+    })
+
+    // Reset defaultBlob
+    FakeRecorder.defaultBlob = new Blob(['x'], { type: 'video/webm' })
+  })
+
+  it('shows friendly Indonesian error message when upload fails with Vercel FUNCTION_PAYLOAD_TOO_LARGE', async () => {
+    stubCameraOk()
+    const uploadMock = compressModule.uploadTaskProof as unknown as ReturnType<typeof vi.fn>
+    uploadMock.mockRejectedValue(
+      new Error('Ukuran file melebihi batas server (maksimal 4 MB). Silakan perkecil atau rekam ulang file bukti.')
+    )
+
+    renderModal({}, { countdownSeconds: 0 })
+    fireEvent.click(screen.getByTestId('open-camera-button'))
+    await waitFor(() => expect(screen.getByTestId('start-recording-button')).toBeInTheDocument())
+    fireEvent.click(screen.getByTestId('start-recording-button'))
+    fireEvent.click(screen.getByTestId('stop-recording-button'))
+
+    await waitFor(() => expect(screen.getByTestId('use-video-button')).toBeInTheDocument())
+    fireEvent.click(screen.getByTestId('use-video-button'))
+
+    await waitFor(() => {
+      expect(screen.getByTestId('camera-error')).toHaveTextContent(/maksimal 4 MB/i)
+    })
   })
 })

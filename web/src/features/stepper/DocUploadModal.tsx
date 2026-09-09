@@ -27,7 +27,9 @@ export const DocUploadModal: React.FC<DocUploadModalProps> = ({ task, onClose, o
   const attachmentUrl = task.config?.attachment_url || ''
   const attachmentName = task.config?.attachment_name || 'Dokumen Template'
   const acceptedExtensions = task.config?.accepted_extensions?.join(',') || '.pdf,.xlsx,.xls,.docx,.doc,.csv,.txt'
-  const maxSizeBytes = (task.config?.max_file_size_mb || 10) * 1024 * 1024
+  // Vercel serverless function payload limit is 4.5 MB. Enforce safe 4 MB limit.
+  const configuredMaxMB = Number(task.config?.max_file_size_mb) || 4
+  const maxSizeBytes = Math.min(configuredMaxMB, 4) * 1024 * 1024
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
