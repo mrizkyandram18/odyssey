@@ -923,3 +923,68 @@ func TestHandleListPendingSubmissions_TenantIsolationAndPagination(t *testing.T)
 		t.Errorf("expected enriched item with task title, got %+v", res.Items)
 	}
 }
+
+func TestHandleUpdateAdminConfig_AnnouncementValidation(t *testing.T) {
+	adminClaims := &auth.SessionClaims{UID: "admin-1", FamilyID: "fam-1", Role: "ADMIN"}
+
+	// Enabling with blank title+body must be rejected (no hardcoded content).
+	client := &mockSupabaseClient{getResp: []byte(`[]`), mutateResp: []byte(`[]`)}
+	api := NewAPI(client)
+	req := httptest.NewRequest(http.MethodPost, "/api/admin/config",
+		strings.NewReader(`{"announcement_enabled":true,"announcement_title":"","announcement_body":""}`))
+	req.Header.Set("Content-Type", "application/json")
+	req = req.WithContext(auth.ContextWithClaims(req.Context(), adminClaims))
+	rec := httptest.NewRecorder()
+	api.Handler(rec, req)
+	if rec.Code != http.StatusBadRequest {
+		t.Fatalf("expected 400 when enabling announcement with blank content, got %d: %s", rec.Code, rec.Body.String())
+	}
+
+	// Invalid audience must be rejected.
+	req2 := httptest.NewRequest(http.MethodPost, "/api/admin/config",
+		strings.NewReader(`{"announcement_audience":"EVERYONE"}`))
+	req2.Header.Set("Content-Type", "application/json")
+	req2 = req2.WithContext(auth.ContextWithClaims(req2.Context(), adminClaims))
+	rec2 := httptest.NewRecorder()
+	api.Handler(rec2, req2)
+	if rec2.Code != http.StatusBadRequest {
+		t.Fatalf("expected 400 for invalid audience, got %d: %s", rec2.Code, rec2.Body.String())
+	}
+}
+
+func TestHandleGetAdminConfig_IncludesAnnouncement(t *testing.T) {
+	adminClaims := &auth.SessionClaims{UID: "admin-1", FamilyID: "fam-1", Role: "ADMIN"}
+	rows := `[
+		{"key":"announcement_enabled","value":"true"},
+		{"key":"announcement_title","value":"Judul Uji"},
+		{"key":"announcement_body","value":"Isi uji dari konfigurasi."},
+		{"key":"announcement_audience","value":"ALL"},
+		{"key":"announcement_priority","value":"normal"}
+	]`
+	client := &mockSupabaseClient{getResp: []byte(rows), mutateResp: []byte(`[]`)}
+	api := NewAPI(client)
+	req := httptest.NewRequest(http.MethodGet, "/api/admin/config", nil)
+	req = req.WithContext(auth.ContextWithClaims(req.Context(), adminClaims))
+	rec := httptest.NewRecorder()
+	api.Handler(rec, req)
+	if rec.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d: %s", rec.Code, rec.Body.String())
+	}
+	var res struct {
+		Announcement *struct {
+			Enabled bool   `json:"enabled"`
+			Title   string `json:"title"`
+			Body    string `json:"body"`
+			Visible bool   `json:"visible"`
+		} `json:"announcement"`
+	}
+	if err := json.Unmarshal(rec.Body.Bytes(), &res); err != nil {
+		t.Fatalf("decode failed: %v", err)
+	}
+	if res.Announcement == nil || !res.Announcement.Enabled || !res.Announcement.Visible {
+		t.Fatalf("expected visible enabled announcement from config, got %+v", res.Announcement)
+	}
+	if res.Announcement.Title != "Judul Uji" {
+		t.Fatalf("expected title from DB config, got %q", res.Announcement.Title)
+	}
+}

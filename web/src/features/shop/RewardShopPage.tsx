@@ -16,6 +16,7 @@ import { Navigate } from 'react-router-dom'
 import type { ClaimView, RedemptionConfig } from '../../shared/types'
 import { shopApi } from '../../shared/lib/api'
 import { useSession } from '../../shared/hooks/useSession'
+import { AnnouncementBanner } from '../../shared/components/molecules/AnnouncementBanner'
 import { RedeemModal } from './RedeemModal'
 
 export const RewardShopPage: React.FC = () => {
@@ -109,6 +110,11 @@ export const RewardShopPage: React.FC = () => {
           <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
         </button>
       </header>
+
+      {/* System announcement (admin-configured via /api/shop/config; no hardcoded text) */}
+      {config?.announcement?.visible && (
+        <AnnouncementBanner announcement={config.announcement} />
+      )}
 
       {/* 2. Hero Balance — grouped, tighter hierarchy */}
       <div className="rounded-2xl bg-surface border border-border-subtle p-4">

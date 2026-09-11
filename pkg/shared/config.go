@@ -128,18 +128,18 @@ func getEnvSlice(key string) []string {
 }
 
 type RedemptionConfig struct {
-	RedemptionStartDay       int    `json:"redemption_start_day"`
-	RedemptionEndDay         int    `json:"redemption_end_day"`
-	PayoutDay                int    `json:"payout_day"`
-	EarningPeriodDays        int    `json:"earning_period_days"`
-	IsOpen                   bool   `json:"is_open"`
-	IsPayoutDay              bool   `json:"is_payout_day"`
-	CurrentDay               int    `json:"current_day"`
-	ConversionRate           int    `json:"conversion_rate"`
-	PayoutTargetRupiah       int    `json:"payout_target_rupiah"`
-	PayoutTargetCoins        int    `json:"payout_target_coins"`
-	MaxPayoutCoins           int    `json:"max_payout_coins"`
-	Timezone                 string `json:"timezone"`
+	RedemptionStartDay          int            `json:"redemption_start_day"`
+	RedemptionEndDay            int            `json:"redemption_end_day"`
+	PayoutDay                   int            `json:"payout_day"`
+	EarningPeriodDays           int            `json:"earning_period_days"`
+	IsOpen                      bool           `json:"is_open"`
+	IsPayoutDay                 bool           `json:"is_payout_day"`
+	CurrentDay                  int            `json:"current_day"`
+	ConversionRate              int            `json:"conversion_rate"`
+	PayoutTargetRupiah          int            `json:"payout_target_rupiah"`
+	PayoutTargetCoins           int            `json:"payout_target_coins"`
+	MaxPayoutCoins              int            `json:"max_payout_coins"`
+	Timezone                    string         `json:"timezone"`
 	DefaultMonthlyCoinTarget    int            `json:"default_monthly_coin_target"`
 	DefaultMonthlyEarningCap    int            `json:"default_monthly_earning_cap,omitempty"`
 	MaxMonthlyEarningCapCeiling int            `json:"max_monthly_earning_cap_ceiling,omitempty"`
@@ -147,6 +147,169 @@ type RedemptionConfig struct {
 	TargetEarningStartDay       int            `json:"target_earning_start_day"`
 	TargetEarningEndDay         int            `json:"target_earning_end_day"`
 	AutoBlockInactivityDays     int            `json:"auto_block_inactivity_days"`
+	// Announcement is the admin-configured system message surfaced to members.
+	// All content originates from odyssey_system_config keys (announcement_*);
+	// no title/body text is hardcoded here.
+	Announcement *AnnouncementConfig `json:"announcement,omitempty"`
+}
+
+// AnnouncementConfig is the runtime view of the admin-configured system
+// announcement. Storage lives in the existing odyssey_system_config table
+// under announcement_* keys (no new table). Visible is server-computed from
+// enabled + schedule window; the member UI must honor Visible and must never
+// embed announcement text in source.
+type AnnouncementConfig struct {
+	Enabled  bool   `json:"enabled"`
+	Title    string `json:"title"`
+	Body     string `json:"body"`
+	Audience string `json:"audience"`
+	StartAt  string `json:"start_at,omitempty"`
+	EndAt    string `json:"end_at,omitempty"`
+	Priority string `json:"priority"`
+	Visible  bool   `json:"visible"`
+}
+
+// Announcement key names in odyssey_system_config (existing table, existing pattern).
+const (
+	AnnouncementEnabledKey  = "announcement_enabled"
+	AnnouncementTitleKey    = "announcement_title"
+	AnnouncementBodyKey     = "announcement_body"
+	AnnouncementAudienceKey = "announcement_audience"
+	AnnouncementStartAtKey  = "announcement_start_at"
+	AnnouncementEndAtKey    = "announcement_end_at"
+	AnnouncementPriorityKey = "announcement_priority"
+)
+
+const (
+	DefaultAnnouncementAudience = "ALL"
+	DefaultAnnouncementPriority = "normal"
+)
+
+var validAnnouncementAudiences = map[string]bool{"ALL": true, "MEMBER": true, "ADMIN": true}
+var validAnnouncementPriorities = map[string]bool{"low": true, "normal": true, "high": true, "urgent": true}
+
+// ParseAnnouncementConfig builds the runtime announcement view from raw
+// system-config key/values. It performs no I/O and contains no business
+// content — only technical defaults and schedule evaluation.
+func ParseAnnouncementConfig(values map[string]string, now time.Time) *AnnouncementConfig {
+	enabled := false
+	if v, ok := values[AnnouncementEnabledKey]; ok {
+		s := strings.TrimSpace(strings.ToLower(v))
+		enabled = s == "true" || s == "1" || s == "yes" || s == "on"
+	}
+	title := ""
+	if v, ok := values[AnnouncementTitleKey]; ok {
+		title = strings.TrimSpace(v)
+	}
+	body := ""
+	if v, ok := values[AnnouncementBodyKey]; ok {
+		body = strings.TrimSpace(v)
+	}
+	audience := DefaultAnnouncementAudience
+	if v, ok := values[AnnouncementAudienceKey]; ok && strings.TrimSpace(v) != "" {
+		audience = strings.ToUpper(strings.TrimSpace(v))
+	}
+	startAt := ""
+	if v, ok := values[AnnouncementStartAtKey]; ok {
+		startAt = strings.TrimSpace(v)
+	}
+	endAt := ""
+	if v, ok := values[AnnouncementEndAtKey]; ok {
+		endAt = strings.TrimSpace(v)
+	}
+	priority := DefaultAnnouncementPriority
+	if v, ok := values[AnnouncementPriorityKey]; ok && strings.TrimSpace(v) != "" {
+		priority = strings.ToLower(strings.TrimSpace(v))
+	}
+	visible := false
+	if enabled && (title != "" || body != "") {
+		visible = true
+		if startAt != "" {
+			if t, err := time.Parse(time.RFC3339, startAt); err == nil {
+				if now.Before(t) {
+					visible = false
+				}
+			}
+		}
+		if visible && endAt != "" {
+			if t, err := time.Parse(time.RFC3339, endAt); err == nil {
+				if now.After(t) {
+					visible = false
+				}
+			}
+		}
+	}
+	return &AnnouncementConfig{
+		Enabled:  enabled,
+		Title:    title,
+		Body:     body,
+		Audience: audience,
+		StartAt:  startAt,
+		EndAt:    endAt,
+		Priority: priority,
+		Visible:  visible,
+	}
+}
+
+// ValidateAnnouncementInput validates admin-supplied announcement fields.
+// Empty title+body with enabled=false is allowed (disabled state). When
+// enabled, at least one of title/body must be present. Schedule bounds must
+// be RFC3339 when provided, and start must not be after end.
+func ValidateAnnouncementInput(enabled *bool, title, body, audience, startAt, endAt, priority *string) error {
+	if audience != nil {
+		a := strings.ToUpper(strings.TrimSpace(*audience))
+		if a != "" && !validAnnouncementAudiences[a] {
+			return fmt.Errorf("announcement_audience must be one of ALL, MEMBER, ADMIN")
+		}
+	}
+	if priority != nil {
+		p := strings.ToLower(strings.TrimSpace(*priority))
+		if p != "" && !validAnnouncementPriorities[p] {
+			return fmt.Errorf("announcement_priority must be one of low, normal, high, urgent")
+		}
+	}
+	var startT, endT time.Time
+	var hasStart, hasEnd bool
+	if startAt != nil && strings.TrimSpace(*startAt) != "" {
+		t, err := time.Parse(time.RFC3339, strings.TrimSpace(*startAt))
+		if err != nil {
+			return fmt.Errorf("announcement_start_at must be RFC3339 (e.g. 2026-09-12T00:00:00+07:00)")
+		}
+		startT, hasStart = t, true
+	}
+	if endAt != nil && strings.TrimSpace(*endAt) != "" {
+		t, err := time.Parse(time.RFC3339, strings.TrimSpace(*endAt))
+		if err != nil {
+			return fmt.Errorf("announcement_end_at must be RFC3339 (e.g. 2026-09-30T23:59:59+07:00)")
+		}
+		endT, hasEnd = t, true
+	}
+	if hasStart && hasEnd && startT.After(endT) {
+		return fmt.Errorf("announcement_start_at must not be after announcement_end_at")
+	}
+	if title != nil && len(*title) > 255 {
+		return fmt.Errorf("announcement_title too long (max 255 characters)")
+	}
+	if body != nil && len(*body) > 5000 {
+		return fmt.Errorf("announcement_body too long (max 5000 characters)")
+	}
+	if enabled != nil && *enabled {
+		t := ""
+		if title != nil {
+			t = strings.TrimSpace(*title)
+		}
+		b := ""
+		if body != nil {
+			b = strings.TrimSpace(*body)
+		}
+		// When enabling via a partial update, the caller merges with stored
+		// values before calling; here we only reject an explicit enable with
+		// both fields blanked in the same payload.
+		if title != nil && body != nil && t == "" && b == "" {
+			return fmt.Errorf("announcement_title or announcement_body must be set when enabled")
+		}
+	}
+	return nil
 }
 
 const DefaultRedemptionStartDay = 24
@@ -158,7 +321,6 @@ const DefaultPayoutTargetRupiah = 320000
 const DefaultPayoutTargetCoins = 3200
 const DefaultMaxPayoutCoins = 3200
 const DefaultMonthlyCoinTarget = 0
-
 
 // DefaultMaxUploadBytes is the single request/file size limit for task proof
 // uploads. It must stay in sync between the HTTP body-limit middleware and the

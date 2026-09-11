@@ -68,11 +68,15 @@ func fetchRedemptionConfig(ctx context.Context, client db.SupabaseClient) shared
 	targetStartDay := shared.DefaultTargetEarningStartDay
 	targetEndDay := shared.DefaultTargetEarningEndDay
 	autoBlockDays := shared.DefaultAutoBlockInactivityDays
-	raw, err := client.Get(ctx, "odyssey_system_config", "key=in.(redemption_start_day,redemption_end_day,payout_day,earning_period_days,coin_conversion_rate,payout_target_rupiah,payout_target_coins,max_payout_coins,timezone,default_monthly_coin_target,target_earning_start_day,target_earning_end_day,auto_block_inactivity_days,AUTO_BLOCK_INACTIVITY_DAYS)")
+	raw, err := client.Get(ctx, "odyssey_system_config", "key=in.(redemption_start_day,redemption_end_day,payout_day,earning_period_days,coin_conversion_rate,payout_target_rupiah,payout_target_coins,max_payout_coins,timezone,default_monthly_coin_target,target_earning_start_day,target_earning_end_day,auto_block_inactivity_days,AUTO_BLOCK_INACTIVITY_DAYS,announcement_enabled,announcement_title,announcement_body,announcement_audience,announcement_start_at,announcement_end_at,announcement_priority)")
+	announcementValues := map[string]string{}
 	if err == nil && len(raw) > 0 {
 		var rows []ConfigRow
 		if err := json.Unmarshal(raw, &rows); err == nil {
 			for _, r := range rows {
+				if strings.HasPrefix(r.Key, "announcement_") {
+					announcementValues[r.Key] = r.Value
+				}
 				switch r.Key {
 				case "redemption_start_day":
 					if v, err := strconv.Atoi(r.Value); err == nil && v >= 1 && v <= 31 {
@@ -154,6 +158,7 @@ func fetchRedemptionConfig(ctx context.Context, client db.SupabaseClient) shared
 	cfg.DefaultMonthlyCoinTarget = defaultTarget
 	cfg.TargetEarningStartDay = targetStartDay
 	cfg.TargetEarningEndDay = targetEndDay
+	cfg.Announcement = shared.ParseAnnouncementConfig(announcementValues, time.Now())
 	return cfg
 }
 
@@ -169,7 +174,7 @@ func (a *API) HandleGetShopConfig(w http.ResponseWriter, r *http.Request) {
 			effMonthlyTarget := cfg.DefaultMonthlyCoinTarget
 			if raw, err := a.client.Get(ctx, "odyssey_user_profiles", fmt.Sprintf("uid=eq.%s&select=coins,monthly_coin_target", uid)); err == nil && len(raw) > 2 {
 				var rows []struct {
-					Coins              int  `json:"coins"`
+					Coins             int  `json:"coins"`
 					MonthlyCoinTarget *int `json:"monthly_coin_target"`
 				}
 				if err := json.Unmarshal(raw, &rows); err == nil && len(rows) > 0 {

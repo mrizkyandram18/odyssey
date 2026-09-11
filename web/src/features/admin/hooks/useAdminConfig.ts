@@ -23,6 +23,14 @@ export function useAdminConfig() {
   const [monthlyCapInput, setMonthlyCapInput] = useState('0')
   const [maxCapCeilingInput, setMaxCapCeilingInput] = useState('')
   const [levelCapBonusInput, setLevelCapBonusInput] = useState('')
+  // Announcement (existing odyssey_system_config announcement_* keys).
+  const [announcementEnabledInput, setAnnouncementEnabledInput] = useState(false)
+  const [announcementTitleInput, setAnnouncementTitleInput] = useState('')
+  const [announcementBodyInput, setAnnouncementBodyInput] = useState('')
+  const [announcementAudienceInput, setAnnouncementAudienceInput] = useState('ALL')
+  const [announcementStartAtInput, setAnnouncementStartAtInput] = useState('')
+  const [announcementEndAtInput, setAnnouncementEndAtInput] = useState('')
+  const [announcementPriorityInput, setAnnouncementPriorityInput] = useState('normal')
 
   const fetchConfig = useCallback(async () => {
     setIsFetching(true)
@@ -44,6 +52,16 @@ export function useAdminConfig() {
         setMonthlyCapInput(res.default_monthly_earning_cap != null && res.default_monthly_earning_cap >= 0 ? String(res.default_monthly_earning_cap) : '0')
         setMaxCapCeilingInput(res.max_monthly_earning_cap_ceiling != null ? String(res.max_monthly_earning_cap_ceiling) : '')
         setLevelCapBonusInput(res.level_cap_bonus ? JSON.stringify(res.level_cap_bonus) : '')
+        const ann = (res as any).announcement
+        if (ann && typeof ann === 'object') {
+          setAnnouncementEnabledInput(Boolean(ann.enabled))
+          setAnnouncementTitleInput(String(ann.title ?? ''))
+          setAnnouncementBodyInput(String(ann.body ?? ''))
+          setAnnouncementAudienceInput(String(ann.audience ?? 'ALL'))
+          setAnnouncementStartAtInput(String(ann.start_at ?? ''))
+          setAnnouncementEndAtInput(String(ann.end_at ?? ''))
+          setAnnouncementPriorityInput(String(ann.priority ?? 'normal'))
+        }
       }
     } catch (err: any) {
       setErrorMsg(err?.message || 'Gagal memuat konfigurasi ekonomi')
@@ -149,6 +167,53 @@ export function useAdminConfig() {
       }
     }
 
+    // Announcement validation (mirrors backend ValidateAnnouncementInput).
+    const annTitle = announcementTitleInput.trim()
+    const annBody = announcementBodyInput.trim()
+    const annAudience = announcementAudienceInput.trim().toUpperCase() || 'ALL'
+    const annPriority = announcementPriorityInput.trim().toLowerCase() || 'normal'
+    const annStart = announcementStartAtInput.trim()
+    const annEnd = announcementEndAtInput.trim()
+    if (!['ALL', 'MEMBER', 'ADMIN'].includes(annAudience)) {
+      setErrorMsg('Audiens pengumuman harus ALL, MEMBER, atau ADMIN')
+      return
+    }
+    if (!['low', 'normal', 'high', 'urgent'].includes(annPriority)) {
+      setErrorMsg('Prioritas pengumuman harus low, normal, high, atau urgent')
+      return
+    }
+    if (annTitle.length > 255) {
+      setErrorMsg('Judul pengumuman maksimal 255 karakter')
+      return
+    }
+    if (annBody.length > 5000) {
+      setErrorMsg('Isi pengumuman maksimal 5000 karakter')
+      return
+    }
+    const parseRfc3339 = (s: string): number | null => {
+      if (!s) return null
+      const t = Date.parse(s)
+      return isNaN(t) ? null : t
+    }
+    const startTs = parseRfc3339(annStart)
+    const endTs = parseRfc3339(annEnd)
+    if (annStart && startTs === null) {
+      setErrorMsg('Waktu mulai pengumuman harus format RFC3339 (mis. 2026-09-12T00:00:00+07:00)')
+      return
+    }
+    if (annEnd && endTs === null) {
+      setErrorMsg('Waktu selesai pengumuman harus format RFC3339 (mis. 2026-09-30T23:59:59+07:00)')
+      return
+    }
+    if (startTs !== null && endTs !== null && startTs > endTs) {
+      setErrorMsg('Waktu mulai pengumuman tidak boleh setelah waktu selesai')
+      return
+    }
+    if (announcementEnabledInput && !annTitle && !annBody) {
+      setErrorMsg('Judul atau isi pengumuman wajib diisi saat pengumuman diaktifkan')
+      return
+    }
+
     setIsSaving(true)
     try {
       const updated = await adminTasksApi.updateConfig({
@@ -166,6 +231,13 @@ export function useAdminConfig() {
         default_monthly_earning_cap: monthlyCap,
         max_monthly_earning_cap_ceiling: ceiling,
         level_cap_bonus: parsedBonusMap,
+        announcement_enabled: announcementEnabledInput,
+        announcement_title: annTitle,
+        announcement_body: annBody,
+        announcement_audience: annAudience,
+        announcement_start_at: annStart,
+        announcement_end_at: annEnd,
+        announcement_priority: annPriority,
       })
       setConfig(updated)
       setSuccessMsg('Konfigurasi ekonomi berhasil disimpan!')
@@ -209,6 +281,20 @@ export function useAdminConfig() {
     setMaxCapCeilingInput,
     levelCapBonusInput,
     setLevelCapBonusInput,
+    announcementEnabledInput,
+    setAnnouncementEnabledInput,
+    announcementTitleInput,
+    setAnnouncementTitleInput,
+    announcementBodyInput,
+    setAnnouncementBodyInput,
+    announcementAudienceInput,
+    setAnnouncementAudienceInput,
+    announcementStartAtInput,
+    setAnnouncementStartAtInput,
+    announcementEndAtInput,
+    setAnnouncementEndAtInput,
+    announcementPriorityInput,
+    setAnnouncementPriorityInput,
     handleSaveConfig,
     fetchConfig,
   }

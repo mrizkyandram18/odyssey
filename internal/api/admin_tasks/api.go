@@ -1241,8 +1241,9 @@ func (a *API) HandleGetAdminConfig(w http.ResponseWriter, r *http.Request) {
 	monthlyEarningCap := -1
 	maxMonthlyEarningCapCeiling := 0
 	var levelCapBonus map[string]int
+	announcementValues := map[string]string{}
 
-	raw, err := a.client.Get(ctx, "odyssey_system_config", "key=in.(redemption_start_day,redemption_end_day,payout_day,earning_period_days,coin_conversion_rate,payout_target_rupiah,payout_target_coins,max_payout_coins,timezone,auto_block_inactivity_days,AUTO_BLOCK_INACTIVITY_DAYS,default_monthly_coin_target,default_monthly_earning_cap,max_monthly_earning_cap_ceiling,level_cap_bonus)")
+	raw, err := a.client.Get(ctx, "odyssey_system_config", "key=in.(redemption_start_day,redemption_end_day,payout_day,earning_period_days,coin_conversion_rate,payout_target_rupiah,payout_target_coins,max_payout_coins,timezone,auto_block_inactivity_days,AUTO_BLOCK_INACTIVITY_DAYS,default_monthly_coin_target,default_monthly_earning_cap,max_monthly_earning_cap_ceiling,level_cap_bonus,announcement_enabled,announcement_title,announcement_body,announcement_audience,announcement_start_at,announcement_end_at,announcement_priority)")
 	if err == nil && len(raw) > 0 {
 		type ConfigRow struct {
 			Key   string `json:"key"`
@@ -1314,6 +1315,10 @@ func (a *API) HandleGetAdminConfig(w http.ResponseWriter, r *http.Request) {
 					if err := json.Unmarshal([]byte(row.Value), &m); err == nil {
 						levelCapBonus = m
 					}
+				default:
+					if strings.HasPrefix(row.Key, "announcement_") {
+						announcementValues[row.Key] = row.Value
+					}
 				}
 			}
 		}
@@ -1340,6 +1345,7 @@ func (a *API) HandleGetAdminConfig(w http.ResponseWriter, r *http.Request) {
 	cfg.DefaultMonthlyEarningCap = monthlyEarningCap
 	cfg.MaxMonthlyEarningCapCeiling = maxMonthlyEarningCapCeiling
 	cfg.LevelCapBonus = levelCapBonus
+	cfg.Announcement = shared.ParseAnnouncementConfig(announcementValues, time.Now())
 	shared.WriteJSON(w, http.StatusOK, cfg)
 }
 
@@ -1365,6 +1371,13 @@ func (a *API) HandleUpdateAdminConfig(w http.ResponseWriter, r *http.Request) {
 		MonthlyEarningCap           *int            `json:"default_monthly_earning_cap"`
 		MaxMonthlyEarningCapCeiling *int            `json:"max_monthly_earning_cap_ceiling"`
 		LevelCapBonus               *map[string]int `json:"level_cap_bonus"`
+		AnnouncementEnabled         *bool           `json:"announcement_enabled"`
+		AnnouncementTitle           *string         `json:"announcement_title"`
+		AnnouncementBody            *string         `json:"announcement_body"`
+		AnnouncementAudience        *string         `json:"announcement_audience"`
+		AnnouncementStartAt         *string         `json:"announcement_start_at"`
+		AnnouncementEndAt           *string         `json:"announcement_end_at"`
+		AnnouncementPriority        *string         `json:"announcement_priority"`
 	}
 	if err := shared.ReadJSON(r, &req); err != nil {
 		shared.WriteJSONError(w, "invalid request payload: "+err.Error(), http.StatusBadRequest)
@@ -1573,6 +1586,85 @@ func (a *API) HandleUpdateAdminConfig(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		upsert("level_cap_bonus", string(b))
+	}
+
+	// Announcement (existing odyssey_system_config keys; no new table).
+	// Merge semantics: validate the effective announcement state (stored +
+	// requested) so enabling without content is rejected even on partial
+	// updates, while pure content edits while disabled stay allowed.
+	if req.AnnouncementEnabled != nil || req.AnnouncementTitle != nil || req.AnnouncementBody != nil ||
+		req.AnnouncementAudience != nil || req.AnnouncementStartAt != nil || req.AnnouncementEndAt != nil ||
+		req.AnnouncementPriority != nil {
+		annRaw, _ := a.client.Get(ctx, "odyssey_system_config", "key=in.(announcement_enabled,announcement_title,announcement_body,announcement_audience,announcement_start_at,announcement_end_at,announcement_priority)")
+		stored := map[string]string{}
+		if len(annRaw) > 0 {
+			var typed []struct {
+				Key   string `json:"key"`
+				Value string `json:"value"`
+			}
+			if err := json.Unmarshal(annRaw, &typed); err == nil {
+				for _, r := range typed {
+					stored[r.Key] = r.Value
+				}
+			}
+		}
+		effEnabled := stored["announcement_enabled"] == "true" || stored["announcement_enabled"] == "1"
+		if req.AnnouncementEnabled != nil {
+			effEnabled = *req.AnnouncementEnabled
+		}
+		effTitle := stored["announcement_title"]
+		if req.AnnouncementTitle != nil {
+			effTitle = *req.AnnouncementTitle
+		}
+		effBody := stored["announcement_body"]
+		if req.AnnouncementBody != nil {
+			effBody = *req.AnnouncementBody
+		}
+		effAudience := stored["announcement_audience"]
+		if req.AnnouncementAudience != nil {
+			effAudience = *req.AnnouncementAudience
+		}
+		effStart := stored["announcement_start_at"]
+		if req.AnnouncementStartAt != nil {
+			effStart = *req.AnnouncementStartAt
+		}
+		effEnd := stored["announcement_end_at"]
+		if req.AnnouncementEndAt != nil {
+			effEnd = *req.AnnouncementEndAt
+		}
+		effPriority := stored["announcement_priority"]
+		if req.AnnouncementPriority != nil {
+			effPriority = *req.AnnouncementPriority
+		}
+		if err := shared.ValidateAnnouncementInput(&effEnabled, &effTitle, &effBody, &effAudience, &effStart, &effEnd, &effPriority); err != nil {
+			shared.WriteJSONError(w, err.Error(), http.StatusBadRequest)
+			return
+		}
+		if req.AnnouncementEnabled != nil {
+			if *req.AnnouncementEnabled {
+				upsert("announcement_enabled", "true")
+			} else {
+				upsert("announcement_enabled", "false")
+			}
+		}
+		if req.AnnouncementTitle != nil {
+			upsert("announcement_title", strings.TrimSpace(*req.AnnouncementTitle))
+		}
+		if req.AnnouncementBody != nil {
+			upsert("announcement_body", strings.TrimSpace(*req.AnnouncementBody))
+		}
+		if req.AnnouncementAudience != nil {
+			upsert("announcement_audience", strings.ToUpper(strings.TrimSpace(*req.AnnouncementAudience)))
+		}
+		if req.AnnouncementStartAt != nil {
+			upsert("announcement_start_at", strings.TrimSpace(*req.AnnouncementStartAt))
+		}
+		if req.AnnouncementEndAt != nil {
+			upsert("announcement_end_at", strings.TrimSpace(*req.AnnouncementEndAt))
+		}
+		if req.AnnouncementPriority != nil {
+			upsert("announcement_priority", strings.ToLower(strings.TrimSpace(*req.AnnouncementPriority)))
+		}
 	}
 
 	// Return updated config

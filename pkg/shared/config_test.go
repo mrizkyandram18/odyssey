@@ -151,3 +151,86 @@ func TestConfigurability_ScenariosWithoutCodeChange(t *testing.T) {
 		t.Fatalf("Scenario 3 failed: expected validation error when target coins (5000) > max payout (3200)")
 	}
 }
+
+func TestParseAnnouncementConfig_Visibility(t *testing.T) {
+	now := time.Date(2026, time.September, 12, 12, 0, 0, 0, time.FixedZone("WIB", 7*3600))
+
+	// Disabled by default (no keys) -> not visible.
+	ann := ParseAnnouncementConfig(map[string]string{}, now)
+	if ann.Visible {
+		t.Fatalf("expected invisible when disabled/unset")
+	}
+
+	// Enabled with content and open schedule -> visible.
+	ann = ParseAnnouncementConfig(map[string]string{
+		"announcement_enabled":  "true",
+		"announcement_title":    "Info",
+		"announcement_body":     "Isi",
+		"announcement_audience": "ALL",
+		"announcement_priority": "normal",
+	}, now)
+	if !ann.Visible || !ann.Enabled {
+		t.Fatalf("expected visible+enabled, got %+v", ann)
+	}
+	if ann.Audience != "ALL" || ann.Priority != "normal" {
+		t.Fatalf("unexpected audience/priority defaults: %+v", ann)
+	}
+
+	// Future start -> not visible yet.
+	ann = ParseAnnouncementConfig(map[string]string{
+		"announcement_enabled":  "true",
+		"announcement_title":    "Info",
+		"announcement_start_at": "2026-09-13T00:00:00+07:00",
+	}, now)
+	if ann.Visible {
+		t.Fatalf("expected invisible before start_at")
+	}
+
+	// Past end -> not visible.
+	ann = ParseAnnouncementConfig(map[string]string{
+		"announcement_enabled": "true",
+		"announcement_body":    "Isi",
+		"announcement_end_at":  "2026-09-11T23:59:59+07:00",
+	}, now)
+	if ann.Visible {
+		t.Fatalf("expected invisible after end_at")
+	}
+
+	// Enabled but empty content -> not visible.
+	ann = ParseAnnouncementConfig(map[string]string{
+		"announcement_enabled": "true",
+	}, now)
+	if ann.Visible {
+		t.Fatalf("expected invisible with empty title+body")
+	}
+}
+
+func TestValidateAnnouncementInput(t *testing.T) {
+	tr := func(s string) *string { return &s }
+	bt := func(b bool) *bool { return &b }
+
+	// Valid: disabled with blanks.
+	if err := ValidateAnnouncementInput(bt(false), tr(""), tr(""), tr("ALL"), tr(""), tr(""), tr("normal")); err != nil {
+		t.Fatalf("unexpected error for disabled blank: %v", err)
+	}
+	// Invalid audience.
+	if err := ValidateAnnouncementInput(bt(true), tr("T"), tr("B"), tr("EVERYONE"), tr(""), tr(""), tr("normal")); err == nil {
+		t.Fatalf("expected audience validation error")
+	}
+	// Invalid priority.
+	if err := ValidateAnnouncementInput(bt(true), tr("T"), tr("B"), tr("ALL"), tr(""), tr(""), tr("extreme")); err == nil {
+		t.Fatalf("expected priority validation error")
+	}
+	// Invalid RFC3339.
+	if err := ValidateAnnouncementInput(bt(true), tr("T"), tr("B"), tr("ALL"), tr("12-09-2026"), tr(""), tr("normal")); err == nil {
+		t.Fatalf("expected start_at format error")
+	}
+	// Start after end.
+	if err := ValidateAnnouncementInput(bt(true), tr("T"), tr("B"), tr("ALL"), tr("2026-09-30T00:00:00+07:00"), tr("2026-09-12T00:00:00+07:00"), tr("normal")); err == nil {
+		t.Fatalf("expected start-after-end error")
+	}
+	// Enabling with both blank in same payload.
+	if err := ValidateAnnouncementInput(bt(true), tr(""), tr(""), tr("ALL"), tr(""), tr(""), tr("normal")); err == nil {
+		t.Fatalf("expected content-required error when enabling with blanks")
+	}
+}

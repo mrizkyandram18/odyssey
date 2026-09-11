@@ -226,6 +226,13 @@ export const adminTasksApi = {
     default_monthly_earning_cap?: number
     max_monthly_earning_cap_ceiling?: number
     level_cap_bonus?: Record<string, number>
+    announcement_enabled?: boolean
+    announcement_title?: string
+    announcement_body?: string
+    announcement_audience?: string
+    announcement_start_at?: string
+    announcement_end_at?: string
+    announcement_priority?: string
   }) => apiClient.post<RedemptionConfig>('/api/admin/config', data),
   getTasks: (date?: string) => apiClient.get<TaskView[]>(`/api/admin/tasks${date ? '?date=' + date : ''}`),
   createTask: (data: any) => apiClient.post<TaskView>('/api/admin/tasks', data),

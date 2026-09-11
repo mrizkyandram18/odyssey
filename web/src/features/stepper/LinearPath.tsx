@@ -15,6 +15,7 @@ import { LiveCameraCaptureModal } from './LiveCameraCaptureModal'
 import { TextResponseModal } from './TextResponseModal'
 import { MiniGameModal } from './MiniGameModal'
 import { TicketCard } from '../home/TicketCard'
+import { AnnouncementBanner } from '../../shared/components/molecules/AnnouncementBanner'
 import { levelProgress } from '../../shared/lib/level'
 
 // Helper: greeting by time
@@ -346,6 +347,11 @@ export const LinearPath: React.FC = () => {
 
       {/* 3. Ticket Card — prominent voucher */}
       <TicketCard />
+
+      {/* System announcement (admin-configured via /api/shop/config; no hardcoded text) */}
+      {shopConfig?.announcement?.visible && (
+        <AnnouncementBanner announcement={shopConfig.announcement} />
+      )}
 
       {/* Earning cap HALTED banner — authoritative from backend */}
       {earningLocked && !loading && (

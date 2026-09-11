@@ -7,8 +7,10 @@ import (
 	"io"
 	"net/http"
 	"net/http/httptest"
+	"strconv"
 	"strings"
 	"testing"
+	"time"
 
 	"odyssey/pkg/auth"
 	"odyssey/pkg/shared"
@@ -191,10 +193,21 @@ func TestShopRedeem_OpenWindow_Success(t *testing.T) {
 }
 
 func TestShopRedeem_ClosedWindow_Rejected(t *testing.T) {
-	// Configure window to day 10-12 (closed when day is outside 10-12)
+	// Deterministic closed window: a single day that is never today, derived
+	// from the wall clock in the same timezone the redeem path evaluates
+	// (shared.DefaultTimezone). A fixed window such as day 10-12 is open
+	// whenever the test happens to run inside it, which made this test
+	// date-dependent. closedDay is always a valid day (1-28) and by
+	// construction differs from every possible today (1-31).
+	loc, err := time.LoadLocation(shared.DefaultTimezone)
+	if err != nil {
+		loc = time.UTC
+	}
+	today := time.Now().In(loc).Day()
+	closedDay := today%28 + 1
 	configData, _ := json.Marshal([]map[string]any{
-		{"key": "redemption_start_day", "value": "10"},
-		{"key": "redemption_end_day", "value": "12"},
+		{"key": "redemption_start_day", "value": strconv.Itoa(closedDay)},
+		{"key": "redemption_end_day", "value": strconv.Itoa(closedDay)},
 	})
 	client := &mockSupabaseClient{
 		getResp: configData,
@@ -211,7 +224,8 @@ func TestShopRedeem_ClosedWindow_Rejected(t *testing.T) {
 	rec := httptest.NewRecorder()
 	api.Handler(rec, req)
 
-	// Outside [10, 12], must be rejected with 400 Bad Request
+	// Today is always outside the single closedDay, so redeem must be
+	// rejected with 400 Bad Request on every calendar day.
 	if rec.Code != http.StatusBadRequest {
 		t.Fatalf("expected 400 Bad Request for closed window, got %d: %s", rec.Code, rec.Body.String())
 	}

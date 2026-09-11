@@ -304,6 +304,17 @@ export interface SubmitTaskResponse {
   error?: string
 }
 
+export interface AnnouncementConfig {
+  enabled: boolean
+  title: string
+  body: string
+  audience: string
+  start_at?: string
+  end_at?: string
+  priority: string
+  visible: boolean
+}
+
 export interface RedemptionConfig {
   redemption_start_day: number
   redemption_end_day: number
@@ -317,6 +328,7 @@ export interface RedemptionConfig {
   payout_target_coins: number
   max_payout_coins: number
   timezone: string
+  announcement?: AnnouncementConfig | null
   default_monthly_coin_target?: number
   default_monthly_earning_cap?: number
   max_monthly_earning_cap_ceiling?: number

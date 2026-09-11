@@ -215,6 +215,25 @@ export const CreateTaskModal: React.FC<CreateTaskModalProps> = ({
                   </p>
                 </div>
               </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1">
+                  <label htmlFor="task-xp" className="text-xs font-bold text-text-secondary">
+                    Reward XP / Bintang
+                  </label>
+                  <input
+                    id="task-xp"
+                    type="number"
+                    min={0}
+                    value={newTask.reward_xp}
+                    onChange={(e) => setNewTask({ ...newTask, reward_xp: Number(e.target.value) })}
+                    className="w-full p-2.5 rounded-xl bg-surface border border-border-subtle text-xs sm:text-sm text-text-primary focus:outline-none focus:border-accent-magic font-mono font-bold"
+                  />
+                  <p className="text-[11px] text-text-secondary leading-relaxed">
+                    Bintang untuk progres Tingkat Penjelajah.
+                  </p>
+                </div>
+              </div>
             </div>
 
             {/* Konfigurasi Khusus Tipe */}

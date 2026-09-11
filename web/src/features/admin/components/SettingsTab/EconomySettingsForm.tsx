@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react'
-import { Sliders, AlertCircle, Check, Calendar, Coins, ArrowRight, Shield, Award, Plus, Trash2, ChevronDown, ChevronUp } from 'lucide-react'
+import { Sliders, AlertCircle, Check, Calendar, Coins, ArrowRight, Shield, Award, Plus, Trash2, ChevronDown, ChevronUp, Megaphone } from 'lucide-react'
 import { useAdminConfig } from '../../hooks/useAdminConfig'
 
 export const EconomySettingsForm: React.FC = () => {
@@ -34,6 +34,20 @@ export const EconomySettingsForm: React.FC = () => {
     setMaxCapCeilingInput,
     levelCapBonusInput,
     setLevelCapBonusInput,
+    announcementEnabledInput,
+    setAnnouncementEnabledInput,
+    announcementTitleInput,
+    setAnnouncementTitleInput,
+    announcementBodyInput,
+    setAnnouncementBodyInput,
+    announcementAudienceInput,
+    setAnnouncementAudienceInput,
+    announcementStartAtInput,
+    setAnnouncementStartAtInput,
+    announcementEndAtInput,
+    setAnnouncementEndAtInput,
+    announcementPriorityInput,
+    setAnnouncementPriorityInput,
     handleSaveConfig,
   } = useAdminConfig()
 
@@ -615,6 +629,134 @@ export const EconomySettingsForm: React.FC = () => {
             <div className="font-bold text-text-primary text-[11px] sm:text-xs">
               Target Rp {targetRpNum.toLocaleString('id-ID')} ({targetCoinsCalc} koin) • Maks{' '}
               {maxPayoutInput} koin • Cap {monthlyCapInput || 'unlimited'} (Ceiling {maxCapCeilingInput || 'none'}) • Gajian tgl {payoutDayInput}
+            </div>
+          </div>
+
+          {/* Group 5: Pengumuman Sistem (existing odyssey_system_config announcement_* keys) */}
+          <div className="space-y-3 pt-3 border-t border-border-subtle">
+            <div>
+              <h4 className="text-xs font-bold uppercase tracking-wider text-text-secondary flex items-center gap-1.5">
+                <Megaphone className="w-3.5 h-3.5 text-accent-magic" />
+                <span>Pengumuman Sistem untuk Anggota</span>
+              </h4>
+              <p className="text-[11px] text-text-secondary mt-0.5">
+                Judul, isi, audiens, jadwal tampil, dan prioritas dibaca member dari backend. Kosongkan jadwal untuk selalu tampil saat aktif.
+              </p>
+            </div>
+
+            <label className="flex items-center gap-2.5 p-3 rounded-xl bg-surface-elevated/60 border border-border-subtle cursor-pointer">
+              <input
+                id="input-announcement-enabled"
+                type="checkbox"
+                checked={announcementEnabledInput}
+                onChange={(e) => setAnnouncementEnabledInput(e.target.checked)}
+                className="w-4 h-4 accent-[#8b5cf6]"
+              />
+              <span className="text-xs font-bold text-text-primary">Tampilkan pengumuman ke anggota</span>
+            </label>
+
+            <div className="space-y-1">
+              <label htmlFor="input-announcement-title" className="text-xs font-bold text-text-secondary">
+                Judul Pengumuman
+              </label>
+              <input
+                id="input-announcement-title"
+                type="text"
+                maxLength={255}
+                value={announcementTitleInput}
+                onChange={(e) => setAnnouncementTitleInput(e.target.value)}
+                placeholder="Contoh: Informasi Jadwal Pencairan"
+                className="w-full p-2.5 rounded-xl bg-surface-elevated border border-border-subtle text-xs sm:text-sm text-text-primary focus:outline-none focus:border-accent-magic"
+              />
+            </div>
+
+            <div className="space-y-1">
+              <label htmlFor="input-announcement-body" className="text-xs font-bold text-text-secondary">
+                Isi Pengumuman
+              </label>
+              <textarea
+                id="input-announcement-body"
+                rows={4}
+                maxLength={5000}
+                value={announcementBodyInput}
+                onChange={(e) => setAnnouncementBodyInput(e.target.value)}
+                placeholder="Tulis isi pengumuman yang akan dibaca anggota..."
+                className="w-full p-2.5 rounded-xl bg-surface-elevated border border-border-subtle text-xs sm:text-sm text-text-primary focus:outline-none focus:border-accent-magic resize-none leading-relaxed"
+              />
+              <p className="text-[10px] text-text-secondary text-right">{announcementBodyInput.length}/5000</p>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              <div className="space-y-1">
+                <label htmlFor="input-announcement-audience" className="text-xs font-bold text-text-secondary">
+                  Audiens
+                </label>
+                <select
+                  id="input-announcement-audience"
+                  value={announcementAudienceInput}
+                  onChange={(e) => setAnnouncementAudienceInput(e.target.value)}
+                  className="w-full p-2.5 rounded-xl bg-surface-elevated border border-border-subtle text-xs font-bold text-text-primary focus:outline-none focus:border-accent-magic"
+                >
+                  <option value="ALL">ALL — Semua pengguna</option>
+                  <option value="MEMBER">MEMBER — Anggota saja</option>
+                  <option value="ADMIN">ADMIN — Admin saja</option>
+                </select>
+              </div>
+              <div className="space-y-1">
+                <label htmlFor="input-announcement-priority" className="text-xs font-bold text-text-secondary">
+                  Prioritas
+                </label>
+                <select
+                  id="input-announcement-priority"
+                  value={announcementPriorityInput}
+                  onChange={(e) => setAnnouncementPriorityInput(e.target.value)}
+                  className="w-full p-2.5 rounded-xl bg-surface-elevated border border-border-subtle text-xs font-bold text-text-primary focus:outline-none focus:border-accent-magic"
+                >
+                  <option value="low">low</option>
+                  <option value="normal">normal</option>
+                  <option value="high">high</option>
+                  <option value="urgent">urgent</option>
+                </select>
+              </div>
+              <div className="space-y-1">
+                <label className="text-xs font-bold text-text-secondary">Status Terhitung Server</label>
+                <p className="text-[11px] text-text-secondary p-2.5 rounded-xl bg-surface border border-border-subtle">
+                  {config?.announcement
+                    ? config.announcement.visible
+                      ? '● Aktif & terlihat oleh member'
+                      : '○ Tersimpan, tidak terlihat (nonaktif / di luar jadwal / konten kosong)'
+                    : 'Memuat status...'}
+                </p>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div className="space-y-1">
+                <label htmlFor="input-announcement-start" className="text-xs font-bold text-text-secondary">
+                  Mulai Tampil (opsional, RFC3339)
+                </label>
+                <input
+                  id="input-announcement-start"
+                  type="text"
+                  value={announcementStartAtInput}
+                  onChange={(e) => setAnnouncementStartAtInput(e.target.value)}
+                  placeholder="2026-09-12T00:00:00+07:00"
+                  className="w-full p-2.5 rounded-xl bg-surface-elevated border border-border-subtle text-xs font-mono text-text-primary focus:outline-none focus:border-accent-magic"
+                />
+              </div>
+              <div className="space-y-1">
+                <label htmlFor="input-announcement-end" className="text-xs font-bold text-text-secondary">
+                  Selesai Tampil (opsional, RFC3339)
+                </label>
+                <input
+                  id="input-announcement-end"
+                  type="text"
+                  value={announcementEndAtInput}
+                  onChange={(e) => setAnnouncementEndAtInput(e.target.value)}
+                  placeholder="2026-09-30T23:59:59+07:00"
+                  className="w-full p-2.5 rounded-xl bg-surface-elevated border border-border-subtle text-xs font-mono text-text-primary focus:outline-none focus:border-accent-magic"
+                />
+              </div>
             </div>
           </div>
 
