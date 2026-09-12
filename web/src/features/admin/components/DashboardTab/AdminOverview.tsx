@@ -123,6 +123,49 @@ export const AdminOverview: React.FC<AdminOverviewProps> = ({
         )}
       </div>
 
+      {/* MEMBER ANNOUNCEMENT PREVIEW — prominent position directly below the
+          header so operational announcements are seen before the queues.
+          No dismiss behavior, so admin cannot accidentally hide it without
+          recovery. Editing lives in Pengaturan (single-save form). */}
+      {config?.announcement?.visible && (
+        <section
+          data-testid="admin-announcement-preview"
+          className="p-4 rounded-2xl bg-surface border border-border-subtle shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-3"
+        >
+          <div className="flex items-start gap-3 min-w-0">
+            <div className="w-9 h-9 rounded-xl bg-accent-magic/10 text-accent-magic flex items-center justify-center shrink-0">
+              <Megaphone className="w-4 h-4" />
+            </div>
+            <div className="min-w-0">
+              <p className="text-[10px] font-extrabold uppercase tracking-wider text-text-secondary">
+                Pengumuman Anggota • Pratinjau
+              </p>
+              <h4 data-testid="admin-announcement-title" className="text-xs sm:text-sm font-bold text-text-primary mt-0.5 leading-snug">
+                {(config.announcement.title || '').trim() || '(Tanpa judul)'}
+              </h4>
+              {(config.announcement.body || '').trim() && (
+                <p className="text-xs text-text-secondary mt-0.5 line-clamp-2 leading-relaxed">
+                  {(config.announcement.body || '').trim()}
+                </p>
+              )}
+              <p className="text-[10px] text-text-secondary mt-1">
+                Audiens: <strong>{config.announcement.audience || 'ALL'}</strong>
+                <span className="mx-1">•</span>
+                Prioritas: <strong>{config.announcement.priority || 'normal'}</strong>
+              </p>
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={() => onNavigateTab('settings')}
+            className="px-3 py-1.5 rounded-xl bg-surface-elevated border border-border-subtle text-xs font-bold text-accent-magic hover:bg-surface transition-colors cursor-pointer flex items-center gap-1.5 shrink-0 self-start sm:self-auto"
+          >
+            <span>Ubah di Pengaturan</span>
+            <ArrowRight className="w-3.5 h-3.5" />
+          </button>
+        </section>
+      )}
+
       {/* ACTION QUEUE SECTION */}
       <section className="space-y-3">
         <div className="flex items-center justify-between">
@@ -334,49 +377,6 @@ export const AdminOverview: React.FC<AdminOverviewProps> = ({
           </button>
         </div>
       </section>
-
-      {/* MEMBER ANNOUNCEMENT PREVIEW — informational context at the bottom.
-          Never placed inside the operational queue; no dismiss behavior, so
-          admin cannot accidentally hide it without recovery. Editing lives in
-          Pengaturan (single-save form). */}
-      {config?.announcement?.visible && (
-        <section
-          data-testid="admin-announcement-preview"
-          className="p-4 rounded-2xl bg-surface border border-border-subtle shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-3"
-        >
-          <div className="flex items-start gap-3 min-w-0">
-            <div className="w-9 h-9 rounded-xl bg-accent-magic/10 text-accent-magic flex items-center justify-center shrink-0">
-              <Megaphone className="w-4 h-4" />
-            </div>
-            <div className="min-w-0">
-              <p className="text-[10px] font-extrabold uppercase tracking-wider text-text-secondary">
-                Pengumuman Anggota • Pratinjau
-              </p>
-              <h4 data-testid="admin-announcement-title" className="text-xs sm:text-sm font-bold text-text-primary mt-0.5 leading-snug">
-                {(config.announcement.title || '').trim() || '(Tanpa judul)'}
-              </h4>
-              {(config.announcement.body || '').trim() && (
-                <p className="text-xs text-text-secondary mt-0.5 line-clamp-2 leading-relaxed">
-                  {(config.announcement.body || '').trim()}
-                </p>
-              )}
-              <p className="text-[10px] text-text-secondary mt-1">
-                Audiens: <strong>{config.announcement.audience || 'ALL'}</strong>
-                <span className="mx-1">•</span>
-                Prioritas: <strong>{config.announcement.priority || 'normal'}</strong>
-              </p>
-            </div>
-          </div>
-          <button
-            type="button"
-            onClick={() => onNavigateTab('settings')}
-            className="px-3 py-1.5 rounded-xl bg-surface-elevated border border-border-subtle text-xs font-bold text-accent-magic hover:bg-surface transition-colors cursor-pointer flex items-center gap-1.5 shrink-0 self-start sm:self-auto"
-          >
-            <span>Ubah di Pengaturan</span>
-            <ArrowRight className="w-3.5 h-3.5" />
-          </button>
-        </section>
-      )}
     </div>
   )
 }

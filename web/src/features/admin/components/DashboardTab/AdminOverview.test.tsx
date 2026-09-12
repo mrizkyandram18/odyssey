@@ -235,7 +235,7 @@ it('clicks quick action shortcuts to navigate to Tasks, Rewards, and Settings', 
      expect(onNavigateTab).toHaveBeenCalledWith('settings')
    })
 
-    it('renders admin announcement preview at the bottom when config.announcement.visible is true', () => {
+    it('renders admin announcement preview near the top when config.announcement.visible is true', () => {
      const onNavigateTab = vi.fn()
      const announcementConfig = {
        enabled: true,
