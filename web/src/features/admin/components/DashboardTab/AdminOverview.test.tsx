@@ -112,6 +112,49 @@ describe('AdminOverview Component', () => {
     expect(screen.queryByText('Metrik Operasional Utama')).toBeNull()
   })
 
+  it('shows oldest pending age when the full queue is loaded', () => {
+    const twoDaysAgo = new Date(Date.now() - 50 * 3600 * 1000).toISOString()
+    vi.mocked(useAdminSubmissions).mockReturnValue({
+      submissions: [
+        {
+          id: 101,
+          task_title: 'Membaca Buku 15 Menit',
+          user_name: 'Adit',
+          status: 'PENDING',
+          created_at: twoDaysAgo,
+        },
+      ],
+      pendingTotal: 1,
+      isFetching: false,
+    } as any)
+
+    const onNavigateTab = vi.fn()
+    render(<AdminOverview onNavigateTab={onNavigateTab} />)
+
+    expect(screen.getByText('2 hari')).toBeInTheDocument()
+  })
+
+  it('hides age when the loaded page is only partial (never guesses)', () => {
+    vi.mocked(useAdminSubmissions).mockReturnValue({
+      submissions: [
+        {
+          id: 101,
+          task_title: 'Membaca Buku 15 Menit',
+          user_name: 'Adit',
+          status: 'PENDING',
+          created_at: new Date(Date.now() - 50 * 3600 * 1000).toISOString(),
+        },
+      ],
+      pendingTotal: 5,
+      isFetching: false,
+    } as any)
+
+    const onNavigateTab = vi.fn()
+    render(<AdminOverview onNavigateTab={onNavigateTab} />)
+
+    expect(screen.queryByText(/Tertua:/)).toBeNull()
+  })
+
   it('renders action queue items with CTAs when pending items exist and triggers tab navigation', () => {
     vi.mocked(useAdminSubmissions).mockReturnValue({
       submissions: [

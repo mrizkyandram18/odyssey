@@ -43,43 +43,27 @@ interface TabButtonProps {
   isActive: boolean
   onSelect: (tab: AdminTab) => void
   badge?: React.ReactNode
-  stretch?: boolean
 }
 
-const tabButtonClass = (isActive: boolean, stretch?: boolean) =>
-  `shrink-0 py-2 px-3 rounded-xl font-bold text-xs flex items-center justify-center gap-1.5 transition-all cursor-pointer whitespace-nowrap ${
-    stretch ? 'self-stretch' : ''
-  } ${
+const tabButtonClass = (isActive: boolean) =>
+  `shrink-0 flex-1 py-2 px-3 rounded-xl font-bold text-xs flex items-center justify-center gap-1.5 transition-all cursor-pointer whitespace-nowrap ${
     isActive
       ? 'bg-accent-magic text-white shadow-xs'
       : 'text-text-secondary hover:text-text-primary hover:bg-surface-elevated'
   }`
 
-const TabButton: React.FC<TabButtonProps> = ({ tab, testId, label, icon, isActive, onSelect, badge, stretch }) => (
+const TabButton: React.FC<TabButtonProps> = ({ tab, testId, label, icon, isActive, onSelect, badge }) => (
   <button
     type="button"
     data-testid={testId}
     onClick={() => onSelect(tab)}
     aria-current={isActive ? 'page' : undefined}
-    className={tabButtonClass(isActive, stretch)}
+    className={tabButtonClass(isActive)}
   >
     {icon}
     <span>{label}</span>
     {badge}
   </button>
-)
-
-const NavDivider: React.FC = () => (
-  <div className="w-px self-stretch bg-border-subtle/70 shrink-0" aria-hidden="true" />
-)
-
-const NavGroup: React.FC<{ label: string; children: React.ReactNode }> = ({ label, children }) => (
-  <div role="group" aria-label={label} className="flex flex-col gap-1 shrink-0 justify-center">
-    <span aria-hidden="true" className="text-[9px] font-extrabold uppercase tracking-widest text-text-secondary px-1 leading-none">
-      {label}
-    </span>
-    <div className="flex items-center gap-1">{children}</div>
-  </div>
 )
 
 export const AdminPage: React.FC<AdminPageProps> = ({ initialTab = 'overview' }) => {
@@ -168,14 +152,12 @@ export const AdminPage: React.FC<AdminPageProps> = ({ initialTab = 'overview' })
         </div>
       </header>
 
-      {/* Grouped Primary Tab Navigation: 4 mental groups, same tabs + test IDs.
-          Operasional = daily queues needing action; Kelola = maintenance/content;
-          Pengaturan = configuration. */}
+      {/* Flat Primary Tab Navigation: 7 destinations, no grouping.
+          Ringkasan = landing/triase; badge hanya di 2 antrean time-sensitive. */}
       <nav
         aria-label="Admin Navigation"
-        className="flex items-stretch gap-2 p-1.5 bg-surface rounded-2xl border border-border-subtle shadow-xs overflow-x-auto no-scrollbar"
+        className="flex items-center gap-1 p-1 bg-surface rounded-2xl border border-border-subtle shadow-xs overflow-x-auto no-scrollbar"
       >
-        {/* Ringkasan */}
         <TabButton
           tab="overview"
           testId="admin-tab-overview"
@@ -183,90 +165,73 @@ export const AdminPage: React.FC<AdminPageProps> = ({ initialTab = 'overview' })
           icon={<LayoutDashboard className="w-3.5 h-3.5" />}
           isActive={activeTab === 'overview'}
           onSelect={navigateTab}
-          stretch
         />
-
-        <NavDivider />
-
-        {/* Operasional — antrean harian yang membutuhkan tindakan */}
-        <NavGroup label="Operasional">
-          <TabButton
-            tab="submissions"
-            testId="admin-tab-submissions"
-            label="Verifikasi"
-            icon={<CheckCircle2 className="w-3.5 h-3.5" />}
-            isActive={activeTab === 'submissions'}
-            onSelect={navigateTab}
-            badge={
-              pendingSubCount != null && pendingSubCount > 0 ? (
-                <span
-                  className={`px-1.5 py-0.2 rounded-full text-[10px] font-extrabold ${
-                    activeTab === 'submissions'
-                      ? 'bg-white/30 text-white'
-                      : 'bg-accent-magic/20 text-accent-magic'
-                  }`}
-                >
-                  {pendingSubCount}
-                </span>
-              ) : undefined
-            }
-          />
-          <TabButton
-            tab="claims"
-            testId="admin-tab-claims"
-            label="Pencairan"
-            icon={<Coins className="w-3.5 h-3.5" />}
-            isActive={activeTab === 'claims'}
-            onSelect={navigateTab}
-            badge={
-              pendingClaimsCount > 0 ? (
-                <span
-                  className={`px-1.5 py-0.2 rounded-full text-[10px] font-extrabold ${
-                    activeTab === 'claims'
-                      ? 'bg-white/30 text-white'
-                      : 'bg-accent-gold/25 text-amber-700 dark:text-amber-300'
-                  }`}
-                >
-                  {pendingClaimsCount}
-                </span>
-              ) : undefined
-            }
-          />
-        </NavGroup>
-
-        <NavDivider />
-
-        {/* Kelola — maintenance konten & anggota, bukan antrean harian */}
-        <NavGroup label="Kelola">
-          <TabButton
-            tab="tasks"
-            testId="admin-tab-tasks"
-            label="Tugas"
-            icon={<Calendar className="w-3.5 h-3.5" />}
-            isActive={activeTab === 'tasks'}
-            onSelect={navigateTab}
-          />
-          <TabButton
-            tab="members"
-            testId="admin-tab-members"
-            label="Anggota"
-            icon={<Users className="w-3.5 h-3.5" />}
-            isActive={activeTab === 'members'}
-            onSelect={navigateTab}
-          />
-          <TabButton
-            tab="rewards"
-            testId="admin-tab-rewards"
-            label="Hadiah"
-            icon={<Sparkles className="w-3.5 h-3.5" />}
-            isActive={activeTab === 'rewards'}
-            onSelect={navigateTab}
-          />
-        </NavGroup>
-
-        <NavDivider />
-
-        {/* Pengaturan */}
+        <TabButton
+          tab="submissions"
+          testId="admin-tab-submissions"
+          label="Verifikasi"
+          icon={<CheckCircle2 className="w-3.5 h-3.5" />}
+          isActive={activeTab === 'submissions'}
+          onSelect={navigateTab}
+          badge={
+            pendingSubCount != null && pendingSubCount > 0 ? (
+              <span
+                className={`px-1.5 py-0.2 rounded-full text-[10px] font-extrabold ${
+                  activeTab === 'submissions'
+                    ? 'bg-white/30 text-white'
+                    : 'bg-accent-magic/20 text-accent-magic'
+                }`}
+              >
+                {pendingSubCount}
+              </span>
+            ) : undefined
+          }
+        />
+        <TabButton
+          tab="claims"
+          testId="admin-tab-claims"
+          label="Pencairan"
+          icon={<Coins className="w-3.5 h-3.5" />}
+          isActive={activeTab === 'claims'}
+          onSelect={navigateTab}
+          badge={
+            pendingClaimsCount > 0 ? (
+              <span
+                className={`px-1.5 py-0.2 rounded-full text-[10px] font-extrabold ${
+                  activeTab === 'claims'
+                    ? 'bg-white/30 text-white'
+                    : 'bg-accent-gold/25 text-amber-700 dark:text-amber-300'
+                }`}
+              >
+                {pendingClaimsCount}
+              </span>
+            ) : undefined
+          }
+        />
+        <TabButton
+          tab="tasks"
+          testId="admin-tab-tasks"
+          label="Tugas"
+          icon={<Calendar className="w-3.5 h-3.5" />}
+          isActive={activeTab === 'tasks'}
+          onSelect={navigateTab}
+        />
+        <TabButton
+          tab="members"
+          testId="admin-tab-members"
+          label="Anggota"
+          icon={<Users className="w-3.5 h-3.5" />}
+          isActive={activeTab === 'members'}
+          onSelect={navigateTab}
+        />
+        <TabButton
+          tab="rewards"
+          testId="admin-tab-rewards"
+          label="Hadiah"
+          icon={<Sparkles className="w-3.5 h-3.5" />}
+          isActive={activeTab === 'rewards'}
+          onSelect={navigateTab}
+        />
         <TabButton
           tab="settings"
           testId="admin-tab-settings"
@@ -274,7 +239,6 @@ export const AdminPage: React.FC<AdminPageProps> = ({ initialTab = 'overview' })
           icon={<Sliders className="w-3.5 h-3.5" />}
           isActive={activeTab === 'settings'}
           onSelect={navigateTab}
-          stretch
         />
       </nav>
 
@@ -291,7 +255,7 @@ export const AdminPage: React.FC<AdminPageProps> = ({ initialTab = 'overview' })
         {activeTab === 'submissions' && <SubmissionsQueue controller={submissionsController} />}
         {activeTab === 'claims' && <ClaimsQueue controller={claimsController} />}
         {activeTab === 'tasks' && <TaskScheduleList members={membersController.members} />}
-        {activeTab === 'members' && <MemberList />}
+        {activeTab === 'members' && <MemberList controller={membersController} />}
         {activeTab === 'rewards' && <CosmeticsCatalogSection />}
         {activeTab === 'settings' && <EconomySettingsForm />}
       </main>

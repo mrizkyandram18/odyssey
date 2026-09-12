@@ -582,4 +582,76 @@ describe('AdminPage Component', () => {
       expect(screen.getByText(/Budi/)).toBeInTheDocument()
     })
   })
+
+  it('renders flat navigation without group labels', async () => {
+    vi.mocked(useSession).mockReturnValue({
+      session: { uid: '1', family_id: '1', role: 'ADMIN', kind: 'user', expires: 9999999999, token: 'abc' },
+      profile: { uid: '1', role: 'ADMIN' },
+      loading: false,
+    } as any)
+
+    render(
+      <MemoryRouter initialEntries={['/admin']}>
+        <AdminPage />
+      </MemoryRouter>
+    )
+
+    await waitFor(() => {
+      expect(screen.getByText(/Ringkasan Operasional Harian/i)).toBeInTheDocument()
+    })
+    expect(screen.queryByRole('group', { name: 'Operasional' })).toBeNull()
+    expect(screen.queryByRole('group', { name: 'Kelola' })).toBeNull()
+    for (const id of ['overview', 'submissions', 'claims', 'tasks', 'members', 'rewards', 'settings']) {
+      expect(screen.getByTestId(`admin-tab-${id}`)).toBeInTheDocument()
+    }
+  })
+
+  it('reuses one members controller on Anggota tab (single GET)', async () => {
+    vi.mocked(useSession).mockReturnValue({
+      session: { uid: '1', family_id: '1', role: 'ADMIN', kind: 'user', expires: 9999999999, token: 'abc' },
+      profile: { uid: '1', role: 'ADMIN' },
+      loading: false,
+    } as any)
+
+    vi.mocked(adminMembersApi.getMembers).mockResolvedValue({
+      items: [
+        { uid: 'u-1', username: 'budi', explorer_name: 'Budi', role: 'MEMBER', is_active: true, coins: 100, level: 2 },
+      ],
+      pagination: { page: 1, limit: 50, total: 1, has_next: false },
+    } as any)
+
+    render(
+      <MemoryRouter initialEntries={['/admin?tab=members']}>
+        <AdminPage />
+      </MemoryRouter>
+    )
+
+    await waitFor(() => {
+      expect(screen.getAllByText('Budi').length).toBeGreaterThanOrEqual(1)
+    })
+    expect(vi.mocked(adminMembersApi.getMembers)).toHaveBeenCalledTimes(1)
+  })
+
+  it('humanizes payout policy labels in Tambah Anggota modal', async () => {
+    vi.mocked(useSession).mockReturnValue({
+      session: { uid: '1', family_id: '1', role: 'ADMIN', kind: 'user', expires: 9999999999, token: 'abc' },
+      profile: { uid: '1', role: 'ADMIN' },
+      loading: false,
+    } as any)
+
+    render(
+      <MemoryRouter initialEntries={['/admin?tab=members']}>
+        <AdminPage />
+      </MemoryRouter>
+    )
+
+    fireEvent.click(screen.getByRole('button', { name: /Tambah Anggota/i }))
+
+    await waitFor(() => {
+      expect(screen.getByText('Saat batas tercapai (fleksibel)')).toBeInTheDocument()
+      expect(screen.getByText('Minimal Penarikan (Koin)')).toBeInTheDocument()
+    })
+    expect(screen.queryByText('THRESHOLD')).toBeNull()
+    expect(screen.queryByText('Min Withdrawal')).toBeNull()
+  })
 })

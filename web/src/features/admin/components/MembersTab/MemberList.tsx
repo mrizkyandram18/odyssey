@@ -90,7 +90,12 @@ function StatusBadge({ member }: { member: any }) {
   )
 }
 
-export const MemberList: React.FC = () => {
+export interface MemberListProps {
+  controller?: ReturnType<typeof useAdminMembers>
+}
+
+export const MemberList: React.FC<MemberListProps> = ({ controller }) => {
+  const defaultController = useAdminMembers({ enabled: !controller })
   const {
     members,
     pagination,
@@ -115,7 +120,7 @@ export const MemberList: React.FC = () => {
     handleUnblock,
     handleDelete,
     processingId,
-  } = useAdminMembers()
+  } = controller || defaultController
 
   return (
     <div className="space-y-4">

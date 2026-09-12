@@ -25,6 +25,30 @@ export interface AdminOverviewProps {
   membersController?: ReturnType<typeof useAdminMembers>
 }
 
+// Queue aging from already-loaded data only. Backend sorts newest-first
+// (created_at DESC), so the global oldest is derivable ONLY when the whole
+// pending set is loaded (default PENDING filter, page 1). Otherwise return
+// null — never guess from a partial page. Read-only, no API/DB change.
+function oldestPendingAgeLabel(
+  items: Array<{ status?: string; created_at?: string }>,
+  pendingTotal: number | null | undefined
+): string | null {
+  const pending = items.filter((i) => (i.status ?? 'PENDING') === 'PENDING' && i.created_at)
+  if (pendingTotal == null || pending.length === 0 || pending.length < pendingTotal) return null
+  let oldest = 0
+  for (const item of pending) {
+    const t = Date.parse(item.created_at as string)
+    if (!isNaN(t)) oldest = oldest === 0 ? t : Math.min(oldest, t)
+  }
+  if (!oldest) return null
+  const diffMs = Date.now() - oldest
+  if (diffMs < 0) return null
+  const hours = Math.floor(diffMs / 3600000)
+  if (hours < 1) return 'baru saja'
+  if (hours < 24) return `${hours} jam`
+  return `${Math.floor(hours / 24)} hari`
+}
+
 export const AdminOverview: React.FC<AdminOverviewProps> = ({
   onNavigateTab,
   submissionsController,
@@ -54,6 +78,8 @@ export const AdminOverview: React.FC<AdminOverviewProps> = ({
   )
   const conversionRate = config?.conversion_rate || 100
   const estimatedRupiah = totalCoinsRequested * conversionRate
+  const oldestSubAge = oldestPendingAgeLabel(submissions, pendingTotal)
+  const oldestClaimAge = oldestPendingAgeLabel(claims, pendingClaimsTotal)
 
   // 3. Members Attention (Anggota)
   const inactiveDaysLimit = config?.auto_block_inactivity_days ?? 7
@@ -149,6 +175,11 @@ export const AdminOverview: React.FC<AdminOverviewProps> = ({
                       {latestPendingSub
                         ? `Terbaru: "${latestPendingSub.task_title}" oleh ${latestPendingSub.user_name || 'Anggota'}`
                         : 'Bukti pengerjaan tugas siap diperiksa untuk pemberian koin reward.'}
+                      {oldestSubAge && (
+                        <>
+                          {' '}• Tertua: <strong className="text-text-primary">{oldestSubAge}</strong>
+                        </>
+                      )}
                     </p>
                   </div>
                 </div>
@@ -183,6 +214,11 @@ export const AdminOverview: React.FC<AdminOverviewProps> = ({
                     </div>
                     <p className="text-xs text-text-secondary mt-1">
                       Total <strong>{totalCoinsRequested.toLocaleString('id-ID')} Koin</strong> (estimasi Rp {estimatedRupiah.toLocaleString('id-ID')}) menunggu ditransfer.
+                      {oldestClaimAge && (
+                        <>
+                          {' '}• Tertua: <strong className="text-text-primary">{oldestClaimAge}</strong>
+                        </>
+                      )}
                     </p>
                   </div>
                 </div>
