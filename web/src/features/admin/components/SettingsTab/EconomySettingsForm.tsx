@@ -775,6 +775,14 @@ export const EconomySettingsForm: React.FC = () => {
             </div>
           )}
 
+          {/* Single-save disclosure: one POST persists every section below. */}
+          <p className="p-3 rounded-xl bg-surface-elevated border border-border-subtle text-[11px] text-text-secondary leading-relaxed">
+            Satu kali <strong className="text-text-primary">Simpan</strong> menyimpan seluruh pengaturan di halaman ini
+            sekaligus (batas koin, konversi, jadwal, keamanan, dan pengumuman) dalam satu permintaan.
+            Field bertanda <strong className="text-accent-gold">Dampak Tinggi</strong> langsung memengaruhi
+            perhitungan koin dan akses anggota — periksa kembali sebelum menyimpan.
+          </p>
+
           <button
             type="submit"
             disabled={isSaving}
@@ -785,7 +793,7 @@ export const EconomySettingsForm: React.FC = () => {
             ) : (
               <>
                 <Check className="w-4 h-4" />
-                <span>Simpan Pengaturan Periode & Ekonomi</span>
+                <span>Simpan Pengaturan Periode, Ekonomi & Pengumuman</span>
               </>
             )}
           </button>

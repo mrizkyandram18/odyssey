@@ -86,12 +86,12 @@ export const ClaimCard: React.FC<ClaimCardProps> = ({
             ) : isPending ? (
               <>
                 <Clock className="w-3 h-3" />
-                <span>Menunggu Proses</span>
+                <span>Menunggu</span>
               </>
             ) : (
               <>
                 <XCircle className="w-3 h-3" />
-                <span>Ditolak / Refund</span>
+                <span>Ditolak</span>
               </>
             )}
           </span>

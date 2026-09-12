@@ -7,12 +7,12 @@ test.describe('Admin Management Journeys', () => {
     await expect(page).toHaveURL(/.*#\/$/);
     const adminLink = page.locator('nav a:has-text("Admin"), a[href="#/admin"]');
     await adminLink.click();
-    await expect(page).toHaveURL(/.*#\/admin$/);
+    await expect(page).toHaveURL(/.*#\/admin(\?.*)?$/);
   });
 
   test('Journey 8: Admin can inspect task management tab and open task creator modal', async ({ page }) => {
-    // Switch to Jadwal Tugas tab
-    const tasksTab = page.locator('button:has-text("Jadwal Tugas")');
+    // Switch to Tugas tab (Kelola group)
+    const tasksTab = page.locator('button[data-testid="admin-tab-tasks"]');
     await tasksTab.click();
     
     // Check create task button
@@ -31,14 +31,16 @@ test.describe('Admin Management Journeys', () => {
   });
 
   test('Journey 9: Admin can inspect submission verification queue and claims tab', async ({ page }) => {
-    // Submissions verification tab
-    const subTab = page.locator('button:has-text("Verifikasi Bukti")');
+    // Submissions verification tab (Operasional group)
+    const subTab = page.locator('button[data-testid="admin-tab-submissions"]');
     await subTab.click();
+    await expect(page).toHaveURL(/.*#\/admin(\?.*)?$/);
     await expect(page.locator('p:has-text("Antrean Verifikasi"), h3:has-text("Antrean Verifikasi")').first()).toBeVisible();
 
-    // Claims tab
-    const claimsTab = page.locator('button:has-text("Pencairan Koin")');
+    // Claims tab (Operasional group)
+    const claimsTab = page.locator('button[data-testid="admin-tab-claims"]');
     await claimsTab.click();
+    await expect(page).toHaveURL(/.*#\/admin(\?.*)?$/);
     await expect(claimsTab).toBeVisible();
   });
 });

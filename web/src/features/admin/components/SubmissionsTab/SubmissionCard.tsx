@@ -80,12 +80,12 @@ export const SubmissionCard: React.FC<SubmissionCardProps> = ({
             ) : isSubPending ? (
               <>
                 <Clock className="w-3 h-3" />
-                <span>Menunggu Review</span>
+                <span>Menunggu</span>
               </>
             ) : (
               <>
                 <RotateCcw className="w-3 h-3" />
-                <span>Perlu Revisi</span>
+                <span>Ditolak</span>
               </>
             )}
           </span>

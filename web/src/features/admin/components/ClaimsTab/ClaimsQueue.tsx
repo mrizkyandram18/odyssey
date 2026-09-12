@@ -26,6 +26,9 @@ export const ClaimsQueue: React.FC<ClaimsQueueProps> = ({ controller }) => {
 
   const pagePendingCount = claims.filter((c) => c.status === 'PENDING').length
   const pendingCount = pendingTotal ?? pagePendingCount
+  // Total is the exact backend total (pagination.total), never claims.length.
+  // claims.length is only the current page's rows.
+  const totalDisplay = pagination.total
 
   return (
     <div className="space-y-3.5">
@@ -46,7 +49,7 @@ export const ClaimsQueue: React.FC<ClaimsQueueProps> = ({ controller }) => {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 p-3 rounded-2xl bg-surface border border-border-subtle shadow-xs">
         <div>
           <h3 className="font-bold text-text-primary text-xs flex items-center gap-2">
-            <span>Permintaan Pencairan Koin ({pendingCount} Menunggu / {claims.length} Total)</span>
+            <span>Permintaan Pencairan Koin ({pendingCount} Menunggu / {totalDisplay} Total)</span>
             {isFetching && <RefreshCw className="w-3.5 h-3.5 animate-spin text-text-secondary" />}
           </h3>
           <p className="text-[11px] text-text-secondary mt-0.5">

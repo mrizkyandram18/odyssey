@@ -3,10 +3,10 @@ import '@testing-library/jest-dom/vitest'
 import React from 'react'
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { render, screen, cleanup, waitFor, fireEvent } from '@testing-library/react'
-import { MemoryRouter } from 'react-router-dom'
+import { MemoryRouter, useSearchParams } from 'react-router-dom'
 import { AdminPage } from './AdminPage'
 import { useSession } from '../../shared/hooks/useSession'
-import { adminTasksApi } from '../../shared/lib/api'
+import { adminTasksApi, adminMembersApi } from '../../shared/lib/api'
 
 vi.mock('../../shared/hooks/useSession', () => ({
   useSession: vi.fn(),
@@ -106,7 +106,7 @@ describe('AdminPage Component', () => {
     expect(screen.queryByText('Panel Operasional Admin')).toBeNull()
   })
 
-  it('renders operations dashboard for ADMIN role with metric tiles', async () => {
+  it('renders operations dashboard for ADMIN role with triage queue and schedule strip', async () => {
     vi.mocked(useSession).mockReturnValue({
       session: { uid: '1', family_id: '1', role: 'ADMIN', kind: 'user', expires: 9999999999, token: 'abc' },
       profile: { uid: '1', role: 'ADMIN' },
@@ -126,9 +126,12 @@ describe('AdminPage Component', () => {
     expect(screen.getByText('Panel Operasional Admin')).toBeInTheDocument()
 
     await waitFor(() => {
-      expect(screen.getByText(/Antrean Verifikasi Bukti Tugas/i)).toBeInTheDocument()
-      expect(screen.getByText('Tidak Ada Antrean Verifikasi')).toBeInTheDocument()
+      expect(screen.getByText(/Ringkasan Operasional Harian/i)).toBeInTheDocument()
+      expect(screen.getByText('Semua Antrean Bersih & Terkendali')).toBeInTheDocument()
+      expect(screen.getByTestId('admin-schedule-strip')).toBeInTheDocument()
       expect(screen.getByText(/24[–-]26/)).toBeInTheDocument()
+      // Duplicated metric cards must be gone.
+      expect(screen.queryByText('Metrik Operasional Utama')).toBeNull()
     })
   })
 
@@ -450,13 +453,133 @@ describe('AdminPage Component', () => {
     })
 
     // Submit form and verify updated level_cap_bonus
-    const saveBtn = screen.getByRole('button', { name: /Simpan Pengaturan Periode & Ekonomi/i })
+    const saveBtn = screen.getByRole('button', { name: /Simpan Pengaturan Periode, Ekonomi & Pengumuman/i })
     fireEvent.submit(saveBtn.closest('form')!)
 
     await waitFor(() => {
       expect(adminTasksApi.updateConfig).toHaveBeenCalledWith(expect.objectContaining({
         level_cap_bonus: { '5': 300, '10': 500 },
       }))
+    })
+  })
+
+  it('opens Ringkasan by default on /admin without tab param', async () => {
+    vi.mocked(useSession).mockReturnValue({
+      session: { uid: '1', family_id: '1', role: 'ADMIN', kind: 'user', expires: 9999999999, token: 'abc' },
+      profile: { uid: '1', role: 'ADMIN' },
+      loading: false,
+    } as any)
+
+    render(
+      <MemoryRouter initialEntries={['/admin']}>
+        <AdminPage />
+      </MemoryRouter>
+    )
+
+    await waitFor(() => {
+      expect(screen.getByText(/Ringkasan Operasional Harian/i)).toBeInTheDocument()
+    })
+    expect(screen.queryByText(/Permintaan Pencairan Koin \(/)).toBeNull()
+  })
+
+  it('opens Pencairan directly via ?tab=claims', async () => {
+    vi.mocked(useSession).mockReturnValue({
+      session: { uid: '1', family_id: '1', role: 'ADMIN', kind: 'user', expires: 9999999999, token: 'abc' },
+      profile: { uid: '1', role: 'ADMIN' },
+      loading: false,
+    } as any)
+
+    render(
+      <MemoryRouter initialEntries={['/admin?tab=claims']}>
+        <AdminPage />
+      </MemoryRouter>
+    )
+
+    await waitFor(() => {
+      expect(screen.getByText(/Permintaan Pencairan Koin \(/)).toBeInTheDocument()
+    })
+    // Tab button state follows the URL.
+    expect(screen.getByTestId('admin-tab-claims')).toHaveAttribute('aria-current', 'page')
+  })
+
+  it('falls back to initialTab when ?tab= is invalid', async () => {
+    vi.mocked(useSession).mockReturnValue({
+      session: { uid: '1', family_id: '1', role: 'ADMIN', kind: 'user', expires: 9999999999, token: 'abc' },
+      profile: { uid: '1', role: 'ADMIN' },
+      loading: false,
+    } as any)
+
+    render(
+      <MemoryRouter initialEntries={['/admin?tab=nope']}>
+        <AdminPage />
+      </MemoryRouter>
+    )
+
+    await waitFor(() => {
+      expect(screen.getByText(/Ringkasan Operasional Harian/i)).toBeInTheDocument()
+    })
+  })
+
+  it('writes ?tab= to URL when switching tabs and clears it back on Ringkasan', async () => {
+    vi.mocked(useSession).mockReturnValue({
+      session: { uid: '1', family_id: '1', role: 'ADMIN', kind: 'user', expires: 9999999999, token: 'abc' },
+      profile: { uid: '1', role: 'ADMIN' },
+      loading: false,
+    } as any)
+
+    const UrlProbe: React.FC = () => {
+      const [params] = useSearchParams()
+      return <span data-testid="url-tab">{params.get('tab') ?? 'none'}</span>
+    }
+
+    render(
+      <MemoryRouter initialEntries={['/admin']}>
+        <AdminPage />
+        <UrlProbe />
+      </MemoryRouter>
+    )
+
+    await waitFor(() => {
+      expect(screen.getByText(/Ringkasan Operasional Harian/i)).toBeInTheDocument()
+    })
+    expect(screen.getByTestId('url-tab')).toHaveTextContent('none')
+
+    fireEvent.click(screen.getByTestId('admin-tab-tasks'))
+    await waitFor(() => {
+      expect(screen.getByTestId('url-tab')).toHaveTextContent('tasks')
+    })
+
+    fireEvent.click(screen.getByTestId('admin-tab-overview'))
+    await waitFor(() => {
+      expect(screen.getByTestId('url-tab')).toHaveTextContent('none')
+      expect(screen.getByText(/Ringkasan Operasional Harian/i)).toBeInTheDocument()
+    })
+  })
+
+  it('passes existing members data to TaskScheduleList assignee labels', async () => {
+    vi.mocked(useSession).mockReturnValue({
+      session: { uid: '1', family_id: '1', role: 'ADMIN', kind: 'user', expires: 9999999999, token: 'abc' },
+      profile: { uid: '1', role: 'ADMIN' },
+      loading: false,
+    } as any)
+
+    vi.mocked(adminMembersApi.getMembers).mockResolvedValue([
+      { uid: 'u-1', username: 'budi', explorer_name: 'Budi', role: 'MEMBER', is_active: true, coins: 0, level: 1 },
+    ] as any)
+    vi.mocked(adminTasksApi.getTasks).mockResolvedValue([
+      { id: 7, title: 'Tugas Personal', step_order: 1, reward_coins: 50, reward_xp: 100, task_type: 'VIDEO', target_scope: 'USER', target_user_uid: 'u-1', config: {} },
+    ] as any)
+
+    render(
+      <MemoryRouter initialEntries={['/admin?tab=tasks']}>
+        <AdminPage />
+      </MemoryRouter>
+    )
+
+    await waitFor(() => {
+      expect(screen.getByText('Tugas Personal')).toBeInTheDocument()
+      expect(screen.getByText(/Personal:/)).toBeInTheDocument()
+      expect(screen.getByText(/Budi/)).toBeInTheDocument()
     })
   })
 })

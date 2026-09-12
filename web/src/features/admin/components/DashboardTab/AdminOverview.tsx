@@ -9,6 +9,7 @@ import {
   Check,
   PlusCircle,
   Sliders,
+  Megaphone,
 } from 'lucide-react'
 import { useAdminSubmissions } from '../../hooks/useAdminSubmissions'
 import { useAdminClaims } from '../../hooks/useAdminClaims'
@@ -21,18 +22,21 @@ export interface AdminOverviewProps {
   onNavigateTab: (tab: AdminTab) => void
   submissionsController?: ReturnType<typeof useAdminSubmissions>
   claimsController?: ReturnType<typeof useAdminClaims>
+  membersController?: ReturnType<typeof useAdminMembers>
 }
 
 export const AdminOverview: React.FC<AdminOverviewProps> = ({
   onNavigateTab,
   submissionsController,
   claimsController,
+  membersController,
 }) => {
   const defaultSubmissions = useAdminSubmissions({ enabled: !submissionsController })
   const defaultClaims = useAdminClaims({ enabled: !claimsController })
+  const defaultMembers = useAdminMembers({ enabled: !membersController })
   const { submissions, pendingTotal, isFetching: isFetchingSubs } = submissionsController || defaultSubmissions
   const { claims, pendingTotal: pendingClaimsTotal, isFetching: isFetchingClaims } = claimsController || defaultClaims
-  const { members, isFetching: isFetchingMembers } = useAdminMembers()
+  const { members, isFetching: isFetchingMembers } = membersController || defaultMembers
   const { config, isFetching: isFetchingConfig } = useAdminConfig()
 
   const isLoading = isFetchingSubs || isFetchingClaims || isFetchingMembers || isFetchingConfig
@@ -53,7 +57,6 @@ export const AdminOverview: React.FC<AdminOverviewProps> = ({
 
   // 3. Members Attention (Anggota)
   const inactiveDaysLimit = config?.auto_block_inactivity_days ?? 7
-  const activeMembers = members.filter((m) => m.is_active)
   const inactiveMembers = members.filter(
     (m) => !m.is_active || (m.inactive_days != null && m.inactive_days >= inactiveDaysLimit)
   )
@@ -230,141 +233,36 @@ export const AdminOverview: React.FC<AdminOverviewProps> = ({
         )}
       </section>
 
-      {/* 4 ESSENTIAL METRIC CARDS */}
-      <section className="space-y-3">
-        <h3 className="text-xs sm:text-sm font-bold text-text-primary tracking-tight">
-          Metrik Operasional Utama
-        </h3>
-
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
-          {/* Card 1: Antrean Verifikasi Bukti Tugas */}
-          <div className="p-4 rounded-2xl bg-surface border border-border-subtle shadow-xs flex flex-col justify-between gap-3">
-            <div>
-              <div className="flex items-center justify-between text-text-secondary">
-                <span className="text-[11px] font-bold">Antrean Verifikasi Bukti Tugas</span>
-                <CheckCircle2 className="w-4 h-4 text-accent-magic" />
-              </div>
-              <div className="mt-2">
-                <p className="text-xl sm:text-2xl font-black text-text-primary tracking-tight">
-                  {pendingSubCount}
-                  <span className="text-xs font-medium text-text-secondary ml-1.5">menunggu</span>
-                </p>
-                <p className="text-[11px] text-text-secondary mt-1 line-clamp-1">
-                  {pendingSubCount === 0
-                    ? 'Tidak Ada Antrean Verifikasi'
-                    : latestPendingSub
-                      ? `Terbaru: ${latestPendingSub.task_title}`
-                      : `${pendingSubCount} tugas menunggu review`}
-                </p>
-              </div>
-            </div>
-            <button
-              type="button"
-              onClick={() => onNavigateTab('submissions')}
-              className="text-xs font-bold text-accent-magic hover:underline flex items-center gap-1 cursor-pointer pt-2 border-t border-border-subtle/50"
-            >
-              <span>Buka Antrean</span>
-              <ArrowRight className="w-3 h-3" />
-            </button>
-          </div>
-
-          {/* Card 2: Permintaan Pencairan */}
-          <div className="p-4 rounded-2xl bg-surface border border-border-subtle shadow-xs flex flex-col justify-between gap-3">
-            <div>
-              <div className="flex items-center justify-between text-text-secondary">
-                <span className="text-[11px] font-bold">Permintaan Pencairan</span>
-                <Coins className="w-4 h-4 text-accent-gold" />
-              </div>
-              <div className="mt-2">
-                <p className="text-xl sm:text-2xl font-black text-text-primary tracking-tight">
-                  {pendingClaimsCount}
-                  <span className="text-xs font-medium text-text-secondary ml-1.5">klaim</span>
-                </p>
-                <p className="text-[11px] text-text-secondary mt-1">
-                  {pendingClaimsCount === 0
-                    ? 'Belum ada klaim tertunda'
-                    : `${totalCoinsRequested.toLocaleString('id-ID')} koin (Rp ${estimatedRupiah.toLocaleString('id-ID')})`}
-                </p>
-              </div>
-            </div>
-            <button
-              type="button"
-              onClick={() => onNavigateTab('claims')}
-              className="text-xs font-bold text-accent-gold hover:underline flex items-center gap-1 cursor-pointer pt-2 border-t border-border-subtle/50"
-            >
-              <span>Lihat Klaim</span>
-              <ArrowRight className="w-3 h-3" />
-            </button>
-          </div>
-
-          {/* Card 3: Status Anggota */}
-          <div className="p-4 rounded-2xl bg-surface border border-border-subtle shadow-xs flex flex-col justify-between gap-3">
-            <div>
-              <div className="flex items-center justify-between text-text-secondary">
-                <span className="text-[11px] font-bold">Status Anggota</span>
-                <Users className="w-4 h-4 text-accent-nature" />
-              </div>
-              <div className="mt-2">
-                <p className="text-xl sm:text-2xl font-black text-text-primary tracking-tight">
-                  {activeMembers.length}
-                  <span className="text-xs font-medium text-text-secondary ml-1.5">
-                    / {members.length} aktif
-                  </span>
-                </p>
-                <p className="text-[11px] text-text-secondary mt-1">
-                  {membersNeedingAttention > 0
-                    ? `${membersNeedingAttention} anggota perlu perhatian`
-                    : 'Semua anggota aktif berkegiatan'}
-                </p>
-              </div>
-            </div>
-            <button
-              type="button"
-              onClick={() => onNavigateTab('members')}
-              className="text-xs font-bold text-accent-nature hover:underline flex items-center gap-1 cursor-pointer pt-2 border-t border-border-subtle/50"
-            >
-              <span>Kelola Anggota</span>
-              <ArrowRight className="w-3 h-3" />
-            </button>
-          </div>
-
-          {/* Card 4: Jadwal Pencairan */}
-          <div className="p-4 rounded-2xl bg-surface border border-border-subtle shadow-xs flex flex-col justify-between gap-3">
-            <div>
-              <div className="flex items-center justify-between text-text-secondary">
-                <span className="text-[11px] font-bold">Jadwal Pencairan</span>
-                <Calendar className="w-4 h-4 text-accent-magic" />
-              </div>
-              <div className="mt-2">
-                <div className="flex items-baseline gap-2">
-                  <p className="text-lg sm:text-xl font-black text-text-primary tracking-tight">
-                    Tgl {config ? `${config.redemption_start_day} s/d ${config.redemption_end_day}` : '21 s/d 26'}
-                  </p>
-                  <span
-                    className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full ${
-                      isOpen
-                        ? 'bg-status-success/15 text-status-success'
-                        : 'bg-surface-elevated text-text-secondary border border-border-subtle'
-                    }`}
-                  >
-                    {isOpen ? 'Buka' : 'Tutup'}
-                  </span>
-                </div>
-                <p className="text-[11px] text-text-secondary mt-1">
-                  Hari transfer rutin: tanggal <strong>{payoutDay}</strong>
-                </p>
-              </div>
-            </div>
-            <button
-              type="button"
-              onClick={() => onNavigateTab('settings')}
-              className="text-xs font-bold text-accent-magic hover:underline flex items-center gap-1 cursor-pointer pt-2 border-t border-border-subtle/50"
-            >
-              <span>Atur Periode</span>
-              <ArrowRight className="w-3 h-3" />
-            </button>
-          </div>
+      {/* CONCISE SCHEDULE STATUS — single-line status + link, no duplicated metrics */}
+      <section
+        data-testid="admin-schedule-strip"
+        className="px-4 py-3 rounded-2xl bg-surface border border-border-subtle shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-2"
+      >
+        <div className="flex items-center gap-2 min-w-0">
+          <Calendar className="w-4 h-4 text-accent-magic shrink-0" />
+          <p className="text-xs text-text-secondary truncate">
+            <span className="font-bold text-text-primary">Jadwal Pencairan: Tgl {config ? `${config.redemption_start_day} s/d ${config.redemption_end_day}` : '21 s/d 26'}</span>
+            <span className="mx-1.5">•</span>
+            <span>Transfer rutin tanggal <strong className="text-text-primary">{payoutDay}</strong></span>
+          </p>
+          <span
+            className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full shrink-0 ${
+              isOpen
+                ? 'bg-status-success/15 text-status-success'
+                : 'bg-surface-elevated text-text-secondary border border-border-subtle'
+            }`}
+          >
+            {isOpen ? 'Buka' : 'Tutup'}
+          </span>
         </div>
+        <button
+          type="button"
+          onClick={() => onNavigateTab('settings')}
+          className="text-xs font-bold text-accent-magic hover:underline flex items-center gap-1 cursor-pointer shrink-0 self-start sm:self-auto"
+        >
+          <span>Atur Periode</span>
+          <ArrowRight className="w-3 h-3" />
+        </button>
       </section>
 
       {/* QUICK SHORTCUTS ROW */}
@@ -400,6 +298,49 @@ export const AdminOverview: React.FC<AdminOverviewProps> = ({
           </button>
         </div>
       </section>
+
+      {/* MEMBER ANNOUNCEMENT PREVIEW — informational context at the bottom.
+          Never placed inside the operational queue; no dismiss behavior, so
+          admin cannot accidentally hide it without recovery. Editing lives in
+          Pengaturan (single-save form). */}
+      {config?.announcement?.visible && (
+        <section
+          data-testid="admin-announcement-preview"
+          className="p-4 rounded-2xl bg-surface border border-border-subtle shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-3"
+        >
+          <div className="flex items-start gap-3 min-w-0">
+            <div className="w-9 h-9 rounded-xl bg-accent-magic/10 text-accent-magic flex items-center justify-center shrink-0">
+              <Megaphone className="w-4 h-4" />
+            </div>
+            <div className="min-w-0">
+              <p className="text-[10px] font-extrabold uppercase tracking-wider text-text-secondary">
+                Pengumuman Anggota • Pratinjau
+              </p>
+              <h4 data-testid="admin-announcement-title" className="text-xs sm:text-sm font-bold text-text-primary mt-0.5 leading-snug">
+                {(config.announcement.title || '').trim() || '(Tanpa judul)'}
+              </h4>
+              {(config.announcement.body || '').trim() && (
+                <p className="text-xs text-text-secondary mt-0.5 line-clamp-2 leading-relaxed">
+                  {(config.announcement.body || '').trim()}
+                </p>
+              )}
+              <p className="text-[10px] text-text-secondary mt-1">
+                Audiens: <strong>{config.announcement.audience || 'ALL'}</strong>
+                <span className="mx-1">•</span>
+                Prioritas: <strong>{config.announcement.priority || 'normal'}</strong>
+              </p>
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={() => onNavigateTab('settings')}
+            className="px-3 py-1.5 rounded-xl bg-surface-elevated border border-border-subtle text-xs font-bold text-accent-magic hover:bg-surface transition-colors cursor-pointer flex items-center gap-1.5 shrink-0 self-start sm:self-auto"
+          >
+            <span>Ubah di Pengaturan</span>
+            <ArrowRight className="w-3.5 h-3.5" />
+          </button>
+        </section>
+      )}
     </div>
   )
 }

@@ -148,7 +148,7 @@ export const SubmissionsQueue: React.FC<SubmissionsQueueProps> = ({ controller }
                 : 'text-text-secondary hover:text-text-primary'
             }`}
           >
-            Perlu Revisi
+            Ditolak
           </button>
         </div>
       </div>

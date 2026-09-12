@@ -2,7 +2,12 @@ import { useState, useCallback, useEffect } from 'react'
 import { adminMembersApi } from '../../../shared/lib/api'
 import type { MemberView, PaginationMeta } from '../../../shared/types'
 
-export function useAdminMembers() {
+export interface UseAdminMembersOptions {
+  enabled?: boolean
+}
+
+export function useAdminMembers(options?: UseAdminMembersOptions) {
+  const enabled = options?.enabled ?? true
   const [members, setMembers] = useState<MemberView[]>([])
   const [pagination, setPagination] = useState<PaginationMeta>({ page: 1, limit: 50, total: 0, has_next: false })
   const [isFetching, setIsFetching] = useState(false)
@@ -62,11 +67,14 @@ export function useAdminMembers() {
   }, [])
 
   useEffect(() => {
-    fetchMembers(1)
-  }, [fetchMembers])
+    if (enabled) {
+      fetchMembers(1)
+    }
+  }, [fetchMembers, enabled])
 
   // Refetch on window focus / reconnect to avoid stale earning cap / active state
   useEffect(() => {
+    if (!enabled) return
     const onFocus = () => fetchMembers(pagination.page)
     const onOnline = () => fetchMembers(pagination.page)
     const onVisible = () => { if (document.visibilityState === 'visible') fetchMembers(pagination.page) }
@@ -78,7 +86,7 @@ export function useAdminMembers() {
       window.removeEventListener('online', onOnline)
       document.removeEventListener('visibilitychange', onVisible)
     }
-  }, [fetchMembers, pagination.page])
+  }, [fetchMembers, pagination.page, enabled])
 
   const openCreateModal = () => {
     setNewMember({

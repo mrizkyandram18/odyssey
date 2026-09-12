@@ -17,7 +17,7 @@ test.describe('Auth and Session Journeys', () => {
     const adminLink = page.locator('nav a:has-text("Admin"), a[href="#/admin"]');
     await expect(adminLink).toBeVisible();
     await adminLink.click();
-    await expect(page).toHaveURL(/.*#\/admin$/);
-    await expect(page.locator('h1:has-text("Admin Panel Keluarga")')).toBeVisible();
+    await expect(page).toHaveURL(/.*#\/admin(\?.*)?$/);
+    await expect(page.locator('h1:has-text("Panel Operasional Admin")')).toBeVisible();
   });
 });
