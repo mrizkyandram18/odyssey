@@ -386,21 +386,6 @@ func IsEligible(cfg EffectivePayoutConfig, balance int, now time.Time, timezone 
 	}
 }
 
-// ValidateMinimumWithdrawal validates per-user threshold against system minimum.
-func ValidateMinimumWithdrawal(userMin, systemMin int) error {
-	if userMin <= 0 {
-		return &ValidationError{Msg: "minimum_withdrawal_coins must be > 0"}
-	}
-	if systemMin > 0 && userMin < systemMin {
-		return &ValidationError{Msg: "minimum withdrawal below system minimum"}
-	}
-	return nil
-}
-
-type ValidationError struct{ Msg string }
-
-func (e *ValidationError) Error() string { return e.Msg }
-
 // GetSystemMinimumWithdrawal resolves system minimum from DB or default.
 func GetSystemMinimumWithdrawal(ctx context.Context, client db.SupabaseClient) int {
 	raw, err := client.Get(ctx, "odyssey_system_config", "key=eq.default_minimum_withdrawal_coins&select=value")

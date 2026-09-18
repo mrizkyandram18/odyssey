@@ -94,7 +94,6 @@ func BuildHandler() (*Server, error) {
 	secCfg.LoginRateLimitMax = config.LoginRateLimitMax
 	secCfg.AdminRateLimitMax = config.AdminRateLimitMax
 
-	userLimiter := shared.NewRateLimiter(secCfg.RateLimitWindow, secCfg.RateLimitMaxHits)
 	loginLimiter := shared.NewRateLimiter(secCfg.RateLimitWindow, secCfg.LoginRateLimitMax)
 	adminLimiter := shared.NewRateLimiter(secCfg.RateLimitWindow, secCfg.AdminRateLimitMax)
 
@@ -106,7 +105,6 @@ func BuildHandler() (*Server, error) {
 			case <-bgCtx.Done():
 				return
 			case <-ticker.C:
-				userLimiter.Cleanup()
 				loginLimiter.Cleanup()
 				adminLimiter.Cleanup()
 			}
@@ -232,7 +230,6 @@ func BuildHandler() (*Server, error) {
 
 	cleanup := func(shutdownCtx context.Context) error {
 		cancelBg()
-		userLimiter.Cleanup()
 		loginLimiter.Cleanup()
 		adminLimiter.Cleanup()
 		logger.Close()

@@ -1,7 +1,6 @@
 package shared
 
 import (
-	"fmt"
 	"strconv"
 	"strings"
 	"time"
@@ -49,12 +48,6 @@ func ParseAutoBlockThreshold(raw string) int {
 		return DefaultAutoBlockInactivityDays
 	}
 	return n
-}
-
-// FormatInactivityBoundary documents the exact semantics for tests/docs.
-// For threshold=5, last completion Sep 1 => blocked on Sep 6 (5 calendar days later).
-func FormatInactivityBoundary(threshold int) string {
-	return fmt.Sprintf("inactive when (today_date - last_success_date) >= %d calendar days in Asia/Jakarta; never-completed => not blocked; already blocked => skipped", threshold)
 }
 
 // IsInactiveCycleAware is cycle-aware variant: lastCompletion must be within [periodStart, periodEnd)

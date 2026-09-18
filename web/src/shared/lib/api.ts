@@ -1,6 +1,5 @@
 import type {
   ApiError,
-  Family,
   Explorer,
   TaskView,
   SubmitTaskResponse,
@@ -137,9 +136,6 @@ export class ApiClient {
 export const apiClient = new ApiClient()
 
 export const crewsApi = {
-  get: () => apiClient.get<Family>('/api/families'),
-  patch: (body: { banner_url?: string; theme?: string }) =>
-    apiClient.patch<Family>('/api/families', body),
   members: () => apiClient.get<Explorer[]>('/api/families/members').then(d => d || []),
 }
 
@@ -154,25 +150,15 @@ export interface PushSubscribePayload {
 export const pushApi = {
   subscribe: (payload: PushSubscribePayload) => apiClient.post<{ status: string }>('/api/push', payload),
   unsubscribe: (endpoint?: string) => apiClient.delete<{ status: string }>('/api/push' + (endpoint ? '?endpoint=' + encodeURIComponent(endpoint) : ''), endpoint ? { endpoint } : undefined),
-  delete: () => apiClient.delete<{ success: boolean }>('/api/push'),
 }
 
 export const profileApi = {
-  getProfile: () => apiClient.get<Explorer>('/api/me'),
-  updateAvatar: (data: { avatar_style: string; avatar_seed: string }) => apiClient.patch<{ status: string }>('/api/me/avatar', data),
-  changePassword: (newPassword: string, currentPassword?: string, confirmPassword?: string) =>
-    apiClient.post<{ status: string; message: string }>('/api/me/change-password', {
-      new_password: newPassword,
-      ...(currentPassword !== undefined ? { current_password: currentPassword } : {}),
-      ...(confirmPassword !== undefined ? { confirm_password: confirmPassword } : {}),
-    }),
   changePasswordFull: (data: { current_password?: string; new_password: string; confirm_password?: string }) =>
     apiClient.post<{ status: string; message: string }>('/api/me/change-password', data),
 }
 
 export const tasksApi = {
   getToday: () => apiClient.get<{ tasks: TaskView[]; earning_locked?: boolean; earning_cap?: number; earned?: number }>('/api/tasks/today'),
-  getTask: (taskId: number) => apiClient.get<TaskView>(`/api/tasks/${taskId}`),
   submit: (taskId: number, data: { submission_type?: string; answers?: Record<string, any>; payload?: Record<string, any> }) =>
     apiClient.post<SubmitTaskResponse>(`/api/tasks/${taskId}/submit`, data),
 }
