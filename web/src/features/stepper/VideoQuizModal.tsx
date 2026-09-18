@@ -49,7 +49,8 @@ export const VideoQuizModal: React.FC<VideoQuizModalProps> = ({ task, onClose, o
 
   // RPC failures arrive wrapped: "submission failed: supabase rpc ... : {"code":"P0008",...,"message":"..."}".
   // Extract the inner server message so members see e.g. which question numbers were wrong.
-  const extractServerMessage = (raw: string): string => {
+  const extractServerMessage = (raw: string | undefined): string => {
+    if (!raw) return ''
     const start = raw.indexOf('{')
     const end = raw.lastIndexOf('}')
     if (start >= 0 && end > start) {
