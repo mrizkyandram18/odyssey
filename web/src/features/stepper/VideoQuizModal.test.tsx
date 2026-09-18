@@ -133,7 +133,7 @@ describe('VideoQuizModal Component', () => {
   it('displays error message when quiz answers are rejected by API', async () => {
     vi.mocked(tasksApi.submit).mockResolvedValueOnce({
       success: false,
-      error: 'Jawaban kuis belum tepat, silakan periksa kembali',
+      error: 'Jawaban kuis belum tepat pada soal nomor 2, silakan periksa kembali',
     } as any)
 
     render(
@@ -152,7 +152,35 @@ describe('VideoQuizModal Component', () => {
     fireEvent.click(submitBtn)
 
     await waitFor(() => {
-      expect(screen.getByText(/Jawaban kuis belum tepat, silakan periksa kembali/i)).toBeInTheDocument()
+      expect(screen.getByText(/Jawaban kuis belum tepat pada soal nomor 2/i)).toBeInTheDocument()
+    })
+  })
+
+  it('extracts the inner server message from a wrapped RPC failure', async () => {
+    vi.mocked(tasksApi.submit).mockRejectedValueOnce(
+      new Error(
+        'submission failed: supabase rpc odyssey_submit_auto_task 500 Internal Server Error: {"code":"P0008","details":null,"hint":null,"message":"Jawaban kuis belum tepat pada soal nomor 1, 2, silakan periksa kembali"}'
+      )
+    )
+
+    render(
+      <VideoQuizModal
+        task={mockQuizTask}
+        onClose={vi.fn()}
+        onSuccess={vi.fn()}
+      />
+    )
+
+    fireEvent.click(screen.getByText(/A. Mengabari atasan lebih awal/i))
+    fireEvent.click(screen.getByText(/B. Langsung membantah dan tersinggung/i))
+
+    const submitBtn = screen.getByRole('button', { name: /Kirim Jawaban/i })
+    fireEvent.click(submitBtn)
+
+    await waitFor(() => {
+      // Clean inner message shown (wrong question numbers visible, no JSON blob)
+      expect(screen.getByText(/Jawaban kuis belum tepat pada soal nomor 1, 2/i)).toBeInTheDocument()
+      expect(screen.queryByText(/"code":"P0008"/)).not.toBeInTheDocument()
     })
   })
 })

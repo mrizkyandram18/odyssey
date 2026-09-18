@@ -47,6 +47,24 @@ export const VideoQuizModal: React.FC<VideoQuizModalProps> = ({ task, onClose, o
   const [ticketGranted, setTicketGranted] = useState(false)
   const [showCapsule, setShowCapsule] = useState(false)
 
+  // RPC failures arrive wrapped: "submission failed: supabase rpc ... : {"code":"P0008",...,"message":"..."}".
+  // Extract the inner server message so members see e.g. which question numbers were wrong.
+  const extractServerMessage = (raw: string): string => {
+    const start = raw.indexOf('{')
+    const end = raw.lastIndexOf('}')
+    if (start >= 0 && end > start) {
+      try {
+        const parsed = JSON.parse(raw.slice(start, end + 1)) as any
+        if (parsed && typeof parsed.message === 'string' && parsed.message) {
+          return parsed.message
+        }
+      } catch {
+        // fall through to raw text
+      }
+    }
+    return raw
+  }
+
   const handleSelectOption = (questionId: string | number, option: string) => {
     const match = option.match(/^([A-Za-z])[.)]\s*(.*)/)
     const normalizedVal = match ? match[1].toUpperCase() : option
@@ -81,14 +99,14 @@ export const VideoQuizModal: React.FC<VideoQuizModalProps> = ({ task, onClose, o
           origin: { y: 0.6 },
         })
       } else {
-        setErrorMessage(res.error || 'Jawaban kuis belum tepat. Periksa kembali jawabanmu.')
+        setErrorMessage(extractServerMessage(res.error) || 'Jawaban kuis belum tepat. Periksa kembali jawabanmu.')
       }
     } catch (err: any) {
       if (isEarningCapError(err)) {
         setErrorMessage(EARNING_CAP_MESSAGE)
         try { (onSuccess as any)?.() } catch { /* ignore */ }
       } else {
-        setErrorMessage(err.message || 'Gagal mengirim jawaban kuis. Coba lagi.')
+        setErrorMessage(extractServerMessage(err.message) || 'Gagal mengirim jawaban kuis. Coba lagi.')
       }
     } finally {
       setSubmitting(false)
