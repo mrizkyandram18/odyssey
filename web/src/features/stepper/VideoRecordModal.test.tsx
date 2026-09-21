@@ -289,4 +289,171 @@ describe('VideoRecordModal', () => {
       expect(screen.getByTestId('camera-error')).toHaveTextContent(/maksimal 4 MB/i)
     })
   })
+
+  describe('camera switch front/rear (hotfix)', () => {
+    const okStream = () => ({ getTracks: () => [] }) as unknown as MediaStream
+
+    function stubCameraWith(impl: (constraints?: any) => Promise<MediaStream>) {
+      const getUserMedia = vi.fn(impl)
+      vi.stubGlobal('navigator', { mediaDevices: { getUserMedia } })
+      vi.stubGlobal('MediaRecorder', FakeRecorder as any)
+      return getUserMedia
+    }
+
+    async function openCameraAndWait() {
+      fireEvent.click(screen.getByTestId('open-camera-button'))
+      await waitFor(() => expect(screen.getByTestId('start-recording-button')).toBeInTheDocument())
+    }
+
+    function envTask() {
+      return {
+        config: {
+          recording: {
+            enabled: true,
+            max_duration_seconds: 60,
+            camera_facing: 'environment' as const,
+            instruction: 'instruksi',
+          },
+        },
+      } as Partial<TaskView>
+    }
+
+    it('requests front camera initially when camera_facing is user', async () => {
+      const gum = stubCameraWith(async () => okStream())
+      renderModal()
+      await openCameraAndWait()
+      expect(gum).toHaveBeenCalledTimes(1)
+      expect(gum.mock.calls[0][0]).toEqual({
+        video: { facingMode: { ideal: 'user' }, width: { ideal: 640, max: 720 }, height: { ideal: 480, max: 1280 } },
+        audio: true,
+      })
+    })
+
+    it('requests rear camera initially when camera_facing is environment', async () => {
+      const gum = stubCameraWith(async () => okStream())
+      renderModal(envTask())
+      await openCameraAndWait()
+      expect(gum).toHaveBeenCalledTimes(1)
+      expect(gum.mock.calls[0][0].video.facingMode).toEqual({ ideal: 'environment' })
+      expect(screen.getByTestId('switch-camera-overlay-button')).toHaveTextContent('Kamera Belakang')
+    })
+
+    it('switches user -> environment and updates UI', async () => {
+      const gum = stubCameraWith(async () => okStream())
+      renderModal()
+      await openCameraAndWait()
+      fireEvent.click(screen.getByTestId('switch-camera-button'))
+      await waitFor(() =>
+        expect(screen.getByTestId('switch-camera-overlay-button')).toHaveTextContent('Kamera Belakang')
+      )
+      expect(gum).toHaveBeenCalledTimes(2)
+      expect(gum.mock.calls[1][0]).toEqual({ video: { facingMode: { ideal: 'environment' } }, audio: true })
+    })
+
+    it('switches environment -> user and updates UI', async () => {
+      const gum = stubCameraWith(async () => okStream())
+      renderModal(envTask())
+      await openCameraAndWait()
+      fireEvent.click(screen.getByTestId('switch-camera-button'))
+      await waitFor(() =>
+        expect(screen.getByTestId('switch-camera-overlay-button')).toHaveTextContent('Kamera Depan')
+      )
+      expect(gum).toHaveBeenCalledTimes(2)
+      expect(gum.mock.calls[1][0]).toEqual({ video: { facingMode: { ideal: 'user' } }, audio: true })
+    })
+
+    it('restores previous front stream when rear switch fails', async () => {
+      const userStream = okStream()
+      const rearErr = Object.assign(new Error('rear unavailable'), { name: 'OverconstrainedError' })
+      let calls = 0
+      const gum = stubCameraWith(async () => {
+        calls += 1
+        if (calls === 2) throw rearErr
+        return userStream
+      })
+      renderModal()
+      await openCameraAndWait()
+      fireEvent.click(screen.getByTestId('switch-camera-button'))
+      await waitFor(() =>
+        expect(screen.getByTestId('camera-error')).toHaveTextContent(/Kamera belakang tidak tersedia/)
+      )
+      // failed switch + fallback restore of the previous front stream
+      await waitFor(() => expect(gum).toHaveBeenCalledTimes(3))
+      expect(gum.mock.calls[2][0]).toEqual({ video: { facingMode: { ideal: 'user' } }, audio: true })
+      // still on front camera and able to continue
+      expect(screen.getByTestId('switch-camera-overlay-button')).toHaveTextContent('Kamera Depan')
+      expect(screen.getByTestId('start-recording-button')).toBeInTheDocument()
+    })
+
+    it('blocks switch while recording', async () => {
+      stubCameraOk()
+      renderModal({}, { countdownSeconds: 0 })
+      await openCameraAndWait()
+      fireEvent.click(screen.getByTestId('start-recording-button'))
+      expect(screen.getByTestId('recording-indicator')).toBeInTheDocument()
+      const gum = navigator.mediaDevices.getUserMedia as unknown as ReturnType<typeof vi.fn>
+      const before = gum.mock.calls.length
+      expect(screen.getByTestId('switch-camera-overlay-button')).toBeDisabled()
+      fireEvent.click(screen.getByTestId('switch-camera-overlay-button'))
+      expect(gum.mock.calls.length).toBe(before)
+      expect(screen.getByTestId('recording-indicator')).toBeInTheDocument()
+    })
+
+    it('retake keeps the switched rear camera', async () => {
+      const gum = stubCameraWith(async () => okStream())
+      renderModal({}, { countdownSeconds: 0 })
+      await openCameraAndWait()
+      fireEvent.click(screen.getByTestId('switch-camera-button'))
+      await waitFor(() =>
+        expect(screen.getByTestId('switch-camera-overlay-button')).toHaveTextContent('Kamera Belakang')
+      )
+      fireEvent.click(screen.getByTestId('start-recording-button'))
+      fireEvent.click(screen.getByTestId('stop-recording-button'))
+      await waitFor(() => expect(screen.getByTestId('retake-button')).toBeInTheDocument())
+      fireEvent.click(screen.getByTestId('retake-button'))
+      await waitFor(() => expect(screen.getByTestId('start-recording-button')).toBeInTheDocument())
+      const lastCall = gum.mock.calls[gum.mock.calls.length - 1][0]
+      expect(lastCall.video.facingMode).toEqual({ ideal: 'environment' })
+      expect(screen.getByTestId('switch-camera-overlay-button')).toHaveTextContent('Kamera Belakang')
+    })
+
+    it('submits payload.camera_facing reflecting the switched camera', async () => {
+      stubCameraOk()
+      const uploadMock = compressModule.uploadTaskProof as unknown as ReturnType<typeof vi.fn>
+      uploadMock.mockResolvedValue({ file_url: 'https://cdn/x.webm', file_name: 'video-1.webm', file_size: 12345 })
+      const submitMock = tasksApi.submit as unknown as ReturnType<typeof vi.fn>
+      submitMock.mockResolvedValue({ success: true, status: 'PENDING' })
+      renderModal({}, { countdownSeconds: 0 })
+      await openCameraAndWait()
+      fireEvent.click(screen.getByTestId('switch-camera-button'))
+      await waitFor(() =>
+        expect(screen.getByTestId('switch-camera-overlay-button')).toHaveTextContent('Kamera Belakang')
+      )
+      fireEvent.click(screen.getByTestId('start-recording-button'))
+      fireEvent.click(screen.getByTestId('stop-recording-button'))
+      await waitFor(() => expect(screen.getByTestId('use-video-button')).toBeInTheDocument())
+      fireEvent.click(screen.getByTestId('use-video-button'))
+      await waitFor(() => expect(submitMock).toHaveBeenCalledTimes(1))
+      expect(submitMock.mock.calls[0][1].payload.camera_facing).toBe('environment')
+    })
+
+    it('switches back and forth repeatedly before recording', async () => {
+      const gum = stubCameraWith(async () => okStream())
+      renderModal()
+      await openCameraAndWait()
+      const overlay = () => screen.getByTestId('switch-camera-overlay-button')
+      fireEvent.click(screen.getByTestId('switch-camera-button'))
+      await waitFor(() => expect(overlay()).toHaveTextContent('Kamera Belakang'))
+      fireEvent.click(screen.getByTestId('switch-camera-button'))
+      await waitFor(() => expect(overlay()).toHaveTextContent('Kamera Depan'))
+      fireEvent.click(screen.getByTestId('switch-camera-overlay-button'))
+      await waitFor(() => expect(overlay()).toHaveTextContent('Kamera Belakang'))
+      expect(gum).toHaveBeenCalledTimes(4)
+      expect(gum.mock.calls[1][0].video.facingMode).toEqual({ ideal: 'environment' })
+      expect(gum.mock.calls[2][0].video.facingMode).toEqual({ ideal: 'user' })
+      expect(gum.mock.calls[3][0].video.facingMode).toEqual({ ideal: 'environment' })
+      // camera still usable for normal recording afterwards
+      expect(screen.getByTestId('start-recording-button')).toBeInTheDocument()
+    })
+  })
 })

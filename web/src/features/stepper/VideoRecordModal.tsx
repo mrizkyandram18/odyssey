@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Video, RefreshCw, X, CheckCircle2, AlertCircle, Clock, ArrowRight, Square, Circle } from 'lucide-react'
+import { Video, RefreshCw, X, CheckCircle2, AlertCircle, Clock, ArrowRight, Square, Circle, SwitchCamera } from 'lucide-react'
 import type { TaskView } from '../../shared/types'
 import { tasksApi } from '../../shared/lib/api'
 import { uploadTaskProof } from '../../shared/lib/compress'
@@ -71,8 +71,15 @@ export const VideoRecordModal: React.FC<VideoRecordModalProps> = ({
   const recordingCfg = task.config?.recording || {}
   const maxDuration = Math.max(1, Math.min(600, Number(recordingCfg.max_duration_seconds) || 60))
   const rawFacing = recordingCfg.camera_facing || 'user'
-  const cameraFacing: 'user' | 'environment' = rawFacing === 'environment' ? 'environment' : 'user'
+  const initialFacing: 'user' | 'environment' = rawFacing === 'environment' ? 'environment' : 'user'
+  const [activeFacing, setActiveFacing] = useState<'user' | 'environment'>(initialFacing)
+  const [isSwitchingCamera, setIsSwitchingCamera] = useState(false)
   const instruction = (recordingCfg.instruction as string | undefined)?.trim() || ''
+
+  useEffect(() => {
+    setActiveFacing(rawFacing === 'environment' ? 'environment' : 'user')
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [task.id])
 
   const [isSupported] = useState(() => typeof navigator !== 'undefined' && !!(navigator.mediaDevices && navigator.mediaDevices.getUserMedia))
   const [recorderSupported] = useState(() => typeof MediaRecorder !== 'undefined')
@@ -138,22 +145,13 @@ export const VideoRecordModal: React.FC<VideoRecordModalProps> = ({
     setIsRequesting(true)
     setErrorMessage(null)
     try {
-      let stream: MediaStream
-      const videoConstraints: MediaTrackConstraints = {
-        facingMode: cameraFacing,
-        width: { ideal: 640, max: 720 },
-        height: { ideal: 480, max: 1280 },
-        frameRate: { ideal: 24, max: 30 },
-      }
-      try {
-        stream = await navigator.mediaDevices.getUserMedia({ video: videoConstraints, audio: true })
-      } catch {
-        try {
-          stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: cameraFacing }, audio: true })
-        } catch {
-          stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true })
-        }
-      }
+      // Sama seperti foto langsung: pakai { ideal } agar browser memilih kamera
+      // yang diminta tanpa OverconstrainedError, dan JANGAN fallback diam-diam
+      // ke kamera yang salah.
+      const stream: MediaStream = await navigator.mediaDevices.getUserMedia({
+        video: { facingMode: { ideal: activeFacing }, width: { ideal: 640, max: 720 }, height: { ideal: 480, max: 1280 } },
+        audio: true,
+      })
       streamRef.current = stream
       setIsCameraOpen(true)
     } catch (err: any) {
@@ -161,7 +159,8 @@ export const VideoRecordModal: React.FC<VideoRecordModalProps> = ({
       if (name === 'NotAllowedError' || name === 'PermissionDeniedError') {
         setErrorMessage('Izin kamera/mikrofon belum aktif. Ketuk ikon gembok 🔒 di sebelah alamat web lalu pilih Izinkan akses kamera & mikrofon.')
       } else if (name === 'NotFoundError' || name === 'OverconstrainedError') {
-        setErrorMessage('Kamera tidak ditemukan di perangkat ini.')
+        const requested = activeFacing === 'user' ? 'depan' : 'belakang'
+        setErrorMessage(`Kamera ${requested} tidak tersedia di perangkat ini. Coba putar ke kamera satunya atau pastikan perangkat memiliki kamera ${requested}.`)
       } else if (name === 'NotReadableError') {
         setErrorMessage('Kamera sedang digunakan aplikasi lain. Tutup aplikasi kamera lain lalu coba lagi.')
       } else {
@@ -169,6 +168,58 @@ export const VideoRecordModal: React.FC<VideoRecordModalProps> = ({
       }
     } finally {
       setIsRequesting(false)
+    }
+  }
+
+  const handleSwitchCamera = async () => {
+    if (isSwitchingCamera || isRequesting || isRecording || countdown !== null) return
+    const targetFacing = activeFacing === 'user' ? 'environment' : 'user'
+    setIsSwitchingCamera(true)
+    setErrorMessage(null)
+    try {
+      if (recorderRef.current) {
+        try { recorderRef.current.stream?.getTracks()?.forEach((t) => t.stop()) } catch { /* ignore */ }
+        recorderRef.current = null
+      }
+      if (streamRef.current) {
+        streamRef.current.getTracks().forEach((track) => track.stop())
+        streamRef.current = null
+      }
+      if (videoRef.current) videoRef.current.srcObject = null
+      const newStream = await navigator.mediaDevices.getUserMedia({
+        video: { facingMode: { ideal: targetFacing } },
+        audio: true,
+      })
+      streamRef.current = newStream
+      setActiveFacing(targetFacing)
+      if (videoRef.current) {
+        videoRef.current.srcObject = newStream
+        safePlay(videoRef.current)
+      }
+    } catch (err: any) {
+      const name = err?.name || ''
+      const requested = targetFacing === 'user' ? 'depan' : 'belakang'
+      if (name === 'OverconstrainedError' || name === 'NotFoundError') {
+        setErrorMessage(`Kamera ${requested} tidak tersedia di perangkat ini.`)
+      } else if (name === 'NotAllowedError' || name === 'PermissionDeniedError') {
+        setErrorMessage('Izin kamera belum aktif. Berikan izin akses kamera pada browser.')
+      } else {
+        setErrorMessage(`Gagal mengganti ke kamera ${requested}: ` + (err?.message || 'Terjadi kesalahan'))
+      }
+      // Kembalikan stream lama agar preview tidak kosong.
+      try {
+        const fallback = await navigator.mediaDevices.getUserMedia({
+          video: { facingMode: { ideal: activeFacing } },
+          audio: true,
+        })
+        streamRef.current = fallback
+        if (videoRef.current) {
+          videoRef.current.srcObject = fallback
+          safePlay(videoRef.current)
+        }
+      } catch { /* biarkan pesan error utama yang tampil */ }
+    } finally {
+      setIsSwitchingCamera(false)
     }
   }
 
@@ -304,7 +355,7 @@ export const VideoRecordModal: React.FC<VideoRecordModalProps> = ({
           // Client-reported only — admin verifies actual duration by watching.
           duration_seconds: elapsed,
           mime_type: actualMime || recordedFile.type,
-          camera_facing: cameraFacing,
+          camera_facing: activeFacing,
           captured_at: new Date().toISOString(),
         },
       })
@@ -366,7 +417,7 @@ export const VideoRecordModal: React.FC<VideoRecordModalProps> = ({
                       <span>Panduan Rekam Solo (Maksimal {maxDuration} Detik)</span>
                     </div>
                     <span className="text-[10px] font-semibold bg-accent-magic/10 text-accent-magic px-2 py-0.5 rounded-full">
-                      Kamera Depan
+                      {activeFacing === 'user' ? 'Kamera Depan' : 'Kamera Belakang'}
                     </span>
                   </div>
 
@@ -430,7 +481,19 @@ export const VideoRecordModal: React.FC<VideoRecordModalProps> = ({
                     ) : (
                       <div className="space-y-3">
                         <div className="relative aspect-[4/3] w-full max-w-[360px] mx-auto rounded-2xl overflow-hidden border-2 border-accent-magic bg-black">
-                          <video ref={videoRef} autoPlay playsInline muted className="w-full h-full object-cover" data-testid="camera-preview" />
+                          <video ref={videoRef} autoPlay playsInline muted className={`w-full h-full object-cover ${activeFacing === 'user' ? 'scale-x-[-1]' : ''}`} data-testid="camera-preview" />
+                          <button
+                            type="button"
+                            data-testid="switch-camera-overlay-button"
+                            onClick={handleSwitchCamera}
+                            disabled={isSwitchingCamera || isRequesting || isRecording || countdown !== null}
+                            className="absolute top-2.5 right-2.5 z-10 px-3 py-1.5 rounded-full bg-black/65 hover:bg-black/85 active:scale-95 text-white backdrop-blur-md flex items-center gap-1.5 text-xs font-bold transition-all shadow-md cursor-pointer border border-white/20"
+                            title="Putar Kamera (Depan / Belakang)"
+                            aria-label="Putar Kamera"
+                          >
+                            <SwitchCamera className={`w-3.5 h-3.5 text-accent-magic ${isSwitchingCamera ? 'animate-spin' : ''}`} />
+                            <span>{activeFacing === 'user' ? 'Kamera Depan' : 'Kamera Belakang'}</span>
+                          </button>
                           {countdown !== null && (
                             <div
                               data-testid="countdown-overlay"
@@ -467,8 +530,20 @@ export const VideoRecordModal: React.FC<VideoRecordModalProps> = ({
                             </button>
                           ) : !isRecording ? (
                             <>
-                              <button type="button" onClick={() => { stopStream(); setIsCameraOpen(false) }} className="flex-1 py-3 rounded-xl bg-surface-elevated border border-border-subtle text-text-secondary font-bold hover:bg-surface">
+                              <button type="button" onClick={() => { stopStream(); setIsCameraOpen(false) }} className="py-3 px-3.5 rounded-xl bg-surface-elevated border border-border-subtle text-text-secondary font-bold hover:bg-surface">
                                 Batal
+                              </button>
+                              <button
+                                type="button"
+                                data-testid="switch-camera-button"
+                                onClick={handleSwitchCamera}
+                                disabled={isSwitchingCamera || isRequesting || isRecording || countdown !== null}
+                                className="py-3 px-3 rounded-xl bg-surface-elevated border border-border-subtle text-text-primary font-bold hover:bg-surface flex items-center justify-center gap-1.5 cursor-pointer shadow-xs active:scale-95 transition-all"
+                                title="Putar Kamera Depan / Belakang"
+                                aria-label="Putar Kamera"
+                              >
+                                <SwitchCamera className={`w-4 h-4 text-accent-magic ${isSwitchingCamera ? 'animate-spin' : ''}`} />
+                                <span className="text-xs whitespace-nowrap">Putar Kamera</span>
                               </button>
                               <button
                                 type="button"
