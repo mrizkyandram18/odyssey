@@ -3,13 +3,8 @@ import {
   CheckCircle2,
   Coins,
   Users,
-  Calendar,
   ArrowRight,
-  Sparkles,
   Check,
-  PlusCircle,
-  Sliders,
-  Megaphone,
 } from 'lucide-react'
 import { useAdminSubmissions } from '../../hooks/useAdminSubmissions'
 import { useAdminClaims } from '../../hooks/useAdminClaims'
@@ -93,9 +88,8 @@ export const AdminOverview: React.FC<AdminOverviewProps> = ({
   })
   const membersNeedingAttention = inactiveMembers.length + cappedMembers.length
 
-  // 4. Redemption Period
-  const isOpen = config?.is_open ?? false
-  const payoutDay = config?.payout_day ?? 24
+  // 4. Redemption Period (window status lives in the admin header pill;
+  // the dashboard shows only actionable queues — triage-only rule)
 
   // Check if any action is needed
   const hasActions = pendingSubCount > 0 || pendingClaimsCount > 0 || membersNeedingAttention > 0
@@ -122,49 +116,6 @@ export const AdminOverview: React.FC<AdminOverviewProps> = ({
           </span>
         )}
       </div>
-
-      {/* MEMBER ANNOUNCEMENT PREVIEW — prominent position directly below the
-          header so operational announcements are seen before the queues.
-          No dismiss behavior, so admin cannot accidentally hide it without
-          recovery. Editing lives in Pengaturan (single-save form). */}
-      {config?.announcement?.visible && (
-        <section
-          data-testid="admin-announcement-preview"
-          className="p-4 rounded-2xl bg-surface border border-border-subtle shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-3"
-        >
-          <div className="flex items-start gap-3 min-w-0">
-            <div className="w-9 h-9 rounded-xl bg-accent-magic/10 text-accent-magic flex items-center justify-center shrink-0">
-              <Megaphone className="w-4 h-4" />
-            </div>
-            <div className="min-w-0">
-              <p className="text-[10px] font-extrabold uppercase tracking-wider text-text-secondary">
-                Pengumuman Anggota • Pratinjau
-              </p>
-              <h4 data-testid="admin-announcement-title" className="text-xs sm:text-sm font-bold text-text-primary mt-0.5 leading-snug">
-                {(config.announcement.title || '').trim() || '(Tanpa judul)'}
-              </h4>
-              {(config.announcement.body || '').trim() && (
-                <p className="text-xs text-text-secondary mt-0.5 line-clamp-2 leading-relaxed">
-                  {(config.announcement.body || '').trim()}
-                </p>
-              )}
-              <p className="text-[10px] text-text-secondary mt-1">
-                Audiens: <strong>{config.announcement.audience || 'ALL'}</strong>
-                <span className="mx-1">•</span>
-                Prioritas: <strong>{config.announcement.priority || 'normal'}</strong>
-              </p>
-            </div>
-          </div>
-          <button
-            type="button"
-            onClick={() => onNavigateTab('settings')}
-            className="px-3 py-1.5 rounded-xl bg-surface-elevated border border-border-subtle text-xs font-bold text-accent-magic hover:bg-surface transition-colors cursor-pointer flex items-center gap-1.5 shrink-0 self-start sm:self-auto"
-          >
-            <span>Ubah di Pengaturan</span>
-            <ArrowRight className="w-3.5 h-3.5" />
-          </button>
-        </section>
-      )}
 
       {/* ACTION QUEUE SECTION */}
       <section className="space-y-3">
@@ -312,71 +263,6 @@ export const AdminOverview: React.FC<AdminOverviewProps> = ({
         )}
       </section>
 
-      {/* CONCISE SCHEDULE STATUS — single-line status + link, no duplicated metrics */}
-      <section
-        data-testid="admin-schedule-strip"
-        className="px-4 py-3 rounded-2xl bg-surface border border-border-subtle shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-2"
-      >
-        <div className="flex items-center gap-2 min-w-0">
-          <Calendar className="w-4 h-4 text-accent-magic shrink-0" />
-          <p className="text-xs text-text-secondary truncate">
-            <span className="font-bold text-text-primary">Jadwal Pencairan: Tgl {config ? `${config.redemption_start_day} s/d ${config.redemption_end_day}` : '21 s/d 26'}</span>
-            <span className="mx-1.5">•</span>
-            <span>Transfer rutin tanggal <strong className="text-text-primary">{payoutDay}</strong></span>
-          </p>
-          <span
-            className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full shrink-0 ${
-              isOpen
-                ? 'bg-status-success/15 text-status-success'
-                : 'bg-surface-elevated text-text-secondary border border-border-subtle'
-            }`}
-          >
-            {isOpen ? 'Buka' : 'Tutup'}
-          </span>
-        </div>
-        <button
-          type="button"
-          onClick={() => onNavigateTab('settings')}
-          className="text-xs font-bold text-accent-magic hover:underline flex items-center gap-1 cursor-pointer shrink-0 self-start sm:self-auto"
-        >
-          <span>Atur Periode</span>
-          <ArrowRight className="w-3 h-3" />
-        </button>
-      </section>
-
-      {/* QUICK SHORTCUTS ROW */}
-      <section className="p-4 rounded-2xl bg-surface border border-border-subtle shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-        <div className="flex items-center gap-2">
-          <Sparkles className="w-4 h-4 text-accent-magic shrink-0" />
-          <span className="text-xs font-bold text-text-primary">Akses Cepat Pengelolaan:</span>
-        </div>
-        <div className="flex flex-wrap items-center gap-2">
-          <button
-            type="button"
-            onClick={() => onNavigateTab('tasks')}
-            className="px-3 py-1.5 rounded-xl bg-surface-elevated border border-border-subtle text-xs font-bold text-text-primary hover:bg-surface transition-colors cursor-pointer flex items-center gap-1.5"
-          >
-            <PlusCircle className="w-3.5 h-3.5 text-accent-magic" />
-            <span>Jadwal Tugas</span>
-          </button>
-          <button
-            type="button"
-            onClick={() => onNavigateTab('rewards')}
-            className="px-3 py-1.5 rounded-xl bg-surface-elevated border border-border-subtle text-xs font-bold text-text-primary hover:bg-surface transition-colors cursor-pointer flex items-center gap-1.5"
-          >
-            <Sparkles className="w-3.5 h-3.5 text-accent-gold" />
-            <span>Katalog Hadiah</span>
-          </button>
-          <button
-            type="button"
-            onClick={() => onNavigateTab('settings')}
-            className="px-3 py-1.5 rounded-xl bg-surface-elevated border border-border-subtle text-xs font-bold text-text-primary hover:bg-surface transition-colors cursor-pointer flex items-center gap-1.5"
-          >
-            <Sliders className="w-3.5 h-3.5 text-text-secondary" />
-            <span>Pengaturan Ekonomi</span>
-          </button>
-        </div>
-      </section>
     </div>
   )
 }

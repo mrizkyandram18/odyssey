@@ -53,7 +53,7 @@ export const ClaimsQueue: React.FC<ClaimsQueueProps> = ({ controller }) => {
             {isFetching && <RefreshCw className="w-3.5 h-3.5 animate-spin text-text-secondary" />}
           </h3>
           <p className="text-[11px] text-text-secondary mt-0.5">
-            Transfer / Top-up saldo e-wallet dan bank anggota
+            Transfer / Top-up saldo e-wallet dan bank anggota — transfer dilakukan manual di luar aplikasi
           </p>
         </div>
 

@@ -89,11 +89,11 @@ export const CosmeticsCatalogSection: React.FC = () => {
       setNewAsset('')
       setNewTier('1')
       setNewIsActive(true)
-      setSuccessMsg(`Hadiah "${trimmedId}" berhasil ditambahkan!`)
+      setSuccessMsg(`Item "${trimmedId}" berhasil ditambahkan!`)
       setTimeout(() => setSuccessMsg(null), 3000)
       loadCosmetics()
     } catch (err: any) {
-      setModalError(err?.message || 'Gagal menambahkan hadiah')
+      setModalError(err?.message || 'Gagal menambahkan item')
     } finally {
       setIsCreating(false)
     }
@@ -106,7 +106,7 @@ export const CosmeticsCatalogSection: React.FC = () => {
         <div>
           <h3 className="font-heading font-bold text-text-primary text-sm sm:text-base flex items-center gap-2">
             <Sparkles className="w-4 h-4 text-accent-gold" />
-            <span>Katalog Hadiah & Koleksi</span>
+            <span>Katalog Kustomisasi</span>
           </h3>
           <p className="text-[11px] text-text-secondary mt-0.5">
             Koleksi visual bingkai avatar & efek animasi yang dapat diperoleh anggota saat membuka Kotak Hadiah.
@@ -122,7 +122,7 @@ export const CosmeticsCatalogSection: React.FC = () => {
           className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-accent-magic text-white text-xs font-bold hover:brightness-110 active:scale-[0.99] transition-all cursor-pointer self-start sm:self-auto"
         >
           <Plus className="w-3.5 h-3.5" />
-          <span>Tambah Hadiah</span>
+          <span>Tambah Item</span>
         </button>
       </div>
 
@@ -145,13 +145,13 @@ export const CosmeticsCatalogSection: React.FC = () => {
       {isLoading ? (
         <div className="p-8 text-center text-text-secondary text-xs flex items-center justify-center gap-2">
           <Loader2 className="w-4 h-4 animate-spin" />
-          <span>Memuat katalog hadiah...</span>
+          <span>Memuat katalog kustomisasi...</span>
         </div>
       ) : items.length === 0 ? (
         <div className="p-8 text-center text-text-secondary text-xs border border-dashed border-border-subtle rounded-xl space-y-2">
           <Award className="w-8 h-8 text-text-secondary/40 mx-auto" />
-          <p className="font-bold text-text-primary text-sm">Belum Ada Hadiah Terdaftar</p>
-          <p>Klik &quot;Tambah Hadiah&quot; untuk menambahkan bingkai atau efek visual baru.</p>
+          <p className="font-bold text-text-primary text-sm">Belum Ada Item Terdaftar</p>
+          <p>Klik &quot;Tambah Item&quot; untuk menambahkan bingkai atau efek visual baru.</p>
         </div>
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
@@ -180,8 +180,8 @@ export const CosmeticsCatalogSection: React.FC = () => {
 
                   <button
                     type="button"
-                    title={it.is_active ? 'Nonaktifkan hadiah' : 'Aktifkan hadiah'}
-                    aria-label={it.is_active ? 'Nonaktifkan hadiah' : 'Aktifkan hadiah'}
+                    title={it.is_active ? 'Nonaktifkan item' : 'Aktifkan item'}
+                    aria-label={it.is_active ? 'Nonaktifkan item' : 'Aktifkan item'}
                     onClick={() => handleToggleActive(it)}
                     className="cursor-pointer text-text-secondary hover:text-text-primary transition-colors shrink-0"
                   >
@@ -231,14 +231,14 @@ export const CosmeticsCatalogSection: React.FC = () => {
         </div>
       )}
 
-      {/* Modal Tambah Hadiah */}
+      {/* Modal Tambah Item */}
       {isModalOpen && (
         <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4">
           <div className="bg-surface border border-border-subtle rounded-2xl w-full max-w-md p-5 space-y-4 shadow-xl">
             <div className="flex items-center justify-between pb-2 border-b border-border-subtle">
               <h4 className="font-bold text-text-primary text-sm flex items-center gap-2">
                 <Plus className="w-4 h-4 text-accent-magic" />
-                <span>Tambah Hadiah Baru</span>
+                <span>Tambah Item Baru</span>
               </h4>
               <button
                 type="button"
@@ -256,7 +256,7 @@ export const CosmeticsCatalogSection: React.FC = () => {
               </div>
             )}
 
-            {/* Live Visual Preview of New Reward */}
+            {/* Live Visual Preview of New Item */}
             <div className="p-3 rounded-xl bg-surface-elevated border border-border-subtle flex items-center gap-3">
               <Avatar
                 seed="preview-new"
@@ -266,7 +266,7 @@ export const CosmeticsCatalogSection: React.FC = () => {
               />
               <div className="space-y-0.5 min-w-0">
                 <p className="text-xs font-bold text-text-primary truncate">
-                  {newName.trim() || 'Pratinjau Hadiah'}
+                  {newName.trim() || 'Pratinjau Item'}
                 </p>
                 <p className="text-[11px] text-text-secondary">
                   Tipe: {newSlot === 'frame' ? 'Bingkai Avatar' : 'Efek Animasi'} • Tier {newTier}
@@ -277,7 +277,7 @@ export const CosmeticsCatalogSection: React.FC = () => {
             <form onSubmit={handleCreateCosmetic} className="space-y-3">
               <div className="space-y-1">
                 <label className="text-xs font-bold text-text-secondary">
-                  ID Hadiah <span className="text-status-error">*</span>
+                  ID Item <span className="text-status-error">*</span>
                 </label>
                 <input
                   type="text"
@@ -291,7 +291,7 @@ export const CosmeticsCatalogSection: React.FC = () => {
 
               <div className="space-y-1">
                 <label className="text-xs font-bold text-text-secondary">
-                  Nama Hadiah (Display Name)
+                  Nama Item
                 </label>
                 <input
                   type="text"
@@ -305,15 +305,15 @@ export const CosmeticsCatalogSection: React.FC = () => {
               <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-1">
                   <label className="text-xs font-bold text-text-secondary">
-                    Jenis Hadiah (Slot) <span className="text-status-error">*</span>
+                    Jenis Item <span className="text-status-error">*</span>
                   </label>
                   <select
                     value={newSlot}
                     onChange={(e) => setNewSlot(e.target.value as 'frame' | 'effect')}
                     className="w-full p-2.5 rounded-xl bg-surface-elevated border border-border-subtle text-xs font-bold text-text-primary focus:outline-none focus:border-accent-magic cursor-pointer"
                   >
-                    <option value="frame">Bingkai Avatar (frame)</option>
-                    <option value="effect">Efek Visual (effect)</option>
+                    <option value="frame">Bingkai Avatar</option>
+                    <option value="effect">Efek Visual</option>
                   </select>
                 </div>
 
@@ -356,8 +356,9 @@ export const CosmeticsCatalogSection: React.FC = () => {
               <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-1">
                   <label className="text-xs font-bold text-text-secondary">
-                    Tingkat Hadiah Awal (Tier 1–3) <span className="text-status-error">*</span>
+                    Tingkat Awal (Tier 1–3) <span className="text-status-error">*</span>
                   </label>
+                  <p className="text-[10px] text-text-secondary">Duplikat yang dimiliki anggota otomatis naik tingkat (maks 3).</p>
                   <input
                     type="number"
                     min={1}
@@ -396,7 +397,7 @@ export const CosmeticsCatalogSection: React.FC = () => {
                   disabled={isCreating}
                   className="px-4 py-2 rounded-xl bg-accent-magic text-white text-xs font-bold hover:brightness-110 active:scale-[0.99] disabled:opacity-50 transition-all cursor-pointer"
                 >
-                  {isCreating ? 'Menyimpan...' : 'Simpan Hadiah'}
+                  {isCreating ? 'Menyimpan...' : 'Simpan Item'}
                 </button>
               </div>
             </form>

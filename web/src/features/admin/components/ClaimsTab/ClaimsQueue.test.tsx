@@ -104,14 +104,14 @@ describe('ClaimsQueue terminology (display labels never change backend enum)', (
     expect(rejectedCalls.length).toBeGreaterThanOrEqual(1)
   })
 
-  it('sends APPROVED enum when admin confirms Sudah Ditransfer', async () => {
+  it('sends APPROVED enum when admin confirms Tandai sudah ditransfer', async () => {
     vi.mocked(adminTasksApi.getClaims).mockResolvedValue(paged([claim(1)], 1, 1, false))
     vi.mocked(adminTasksApi.processClaim).mockResolvedValue({ success: true, status: 'APPROVED' } as any)
     render(<ClaimsQueue />)
     await waitFor(() => {
       expect(screen.getByText(/User 1/)).toBeInTheDocument()
     })
-    fireEvent.click(screen.getByRole('button', { name: /Selesaikan pencairan/ }))
+    fireEvent.click(screen.getByRole('button', { name: /Tandai sudah ditransfer/ }))
     await waitFor(() => {
       expect(adminTasksApi.processClaim).toHaveBeenCalledWith(1, 'APPROVED', undefined)
     })

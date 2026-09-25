@@ -173,25 +173,25 @@ export const ClaimCard: React.FC<ClaimCardProps> = ({
             <div className="flex items-center justify-end gap-2 pt-1">
               <button
                 type="button"
-                aria-label={`Tolak pencairan ${claim.target_value}`}
+                aria-label={`Tolak dan kembalikan koin ${claim.target_value}`}
                 disabled={processingId === claim.id}
                 onClick={() => onProcess(claim.id, 'REJECTED')}
                 className="px-4 py-2 rounded-xl bg-surface border border-status-error/30 text-status-error hover:bg-status-error/10 font-bold text-xs flex items-center justify-center gap-1.5 transition-colors disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
               >
                 <XCircle className="w-3.5 h-3.5" />
-                <span>{processingId === claim.id ? 'Memproses...' : 'Tolak & Refund'}</span>
+                <span>{processingId === claim.id ? 'Memproses...' : 'Tolak & kembalikan'}</span>
               </button>
 
               <button
                 type="button"
-                aria-label={`Selesaikan pencairan ${claim.target_value}`}
+                aria-label={`Tandai sudah ditransfer ${claim.target_value}`}
                 disabled={processingId === claim.id}
                 aria-busy={processingId === claim.id}
                 onClick={() => onProcess(claim.id, 'APPROVED')}
                 className="px-4 py-2 rounded-xl bg-status-success hover:brightness-110 text-white font-bold text-xs flex items-center justify-center gap-1.5 shadow-xs transition-all disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
               >
                 <CheckCircle2 className="w-3.5 h-3.5" />
-                <span>Sudah Ditransfer</span>
+                <span>Tandai sudah ditransfer</span>
               </button>
             </div>
           </div>

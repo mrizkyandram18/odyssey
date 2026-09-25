@@ -369,6 +369,9 @@ export const SubmissionCard: React.FC<SubmissionCardProps> = ({
             </div>
 
             {/* Actions Bar */}
+            <p className="text-[10px] text-text-secondary leading-relaxed">
+              Minta revisi = anggota memperbaiki bukti &amp; mengirim ulang. Menyetujui = koin otomatis masuk ke saldo anggota.
+            </p>
             <div className="flex items-center justify-end gap-2 pt-1">
               <button
                 type="button"
@@ -401,7 +404,7 @@ export const SubmissionCard: React.FC<SubmissionCardProps> = ({
 
               <button
                 type="button"
-                aria-label={`Setujui verifikasi ${submission.task_title}`}
+                aria-label={`Setujui dan beri koin untuk ${submission.task_title}`}
                 disabled={processingId === submission.id}
                 onClick={() => {
                   setNoteError(null)
@@ -410,7 +413,7 @@ export const SubmissionCard: React.FC<SubmissionCardProps> = ({
                 className="px-4 py-2 rounded-xl bg-status-success text-white font-bold text-xs flex items-center justify-center gap-1.5 shadow-xs hover:brightness-110 transition-all disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
               >
                 <Check className="w-3.5 h-3.5" />
-                <span>{processingId === submission.id ? 'Memproses...' : 'Setujui'}</span>
+                <span>{processingId === submission.id ? 'Memproses...' : 'Setujui & beri koin'}</span>
               </button>
             </div>
           </div>

@@ -69,7 +69,7 @@ describe('CosmeticsCatalogSection', () => {
       expect(screen.getByText('Bingkai Emas')).toBeInTheDocument()
     })
 
-    const toggleButtons = screen.getAllByRole('button', { name: /nonaktifkan hadiah/i })
+    const toggleButtons = screen.getAllByRole('button', { name: /nonaktifkan item/i })
     fireEvent.click(toggleButtons[0])
 
     await waitFor(() => {
@@ -83,13 +83,13 @@ describe('CosmeticsCatalogSection', () => {
     render(<CosmeticsCatalogSection />)
 
     await waitFor(() => {
-      expect(screen.getByText('Katalog Hadiah & Koleksi')).toBeInTheDocument()
+      expect(screen.getByText('Katalog Kustomisasi')).toBeInTheDocument()
     })
 
-    const addBtn = screen.getByRole('button', { name: /Tambah Hadiah/i })
+    const addBtn = screen.getByRole('button', { name: /Tambah Item/i })
     fireEvent.click(addBtn)
 
-    expect(screen.getByText('Tambah Hadiah Baru')).toBeInTheDocument()
+    expect(screen.getByText('Tambah Item Baru')).toBeInTheDocument()
 
     const idInput = screen.getByPlaceholderText(/contoh: frame-emerald/i)
     const nameInput = screen.getByPlaceholderText(/contoh: Bingkai Zamrud/i)
@@ -99,7 +99,7 @@ describe('CosmeticsCatalogSection', () => {
     fireEvent.change(nameInput, { target: { value: 'Bingkai Neon' } })
     fireEvent.change(assetInput, { target: { value: 'neon' } })
 
-    const submitBtn = screen.getByRole('button', { name: /Simpan Hadiah/i })
+    const submitBtn = screen.getByRole('button', { name: /Simpan Item/i })
     fireEvent.click(submitBtn)
 
     await waitFor(() => {

@@ -800,16 +800,16 @@ export const EconomySettingsForm: React.FC = () => {
         </form>
       </div>
 
-      {/* Information Box linking to Hadiah Tab */}
+      {/* Information Box linking to Kustomisasi Tab */}
       <div className="p-4 rounded-2xl bg-surface border border-border-subtle shadow-2xs flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div className="flex items-center gap-3">
           <div className="w-9 h-9 rounded-xl bg-accent-gold/10 text-accent-gold flex items-center justify-center shrink-0">
             <Award className="w-5 h-5" />
           </div>
           <div>
-            <h4 className="text-xs font-bold text-text-primary">Katalog Hadiah & Koleksi</h4>
+            <h4 className="text-xs font-bold text-text-primary">Katalog Kustomisasi</h4>
             <p className="text-[11px] text-text-secondary">
-              Kelola item bingkai avatar dan efek visual kosmetik di tab khusus <strong>Hadiah</strong> pada navigasi panel admin.
+              Kelola item bingkai avatar dan efek visual kosmetik di tab khusus <strong>Kustomisasi</strong> pada navigasi panel admin.
             </p>
           </div>
         </div>

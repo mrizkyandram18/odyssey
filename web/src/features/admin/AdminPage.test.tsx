@@ -128,7 +128,10 @@ describe('AdminPage Component', () => {
     await waitFor(() => {
       expect(screen.getByText(/Ringkasan Operasional Harian/i)).toBeInTheDocument()
       expect(screen.getByText('Semua Antrean Bersih & Terkendali')).toBeInTheDocument()
-      expect(screen.getByTestId('admin-schedule-strip')).toBeInTheDocument()
+      // Triage-only dashboard: schedule strip, announcement preview, and
+      // shortcuts are gone; window status lives in the header pill.
+      expect(screen.queryByTestId('admin-schedule-strip')).toBeNull()
+      expect(screen.queryByTestId('admin-announcement-preview')).toBeNull()
       expect(screen.getByText(/24[–-]26/)).toBeInTheDocument()
       // Duplicated metric cards must be gone.
       expect(screen.queryByText('Metrik Operasional Utama')).toBeNull()
@@ -319,7 +322,7 @@ describe('AdminPage Component', () => {
     } as any)
 
     // Approve the submission using exact aria-label
-    const approveBtn = screen.getByRole('button', { name: /Setujui verifikasi Tugas Menulis/i })
+    const approveBtn = screen.getByRole('button', { name: /Setujui dan beri koin untuk Tugas Menulis/i })
     fireEvent.click(approveBtn)
 
     // After approval, verifySubmission is called and tab badge '1' disappears
@@ -387,7 +390,7 @@ describe('AdminPage Component', () => {
     })
   })
 
-  it('navigates to Hadiah tab and renders cosmetic catalog separately from economy settings', async () => {
+  it('navigates to Kustomisasi tab and renders cosmetic catalog separately from economy settings', async () => {
     vi.mocked(useSession).mockReturnValue({
       session: { uid: '1', family_id: '1', role: 'ADMIN', kind: 'user', expires: 9999999999, token: 'abc' },
       profile: { uid: '1', role: 'ADMIN' },
@@ -404,8 +407,8 @@ describe('AdminPage Component', () => {
     fireEvent.click(rewardsTabBtn)
 
     await waitFor(() => {
-      expect(screen.getByText('Katalog Hadiah & Koleksi')).toBeInTheDocument()
-      expect(screen.getByRole('button', { name: /Tambah Hadiah/i })).toBeInTheDocument()
+      expect(screen.getByText('Katalog Kustomisasi')).toBeInTheDocument()
+      expect(screen.getByRole('button', { name: /Tambah Item/i })).toBeInTheDocument()
     })
   })
 

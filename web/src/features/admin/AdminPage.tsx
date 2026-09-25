@@ -227,7 +227,7 @@ export const AdminPage: React.FC<AdminPageProps> = ({ initialTab = 'overview' })
         <TabButton
           tab="rewards"
           testId="admin-tab-rewards"
-          label="Hadiah"
+          label="Kustomisasi"
           icon={<Sparkles className="w-3.5 h-3.5" />}
           isActive={activeTab === 'rewards'}
           onSelect={navigateTab}
