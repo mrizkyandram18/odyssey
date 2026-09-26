@@ -12,6 +12,17 @@ import {
 import type { TaskType, MemberView } from '../../../../shared/types'
 import type { NewTaskFormState } from '../../hooks/useAdminTasks'
 
+// Type-first preset cards. Values reuse the existing TaskType domain —
+// presentation only, no payload/validation change.
+const TASK_TYPE_PRESETS: Array<{ value: TaskType; label: string; hint: string; Icon: typeof Play }> = [
+  { value: 'VIDEO', label: 'Video', hint: 'Tonton / rekam', Icon: Play },
+  { value: 'QUIZ', label: 'Kuis', hint: 'Pilihan ganda', Icon: HelpCircle },
+  { value: 'PHOTO_UPLOAD', label: 'Foto', hint: 'Bukti foto', Icon: Camera },
+  { value: 'DOCUMENT_UPLOAD', label: 'Dokumen', hint: 'Upload berkas', Icon: FileText },
+  { value: 'TEXT_RESPONSE', label: 'Esai', hint: 'Respon teks', Icon: PenLine },
+  { value: 'MINI_GAME', label: 'Mini Game', hint: 'Game & simulasi', Icon: Gamepad2 },
+]
+
 interface CreateTaskModalProps {
   isOpen: boolean
   newTask: NewTaskFormState
@@ -110,53 +121,37 @@ export const CreateTaskModal: React.FC<CreateTaskModalProps> = ({
               </div>
             </div>
 
-            {/* Target, Tipe & Hadiah */}
-            <div className="space-y-3 pt-2 border-t border-border-subtle">
+            {/* Jenis Tugas — type-first preset cards (same TaskType values as before) */}
+            <div className="space-y-2 pt-2 border-t border-border-subtle">
               <h4 className="text-xs font-bold uppercase tracking-wider text-text-secondary">
-                Target & Parameter
+                Jenis Tugas
               </h4>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <div className="space-y-1">
-                  <label htmlFor="task-target-scope" className="text-xs font-bold text-text-secondary">
-                    Target Penerima
-                  </label>
-                  <select
-                    id="task-target-scope"
-                    value={newTask.target_scope}
-                    onChange={(e) =>
-                      setNewTask({ ...newTask, target_scope: e.target.value as 'ALL' | 'USER' })
-                    }
-                    className="w-full p-2.5 rounded-xl bg-surface border border-border-subtle text-xs sm:text-sm text-text-primary font-bold focus:outline-none focus:border-accent-magic"
-                    disabled
-                    title="Tugas harian saat ini ditujukan untuk seluruh anggota keluarga"
-                  >
-                    <option value="ALL">🌐 Seluruh Anggota Keluarga</option>
-                  </select>
-                  <p className="text-[11px] text-text-secondary">Tugas ini akan otomatis tersedia untuk semua anggota yang aktif.</p>
-                </div>
-
-                <div className="space-y-1">
-                  <label htmlFor="task-type" className="text-xs font-bold text-text-secondary">
-                    Tipe Tugas
-                  </label>
-                  <select
-                    id="task-type"
-                    value={newTask.task_type}
-                    onChange={(e) =>
-                      setNewTask({ ...newTask, task_type: e.target.value as TaskType })
-                    }
-                    className="w-full p-2.5 rounded-xl bg-surface border border-border-subtle text-xs sm:text-sm text-text-primary font-bold focus:outline-none focus:border-accent-magic"
-                  >
-                    <option value="VIDEO">🎥 Video (YouTube / Rekaman)</option>
-                    <option value="QUIZ">🧠 Kuis Pilihan Ganda</option>
-                    <option value="PHOTO_UPLOAD">📸 Upload Foto Bukti</option>
-                    <option value="DOCUMENT_UPLOAD">📄 Upload Dokumen</option>
-                    <option value="TEXT_RESPONSE">✍️ Respon Teks / Esai</option>
-                    <option value="MINI_GAME">🎮 Mini Game</option>
-                  </select>
-                </div>
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-2" role="group" aria-label="Pilih jenis tugas">
+                {TASK_TYPE_PRESETS.map(({ value, label, hint, Icon }) => {
+                  const selected = newTask.task_type === value
+                  return (
+                    <button
+                      key={value}
+                      type="button"
+                      aria-pressed={selected}
+                      aria-label={`Jenis tugas ${label}`}
+                      onClick={() => setNewTask({ ...newTask, task_type: value })}
+                      className={`p-2.5 rounded-xl border text-left transition-colors cursor-pointer ${
+                        selected
+                          ? 'bg-accent-magic/10 border-accent-magic text-text-primary'
+                          : 'bg-surface border-border-subtle text-text-secondary hover:text-text-primary hover:border-accent-magic/40'
+                      }`}
+                    >
+                      <span className="flex items-center gap-1.5 text-xs font-bold">
+                        <Icon className="w-3.5 h-3.5 shrink-0" />
+                        {label}
+                      </span>
+                      <span className="block text-[10px] mt-0.5 opacity-80">{hint}</span>
+                    </button>
+                  )
+                })}
               </div>
+            </div>
 
               {newTask.target_scope === 'USER' && (
                 <div className="space-y-1">
@@ -182,17 +177,15 @@ export const CreateTaskModal: React.FC<CreateTaskModalProps> = ({
 
               <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-1">
-                  <label htmlFor="task-step" className="text-xs font-bold text-text-secondary">
-                    Urutan Step
-                  </label>
-                  <input
-                    id="task-step"
-                    type="number"
-                    min={1}
-                    value={newTask.step_order}
-                    onChange={(e) => setNewTask({ ...newTask, step_order: Number(e.target.value) })}
-                    className={`w-full p-2.5 rounded-xl bg-surface border text-xs sm:text-sm text-text-primary focus:outline-none font-mono ${isDuplicateStep ? 'border-status-error focus:border-status-error' : 'border-border-subtle focus:border-accent-magic'}`}
-                  />
+                  <span className="text-xs font-bold text-text-secondary block">
+                    Posisi
+                  </span>
+                  <p className="w-full p-2.5 rounded-xl bg-surface-elevated border border-border-subtle text-xs sm:text-sm text-text-primary font-mono font-bold">
+                    Posisi #{newTask.step_order} (otomatis)
+                  </p>
+                  <p className="text-[11px] text-text-secondary leading-relaxed">
+                    Bisa digeser setelah tersimpan.
+                  </p>
                   {isDuplicateStep && (
                     <p className="text-[11px] font-medium text-status-error">step_order sudah digunakan untuk tanggal tersebut</p>
                   )}
@@ -211,13 +204,18 @@ export const CreateTaskModal: React.FC<CreateTaskModalProps> = ({
                     className="w-full p-2.5 rounded-xl bg-surface border border-border-subtle text-xs sm:text-sm text-text-primary focus:outline-none focus:border-accent-magic font-mono font-bold"
                   />
                   <p className="text-[11px] text-text-secondary leading-relaxed">
-                    Bobot bukan koin final. Koin final = Target Bulanan × Bobot ÷ Total Bobot
+                    Bobot menentukan porsi koin dari target bulanan.
+                    Koin final bergantung pada seluruh tugas aktif periode ini.
                   </p>
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
-                <div className="space-y-1">
+              {/* Mode lanjut — existing advanced fields only, no new abstraction */}
+              <details className="rounded-xl bg-surface-elevated border border-border-subtle px-3 py-2">
+                <summary className="text-xs font-bold text-text-secondary cursor-pointer hover:text-text-primary">
+                  Mode lanjut
+                </summary>
+                <div className="pt-2 space-y-1">
                   <label htmlFor="task-xp" className="text-xs font-bold text-text-secondary">
                     Reward XP / Bintang
                   </label>
@@ -232,9 +230,24 @@ export const CreateTaskModal: React.FC<CreateTaskModalProps> = ({
                   <p className="text-[11px] text-text-secondary leading-relaxed">
                     Bintang untuk progres Tingkat Penjelajah.
                   </p>
+                  {newTask.task_type === 'MINI_GAME' && (
+                    <div className="space-y-1 pt-1">
+                      <label className="text-[11px] text-text-secondary">
+                        Scenario Keputusan (JSON, opsional — wajib untuk Simulasi Keuangan):
+                      </label>
+                      <textarea
+                        value={newTask.game_scenario_json}
+                        onChange={(e) => setNewTask({ ...newTask, game_scenario_json: e.target.value })}
+                        placeholder='{"scenario": {"initial_balance": 500000, "events": [{"id": "day_1", "title": "...", "options": [{"id": "a", "label": "...", "delta": -75000}]}]}}'
+                        rows={5}
+                        spellCheck={false}
+                        className="w-full p-2 rounded-xl bg-surface border border-border-subtle text-[11px] text-text-primary w-full font-mono focus:outline-none focus:border-accent-magic"
+                      />
+                      <p className="text-[11px] text-text-secondary">Server memvalidasi struktur & menghitung saldo akhir dari config ini. Skor client tidak dipercaya.</p>
+                    </div>
+                  )}
                 </div>
-              </div>
-            </div>
+              </details>
 
             {/* Konfigurasi Khusus Tipe */}
             <div className="space-y-3 pt-2 border-t border-border-subtle">
@@ -673,20 +686,6 @@ export const CreateTaskModal: React.FC<CreateTaskModalProps> = ({
                         className="p-2 rounded-xl bg-surface border border-border-subtle text-xs text-text-primary w-full font-mono"
                       />
                     </div>
-                  </div>
-                  <div className="space-y-1">
-                    <label className="text-[11px] text-text-secondary">
-                      Scenario Keputusan (JSON, opsional — wajib untuk Simulasi Keuangan):
-                    </label>
-                    <textarea
-                      value={newTask.game_scenario_json}
-                      onChange={(e) => setNewTask({ ...newTask, game_scenario_json: e.target.value })}
-                      placeholder='{"scenario": {"initial_balance": 500000, "events": [{"id": "day_1", "title": "...", "options": [{"id": "a", "label": "...", "delta": -75000}]}]}}'
-                      rows={5}
-                      spellCheck={false}
-                      className="w-full p-2 rounded-xl bg-surface border border-border-subtle text-[11px] text-text-primary w-full font-mono focus:outline-none focus:border-accent-magic"
-                    />
-                    <p className="text-[11px] text-text-secondary">Server memvalidasi struktur & menghitung saldo akhir dari config ini. Skor client tidak dipercaya.</p>
                   </div>
                 </div>
               )}

@@ -201,3 +201,74 @@ describe('Admin PHOTO_UPLOAD Configuration (Tests 1, 2, 3)', () => {
     expect(savedFormState.photo_camera_only).toBe(false)
   })
 })
+
+describe('Gate 2-B — Type-first create UX (presentation only)', () => {
+  const fullCreateState = (): NewTaskFormState => ({
+    ...initialCreateState,
+    video_mode: 'youtube',
+    video_max_duration: 60,
+    video_camera_facing: 'user',
+    video_instruction: '',
+    game_scenario_json: '',
+  } as NewTaskFormState)
+
+  function TypeFirstWrapper({ onSubmit }: { onSubmit?: (state: NewTaskFormState) => void }) {
+    const [taskState, setTaskState] = useState<NewTaskFormState>(fullCreateState())
+    return (
+      <CreateTaskModal
+        isOpen={true}
+        newTask={taskState}
+        setNewTask={setTaskState}
+        members={[]}
+        isCreating={false}
+        onClose={vi.fn()}
+        onSubmit={() => onSubmit?.(taskState)}
+      />
+    )
+  }
+
+  it('renders preset cards and shows only the selected type config', () => {
+    render(<TypeFirstWrapper />)
+
+    // All six presets present; initial PHOTO_UPLOAD state is selected.
+    expect(screen.getByRole('button', { name: 'Jenis tugas Foto' })).toHaveAttribute('aria-pressed', 'true')
+    expect(screen.getByRole('button', { name: 'Jenis tugas Mini Game' })).toHaveAttribute('aria-pressed', 'false')
+    // Photo config visible, game config hidden.
+    expect(screen.getByTestId('photo-mode-upload')).toBeInTheDocument()
+    expect(screen.queryByText('Konfigurasi Mini Game')).toBeNull()
+
+    // Switching preset swaps the visible config (existing blocks, no new logic).
+    fireEvent.click(screen.getByRole('button', { name: 'Jenis tugas Esai' }))
+    expect(screen.getByRole('button', { name: 'Jenis tugas Esai' })).toHaveAttribute('aria-pressed', 'true')
+    expect(screen.getByPlaceholderText(/Apa pelajaran terpenting hari ini/i)).toBeInTheDocument()
+    expect(screen.queryByTestId('photo-mode-upload')).toBeNull()
+  })
+
+  it('hides scope/step inputs, shows auto position chip and honest Bobot copy', () => {
+    render(<TypeFirstWrapper />)
+
+    // Scope selector and manual step input are gone; state still defaults ALL / step 1.
+    expect(screen.queryByLabelText('Target Penerima')).toBeNull()
+    expect(screen.queryByLabelText('Urutan Step')).toBeNull()
+    expect(screen.getByText('Posisi #1 (otomatis)')).toBeInTheDocument()
+    // Honest Bobot copy replaces the pseudo-formula.
+    expect(screen.getByText(/Bobot menentukan porsi koin dari target bulanan/i)).toBeInTheDocument()
+    expect(screen.queryByText(/Koin final = Target Bulanan/)).toBeNull()
+  })
+
+  it('keeps scope ALL in submitted state and reveals advanced fields on demand', () => {
+    let submittedState: NewTaskFormState | null = null
+    render(<TypeFirstWrapper onSubmit={(state) => { submittedState = state }} />)
+
+    fireEvent.submit(screen.getByRole('button', { name: /Simpan & Terbitkan/i }))
+    expect(submittedState).not.toBeNull()
+    expect(submittedState!.target_scope).toBe('ALL')
+
+    // XP lives under Mode lanjut (existing input, collapsed by default markup).
+    expect(screen.getByLabelText('Reward XP / Bintang')).toBeInTheDocument()
+    // Scenario JSON appears in advanced only for MINI_GAME.
+    expect(screen.queryByPlaceholderText(/initial_balance/)).toBeNull()
+    fireEvent.click(screen.getByRole('button', { name: 'Jenis tugas Mini Game' }))
+    expect(screen.getByPlaceholderText(/initial_balance/)).toBeInTheDocument()
+  })
+})

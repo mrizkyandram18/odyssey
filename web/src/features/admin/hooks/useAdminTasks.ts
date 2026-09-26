@@ -169,7 +169,14 @@ export function useAdminTasks() {
   }, [selectedDate, fetchTasks])
 
   const openCreateModal = () => {
-    setNewTask(getInitialNewTask(selectedDate))
+    // Auto-position: tasks state always holds exactly the selectedDate list
+    // (replaced on every fetchTasks(selectedDate): date change, retry, and
+    // after each create/duplicate/delete/save), so max+1 here is per-date.
+    // TaskView carries no active_date field, hence no extra filter possible.
+    // Uniqueness is still enforced server-side (duplicate 400 backstop).
+    const nextStep =
+      tasks.reduce((m, t) => Math.max(m, t.step_order || 0), 0) + 1
+    setNewTask({ ...getInitialNewTask(selectedDate), step_order: nextStep })
     setIsCreateModalOpen(true)
   }
 
@@ -307,7 +314,26 @@ export function useAdminTasks() {
       closeCreateModal()
       await fetchTasks(selectedDate)
     } catch (err: any) {
-      alert(`Gagal membuat tugas: ${err?.message || 'Terjadi kesalahan'}`)
+      const msg = err?.message || 'Terjadi kesalahan'
+      // Concurrency backstop (message-only, no new backend): another admin may
+      // have taken the suggested position. Refresh the suggestion in place so
+      // the admin keeps title/content and can simply save again.
+      if (msg.includes('step_order sudah digunakan')) {
+        try {
+          const fresh = await adminTasksApi.getTasks(selectedDate)
+          const nextStep = (fresh || []).reduce(
+            (m: number, t: TaskView) => Math.max(m, t.step_order || 0),
+            0
+          ) + 1
+          setNewTask((prev) => ({ ...prev, step_order: nextStep }))
+          await fetchTasks(selectedDate)
+        } catch {
+          // keep existing state; fall through to the message below
+        }
+        alert('Posisi tersebut baru saja terisi. Posisi otomatis sudah diperbarui — silakan simpan lagi.')
+      } else {
+        alert(`Gagal membuat tugas: ${msg}`)
+      }
     } finally {
       setIsCreatingTask(false)
     }
