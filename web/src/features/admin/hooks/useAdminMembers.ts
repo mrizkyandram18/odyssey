@@ -31,14 +31,15 @@ export function useAdminMembers(options?: UseAdminMembersOptions) {
   })
   const [isCreating, setIsCreating] = useState(false)
 
-  // Edit member modal
+  // Edit member modal (monthly_coin_target is nullable: NULL = inherit
+  // system default and must survive a save untouched via key omission).
   const [selectedMember, setSelectedMember] = useState<MemberView | null>(null)
   const [editMemberForm, setEditMemberForm] = useState({
     explorer_name: '',
     role: 'MEMBER' as 'ADMIN' | 'MEMBER',
     is_active: true,
     reset_device: false,
-    monthly_coin_target: 0,
+    monthly_coin_target: null as number | null,
     monthly_earning_cap: 0,
     payout_frequency: 'THRESHOLD' as 'THRESHOLD' | 'WEEKLY' | 'MONTHLY',
     minimum_withdrawal_coins: 500,
@@ -160,7 +161,8 @@ export function useAdminMembers(options?: UseAdminMembersOptions) {
       role: (member.role === 'ADMIN' || member.role === 'GUIDE' || member.role === 'BUILDER') ? 'ADMIN' : 'MEMBER',
       is_active: member.is_active,
       reset_device: false,
-      monthly_coin_target: member.monthly_coin_target ?? 0,
+      // NULL (inherit) passes through; only explicit numbers are baked in.
+      monthly_coin_target: member.monthly_coin_target ?? null,
       monthly_earning_cap: member.monthly_earning_cap ?? 0,
       payout_frequency: (member.payout_frequency as any) || 'THRESHOLD',
       minimum_withdrawal_coins: member.minimum_withdrawal_coins ?? 500,
@@ -180,8 +182,9 @@ export function useAdminMembers(options?: UseAdminMembersOptions) {
       alert('Nama anggota tidak boleh kosong')
       return
     }
-    if (editMemberForm.monthly_coin_target < 0 || editMemberForm.monthly_coin_target > 10000) {
-      alert('Target koin bulanan harus 0..10000')
+    const editTarget = editMemberForm.monthly_coin_target
+    if (editTarget !== null && (isNaN(editTarget) || editTarget < 0 || editTarget > 10000)) {
+      alert('Target koin bulanan harus 0..10000 (kosongkan untuk ikut default)')
       return
     }
     if (editMemberForm.monthly_earning_cap < 0 || editMemberForm.monthly_earning_cap > 10000) {
@@ -199,7 +202,8 @@ export function useAdminMembers(options?: UseAdminMembersOptions) {
         role: editMemberForm.role,
         is_active: editMemberForm.is_active,
         reset_device: editMemberForm.reset_device ? true : undefined,
-        monthly_coin_target: editMemberForm.monthly_coin_target,
+        // NULL = inherit: omit the key so the stored NULL survives the save.
+        ...(editTarget !== null ? { monthly_coin_target: editTarget } : {}),
         monthly_earning_cap: editMemberForm.monthly_earning_cap,
         payout_frequency: editMemberForm.payout_frequency,
         minimum_withdrawal_coins: editMemberForm.minimum_withdrawal_coins,

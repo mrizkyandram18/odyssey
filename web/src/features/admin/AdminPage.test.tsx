@@ -162,13 +162,20 @@ describe('AdminPage Component', () => {
       expect(screen.getByText('Pengaturan Periode Penukaran Koin')).toBeInTheDocument()
     })
 
-    const saveBtn = screen.getByRole('button', { name: /Simpan Pengaturan Periode/i })
+    const saveBtn = screen.getByRole('button', { name: /Simpan Aturan Pencairan/i })
     const form = saveBtn.closest('form')!
     fireEvent.submit(form)
 
     await waitFor(() => {
-      expect(adminTasksApi.updateConfig).toHaveBeenCalled()
+      expect(adminTasksApi.updateConfig).toHaveBeenCalledWith(expect.objectContaining({
+        start_day: expect.any(Number),
+        end_day: expect.any(Number),
+      }))
     })
+    // Schedule save posts only its subset — economy/announcement keys excluded.
+    const sentSchedule = vi.mocked(adminTasksApi.updateConfig).mock.calls[0][0] as Record<string, unknown>
+    expect('default_monthly_coin_target' in sentSchedule).toBe(false)
+    expect('announcement_title' in sentSchedule).toBe(false)
   })
 
   it('keeps monthly coin target 0 from API through display to save (no 3200 fallback)', async () => {
@@ -208,19 +215,55 @@ describe('AdminPage Component', () => {
       expect(autoBlockInput.value).toBe('5')
     })
 
-    const saveBtn = screen.getByRole('button', { name: /Simpan Pengaturan Periode/i })
+    const saveBtn = screen.getByRole('button', { name: /Simpan Target & Batas Koin/i })
     fireEvent.submit(saveBtn.closest('form')!)
 
     await waitFor(() => {
       expect(adminTasksApi.updateConfig).toHaveBeenCalledWith(expect.objectContaining({
         default_monthly_coin_target: 0,
         default_monthly_earning_cap: 3320,
-        auto_block_inactivity_days: 5,
       }))
     })
     const sent = vi.mocked(adminTasksApi.updateConfig).mock.calls[0][0] as Record<string, unknown>
     expect(sent.default_monthly_coin_target).toBe(0)
     expect(sent.default_monthly_earning_cap).toBe(3320)
+    // Economy save posts only its subset — schedule/technical keys excluded.
+    expect('auto_block_inactivity_days' in sent).toBe(false)
+    expect('start_day' in sent).toBe(false)
+  })
+
+  it('saves technical settings independently with only technical keys', async () => {
+    vi.mocked(useSession).mockReturnValue({
+      session: { uid: '1', family_id: '1', role: 'ADMIN', kind: 'user', expires: 9999999999, token: 'abc' },
+      profile: { uid: '1', role: 'ADMIN' },
+      loading: false,
+    } as any)
+
+    render(
+      <MemoryRouter>
+        <AdminPage />
+      </MemoryRouter>
+    )
+
+    const settingsTabBtn = screen.getByTestId('admin-tab-settings')
+    fireEvent.click(settingsTabBtn)
+
+    await waitFor(() => {
+      expect(screen.getByText('Pengaturan Periode Penukaran Koin')).toBeInTheDocument()
+    })
+
+    const saveBtn = screen.getByRole('button', { name: /Simpan Pengaturan Teknis/i })
+    fireEvent.submit(saveBtn.closest('form')!)
+
+    await waitFor(() => {
+      expect(adminTasksApi.updateConfig).toHaveBeenCalledWith(expect.objectContaining({
+        auto_block_inactivity_days: 5,
+        timezone: 'Asia/Jakarta',
+      }))
+    })
+    const sent = vi.mocked(adminTasksApi.updateConfig).mock.calls[0][0] as Record<string, unknown>
+    expect('default_monthly_coin_target' in sent).toBe(false)
+    expect('announcement_title' in sent).toBe(false)
   })
 
   it('renders pending submission with edit and minta revisi with penalty buttons', async () => {
@@ -456,7 +499,7 @@ describe('AdminPage Component', () => {
     })
 
     // Submit form and verify updated level_cap_bonus
-    const saveBtn = screen.getByRole('button', { name: /Simpan Pengaturan Periode, Ekonomi & Pengumuman/i })
+    const saveBtn = screen.getByRole('button', { name: /Simpan Target & Batas Koin/i })
     fireEvent.submit(saveBtn.closest('form')!)
 
     await waitFor(() => {

@@ -146,7 +146,7 @@ export const CreateMemberModal: React.FC<CreateMemberModalProps> = ({
             {form.role === 'MEMBER' && (
               <>
                 <div className="space-y-1">
-                  <label className="text-xs font-bold text-text-secondary">Target Koin Bulanan (0 = ikut default system)</label>
+                  <label className="text-xs font-bold text-text-secondary">Target Koin Bulanan (0 = tanpa payout)</label>
                   <input
                     type="number"
                     min={0}
@@ -156,7 +156,7 @@ export const CreateMemberModal: React.FC<CreateMemberModalProps> = ({
                     onChange={(e) => setForm({ ...form, monthly_coin_target: parseInt(e.target.value || '0', 10) })}
                     className="w-full p-2.5 rounded-xl bg-surface border border-border-subtle text-xs sm:text-sm text-text-primary focus:outline-none focus:border-accent-magic"
                   />
-                  <p className="text-[11px] text-text-secondary">Sistem akan menghitung pembagian koin otomatis berdasarkan target dan bobot task. Nilai 0 berarti mengikuti pengaturan default sistem.</p>
+                  <p className="text-[11px] text-text-secondary">Sistem akan menghitung pembagian koin otomatis berdasarkan target dan bobot task. Nilai 0 berarti tanpa payout koin (XP dan streak tetap berjalan).</p>
                 </div>
                 <div className="space-y-3 p-3.5 rounded-xl bg-amber-50/70 dark:bg-amber-950/20 border border-amber-200/80">
                   <div className="flex items-center justify-between">

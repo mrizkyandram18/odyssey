@@ -12,7 +12,7 @@ import {
   Megaphone,
   ArrowRight,
 } from 'lucide-react'
-import { useAdminConfig } from '../../hooks/useAdminConfig'
+import { useAdminConfig, rfc3339ToLocalInput, localInputToRfc3339 } from '../../hooks/useAdminConfig'
 
 /**
  * Presentational sections of the economy settings form.
@@ -677,6 +677,7 @@ export const KpiPreviewStrip: React.FC<{
 export const AnnouncementSection: React.FC<{ settings: EconomySettings }> = ({ settings }) => {
   const {
     config,
+    timezoneInput,
     announcementEnabledInput,
     setAnnouncementEnabledInput,
     announcementTitleInput,
@@ -692,6 +693,9 @@ export const AnnouncementSection: React.FC<{ settings: EconomySettings }> = ({ s
     announcementPriorityInput,
     setAnnouncementPriorityInput,
   } = settings
+  // Picker wall time is interpreted in the configured system timezone —
+  // the offset is never hardcoded.
+  const scheduleTz = timezoneInput.trim() || 'Asia/Jakarta'
 
   return (
     <div className="space-y-3 pt-3 border-t border-border-subtle">
@@ -794,29 +798,29 @@ export const AnnouncementSection: React.FC<{ settings: EconomySettings }> = ({ s
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
         <div className="space-y-1">
           <label htmlFor="input-announcement-start" className="text-xs font-bold text-text-secondary">
-            Mulai Tampil (opsional, RFC3339)
+            Mulai Tampil (opsional)
           </label>
           <input
             id="input-announcement-start"
-            type="text"
-            value={announcementStartAtInput}
-            onChange={(e) => setAnnouncementStartAtInput(e.target.value)}
-            placeholder="2026-09-12T00:00:00+07:00"
+            type="datetime-local"
+            value={rfc3339ToLocalInput(announcementStartAtInput, scheduleTz)}
+            onChange={(e) => setAnnouncementStartAtInput(localInputToRfc3339(e.target.value, scheduleTz))}
             className="w-full p-2.5 rounded-xl bg-surface-elevated border border-border-subtle text-xs font-mono text-text-primary focus:outline-none focus:border-accent-magic"
           />
+          <p className="text-[10px] text-text-secondary">Zona waktu: {scheduleTz}. Kosongkan untuk selalu tampil saat aktif.</p>
         </div>
         <div className="space-y-1">
           <label htmlFor="input-announcement-end" className="text-xs font-bold text-text-secondary">
-            Selesai Tampil (opsional, RFC3339)
+            Selesai Tampil (opsional)
           </label>
           <input
             id="input-announcement-end"
-            type="text"
-            value={announcementEndAtInput}
-            onChange={(e) => setAnnouncementEndAtInput(e.target.value)}
-            placeholder="2026-09-30T23:59:59+07:00"
+            type="datetime-local"
+            value={rfc3339ToLocalInput(announcementEndAtInput, scheduleTz)}
+            onChange={(e) => setAnnouncementEndAtInput(localInputToRfc3339(e.target.value, scheduleTz))}
             className="w-full p-2.5 rounded-xl bg-surface-elevated border border-border-subtle text-xs font-mono text-text-primary focus:outline-none focus:border-accent-magic"
           />
+          <p className="text-[10px] text-text-secondary">Zona waktu: {scheduleTz}. Kosongkan untuk selalu tampil saat aktif.</p>
         </div>
       </div>
     </div>

@@ -5,7 +5,7 @@ import type { MemberView } from '../../../../../shared/types'
 interface MemberCapSectionProps {
   member: MemberView
   form: {
-    monthly_coin_target: number
+    monthly_coin_target: number | null
     monthly_earning_cap: number
   }
   setForm: React.Dispatch<React.SetStateAction<any>>
@@ -18,6 +18,13 @@ export const MemberCapSection: React.FC<MemberCapSectionProps> = ({
 }) => {
   const isCustomCap = form.monthly_earning_cap > 0
   const earned = member.earned_this_period ?? 0
+  // NULL (or missing) = inherit system default · 0 = no coin payout · N = explicit pool.
+  const targetState =
+    form.monthly_coin_target == null
+      ? 'Ikut default'
+      : form.monthly_coin_target === 0
+        ? 'Tanpa payout'
+        : `${form.monthly_coin_target.toLocaleString('id-ID')} koin`
 
   return (
     <div className="space-y-4">
@@ -27,7 +34,7 @@ export const MemberCapSection: React.FC<MemberCapSectionProps> = ({
           <label htmlFor="input-monthly-target" className="text-xs font-bold text-text-primary">
             Target Koin Bulanan Anggota
           </label>
-          <span className="text-[10px] text-text-secondary">0 = Ikuti target sistem</span>
+          <span className="text-[10px] text-text-secondary">{targetState}</span>
         </div>
         <div className="relative">
           <input
@@ -35,11 +42,12 @@ export const MemberCapSection: React.FC<MemberCapSectionProps> = ({
             type="number"
             min={0}
             max={10000}
-            value={form.monthly_coin_target}
+            value={form.monthly_coin_target ?? ''}
+            placeholder="Ikut default"
             onChange={(e) =>
               setForm((prev: any) => ({
                 ...prev,
-                monthly_coin_target: parseInt(e.target.value || '0', 10),
+                monthly_coin_target: e.target.value === '' ? null : parseInt(e.target.value, 10),
               }))
             }
             className="w-full p-2.5 pr-16 rounded-xl bg-surface border border-border-subtle text-xs sm:text-sm font-bold text-text-primary focus:outline-none focus:border-accent-magic font-mono"
@@ -47,7 +55,8 @@ export const MemberCapSection: React.FC<MemberCapSectionProps> = ({
           <span className="absolute right-3 top-2.5 text-xs text-text-secondary">koin</span>
         </div>
         <p className="text-[11px] text-text-secondary">
-          Target perolehan koin bulanan untuk anggota ini. Sistem menggunakan angka ini untuk memandu bobot tugas.
+          Target perolehan koin bulanan untuk anggota ini. Kosongkan untuk ikut default sistem.
+          Nilai 0 berarti tanpa payout koin (XP dan streak tetap berjalan).
         </p>
       </div>
 

@@ -186,3 +186,56 @@ describe('EditMemberModal - Reset Password', () => {
     confirmSpy.mockRestore()
   })
 })
+
+describe('Gate 2-D — honest NULL/0 target display', () => {
+  afterEach(() => cleanup())
+
+  const fullForm = (monthly_coin_target: number | null) => ({
+    explorer_name: 'Selvica Hyani',
+    role: 'MEMBER' as const,
+    is_active: true,
+    reset_device: false,
+    monthly_coin_target,
+    monthly_earning_cap: 0,
+    payout_frequency: 'THRESHOLD' as const,
+    minimum_withdrawal_coins: 500,
+    payout_weekday: 1,
+    payout_month_start_day: 24,
+    payout_month_end_day: 26,
+  })
+
+  it('NULL target renders empty input with Ikut default (never 0)', () => {
+    render(
+      <EditMemberModal
+        member={{ ...member, role: 'MEMBER' as const }}
+        form={fullForm(null)}
+        setForm={vi.fn()}
+        isSaving={false}
+        onClose={vi.fn()}
+        onSave={vi.fn()}
+      />
+    )
+    fireEvent.click(screen.getByText('Batas Koin'))
+    const input = document.getElementById('input-monthly-target') as HTMLInputElement
+    expect(input.value).toBe('')
+    expect(screen.getByText('Ikut default')).toBeInTheDocument()
+    expect(screen.queryByText('Tanpa payout')).toBeNull()
+  })
+
+  it('explicit 0 renders Tanpa payout (ZERO intent untouched)', () => {
+    render(
+      <EditMemberModal
+        member={{ ...member, role: 'MEMBER' as const }}
+        form={fullForm(0)}
+        setForm={vi.fn()}
+        isSaving={false}
+        onClose={vi.fn()}
+        onSave={vi.fn()}
+      />
+    )
+    fireEvent.click(screen.getByText('Batas Koin'))
+    const input = document.getElementById('input-monthly-target') as HTMLInputElement
+    expect(input.value).toBe('0')
+    expect(screen.getByText('Tanpa payout')).toBeInTheDocument()
+  })
+})

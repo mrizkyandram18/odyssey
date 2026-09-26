@@ -16,7 +16,7 @@ interface EditMemberModalProps {
     role: 'ADMIN' | 'MEMBER'
     is_active: boolean
     reset_device: boolean
-    monthly_coin_target: number
+    monthly_coin_target: number | null
     monthly_earning_cap: number
     payout_frequency: 'THRESHOLD' | 'WEEKLY' | 'MONTHLY'
     minimum_withdrawal_coins: number
@@ -30,7 +30,7 @@ interface EditMemberModalProps {
       role: 'ADMIN' | 'MEMBER'
       is_active: boolean
       reset_device: boolean
-      monthly_coin_target: number
+      monthly_coin_target: number | null
       monthly_earning_cap: number
       payout_frequency: 'THRESHOLD' | 'WEEKLY' | 'MONTHLY'
       minimum_withdrawal_coins: number

@@ -58,8 +58,10 @@ export function useAdminConfig() {
           setAnnouncementTitleInput(String(ann.title ?? ''))
           setAnnouncementBodyInput(String(ann.body ?? ''))
           setAnnouncementAudienceInput(String(ann.audience ?? 'ALL'))
-          setAnnouncementStartAtInput(String(ann.start_at ?? ''))
-          setAnnouncementEndAtInput(String(ann.end_at ?? ''))
+          // Stored RFC3339 → picker wall time in the system timezone.
+          const tzForAnn = res.timezone || 'Asia/Jakarta'
+          setAnnouncementStartAtInput(rfc3339ToLocalInput(String(ann.start_at ?? ''), tzForAnn))
+          setAnnouncementEndAtInput(rfc3339ToLocalInput(String(ann.end_at ?? ''), tzForAnn))
           setAnnouncementPriorityInput(String(ann.priority ?? 'normal'))
         }
       }
@@ -74,22 +76,41 @@ export function useAdminConfig() {
     fetchConfig()
   }, [fetchConfig])
 
-  const handleSaveConfig = async (e?: React.FormEvent) => {
-    if (e) e.preventDefault()
+  // --- Split saves (D1): each section validates its own subset and POSTs
+  // only that subset to the same endpoint. The backend accepts partial
+  // updates (all-pointer payload + effective-state validation), so no
+  // contract change is involved. Cross-section consistency is backstopped
+  // server-side with clear 400 messages.
+  const saveSubset = async (
+    payload: Record<string, unknown>,
+    successText: string
+  ) => {
+    setIsSaving(true)
+    try {
+      const updated = await adminTasksApi.updateConfig(payload as any)
+      setConfig(updated)
+      setSuccessMsg(successText)
+      setTimeout(() => setSuccessMsg(null), 4000)
+    } catch (err: any) {
+      setErrorMsg(err?.message || 'Gagal menyimpan konfigurasi')
+    } finally {
+      setIsSaving(false)
+    }
+  }
+
+  const beginSectionSave = () => {
     setSuccessMsg(null)
     setErrorMsg(null)
+  }
+
+  const handleSaveSchedule = async (e?: React.FormEvent) => {
+    if (e) e.preventDefault()
+    beginSectionSave()
 
     const start = parseInt(startDayInput, 10)
     const end = parseInt(endDayInput, 10)
     const payout = parseInt(payoutDayInput, 10)
-    const earningPeriod = parseInt(earningPeriodInput, 10)
-    const rate = parseInt(conversionRateInput, 10)
-    const targetRp = parseInt(targetRupiahInput, 10)
     const maxPayout = parseInt(maxPayoutInput, 10)
-    const autoBlock = parseInt(autoBlockInput, 10)
-    const monthlyTarget = parseInt(monthlyTargetInput, 10)
-    const monthlyCap = parseInt(monthlyCapInput, 10)
-    const ceiling = maxCapCeilingInput.trim() !== '' ? parseInt(maxCapCeilingInput, 10) : undefined
 
     if (isNaN(start) || start < 1 || start > 31) {
       setErrorMsg('Tanggal mulai harus antara 1 sampai 31')
@@ -107,24 +128,33 @@ export function useAdminConfig() {
       setErrorMsg('Tanggal gajian (payout day) harus antara 1 sampai 31')
       return
     }
-    if (isNaN(earningPeriod) || earningPeriod < 1 || earningPeriod > 365) {
-      setErrorMsg('Durasi periode earning harus antara 1 sampai 365 hari')
+    if (isNaN(maxPayout) || maxPayout <= 0) {
+      setErrorMsg('Batas penarikan koin maksimum harus lebih dari 0')
       return
     }
+
+    await saveSubset(
+      { start_day: start, end_day: end, payout_day: payout, max_payout_coins: maxPayout },
+      'Aturan pencairan berhasil disimpan!'
+    )
+  }
+
+  const handleSaveEconomy = async (e?: React.FormEvent) => {
+    if (e) e.preventDefault()
+    beginSectionSave()
+
+    const rate = parseInt(conversionRateInput, 10)
+    const targetRp = parseInt(targetRupiahInput, 10)
+    const monthlyTarget = parseInt(monthlyTargetInput, 10)
+    const monthlyCap = parseInt(monthlyCapInput, 10)
+    const ceiling = maxCapCeilingInput.trim() !== '' ? parseInt(maxCapCeilingInput, 10) : undefined
+
     if (isNaN(rate) || rate <= 0) {
       setErrorMsg('Nilai konversi koin harus lebih dari 0')
       return
     }
     if (isNaN(targetRp) || targetRp <= 0) {
       setErrorMsg('Target rupiah harus lebih dari 0')
-      return
-    }
-    if (isNaN(maxPayout) || maxPayout <= 0) {
-      setErrorMsg('Batas penarikan koin maksimum harus lebih dari 0')
-      return
-    }
-    if (isNaN(autoBlock) || autoBlock < 0 || autoBlock > 365) {
-      setErrorMsg('Batas inaktivitas auto-block harus antara 0 sampai 365 (0 = nonaktif)')
       return
     }
     if (isNaN(monthlyTarget) || monthlyTarget < 0 || monthlyTarget > 10000) {
@@ -167,13 +197,59 @@ export function useAdminConfig() {
       }
     }
 
+    await saveSubset(
+      {
+        conversion_rate: rate,
+        payout_target_rupiah: targetRp,
+        payout_target_coins: Math.round(targetRp / rate),
+        default_monthly_coin_target: monthlyTarget,
+        default_monthly_earning_cap: monthlyCap,
+        max_monthly_earning_cap_ceiling: ceiling,
+        level_cap_bonus: parsedBonusMap,
+      },
+      'Target & batas koin berhasil disimpan!'
+    )
+  }
+
+  const handleSaveTechnical = async (e?: React.FormEvent) => {
+    if (e) e.preventDefault()
+    beginSectionSave()
+
+    const earningPeriod = parseInt(earningPeriodInput, 10)
+    const autoBlock = parseInt(autoBlockInput, 10)
+
+    if (isNaN(earningPeriod) || earningPeriod < 1 || earningPeriod > 365) {
+      setErrorMsg('Durasi periode earning harus antara 1 sampai 365 hari')
+      return
+    }
+    if (isNaN(autoBlock) || autoBlock < 0 || autoBlock > 365) {
+      setErrorMsg('Batas inaktivitas auto-block harus antara 0 sampai 365 (0 = nonaktif)')
+      return
+    }
+
+    await saveSubset(
+      {
+        earning_period_days: earningPeriod,
+        timezone: timezoneInput.trim() || 'Asia/Jakarta',
+        auto_block_inactivity_days: autoBlock,
+      },
+      'Pengaturan teknis berhasil disimpan!'
+    )
+  }
+
+  const handleSaveAnnouncement = async (e?: React.FormEvent) => {
+    if (e) e.preventDefault()
+    beginSectionSave()
+
     // Announcement validation (mirrors backend ValidateAnnouncementInput).
     const annTitle = announcementTitleInput.trim()
     const annBody = announcementBodyInput.trim()
     const annAudience = announcementAudienceInput.trim().toUpperCase() || 'ALL'
     const annPriority = announcementPriorityInput.trim().toLowerCase() || 'normal'
-    const annStart = announcementStartAtInput.trim()
-    const annEnd = announcementEndAtInput.trim()
+    // Picker wall time → stored RFC3339 in the system timezone ('' = unbounded).
+    const tzForSave = timezoneInput.trim() || 'Asia/Jakarta'
+    const annStart = localInputToRfc3339(announcementStartAtInput, tzForSave).trim()
+    const annEnd = localInputToRfc3339(announcementEndAtInput, tzForSave).trim()
     if (!['ALL', 'MEMBER', 'ADMIN'].includes(annAudience)) {
       setErrorMsg('Audiens pengumuman harus ALL, MEMBER, atau ADMIN')
       return
@@ -214,23 +290,8 @@ export function useAdminConfig() {
       return
     }
 
-    setIsSaving(true)
-    try {
-      const updated = await adminTasksApi.updateConfig({
-        start_day: start,
-        end_day: end,
-        payout_day: payout,
-        earning_period_days: earningPeriod,
-        conversion_rate: rate,
-        payout_target_rupiah: targetRp,
-        payout_target_coins: Math.round(targetRp / rate),
-        max_payout_coins: maxPayout,
-        timezone: timezoneInput.trim() || 'Asia/Jakarta',
-        auto_block_inactivity_days: autoBlock,
-        default_monthly_coin_target: monthlyTarget,
-        default_monthly_earning_cap: monthlyCap,
-        max_monthly_earning_cap_ceiling: ceiling,
-        level_cap_bonus: parsedBonusMap,
+    await saveSubset(
+      {
         announcement_enabled: announcementEnabledInput,
         announcement_title: annTitle,
         announcement_body: annBody,
@@ -238,15 +299,9 @@ export function useAdminConfig() {
         announcement_start_at: annStart,
         announcement_end_at: annEnd,
         announcement_priority: annPriority,
-      })
-      setConfig(updated)
-      setSuccessMsg('Konfigurasi ekonomi berhasil disimpan!')
-      setTimeout(() => setSuccessMsg(null), 4000)
-    } catch (err: any) {
-      setErrorMsg(err?.message || 'Gagal menyimpan konfigurasi')
-    } finally {
-      setIsSaving(false)
-    }
+      },
+      'Pengumuman berhasil disimpan!'
+    )
   }
 
   return {
@@ -295,7 +350,92 @@ export function useAdminConfig() {
     setAnnouncementEndAtInput,
     announcementPriorityInput,
     setAnnouncementPriorityInput,
-    handleSaveConfig,
+    handleSaveSchedule,
+    handleSaveEconomy,
+    handleSaveTechnical,
+    handleSaveAnnouncement,
     fetchConfig,
+  }
+}
+
+// --- Timezone-aware datetime conversion (D2) ---
+// Stored shape is RFC3339 with offset (backend parses via time.RFC3339;
+// empty = unbounded). datetime-local inputs carry wall time without offset,
+// so conversion always goes through the configured system timezone — the
+// offset is never hardcoded.
+
+function tzOffsetMinutes(timeZone: string, utcMs: number): number {
+  const dtf = new Intl.DateTimeFormat('en-CA', {
+    timeZone,
+    hour12: false,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+  })
+  const parts = Object.fromEntries(dtf.formatToParts(new Date(utcMs)).map((p) => [p.type, p.value]))
+  const asUTC = Date.UTC(
+    Number(parts.year),
+    Number(parts.month) - 1,
+    Number(parts.day),
+    Number(parts.hour) % 24,
+    Number(parts.minute),
+    Number(parts.second)
+  )
+  return Math.round((asUTC - utcMs) / 60000)
+}
+
+function pad2(n: number): string {
+  return String(n).padStart(2, '0')
+}
+
+/** Stored RFC3339 → datetime-local wall time in the system timezone ('' stays ''). */
+export function rfc3339ToLocalInput(value: string, timeZone: string): string {
+  const v = (value || '').trim()
+  if (!v) return ''
+  const ms = Date.parse(v)
+  if (isNaN(ms)) return ''
+  try {
+    const dtf = new Intl.DateTimeFormat('en-CA', {
+      timeZone,
+      hour12: false,
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit',
+    })
+    const parts = Object.fromEntries(dtf.formatToParts(new Date(ms)).map((p) => [p.type, p.value]))
+    return `${parts.year}-${parts.month}-${parts.day}T${String(Number(parts.hour) % 24).padStart(2, '0')}:${parts.minute}`
+  } catch {
+    return ''
+  }
+}
+
+/** datetime-local wall time (interpreted in the system timezone) → RFC3339 with offset. */
+export function localInputToRfc3339(value: string, timeZone: string): string {
+  const v = (value || '').trim()
+  if (!v) return ''
+  const m = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})(?::(\d{2}))?/.exec(v)
+  if (!m) return v // let RFC3339 validation report it
+  try {
+    const wallAsUTC =
+      Date.UTC(+m[1], +m[2] - 1, +m[3], +m[4], +m[5], +(m[6] ?? 0)) -
+      tzOffsetMinutes(timeZone, Date.UTC(+m[1], +m[2] - 1, +m[3], +m[4], +m[5], +(m[6] ?? 0))) * 60000
+    // Second pass against the resolved instant for zones with transitions.
+    const utcMs = Date.UTC(+m[1], +m[2] - 1, +m[3], +m[4], +m[5], +(m[6] ?? 0)) - tzOffsetMinutes(timeZone, wallAsUTC) * 60000
+    const off = tzOffsetMinutes(timeZone, utcMs)
+    const sign = off >= 0 ? '+' : '-'
+    const abs = Math.abs(off)
+    const d = new Date(utcMs + off * 60000)
+    return (
+      `${d.getUTCFullYear()}-${pad2(d.getUTCMonth() + 1)}-${pad2(d.getUTCDate())}` +
+      `T${pad2(d.getUTCHours())}:${pad2(d.getUTCMinutes())}:${pad2(d.getUTCSeconds())}` +
+      `${sign}${pad2(Math.floor(abs / 60))}:${pad2(abs % 60)}`
+    )
+  } catch {
+    return v
   }
 }
