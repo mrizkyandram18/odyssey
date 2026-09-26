@@ -347,7 +347,7 @@ describe('VideoRecordModal', () => {
         expect(screen.getByTestId('switch-camera-overlay-button')).toHaveTextContent('Kamera Belakang')
       )
       expect(gum).toHaveBeenCalledTimes(2)
-      expect(gum.mock.calls[1][0]).toEqual({ video: { facingMode: { ideal: 'environment' } }, audio: true })
+      expect(gum.mock.calls[1][0]).toEqual({ video: { facingMode: { exact: 'environment' } }, audio: true })
     })
 
     it('switches environment -> user and updates UI', async () => {
@@ -359,7 +359,7 @@ describe('VideoRecordModal', () => {
         expect(screen.getByTestId('switch-camera-overlay-button')).toHaveTextContent('Kamera Depan')
       )
       expect(gum).toHaveBeenCalledTimes(2)
-      expect(gum.mock.calls[1][0]).toEqual({ video: { facingMode: { ideal: 'user' } }, audio: true })
+      expect(gum.mock.calls[1][0]).toEqual({ video: { facingMode: { exact: 'user' } }, audio: true })
     })
 
     it('restores previous front stream when rear switch fails', async () => {
@@ -449,9 +449,9 @@ describe('VideoRecordModal', () => {
       fireEvent.click(screen.getByTestId('switch-camera-overlay-button'))
       await waitFor(() => expect(overlay()).toHaveTextContent('Kamera Belakang'))
       expect(gum).toHaveBeenCalledTimes(4)
-      expect(gum.mock.calls[1][0].video.facingMode).toEqual({ ideal: 'environment' })
-      expect(gum.mock.calls[2][0].video.facingMode).toEqual({ ideal: 'user' })
-      expect(gum.mock.calls[3][0].video.facingMode).toEqual({ ideal: 'environment' })
+      expect(gum.mock.calls[1][0].video.facingMode).toEqual({ exact: 'environment' })
+      expect(gum.mock.calls[2][0].video.facingMode).toEqual({ exact: 'user' })
+      expect(gum.mock.calls[3][0].video.facingMode).toEqual({ exact: 'environment' })
       // camera still usable for normal recording afterwards
       expect(screen.getByTestId('start-recording-button')).toBeInTheDocument()
     })

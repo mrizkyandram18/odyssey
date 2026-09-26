@@ -136,8 +136,13 @@ export const LiveCameraCaptureModal: React.FC<LiveCameraCaptureModalProps> = ({ 
       if (videoRef.current) {
         videoRef.current.srcObject = null
       }
+      // Pakai { exact } agar browser BENAR-BENAR pindah kamera fisik.
+      // { ideal } hanya preferensi lunak: di Chrome Android browser boleh
+      // mengembalikan kamera yang sama sehingga gambar tidak berubah meski
+      // label sudah ganti. exact melempar OverconstrainedError bila kamera
+      // satunya tidak ada — sudah ditangani di catch + fallback di bawah.
       const newStream = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode: { ideal: targetFacing } },
+        video: { facingMode: { exact: targetFacing } },
       })
       streamRef.current = newStream
       setActiveFacing(targetFacing)
@@ -158,6 +163,20 @@ export const LiveCameraCaptureModal: React.FC<LiveCameraCaptureModalProps> = ({ 
       } else {
         setErrorMessage(`Gagal mengganti ke kamera ${requested}: ` + (err?.message || 'Terjadi kesalahan'))
       }
+      // Kembalikan stream lama agar preview tidak hitam/kosong.
+      try {
+        const fallback = await navigator.mediaDevices.getUserMedia({
+          video: { facingMode: { ideal: activeFacing } },
+        })
+        streamRef.current = fallback
+        if (videoRef.current) {
+          videoRef.current.srcObject = fallback
+          videoRef.current.onloadedmetadata = () => {
+            videoRef.current?.play().catch((playErr) => console.warn('Video play error:', playErr))
+          }
+          videoRef.current.play().catch((playErr) => console.warn('Video play error:', playErr))
+        }
+      } catch { /* biarkan pesan error utama yang tampil */ }
     } finally {
       setIsSwitchingCamera(false)
     }

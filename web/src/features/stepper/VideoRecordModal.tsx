@@ -186,8 +186,13 @@ export const VideoRecordModal: React.FC<VideoRecordModalProps> = ({
         streamRef.current = null
       }
       if (videoRef.current) videoRef.current.srcObject = null
+      // Pakai { exact } agar browser BENAR-BENAR pindah kamera fisik.
+      // { ideal } hanya preferensi lunak: di Chrome Android browser boleh
+      // mengembalikan kamera yang sama sehingga gambar tidak berubah meski
+      // label sudah ganti. exact melempar OverconstrainedError bila kamera
+      // satunya tidak ada — sudah ditangani di catch + fallback di bawah.
       const newStream = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode: { ideal: targetFacing } },
+        video: { facingMode: { exact: targetFacing } },
         audio: true,
       })
       streamRef.current = newStream

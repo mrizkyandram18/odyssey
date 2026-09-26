@@ -174,17 +174,48 @@ describe('Camera Facing Configuration', () => {
     expect(screen.getByTestId('switch-camera-overlay-button')).toBeInTheDocument()
     expect(getUserMedia).toHaveBeenCalledWith({ video: { facingMode: { ideal: 'environment' } } })
 
-    // Click switch camera -> flips to front ('user')
+    // Click switch camera -> flips to front ('user'). Switch uses { exact }
+    // so the browser really changes physical camera instead of silently
+    // returning the same one (Android Chrome ignores soft { ideal } hints).
     fireEvent.click(screen.getByTestId('switch-camera-button'))
     await waitFor(() => {
-      expect(getUserMedia).toHaveBeenCalledWith({ video: { facingMode: { ideal: 'user' } } })
+      expect(getUserMedia).toHaveBeenCalledWith({ video: { facingMode: { exact: 'user' } } })
     })
 
     // Click switch camera again -> flips back to rear ('environment')
     fireEvent.click(screen.getByTestId('switch-camera-overlay-button'))
     await waitFor(() => {
-      expect(getUserMedia).toHaveBeenCalledWith({ video: { facingMode: { ideal: 'environment' } } })
+      expect(getUserMedia).toHaveBeenCalledWith({ video: { facingMode: { exact: 'environment' } } })
     })
+  })
+
+  it('restores previous stream when switch fails so preview never goes black', async () => {
+    const rearStream = { getTracks: () => [{ stop: vi.fn() }] }
+    const rearErr = Object.assign(new Error('rear unavailable'), { name: 'OverconstrainedError' })
+    let calls = 0
+    const getUserMedia = vi.fn().mockImplementation(async () => {
+      calls += 1
+      if (calls === 2) throw rearErr
+      return rearStream
+    })
+    vi.stubGlobal('navigator', { mediaDevices: { getUserMedia } })
+    vi.spyOn(HTMLVideoElement.prototype, 'play').mockResolvedValue(undefined as any)
+
+    renderLiveModal({ config: { camera_only: true, camera_facing: 'environment' } })
+    fireEvent.click(screen.getByTestId('open-camera-button'))
+    await screen.findByTestId('capture-button')
+
+    fireEvent.click(screen.getByTestId('switch-camera-button'))
+    await waitFor(() => {
+      expect(screen.getByTestId('camera-error')).toHaveTextContent(/Kamera depan tidak tersedia/)
+    })
+    // failed switch (exact) + fallback restore of the previous rear stream
+    await waitFor(() => expect(getUserMedia).toHaveBeenCalledTimes(3))
+    expect(getUserMedia.mock.calls[1][0]).toEqual({ video: { facingMode: { exact: 'user' } } })
+    expect(getUserMedia.mock.calls[2][0]).toEqual({ video: { facingMode: { ideal: 'environment' } } })
+    // still on rear camera, preview alive, capture still possible
+    expect(screen.getByTestId('switch-camera-overlay-button')).toHaveTextContent('Kamera Belakang')
+    expect(screen.getByTestId('capture-button')).toBeInTheDocument()
   })
 })
 
