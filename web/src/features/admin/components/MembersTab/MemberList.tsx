@@ -191,7 +191,8 @@ export const MemberList: React.FC<MemberListProps> = ({ controller }) => {
                   {members.map((member) => {
                     const last = formatLastTask(member)
                     const earned = member.earned_this_period ?? 0
-                    const capVal = member.monthly_earning_cap || 0
+                    // Effective cap is what the backend enforces (base + level bonus, ceiling-clamped).
+                    const capVal = member.effective_earning_cap ?? member.monthly_earning_cap ?? 0
                     const percent = capVal > 0 ? Math.min(100, Math.round((earned / capVal) * 100)) : 0
                     return (
                       <tr key={member.uid} className="transition-colors hover:bg-surface-elevated/40">
@@ -334,6 +335,8 @@ export const MemberList: React.FC<MemberListProps> = ({ controller }) => {
             {members.map((member) => {
               const badge = getStatusConfig(member)
               const last = formatLastTask(member)
+              // Effective cap is what the backend enforces (base + level bonus, ceiling-clamped).
+              const capVal = member.effective_earning_cap ?? member.monthly_earning_cap ?? 0
               return (
                 <div key={member.uid} className="rounded-2xl border border-zinc-200 bg-white p-4 shadow-sm">
                   <div className="flex items-start justify-between gap-3">
@@ -438,7 +441,7 @@ export const MemberList: React.FC<MemberListProps> = ({ controller }) => {
                         </span>
                       </p>
                       <p className={`mt-1 text-[10px] font-bold inline-flex px-2 py-0.5 rounded-full border ${member.earning_locked ? 'bg-amber-100 text-amber-700 border-amber-200' : 'bg-emerald-50 text-emerald-700 border-emerald-200'}`} title={member.earning_locked ? 'Perolehan koin bulan ini telah mencapai batas' : 'Bisa mendapatkan koin'}>
-                        {member.earned_this_period ?? 0}/{member.monthly_earning_cap ? member.monthly_earning_cap : 'Batas Global'} {member.earning_locked ? '🔒 Penuh' : '✓ Aktif'}
+                        {member.earned_this_period ?? 0}/{capVal > 0 ? capVal.toLocaleString('id-ID') : 'Batas Global'} {member.earning_locked ? '🔒 Penuh' : '✓ Aktif'}
                       </p>
                     </div>
                   </div>

@@ -6,6 +6,9 @@ import { shopApi } from '../../shared/lib/api'
 interface RedeemModalProps {
   userCoins: number
   conversionRate: number
+  // Configured minimum withdrawal (from shop config). No hardcoding: when
+  // absent, only the pre-existing balance checks apply.
+  minimumWithdrawal?: number
   onClose: () => void
   onSuccess: () => void
 }
@@ -25,6 +28,7 @@ function maskDestinationNumber(val: string): string {
 export const RedeemModal: React.FC<RedeemModalProps> = ({
   userCoins,
   conversionRate,
+  minimumWithdrawal,
   onClose,
   onSuccess,
 }) => {
@@ -38,7 +42,8 @@ export const RedeemModal: React.FC<RedeemModalProps> = ({
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
 
   const calculatedCash = (coinsToRedeem || 0) * conversionRate
-  const isValidAmount = coinsToRedeem > 0 && coinsToRedeem <= userCoins
+  const minAmount = minimumWithdrawal ?? 0
+  const isValidAmount = coinsToRedeem > 0 && coinsToRedeem >= minAmount && coinsToRedeem <= userCoins
 
   const handleTypeChange = (type: 'EWALLET' | 'BANK') => {
     setTargetType(type)
@@ -74,7 +79,11 @@ export const RedeemModal: React.FC<RedeemModalProps> = ({
     }
 
     if (!isValidAmount) {
-      setErrorMessage('Jumlah koin yang ditukarkan tidak valid')
+      if (minAmount > 0 && Number(coinsToRedeem) < minAmount) {
+        setErrorMessage(`Minimal penukaran ${minAmount.toLocaleString('id-ID')} Koin`)
+      } else {
+        setErrorMessage('Jumlah koin yang ditukarkan tidak valid')
+      }
       return false
     }
 
@@ -288,12 +297,13 @@ export const RedeemModal: React.FC<RedeemModalProps> = ({
                   </label>
                   <span className="text-[11px] text-text-secondary">
                     Saldo: <strong>{userCoins.toLocaleString('id-ID')} Koin</strong>
+                    {minAmount > 0 && <> • Minimal {minAmount.toLocaleString('id-ID')}</>}
                   </span>
                 </div>
                 <div className="relative">
                   <input
                     type="number"
-                    min={1}
+                    min={minAmount > 0 ? minAmount : 1}
                     max={userCoins}
                     data-testid="coins-input"
                     value={coinsToRedeem}

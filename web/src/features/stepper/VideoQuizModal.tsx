@@ -87,8 +87,8 @@ export const VideoQuizModal: React.FC<VideoQuizModalProps> = ({ task, onClose, o
       const res = await tasksApi.submit(task.id, { answers })
       if (res.success) {
         setEarnedRewards({
-          coins: res.coins_earned || task.reward_coins,
-          xp: res.xp_earned || task.reward_xp,
+          coins: res.coins_earned ?? task.reward_coins,
+          xp: res.xp_earned ?? task.reward_xp,
         })
         if ((res as any).ticket_granted) {
           setTicketGranted(true)
@@ -322,12 +322,12 @@ export const VideoQuizModal: React.FC<VideoQuizModalProps> = ({ task, onClose, o
                 <div className="inline-flex items-center gap-4 px-6 py-3 rounded-2xl bg-accent-gold/15 border border-accent-gold/30">
                   <div className="flex items-center gap-1.5 text-accent-gold font-bold">
                     <Award className="w-5 h-5" />
-                    <span>+{earnedRewards?.coins || task.coins_earned || task.reward_coins} Koin</span>
+                    <span>+{earnedRewards?.coins ?? task.coins_earned ?? task.reward_coins} Koin</span>
                   </div>
                   <div className="w-px h-5 bg-border-subtle" />
                   <div className="flex items-center gap-1.5 text-accent-magic font-bold">
                     <Sparkles className="w-5 h-5" />
-                    <span>+{earnedRewards?.xp || task.xp_earned || task.reward_xp} Bintang</span>
+                    <span>+{earnedRewards?.xp ?? task.xp_earned ?? task.reward_xp} Bintang</span>
                   </div>
                 </div>
 

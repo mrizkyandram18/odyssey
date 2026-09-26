@@ -248,7 +248,7 @@ export const DocUploadModal: React.FC<DocUploadModalProps> = ({ task, onClose, o
                   </h4>
                   <p className="text-sm text-text-secondary mt-1">
                     {task.status === 'APPROVED'
-                      ? `Tugas telah disetujui dan kamu mendapatkan +${task.coins_earned || task.reward_coins} Koin & +${task.xp_earned || task.reward_xp} Bintang.`
+                      ? `Tugas telah disetujui dan kamu mendapatkan +${task.coins_earned ?? task.reward_coins} Koin & +${task.xp_earned ?? task.reward_xp} Bintang.`
                       : 'Dokumenmu sedang dalam antrean verifikasi admin. Koin & Bintang akan otomatis masuk setelah disetujui.'}
                   </p>
                 </div>

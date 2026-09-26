@@ -106,7 +106,7 @@ export const SubmissionCard: React.FC<SubmissionCardProps> = ({
 
         <div className="flex items-center gap-2 self-start sm:self-auto">
           <span className="text-xs font-extrabold text-accent-gold px-2 py-0.5 rounded-md bg-accent-gold/10 border border-accent-gold/20">
-            +{submission.coins_earned || submission.reward_coins} 🪙
+            +{isSubApproved ? (submission.coins_earned ?? 0) : (submission.coins_earned || submission.reward_coins)} 🪙
           </span>
         </div>
       </div>

@@ -212,8 +212,9 @@ export interface MemberView {
   coins: number
   monthly_coin_target?: number
   monthly_earning_cap?: number
+  effective_earning_cap?: number
   earned_this_period?: number
-  earning_status?: 'ACTIVE' | 'HALTED'
+  earning_status?: 'ACTIVE' | 'HALTED' | 'CONFIG_ERROR'
   earning_locked?: boolean
   blocked_at?: string | null
   blocked_by?: string | null

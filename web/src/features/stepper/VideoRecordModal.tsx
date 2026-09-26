@@ -626,7 +626,7 @@ export const VideoRecordModal: React.FC<VideoRecordModalProps> = ({
                 </div>
                 <div>
                   <h4 className="font-bold text-2xl text-text-primary">{task.status === 'APPROVED' ? 'Video Selesai (Disetujui)! 🎥' : 'Video Berhasil Dikirim! 🎥'}</h4>
-                  <p className="text-sm text-text-secondary mt-1">{task.status === 'APPROVED' ? `Tugas disetujui +${task.coins_earned || task.reward_coins} Koin` : 'Video masuk antrean verifikasi admin.'}</p>
+                  <p className="text-sm text-text-secondary mt-1">{task.status === 'APPROVED' ? `Tugas disetujui +${task.coins_earned ?? task.reward_coins} Koin` : 'Video masuk antrean verifikasi admin.'}</p>
                 </div>
                 <button
                   onClick={() => {

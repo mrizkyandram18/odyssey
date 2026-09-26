@@ -140,4 +140,33 @@ describe('RedeemModal Component', () => {
     expect(await screen.findByText('Pencairan Koin ke Cash')).toBeInTheDocument()
     expect(screen.getByDisplayValue('081234567890')).toBeInTheDocument()
   })
+
+  it('blocks amounts below the configured minimum client-side', async () => {
+    render(<RedeemModal {...defaultProps} userCoins={2000} minimumWithdrawal={500} />)
+
+    expect(screen.getByText(/Minimal 500/)).toBeInTheDocument()
+
+    fireEvent.change(screen.getByTestId('coins-input'), { target: { value: '499' } })
+
+    // CTA is disabled below minimum: cannot reach backend validation.
+    expect(screen.getByTestId('proceed-confirm-btn')).toBeDisabled()
+    fireEvent.click(screen.getByTestId('proceed-confirm-btn'))
+    expect(shopApi.redeem).not.toHaveBeenCalled()
+
+    // Exact minimum re-enables the CTA.
+    fireEvent.change(screen.getByTestId('coins-input'), { target: { value: '500' } })
+    expect(screen.getByTestId('proceed-confirm-btn')).not.toBeDisabled()
+  })
+
+  it('allows the exact configured minimum', async () => {
+    vi.mocked(shopApi.redeem).mockResolvedValue({ success: true, claim_id: 1, new_balance: 1500 } as any)
+    render(<RedeemModal {...defaultProps} userCoins={2000} minimumWithdrawal={500} />)
+
+    const input = screen.getByTestId('account-number-input')
+    fireEvent.change(input, { target: { value: '081234567890' } })
+    fireEvent.change(screen.getByTestId('coins-input'), { target: { value: '500' } })
+    fireEvent.click(screen.getByTestId('proceed-confirm-btn'))
+
+    expect(await screen.findByText('Konfirmasi Pencairan Dana')).toBeInTheDocument()
+  })
 })

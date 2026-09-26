@@ -82,8 +82,8 @@ export const AdminOverview: React.FC<AdminOverviewProps> = ({
     (m) => !m.is_active || (m.inactive_days != null && m.inactive_days >= inactiveDaysLimit)
   )
   const cappedMembers = members.filter((m) => {
-    const cap = (m as any).effective_earning_cap ?? m.monthly_earning_cap ?? 0
-    const earned = (m as any).earned_coins_this_month ?? m.earned_this_period ?? 0
+    const cap = m.effective_earning_cap ?? m.monthly_earning_cap ?? 0
+    const earned = m.earned_this_period ?? 0
     return cap > 0 && earned >= cap
   })
   const membersNeedingAttention = inactiveMembers.length + cappedMembers.length

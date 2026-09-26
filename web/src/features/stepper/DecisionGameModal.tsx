@@ -31,7 +31,7 @@ export const DecisionGameModal: React.FC<DecisionGameModalProps> = ({ task, onCl
   const [submitting, setSubmitting] = useState(false)
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
   const [earnedRewards, setEarnedRewards] = useState<{ coins: number; xp: number } | null>(
-    isApproved ? { coins: task.coins_earned || task.reward_coins, xp: task.xp_earned || task.reward_xp } : null
+    isApproved ? { coins: task.coins_earned ?? task.reward_coins, xp: task.xp_earned ?? task.reward_xp } : null
   )
 
   const currentBalance = useMemo(() => {
@@ -81,8 +81,8 @@ export const DecisionGameModal: React.FC<DecisionGameModalProps> = ({ task, onCl
       })
       if (res.success) {
         setEarnedRewards({
-          coins: res.coins_earned || task.reward_coins,
-          xp: res.xp_earned || task.reward_xp,
+          coins: res.coins_earned ?? task.reward_coins,
+          xp: res.xp_earned ?? task.reward_xp,
         })
         confetti({ particleCount: 100, spread: 70, origin: { y: 0.6 } })
       } else {

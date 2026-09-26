@@ -43,6 +43,7 @@ type MemberView struct {
 	Coins                      int64      `json:"coins"`
 	MonthlyCoinTarget          *int       `json:"monthly_coin_target,omitempty"`
 	MonthlyEarningCap          *int       `json:"monthly_earning_cap,omitempty"`
+	EffectiveEarningCap        *int       `json:"effective_earning_cap,omitempty"`
 	EarnedThisPeriod           int        `json:"earned_this_period,omitempty"`
 	EarningStatus              string     `json:"earning_status,omitempty"`
 	EarningLocked              bool       `json:"earning_locked"`
@@ -160,8 +161,64 @@ func resolveEarningCap(ctx context.Context, client db.SupabaseClient, profileCap
 	return def, def > 0
 }
 
-func earningStatus(cap, earned int) (status string, locked bool) {
-	if cap < 0 {
+// getCapBonusConfig hoists the level-bonus map and ceiling clamp used by the
+// effective earning cap, so list endpoints avoid per-member Supabase reads.
+// Math mirrors family_tasks.getEffectiveEarningCap and SQL odyssey_get_effective_earning_cap.
+func getCapBonusConfig(ctx context.Context, client db.SupabaseClient) (bonusValue string, ceiling int) {
+	ceiling = -1
+	if raw, err := client.Get(ctx, "odyssey_system_config", "key=eq.level_cap_bonus&select=value"); err == nil && len(raw) > 0 {
+		var rows []struct {
+			Value string `json:"value"`
+		}
+		if err := json.Unmarshal(raw, &rows); err == nil && len(rows) > 0 {
+			bonusValue = strings.TrimSpace(rows[0].Value)
+		}
+	}
+	if raw, err := client.Get(ctx, "odyssey_system_config", "key=eq.max_monthly_earning_cap_ceiling&select=value"); err == nil && len(raw) > 0 {
+		var rows []struct {
+			Value string `json:"value"`
+		}
+		if err := json.Unmarshal(raw, &rows); err == nil && len(rows) > 0 {
+			if v, err := strconv.Atoi(strings.TrimSpace(rows[0].Value)); err == nil && v > 0 {
+				ceiling = v
+			}
+		}
+	}
+	return
+}
+
+// applyCapBonusCeiling resolves baseCap (per-user value or system default)
+// with the level bonus map and ceiling clamp: 0 = unlimited, <0 = unconfigured.
+func applyCapBonusCeiling(baseCap, userLevel int, bonusValue string, ceiling int) int {
+	if baseCap < 0 {
+		return -1
+	}
+	if baseCap == 0 {
+		return 0
+	}
+	levelBonus := 0
+	if bonusValue != "" {
+		var cfgMap map[string]int
+		if err := json.Unmarshal([]byte(bonusValue), &cfgMap); err == nil {
+			highestThreshold := -1
+			for k, bonusVal := range cfgMap {
+				if th, err := strconv.Atoi(k); err == nil && th <= userLevel && bonusVal >= 0 {
+					if th > highestThreshold {
+						highestThreshold = th
+						levelBonus = bonusVal
+					}
+				}
+			}
+		}
+	}
+	effective := baseCap + levelBonus
+	if ceiling > 0 && effective > ceiling {
+		return ceiling
+	}
+	return effective
+}
+
+func earningStatus(cap, earned int) (status string, locked bool) {	if cap < 0 {
 		return "CONFIG_ERROR", false
 	}
 	if cap == 0 {
@@ -854,21 +911,24 @@ func (a *API) HandleListMembers(w http.ResponseWriter, r *http.Request) {
 
 	// Hoist system config reads to avoid duplicate Supabase calls per member
 	_, loc := resolveTimezone(ctx, a.client)
-	startDay, endDay := resolveTargetEarningDays(ctx, a.client)
 	// Earning cap uses calendar month (1 → last day), not 1-24 target period
 	nowForCap := time.Now().In(loc)
 	capLastDay := time.Date(nowForCap.Year(), nowForCap.Month()+1, 0, 0, 0, 0, 0, loc).Day()
 	earnedMap := getEarnedThisPeriodWithLoc(ctx, a.client, uids, loc, 1, capLastDay)
 	defaultTarget := getDefaultMonthlyTarget(ctx, a.client)
 	defaultCapCached := getDefaultMonthlyEarningCap(ctx, a.client)
+	// Hoisted once: level-bonus map + ceiling for the effective cap (no per-member reads).
+	capBonusValue, capCeiling := getCapBonusConfig(ctx, a.client)
 	// Inactivity tracking (read-only, cycle-aware) — reuse hoisted loc/days
 	isActiveMap := make(map[string]bool, len(profs))
 	for _, p := range profs {
 		isActiveMap[p.UID] = p.IsActive
 	}
 	nowInTz := time.Now().In(loc)
-	periodStart := time.Date(nowInTz.Year(), nowInTz.Month(), startDay, 0, 0, 0, 0, loc)
-	periodEnd := time.Date(nowInTz.Year(), nowInTz.Month(), endDay+1, 0, 0, 0, 0, loc)
+	// Activity/earning cycle = full calendar month (092 reward window), same as cap math above.
+	cycleLastDay := time.Date(nowInTz.Year(), nowInTz.Month()+1, 0, 0, 0, 0, 0, loc).Day()
+	periodStart := time.Date(nowInTz.Year(), nowInTz.Month(), 1, 0, 0, 0, 0, loc)
+	periodEnd := time.Date(nowInTz.Year(), nowInTz.Month(), cycleLastDay+1, 0, 0, 0, 0, loc)
 	periodStartStr := periodStart.Format("2006-01-02")
 	periodEndStr := periodEnd.AddDate(0, 0, -1).Format("2006-01-02")
 	today := nowInTz
@@ -904,7 +964,10 @@ func (a *API) HandleListMembers(w http.ResponseWriter, r *http.Request) {
 		if capVal != nil {
 			capInt = *capVal
 		}
-		eStatus, eLocked := earningStatus(capInt, earned)
+		// Effective cap (base + level bonus, clamped to ceiling) is what the
+		// backend reward RPCs enforce — the list denominator must match it.
+		effCap := applyCapBonusCeiling(capInt, p.Level, capBonusValue, capCeiling)
+		eStatus, eLocked := earningStatus(effCap, earned)
 		items[i] = MemberView{
 			UID:                        p.UID,
 			FamilyID:                   p.FamilyID,
@@ -917,6 +980,7 @@ func (a *API) HandleListMembers(w http.ResponseWriter, r *http.Request) {
 			Coins:                      p.Coins,
 			MonthlyCoinTarget:          tgt,
 			MonthlyEarningCap:          capVal,
+			EffectiveEarningCap:        &effCap,
 			EarnedThisPeriod:           earned,
 			EarningStatus:              eStatus,
 			EarningLocked:              eLocked,
@@ -1118,29 +1182,10 @@ func (a *API) HandleCreateMember(w http.ResponseWriter, r *http.Request) {
 		}
 		if loc, err := time.LoadLocation(tz); err == nil {
 			nowInTz := time.Now().In(loc)
-			startDay := 1
-			endDay := 24
-			if raw, err := a.client.Get(ctx, "odyssey_system_config", "key=in.(target_earning_start_day,target_earning_end_day)&select=key,value"); err == nil && len(raw) > 0 {
-				var rows []struct {
-					Key   string `json:"key"`
-					Value string `json:"value"`
-				}
-				if err := json.Unmarshal(raw, &rows); err == nil {
-					for _, r := range rows {
-						var n int
-						if _, err := fmt.Sscanf(r.Value, "%d", &n); err == nil {
-							if r.Key == "target_earning_start_day" && n >= 1 && n <= 31 {
-								startDay = n
-							}
-							if r.Key == "target_earning_end_day" && n >= 1 && n <= 31 {
-								endDay = n
-							}
-						}
-					}
-				}
-			}
-			ps := time.Date(nowInTz.Year(), nowInTz.Month(), startDay, 0, 0, 0, 0, loc).UTC().Format("2006-01-02")
-			pe := time.Date(nowInTz.Year(), nowInTz.Month(), endDay+1, 0, 0, 0, 0, loc).UTC().Format("2006-01-02")
+			// Snapshot period = full calendar month (092 reward window).
+			lastDay := time.Date(nowInTz.Year(), nowInTz.Month()+1, 0, 0, 0, 0, 0, loc).Day()
+			ps := time.Date(nowInTz.Year(), nowInTz.Month(), 1, 0, 0, 0, 0, loc).UTC().Format("2006-01-02")
+			pe := time.Date(nowInTz.Year(), nowInTz.Month(), lastDay+1, 0, 0, 0, 0, loc).UTC().Format("2006-01-02")
 			_, _ = a.client.Mutate(ctx, http.MethodPost, "odyssey_member_monthly_targets", map[string]any{
 				"user_uid":     uid,
 				"period_start": ps,
@@ -1165,7 +1210,11 @@ func (a *API) HandleCreateMember(w http.ResponseWriter, r *http.Request) {
 	if capVal != nil {
 		capInt = *capVal
 	}
-	eStatus, eLocked := earningStatus(capInt, 0)
+	// New members start at level 1; still resolve the effective cap so the
+	// response matches backend enforcement (bonus/ceiling aware).
+	createBonusValue, createCeiling := getCapBonusConfig(ctx, a.client)
+	createEffCap := applyCapBonusCeiling(capInt, 1, createBonusValue, createCeiling)
+	eStatus, eLocked := earningStatus(createEffCap, 0)
 	shared.WriteJSON(w, http.StatusCreated, MemberView{
 		UID:                    uid,
 		FamilyID:               familyID,
@@ -1178,6 +1227,7 @@ func (a *API) HandleCreateMember(w http.ResponseWriter, r *http.Request) {
 		Coins:                  0,
 		MonthlyCoinTarget:      targetVal,
 		MonthlyEarningCap:      capVal,
+		EffectiveEarningCap:    &createEffCap,
 		EarnedThisPeriod:       0,
 		EarningStatus:          eStatus,
 		EarningLocked:          eLocked,
@@ -1352,29 +1402,10 @@ func (a *API) HandleUpdateMember(w http.ResponseWriter, r *http.Request, targetU
 		}
 		if loc, err := time.LoadLocation(tz); err == nil {
 			now := time.Now().In(loc)
-			startDay := 1
-			endDay := 24
-			if raw, err := a.client.Get(ctx, "odyssey_system_config", "key=in.(target_earning_start_day,target_earning_end_day)&select=key,value"); err == nil && len(raw) > 0 {
-				var rows []struct {
-					Key   string `json:"key"`
-					Value string `json:"value"`
-				}
-				if err := json.Unmarshal(raw, &rows); err == nil {
-					for _, r := range rows {
-						var n int
-						if _, err := fmt.Sscanf(r.Value, "%d", &n); err == nil {
-							if r.Key == "target_earning_start_day" && n >= 1 && n <= 31 {
-								startDay = n
-							}
-							if r.Key == "target_earning_end_day" && n >= 1 && n <= 31 {
-								endDay = n
-							}
-						}
-					}
-				}
-			}
-			ps := time.Date(now.Year(), now.Month(), startDay, 0, 0, 0, 0, loc).UTC().Format("2006-01-02")
-			pe := time.Date(now.Year(), now.Month(), endDay+1, 0, 0, 0, 0, loc).UTC().Format("2006-01-02")
+			// Snapshot period = full calendar month (092 reward window).
+			lastDay := time.Date(now.Year(), now.Month()+1, 0, 0, 0, 0, 0, loc).Day()
+			ps := time.Date(now.Year(), now.Month(), 1, 0, 0, 0, 0, loc).UTC().Format("2006-01-02")
+			pe := time.Date(now.Year(), now.Month(), lastDay+1, 0, 0, 0, 0, loc).UTC().Format("2006-01-02")
 			_, _ = a.client.Mutate(ctx, http.MethodPost, "odyssey_member_monthly_targets", map[string]any{
 				"user_uid": targetUID, "period_start": ps, "period_end": pe, "target": *req.MonthlyCoinTarget, "assigned_by": claims.UID, "created_at": time.Now().UTC().Format(time.RFC3339),
 			}, "")
@@ -1419,7 +1450,9 @@ func (a *API) HandleUpdateMember(w http.ResponseWriter, r *http.Request, targetU
 		if capVal != nil {
 			capInt = *capVal
 		}
-		eStatus, eLocked := earningStatus(capInt, earned)
+		capBonusValue, capCeiling := getCapBonusConfig(ctx, a.client)
+		effCap := applyCapBonusCeiling(capInt, up.Level, capBonusValue, capCeiling)
+		eStatus, eLocked := earningStatus(effCap, earned)
 		effPayout, _ := payout.GetEffectivePayoutConfig(ctx, a.client, targetUID, time.Now())
 		minWd := effPayout.MinimumWithdrawalCoins
 		shared.WriteJSON(w, http.StatusOK, MemberView{
@@ -1434,6 +1467,7 @@ func (a *API) HandleUpdateMember(w http.ResponseWriter, r *http.Request, targetU
 			Coins:                  up.Coins,
 			MonthlyCoinTarget:      tgt,
 			MonthlyEarningCap:      capVal,
+			EffectiveEarningCap:    &effCap,
 			EarnedThisPeriod:       earned,
 			EarningStatus:          eStatus,
 			EarningLocked:          eLocked,

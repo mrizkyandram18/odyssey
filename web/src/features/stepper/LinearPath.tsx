@@ -363,7 +363,7 @@ export const LinearPath: React.FC = () => {
             <div className="flex-1 min-w-0">
               <h3 className="text-sm font-extrabold text-amber-950 dark:text-amber-200">Batas Koin Bulanan tercapai</h3>
               <p className="text-xs text-amber-800/90 dark:text-amber-300 mt-1 leading-relaxed">
-                Kamu sudah mencapai {earned ?? '—'} / {earningCap ?? '—'} koin periode ini (1–24). Tugas tetap terlihat, tapi tidak menghasilkan koin sampai periode berikutnya. Saldo {userCoins.toLocaleString('id-ID')} koin tetap aman.
+                Kamu sudah mencapai {earned ?? '—'} / {earningCap ?? '—'} koin bulan ini. Tugas tetap terlihat, tapi tidak menghasilkan koin sampai bulan berikutnya. Saldo {userCoins.toLocaleString('id-ID')} koin tetap aman.
               </p>
             </div>
           </div>

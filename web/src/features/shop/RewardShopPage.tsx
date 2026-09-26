@@ -425,6 +425,7 @@ export const RewardShopPage: React.FC = () => {
         <RedeemModal
           userCoins={userCoins}
           conversionRate={conversionRate}
+          minimumWithdrawal={effMin}
           onClose={() => setIsRedeemModalOpen(false)}
           onSuccess={() => {
             setIsRedeemModalOpen(false)

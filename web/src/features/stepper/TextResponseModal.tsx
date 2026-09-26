@@ -218,7 +218,7 @@ export const TextResponseModal: React.FC<TextResponseModalProps> = ({ task, onCl
                   </h4>
                   <p className="text-sm text-text-secondary mt-1">
                     {task.status === 'APPROVED'
-                      ? `Tugas telah disetujui dan kamu mendapatkan +${task.coins_earned || task.reward_coins} Koin & +${task.xp_earned || task.reward_xp} Bintang.`
+                      ? `Tugas telah disetujui dan kamu mendapatkan +${task.coins_earned ?? task.reward_coins} Koin & +${task.xp_earned ?? task.reward_xp} Bintang.`
                       : 'Respon teks kamu telah masuk ke antrean verifikasi admin. Koin & Bintang akan otomatis diberikan setelah disetujui.'}
                   </p>
                 </div>

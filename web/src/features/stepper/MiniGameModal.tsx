@@ -41,7 +41,7 @@ export const MiniGameModal: React.FC<MiniGameModalProps> = ({ task, onClose, onS
   const [submitting, setSubmitting] = useState(false)
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
   const [earnedRewards, setEarnedRewards] = useState<{ coins: number; xp: number } | null>(
-    isApproved ? { coins: task.coins_earned || task.reward_coins, xp: task.xp_earned || task.reward_xp } : null
+    isApproved ? { coins: task.coins_earned ?? task.reward_coins, xp: task.xp_earned ?? task.reward_xp } : null
   )
 
   // Initialize deck
@@ -147,8 +147,8 @@ export const MiniGameModal: React.FC<MiniGameModalProps> = ({ task, onClose, onS
 
       if (res.success) {
         setEarnedRewards({
-          coins: res.coins_earned || task.reward_coins,
-          xp: res.xp_earned || task.reward_xp,
+          coins: res.coins_earned ?? task.reward_coins,
+          xp: res.xp_earned ?? task.reward_xp,
         })
         confetti({
           particleCount: 100,
