@@ -341,30 +341,40 @@ export const SubmissionCard: React.FC<SubmissionCardProps> = ({
                     {noteError}
                   </p>
                 )}
-              </div>
-
-              <div className="space-y-1">
-                <label
-                  htmlFor={`penalty-${submission.id}`}
-                  className="text-[11px] font-bold text-status-error block"
-                >
-                  Penalti Koin jika Revisi:
-                </label>
-                <div className="flex items-center gap-1.5">
-                  <input
-                    id={`penalty-${submission.id}`}
-                    type="number"
-                    min="0"
-                    max="10000"
-                    placeholder="0"
-                    value={actionPenalty || ''}
-                    onChange={(e) =>
-                      onPenaltyChange(Math.max(0, parseInt(e.target.value, 10) || 0))
-                    }
-                    className="w-full p-2 rounded-xl bg-surface-elevated border border-border-subtle text-xs font-bold text-status-error focus:outline-none focus:border-status-error"
-                  />
-                  <span className="text-[10px] text-text-secondary shrink-0">🪙 dipotong</span>
-                </div>
+                {/* Penalti koin: exceptional action, collapsed by default.
+                    Existing actionPenalties state preserved untouched — closing
+                    the disclosure never resets the value, no new validation. */}
+                <details>
+                  <summary className="text-[11px] font-bold text-text-secondary cursor-pointer hover:text-text-primary pt-1">
+                    Sertakan penalti koin
+                  </summary>
+                  <div className="space-y-1 pt-1">
+                    <label
+                      htmlFor={`penalty-${submission.id}`}
+                      className="text-[11px] font-bold text-status-error block"
+                    >
+                      Penalti Koin jika Revisi:
+                    </label>
+                    <div className="flex items-center gap-1.5">
+                      <input
+                        id={`penalty-${submission.id}`}
+                        type="number"
+                        min="0"
+                        max="10000"
+                        placeholder="0"
+                        value={actionPenalty || ''}
+                        onChange={(e) =>
+                          onPenaltyChange(Math.max(0, parseInt(e.target.value, 10) || 0))
+                        }
+                        className="w-full p-2 rounded-xl bg-surface-elevated border border-border-subtle text-xs font-bold text-status-error focus:outline-none focus:border-status-error"
+                      />
+                      <span className="text-[10px] text-text-secondary shrink-0">🪙 dipotong</span>
+                    </div>
+                    <p className="text-[10px] text-text-secondary leading-relaxed">
+                      Opsional. Memotong saldo anggota, maksimal sebesar saldo yang ada.
+                    </p>
+                  </div>
+                </details>
               </div>
             </div>
 

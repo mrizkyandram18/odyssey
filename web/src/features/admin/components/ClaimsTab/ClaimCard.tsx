@@ -28,6 +28,9 @@ export const ClaimCard: React.FC<ClaimCardProps> = ({
   onProcess,
 }) => {
   const [copied, setCopied] = useState(false)
+  // Presentation-only: explicit way to leave the optional transfer note empty.
+  // No payload/contract change — notes stay optional end-to-end.
+  const [noReference, setNoReference] = useState(false)
   const isPending = claim.status === 'PENDING'
   const isApproved = claim.status === 'APPROVED'
   const isRejected = claim.status === 'REJECTED'
@@ -165,9 +168,23 @@ export const ClaimCard: React.FC<ClaimCardProps> = ({
                 type="text"
                 placeholder="Contoh: TRF BCA 123456 — 28 Agu 2026"
                 value={actionNote || ''}
+                disabled={noReference}
                 onChange={(e) => onNoteChange(e.target.value)}
-                className="w-full p-2 rounded-xl bg-surface-elevated border border-border-subtle text-xs text-text-primary placeholder:text-text-secondary/50 focus:outline-none focus:border-accent-magic"
+                className="w-full p-2 rounded-xl bg-surface border border-border-subtle text-xs text-text-primary placeholder:text-text-secondary/50 focus:outline-none focus:border-accent-magic disabled:opacity-50"
               />
+              <label className="flex items-center gap-1.5 text-[11px] text-text-secondary cursor-pointer pt-0.5">
+                <input
+                  type="checkbox"
+                  checked={noReference}
+                  onChange={(e) => {
+                    const checked = e.target.checked
+                    setNoReference(checked)
+                    if (checked) onNoteChange('')
+                  }}
+                  className="w-3.5 h-3.5 rounded text-accent-magic focus:ring-accent-magic cursor-pointer"
+                />
+                Tidak ada reference
+              </label>
             </div>
 
             <div className="flex items-center justify-end gap-2 pt-1">

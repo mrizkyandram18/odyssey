@@ -216,3 +216,51 @@ describe('SubmissionsQueue Minta Revisi flow', () => {
     expect(screen.getByText('Submission Revisi')).toBeInTheDocument()
   })
 })
+
+describe('Gate 2-C — penalty progressive disclosure (presentation only)', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+  })
+
+  afterEach(() => {
+    cleanup()
+  })
+
+  it('collapses penalty behind a closed disclosure without changing payload behavior', async () => {
+    vi.mocked(adminTasksApi.getSubmissions).mockResolvedValue(
+      paged([sub(1)], 1, 1, false)
+    )
+    vi.mocked(adminTasksApi.verifySubmission).mockResolvedValue({ success: true } as any)
+    render(<SubmissionsQueue />)
+    await waitFor(() => {
+      expect(screen.getByText('Tugas 1')).toBeInTheDocument()
+    })
+
+    // Disclosure present and closed by default; input stays in the DOM.
+    const summary = screen.getByText('Sertakan penalti koin')
+    expect(summary.closest('details')).not.toHaveAttribute('open')
+    expect(screen.getByLabelText('Penalti Koin jika Revisi:')).toBeInTheDocument()
+
+    // Untouched penalty → same payload as before (undefined), note still required.
+    const noteInput = screen.getByPlaceholderText('Jelaskan apa yang perlu diperbaiki agar anggota tahu apa yang harus dilakukan...')
+    fireEvent.change(noteInput, { target: { value: 'Perbaiki sudut foto.' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Minta revisi Tugas 1' }))
+    await waitFor(() => {
+      expect(adminTasksApi.verifySubmission).toHaveBeenCalledWith(1, 'REJECTED', 'Perbaiki sudut foto.', undefined)
+    })
+  })
+
+  it('preserves a typed penalty value (no reset, no new validation)', async () => {
+    vi.mocked(adminTasksApi.getSubmissions).mockResolvedValue(
+      paged([sub(1)], 1, 1, false)
+    )
+    render(<SubmissionsQueue />)
+    await waitFor(() => {
+      expect(screen.getByText('Tugas 1')).toBeInTheDocument()
+    })
+
+    const penaltyInput = screen.getByLabelText('Penalti Koin jika Revisi:') as HTMLInputElement
+    fireEvent.change(penaltyInput, { target: { value: '25' } })
+    expect(penaltyInput.value).toBe('25')
+  })
+})

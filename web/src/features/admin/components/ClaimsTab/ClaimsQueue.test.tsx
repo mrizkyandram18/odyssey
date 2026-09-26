@@ -117,3 +117,52 @@ describe('ClaimsQueue terminology (display labels never change backend enum)', (
     })
   })
 })
+
+describe('Gate 2-C — explicit no-reference toggle (presentation only)', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+  })
+
+  afterEach(() => {
+    cleanup()
+  })
+
+  it('clears and disables the note input when checked, re-enables when unchecked', async () => {
+    vi.mocked(adminTasksApi.getClaims).mockResolvedValue(paged([claim(1)], 1, 1, false))
+    render(<ClaimsQueue />)
+    await waitFor(() => {
+      expect(screen.getByText(/User 1/)).toBeInTheDocument()
+    })
+
+    const noteInput = screen.getByPlaceholderText(/Contoh: TRF BCA/) as HTMLInputElement
+    fireEvent.change(noteInput, { target: { value: 'TRF-123' } })
+    expect(noteInput.value).toBe('TRF-123')
+
+    const toggle = screen.getByRole('checkbox', { name: 'Tidak ada reference' })
+    fireEvent.click(toggle)
+    expect(toggle).toBeChecked()
+    expect(noteInput.value).toBe('')
+    expect(noteInput).toBeDisabled()
+
+    fireEvent.click(toggle)
+    expect(toggle).not.toBeChecked()
+    expect(noteInput).not.toBeDisabled()
+  })
+
+  it('processes approval with undefined notes when toggle checked (contract unchanged)', async () => {
+    vi.mocked(adminTasksApi.getClaims).mockResolvedValue(paged([claim(1)], 1, 1, false))
+    vi.mocked(adminTasksApi.processClaim).mockResolvedValue({ success: true, status: 'APPROVED' } as any)
+    render(<ClaimsQueue />)
+    await waitFor(() => {
+      expect(screen.getByText(/User 1/)).toBeInTheDocument()
+    })
+
+    fireEvent.click(screen.getByRole('checkbox', { name: 'Tidak ada reference' }))
+    fireEvent.click(screen.getByRole('button', { name: /Tandai sudah ditransfer/ }))
+    await waitFor(() => {
+      // Cleared note ('') is byte-identical to a manually cleared input today —
+      // no new payload shape, notes stay optional end-to-end.
+      expect(adminTasksApi.processClaim).toHaveBeenCalledWith(1, 'APPROVED', '')
+    })
+  })
+})
