@@ -486,7 +486,6 @@ export const LinearPath: React.FC = () => {
           {(() => {
             const conv = shopConfig ? shopConfig.conversion_rate : 0
             const estCash = userCoins * conv
-            const isPayoutDay = shopConfig?.is_payout_day
             return (
               <>
                 <div className="flex items-center justify-between">
@@ -516,10 +515,10 @@ export const LinearPath: React.FC = () => {
                   <span className="font-bold text-text-primary">≈ Rp {estCash.toLocaleString('id-ID')}</span>
                 </div>
 
-                {isPayoutDay && userCoins > 0 && (
+                {userCoins >= 500 && (
                   <div className="p-2 rounded-xl bg-status-success/10 border border-status-success/20 flex items-center gap-1.5 text-xs text-status-success font-bold">
                     <Banknote className="w-3.5 h-3.5 shrink-0" />
-                    <span>Periode pencairan aktif!</span>
+                    <span>Bisa dicairkan sekarang (min. 500 koin)</span>
                   </div>
                 )}
               </>

@@ -73,7 +73,7 @@ export const AdminPage: React.FC<AdminPageProps> = ({ initialTab = 'overview' })
   const [activeTab, setActiveTab] = useState<AdminTab>(
     isAdminTab(tabFromUrl) ? tabFromUrl : initialTab
   )
-  const { config } = useAdminConfig()
+  useAdminConfig()
   const submissionsController = useAdminSubmissions()
   const claimsController = useAdminClaims()
   // Lifted here (instead of inside AdminOverview) so the existing member data
@@ -105,11 +105,6 @@ export const AdminPage: React.FC<AdminPageProps> = ({ initialTab = 'overview' })
     return <Navigate to="/" replace />
   }
 
-  const periodRange = config
-    ? `${config.redemption_start_day}–${config.redemption_end_day}`
-    : '21–26'
-  const isOpen = config?.is_open ?? false
-
   return (
     <div className="w-full flex flex-col gap-4">
       {/* Unified Admin Header */}
@@ -136,17 +131,11 @@ export const AdminPage: React.FC<AdminPageProps> = ({ initialTab = 'overview' })
         {/* Live Period Status Tag */}
         <div className="flex items-center gap-2 self-start sm:self-auto">
           <div className="flex items-center gap-1.5 px-3 py-1 rounded-xl bg-surface border border-border-subtle text-xs">
-            <span className="text-[11px] text-text-secondary font-medium">Jadwal Pencairan:</span>
-            <span className="font-bold text-text-primary font-mono">Tgl {periodRange}</span>
-            <span
-              className={`inline-flex items-center gap-1 text-[10px] font-bold px-1.5 py-0.5 rounded-full ${
-                isOpen
-                  ? 'bg-status-success/15 text-status-success'
-                  : 'bg-surface-elevated text-text-secondary border border-border-subtle'
-              }`}
-            >
-              <span className={`w-1.5 h-1.5 rounded-full ${isOpen ? 'bg-status-success' : 'bg-text-secondary'}`} />
-              {isOpen ? 'Buka' : 'Tutup'}
+            <span className="text-[11px] text-text-secondary font-medium">Pencairan:</span>
+            <span className="font-bold text-text-primary">Fleksibel (Min. 500)</span>
+            <span className="inline-flex items-center gap-1 text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-status-success/15 text-status-success">
+              <span className="w-1.5 h-1.5 rounded-full bg-status-success" />
+              Aktif
             </span>
           </div>
         </div>

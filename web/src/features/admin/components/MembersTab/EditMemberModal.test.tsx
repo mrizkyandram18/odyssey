@@ -215,7 +215,7 @@ describe('Gate 2-D — honest NULL/0 target display', () => {
         onSave={vi.fn()}
       />
     )
-    fireEvent.click(screen.getByText('Batas Koin'))
+    fireEvent.click(screen.getByText('Target & Batas Koin'))
     const input = document.getElementById('input-monthly-target') as HTMLInputElement
     expect(input.value).toBe('')
     expect(screen.getByText('Ikut default')).toBeInTheDocument()
@@ -233,7 +233,7 @@ describe('Gate 2-D — honest NULL/0 target display', () => {
         onSave={vi.fn()}
       />
     )
-    fireEvent.click(screen.getByText('Batas Koin'))
+    fireEvent.click(screen.getByText('Target & Batas Koin'))
     const input = document.getElementById('input-monthly-target') as HTMLInputElement
     expect(input.value).toBe('0')
     expect(screen.getByText('Tanpa payout')).toBeInTheDocument()

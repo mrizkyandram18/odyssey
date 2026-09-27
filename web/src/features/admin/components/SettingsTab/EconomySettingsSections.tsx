@@ -6,7 +6,6 @@ import {
   Plus,
   Trash2,
   Coins,
-  Calendar,
   ChevronDown,
   ChevronUp,
   Megaphone,
@@ -478,73 +477,29 @@ export const RedemptionScheduleSection: React.FC<{ settings: EconomySettings }> 
     <div className="space-y-3 pt-3 border-t border-border-subtle">
       <div>
         <h4 className="text-xs font-bold uppercase tracking-wider text-text-secondary flex items-center gap-1.5">
-          <Calendar className="w-3.5 h-3.5 text-accent-magic" />
-          <span>Pengaturan Periode Penukaran Koin</span>
+          <Coins className="w-3.5 h-3.5 text-accent-gold" />
+          <span>Pengaturan Kebijakan Pencairan Koin</span>
         </h4>
         <p className="text-[11px] text-text-secondary mt-0.5">
-          Jadwal kapan anggota dapat mengajukan pencairan saldo koin menjadi uang tunai/saldo e-wallet.
+          Aturan penarikan saldo koin menjadi uang tunai / saldo e-wallet.
         </p>
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-        <div className="space-y-1">
-          <label htmlFor="input-start-day" className="text-xs font-bold text-text-secondary">
-            Tanggal Buka Pengajuan <span className="text-status-error">*</span>
-          </label>
-          <input
-            id="input-start-day"
-            type="number"
-            min={1}
-            max={31}
-            required
-            value={startDayInput}
-            onChange={(e) => setStartDayInput(e.target.value)}
-            className="w-full p-2.5 rounded-xl bg-surface-elevated border border-border-subtle text-xs sm:text-sm font-bold text-text-primary focus:outline-none focus:border-accent-magic font-mono"
-          />
-          <p className="text-[10px] text-text-secondary">Tgl 1–31 buka pengajuan</p>
+      <div className="p-4 rounded-xl bg-surface-elevated border border-border-subtle space-y-2">
+        <div className="flex items-center gap-2 text-xs font-bold text-text-primary">
+          <span className="w-2 h-2 rounded-full bg-status-success" />
+          <span>Pencairan Fleksibel Aktif (Kapan Saja)</span>
         </div>
-
-        <div className="space-y-1">
-          <label htmlFor="input-end-day" className="text-xs font-bold text-text-secondary">
-            Tanggal Tutup Pengajuan <span className="text-status-error">*</span>
-          </label>
-          <input
-            id="input-end-day"
-            type="number"
-            min={1}
-            max={31}
-            required
-            value={endDayInput}
-            onChange={(e) => setEndDayInput(e.target.value)}
-            className="w-full p-2.5 rounded-xl bg-surface-elevated border border-border-subtle text-xs sm:text-sm font-bold text-text-primary focus:outline-none focus:border-accent-magic font-mono"
-          />
-          <p className="text-[10px] text-text-secondary">Batas akhir ajukan klaim</p>
-        </div>
-
-        <div className="space-y-1">
-          <label htmlFor="input-payout-day" className="text-xs font-bold text-text-secondary">
-            Tanggal Gajian / Transfer <span className="text-status-error">*</span>
-          </label>
-          <input
-            id="input-payout-day"
-            type="number"
-            min={1}
-            max={31}
-            required
-            value={payoutDayInput}
-            onChange={(e) => setPayoutDayInput(e.target.value)}
-            className="w-full p-2.5 rounded-xl bg-surface-elevated border border-border-subtle text-xs sm:text-sm font-bold text-text-primary focus:outline-none focus:border-accent-magic font-mono"
-          />
-          <p className="text-[10px] text-text-secondary">Hari transfer dana reward</p>
-        </div>
-
-        <input
-          id="input-max-payout"
-          type="hidden"
-          value={maxPayoutInput}
-          onChange={(e) => setMaxPayoutInput(e.target.value)}
-        />
+        <p className="text-xs text-text-secondary leading-relaxed">
+          Anggota dapat mengajukan pencairan koin kapan saja setelah saldo mencapai minimal <strong>500 koin</strong> (dalam kelipatan 500 koin). Tanggal jadwal penutupan dan gajian bulanan telah dinonaktifkan agar tidak membatasi anggota.
+        </p>
       </div>
+
+      {/* Hidden inputs preserve API compatibility */}
+      <input id="input-start-day" type="hidden" value={startDayInput} onChange={(e) => setStartDayInput(e.target.value)} />
+      <input id="input-end-day" type="hidden" value={endDayInput} onChange={(e) => setEndDayInput(e.target.value)} />
+      <input id="input-payout-day" type="hidden" value={payoutDayInput} onChange={(e) => setPayoutDayInput(e.target.value)} />
+      <input id="input-max-payout" type="hidden" value={maxPayoutInput} onChange={(e) => setMaxPayoutInput(e.target.value)} />
     </div>
   )
 }
@@ -651,15 +606,15 @@ export const KpiPreviewStrip: React.FC<{
   maxPayoutInput?: string
   monthlyCapInput: string
   maxCapCeilingInput: string
-  payoutDayInput: string
-}> = ({ targetRpNum, targetCoinsCalc, monthlyCapInput, maxCapCeilingInput, payoutDayInput }) => (
+  payoutDayInput?: string
+}> = ({ targetRpNum, targetCoinsCalc, monthlyCapInput, maxCapCeilingInput }) => (
   <div className="p-3 rounded-xl bg-surface-elevated border border-border-subtle text-xs flex flex-col sm:flex-row sm:items-center justify-between gap-2">
     <div className="flex items-center gap-1.5 text-text-secondary font-bold text-[11px] uppercase tracking-wider">
       <span>Ringkasan Parameter Aktif</span>
       <ArrowRight className="w-3 h-3 text-accent-magic" />
     </div>
     <div className="font-bold text-text-primary text-[11px] sm:text-xs">
-      Target Rp {targetRpNum.toLocaleString('id-ID')} ({targetCoinsCalc} koin) • Cap {monthlyCapInput || 'unlimited'} (Ceiling {maxCapCeilingInput || 'none'}) • Gajian tgl {payoutDayInput}
+      Target Rp {targetRpNum.toLocaleString('id-ID')} ({targetCoinsCalc} koin) • Cap {monthlyCapInput || 'unlimited'} (Ceiling {maxCapCeilingInput || 'none'}) • Pencairan Fleksibel (min. 500 koin)
     </div>
   </div>
 )

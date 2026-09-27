@@ -1,5 +1,5 @@
 import React from 'react'
-import { Coins, Calendar } from 'lucide-react'
+import { Coins, Calendar, CheckCircle2 } from 'lucide-react'
 
 interface MemberPayoutSectionProps {
   form: {
@@ -32,32 +32,31 @@ export const MemberPayoutSection: React.FC<MemberPayoutSectionProps> = ({
         <div className="flex items-center gap-2">
           <Coins className="w-4 h-4 text-accent-gold" />
           <h4 className="text-xs font-bold uppercase tracking-wider text-text-primary">
-            Kebijakan Pencairan Khusus Anggota
+            Ketentuan Pencairan Anggota
           </h4>
         </div>
         <p className="text-[11px] text-text-secondary">
-          Atur jadwal dan ketentuan pencairan koin khusus untuk anggota ini jika berbeda dari pengaturan umum.
+          Atur minimal penarikan dan frekuensi pencairan koin khusus untuk anggota ini.
         </p>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
           <div className="space-y-1">
             <label htmlFor="select-payout-freq" className="text-xs font-bold text-text-secondary">
-              Kapan Pencairan Dilakukan?
+              Frekuensi Pencairan
             </label>
             <select
               id="select-payout-freq"
-              value={form.payout_frequency}
+              value={form.payout_frequency === 'MONTHLY' ? 'THRESHOLD' : form.payout_frequency}
               onChange={(e) =>
                 setForm((prev: any) => ({
                   ...prev,
-                  payout_frequency: e.target.value as 'THRESHOLD' | 'WEEKLY' | 'MONTHLY',
+                  payout_frequency: e.target.value as 'THRESHOLD' | 'WEEKLY',
                 }))
               }
               className="w-full p-2.5 rounded-xl bg-surface border border-border-subtle text-xs font-bold text-text-primary focus:outline-none focus:border-accent-magic"
             >
-              <option value="THRESHOLD">Saat Batas Koin Tercapai (Fleksibel)</option>
-              <option value="WEEKLY">Setiap Minggu</option>
-              <option value="MONTHLY">Setiap Bulan</option>
+              <option value="THRESHOLD">Fleksibel (Kapan Saja)</option>
+              <option value="WEEKLY">Jadwal Mingguan</option>
             </select>
           </div>
 
@@ -68,13 +67,14 @@ export const MemberPayoutSection: React.FC<MemberPayoutSectionProps> = ({
             <input
               id="input-min-withdrawal"
               type="number"
-              min={1}
+              step={500}
+              min={500}
               max={100000}
               value={form.minimum_withdrawal_coins}
               onChange={(e) =>
                 setForm((prev: any) => ({
                   ...prev,
-                  minimum_withdrawal_coins: parseInt(e.target.value || '500', 10),
+                  minimum_withdrawal_coins: Math.max(500, parseInt(e.target.value || '500', 10)),
                 }))
               }
               className="w-full p-2.5 rounded-xl bg-surface border border-border-subtle text-xs sm:text-sm font-bold text-text-primary focus:outline-none focus:border-accent-magic font-mono"
@@ -108,48 +108,20 @@ export const MemberPayoutSection: React.FC<MemberPayoutSectionProps> = ({
           </div>
         )}
 
-        {form.payout_frequency === 'MONTHLY' && (
-          <div className="pt-2 border-t border-border-subtle grid grid-cols-2 gap-2">
-            <div className="space-y-1">
-              <label htmlFor="input-month-start" className="text-[11px] font-bold text-text-secondary">
-                Tanggal Mulai Pengajuan (1–31)
-              </label>
-              <input
-                id="input-month-start"
-                type="number"
-                min={1}
-                max={31}
-                value={form.payout_month_start_day}
-                onChange={(e) =>
-                  setForm((prev: any) => ({
-                    ...prev,
-                    payout_month_start_day: parseInt(e.target.value || '24', 10),
-                  }))
-                }
-                className="w-full p-2 rounded-lg bg-surface border border-border-subtle text-xs font-mono"
-              />
-            </div>
-            <div className="space-y-1">
-              <label htmlFor="input-month-end" className="text-[11px] font-bold text-text-secondary">
-                Tanggal Selesai Pengajuan (1–31)
-              </label>
-              <input
-                id="input-month-end"
-                type="number"
-                min={1}
-                max={31}
-                value={form.payout_month_end_day}
-                onChange={(e) =>
-                  setForm((prev: any) => ({
-                    ...prev,
-                    payout_month_end_day: parseInt(e.target.value || '26', 10),
-                  }))
-                }
-                className="w-full p-2 rounded-lg bg-surface border border-border-subtle text-xs font-mono"
-              />
-            </div>
+        {/* Info box kelipatan 500 & pencairan fleksibel */}
+        <div className="p-2.5 rounded-lg bg-surface border border-border-subtle text-[11px] text-text-secondary flex items-start gap-2">
+          <CheckCircle2 className="w-4 h-4 text-status-success shrink-0 mt-0.5" />
+          <div className="space-y-0.5">
+            <p className="font-semibold text-text-primary">Aturan Penarikan Aktif:</p>
+            <p>
+              Penarikan dapat dilakukan kapan saja dengan nominal <strong>kelipatan 500 koin</strong> (contoh: 500, 1.000, 1.500, dst.) setelah saldo mencapai batas minimal.
+            </p>
           </div>
-        )}
+        </div>
+
+        {/* Hidden inputs to preserve existing payload shape */}
+        <input type="hidden" value={form.payout_month_start_day} />
+        <input type="hidden" value={form.payout_month_end_day} />
       </div>
     </div>
   )

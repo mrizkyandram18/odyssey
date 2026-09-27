@@ -150,11 +150,7 @@ export const RewardShopPage: React.FC = () => {
             )}
           </div>
           <p className="text-[11px] text-text-secondary leading-relaxed">
-            {effFreq === 'THRESHOLD'
-              ? `Pencairan fleksibel (kapan saja minimal ${effMin?.toLocaleString('id-ID') ?? 500} Koin) • Kelipatan 500 Koin • Koin bisa ditukar, EXP untuk Level.`
-              : effFreq === 'WEEKLY'
-              ? `Jadwal pencairan mingguan: setiap ${weekdayNames[effWeekday ?? 1]} • Minimal ${effMin?.toLocaleString('id-ID') ?? 500} Koin • Koin bisa ditukar, EXP untuk Level.`
-              : `Periode penukaran tgl ${startDay}–${endDay} • Gajian tgl ${config?.payout_day ?? 24} • Koin bisa ditukar, EXP untuk Level.`}
+            Pencairan fleksibel (kapan saja minimal {effMin?.toLocaleString('id-ID') ?? 500} Koin) • Kelipatan 500 Koin • Koin bisa ditukar, EXP untuk Level.
           </p>
           {effMin !== undefined && effMin !== null && effMin > 0 && (
             <p className="text-[11px] text-text-secondary leading-relaxed" data-testid="minimum-progress">
@@ -313,16 +309,10 @@ export const RewardShopPage: React.FC = () => {
             </h4>
             <ol className="mt-2.5 space-y-1.5 text-xs text-text-secondary list-decimal list-inside leading-relaxed">
               <li>Selesaikan tugas harian untuk kumpulkan koin</li>
-              {effFreq === 'THRESHOLD' ? (
-                <li>Capai minimal <strong className="text-text-primary">{effMin?.toLocaleString('id-ID')} koin</strong> lalu tukar kapan aja (kelipatan 500 koin)</li>
-              ) : effFreq === 'WEEKLY' ? (
-                <li>Tunggu hari <strong className="text-text-primary">{weekdayNames[effWeekday ?? 1]}</strong> untuk tukar (min {effMin?.toLocaleString('id-ID')} koin, kelipatan 500 koin)</li>
-              ) : (
-                <li>Tunggu periode penukaran tanggal <strong className="text-text-primary">{startDay}–{endDay}</strong> (kelipatan 500 koin)</li>
-              )}
+              <li>Capai minimal <strong className="text-text-primary">{(effMin ?? 500).toLocaleString('id-ID')} koin</strong> lalu tukar kapan saja (kelipatan 500 koin)</li>
               <li>Tukarkan ke Bank atau E-Wallet — pengajuan tercatat PENDING dan koin langsung dipotong</li>
               <li>Satu pengajuan PENDING dalam satu waktu — pengajuan baru bisa dibuat setelah yang lama diproses</li>
-              <li>Jika disetujui, dana ditransfer manual oleh admin (pantau mutasi tujuanmu — aplikasi tidak melacak transfer). Jika ditolak, koin dikembalikan otomatis</li>
+              <li>Jika disetujui, dana ditransfer oleh admin ke rekening / e-wallet kamu. Jika ditolak, koin dikembalikan otomatis</li>
             </ol>
           </div>
         </div>

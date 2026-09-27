@@ -185,7 +185,7 @@ export const EditMemberModal: React.FC<EditMemberModalProps> = ({
                 }`}
               >
                 <Shield className="w-3.5 h-3.5" />
-                <span>Batas Koin</span>
+                <span>Target & Batas Koin</span>
               </button>
               <button
                 type="button"

@@ -1,5 +1,5 @@
 import React from 'react'
-import { Shield } from 'lucide-react'
+import { Shield, Info, Target } from 'lucide-react'
 import type { MemberView } from '../../../../../shared/types'
 
 interface MemberCapSectionProps {
@@ -26,15 +26,49 @@ export const MemberCapSection: React.FC<MemberCapSectionProps> = ({
         ? 'Tanpa payout'
         : `${form.monthly_coin_target.toLocaleString('id-ID')} koin`
 
+  const effectiveTarget = form.monthly_coin_target ?? 3320
+
   return (
     <div className="space-y-4">
+      {/* Panduan Edukatif Target vs Batas Koin */}
+      <div className="p-3.5 rounded-xl bg-accent-magic/5 border border-accent-magic/20 space-y-2.5">
+        <div className="flex items-center gap-1.5 font-bold text-accent-magic text-[11px] uppercase tracking-wider">
+          <Info className="w-3.5 h-3.5" />
+          <span>Panduan: Perbedaan Target vs Batas Koin</span>
+        </div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-[11px] text-text-secondary leading-relaxed">
+          <div className="p-2.5 rounded-lg bg-surface border border-border-subtle space-y-1">
+            <strong className="text-text-primary flex items-center gap-1">
+              <Target className="w-3.5 h-3.5 text-accent-magic" />
+              <span>Target Koin Bulanan</span>
+            </strong>
+            <p>
+              Estimasi reward yang dirancang untuk dicapai anggota per bulan. Sistem membagi koin pada tiap tugas harian agar total sebulan mencapai angka ini.
+            </p>
+          </div>
+          <div className="p-2.5 rounded-lg bg-surface border border-border-subtle space-y-1">
+            <strong className="text-text-primary flex items-center gap-1">
+              <Shield className="w-3.5 h-3.5 text-accent-gold" />
+              <span>Batas Koin (Earning Cap)</span>
+            </strong>
+            <p>
+              Plafon keamanan maksimal per bulan. Jika anggota mengerjakan banyak bonus quest, koin berhenti bertambah setelah batas ini tercapai.
+            </p>
+          </div>
+        </div>
+        <p className="text-[11px] text-text-secondary leading-relaxed">
+          💡 <strong>Rekomendasi Admin:</strong> Set Batas Koin <strong>sama dengan Target Koin</strong>, atau beri toleransi bonus 10%–20% (misal Target 3.320 &rarr; Batas 3.500–4.000 koin).
+        </p>
+      </div>
+
       {/* Target Koin Bulanan */}
       <div className="space-y-1.5 p-3.5 rounded-xl bg-surface-elevated border border-border-subtle">
         <div className="flex items-center justify-between">
-          <label htmlFor="input-monthly-target" className="text-xs font-bold text-text-primary">
-            Target Koin Bulanan Anggota
+          <label htmlFor="input-monthly-target" className="text-xs font-bold text-text-primary flex items-center gap-1.5">
+            <Target className="w-3.5 h-3.5 text-accent-magic" />
+            <span>Target Koin Bulanan Anggota</span>
           </label>
-          <span className="text-[10px] text-text-secondary">{targetState}</span>
+          <span className="text-[10px] text-text-secondary font-mono">{targetState}</span>
         </div>
         <div className="relative">
           <input
@@ -43,7 +77,7 @@ export const MemberCapSection: React.FC<MemberCapSectionProps> = ({
             min={0}
             max={10000}
             value={form.monthly_coin_target ?? ''}
-            placeholder="Ikut default"
+            placeholder="Ikut default sistem"
             onChange={(e) =>
               setForm((prev: any) => ({
                 ...prev,
@@ -64,11 +98,11 @@ export const MemberCapSection: React.FC<MemberCapSectionProps> = ({
       <div className="space-y-3 p-3.5 rounded-xl bg-surface-elevated border border-border-subtle">
         <div className="flex items-center justify-between">
           <span className="text-xs font-bold text-text-primary flex items-center gap-1.5">
-            <Shield className="w-3.5 h-3.5 text-accent-magic" />
+            <Shield className="w-3.5 h-3.5 text-accent-gold" />
             <span>Batas Koin Bulanan (Earning Cap)</span>
           </span>
           <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-surface border border-border-subtle text-text-secondary">
-            {isCustomCap ? 'Batas Khusus' : 'Batas Standar Sistem'}
+            {isCustomCap ? `Batas Khusus (${form.monthly_earning_cap.toLocaleString('id-ID')} koin)` : 'Batas Standar Sistem (3.320 koin)'}
           </span>
         </div>
 
@@ -81,7 +115,7 @@ export const MemberCapSection: React.FC<MemberCapSectionProps> = ({
               onChange={() => setForm((prev: any) => ({ ...prev, monthly_earning_cap: 0 }))}
               className="text-accent-magic cursor-pointer"
             />
-            <span>Gunakan batas koin bulanan standar sistem (global)</span>
+            <span>Gunakan batas koin bulanan standar sistem (3.320 koin / bulan)</span>
           </label>
 
           <label className="flex items-center gap-2 cursor-pointer text-xs text-text-primary">
@@ -92,7 +126,7 @@ export const MemberCapSection: React.FC<MemberCapSectionProps> = ({
               onChange={() =>
                 setForm((prev: any) => ({
                   ...prev,
-                  monthly_earning_cap: prev.monthly_earning_cap > 0 ? prev.monthly_earning_cap : 3000,
+                  monthly_earning_cap: prev.monthly_earning_cap > 0 ? prev.monthly_earning_cap : (effectiveTarget > 0 ? effectiveTarget : 3320),
                 }))
               }
               className="text-accent-magic cursor-pointer"
@@ -102,10 +136,36 @@ export const MemberCapSection: React.FC<MemberCapSectionProps> = ({
         </div>
 
         {isCustomCap && (
-          <div className="pt-2 border-t border-border-subtle/60 space-y-1">
-            <label htmlFor="input-custom-cap" className="text-[11px] font-bold text-text-secondary">
-              Batas Koin Khusus (Per Bulan):
-            </label>
+          <div className="pt-2 border-t border-border-subtle/60 space-y-2">
+            <div className="flex items-center justify-between">
+              <label htmlFor="input-custom-cap" className="text-[11px] font-bold text-text-secondary">
+                Batas Koin Khusus (Per Bulan):
+              </label>
+              <div className="flex items-center gap-1 text-[10px] text-text-secondary">
+                <span>Pilihan Cepat:</span>
+                <button
+                  type="button"
+                  onClick={() => setForm((prev: any) => ({ ...prev, monthly_earning_cap: effectiveTarget }))}
+                  className="px-2 py-0.5 rounded bg-surface border border-border-subtle hover:text-text-primary hover:border-accent-magic"
+                >
+                  = Target ({effectiveTarget})
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setForm((prev: any) => ({ ...prev, monthly_earning_cap: Math.round(effectiveTarget * 1.1) }))}
+                  className="px-2 py-0.5 rounded bg-surface border border-border-subtle hover:text-text-primary hover:border-accent-magic"
+                >
+                  +10% ({Math.round(effectiveTarget * 1.1)})
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setForm((prev: any) => ({ ...prev, monthly_earning_cap: Math.round(effectiveTarget * 1.2) }))}
+                  className="px-2 py-0.5 rounded bg-surface border border-border-subtle hover:text-text-primary hover:border-accent-magic"
+                >
+                  +20% ({Math.round(effectiveTarget * 1.2)})
+                </button>
+              </div>
+            </div>
             <div className="relative">
               <input
                 id="input-custom-cap"
@@ -125,7 +185,7 @@ export const MemberCapSection: React.FC<MemberCapSectionProps> = ({
               <span className="absolute right-3 top-2.5 text-xs text-text-secondary">koin / bulan</span>
             </div>
             <p className="text-[10px] text-text-secondary">
-              Batas khusus ini hanya berlaku untuk anggota ini dan menggantikan batas standar.
+              Batas khusus ini hanya berlaku untuk anggota ini dan menggantikan batas standar sistem.
             </p>
           </div>
         )}
@@ -147,7 +207,7 @@ export const MemberCapSection: React.FC<MemberCapSectionProps> = ({
         </div>
 
         <p className="text-[11px] text-text-secondary leading-relaxed">
-          Jika perolehan koin bulan ini mencapai batas, anggota tidak dapat memperoleh koin tambahan sampai awal bulan berikutnya. Saldo koin yang telah diperoleh tetap aman dan tidak berkurang.
+          Jika perolehan koin bulan ini mencapai batas, anggota tidak dapat memperoleh koin tambahan dari tugas sampai awal bulan berikutnya. Saldo koin yang telah diperoleh tetap aman dan dapat ditarik kapan saja (minimal 500 koin).
         </p>
       </div>
     </div>

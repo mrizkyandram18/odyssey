@@ -132,7 +132,7 @@ describe('AdminPage Component', () => {
       // shortcuts are gone; window status lives in the header pill.
       expect(screen.queryByTestId('admin-schedule-strip')).toBeNull()
       expect(screen.queryByTestId('admin-announcement-preview')).toBeNull()
-      expect(screen.getByText(/24[–-]26/)).toBeInTheDocument()
+      expect(screen.getByText('Fleksibel (Min. 500)')).toBeInTheDocument()
       // Duplicated metric cards must be gone.
       expect(screen.queryByText('Metrik Operasional Utama')).toBeNull()
     })
@@ -159,7 +159,7 @@ describe('AdminPage Component', () => {
     fireEvent.click(settingsTabBtn)
 
     await waitFor(() => {
-      expect(screen.getByText('Pengaturan Periode Penukaran Koin')).toBeInTheDocument()
+      expect(screen.getByText('Pengaturan Kebijakan Pencairan Koin')).toBeInTheDocument()
     })
 
     const saveBtn = screen.getByRole('button', { name: /Simpan Aturan Pencairan/i })
@@ -202,7 +202,7 @@ describe('AdminPage Component', () => {
     fireEvent.click(settingsTabBtn)
 
     await waitFor(() => {
-      expect(screen.getByText('Pengaturan Periode Penukaran Koin')).toBeInTheDocument()
+      expect(screen.getByText('Pengaturan Kebijakan Pencairan Koin')).toBeInTheDocument()
     })
 
     // API value 0 must render as "0", not empty and not replaced by a legacy fallback
@@ -249,7 +249,7 @@ describe('AdminPage Component', () => {
     fireEvent.click(settingsTabBtn)
 
     await waitFor(() => {
-      expect(screen.getByText('Pengaturan Periode Penukaran Koin')).toBeInTheDocument()
+      expect(screen.getByText('Pengaturan Kebijakan Pencairan Koin')).toBeInTheDocument()
     })
 
     const saveBtn = screen.getByRole('button', { name: /Simpan Pengaturan Teknis/i })
@@ -694,7 +694,7 @@ describe('AdminPage Component', () => {
     fireEvent.click(screen.getByRole('button', { name: /Tambah Anggota/i }))
 
     await waitFor(() => {
-      expect(screen.getByText('Saat batas tercapai (fleksibel)')).toBeInTheDocument()
+      expect(screen.getByText('Fleksibel (Kapan Saja)')).toBeInTheDocument()
       expect(screen.getByText('Minimal Penarikan (Koin)')).toBeInTheDocument()
     })
     expect(screen.queryByText('THRESHOLD')).toBeNull()

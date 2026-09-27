@@ -145,6 +145,26 @@ export const CreateMemberModal: React.FC<CreateMemberModalProps> = ({
 
             {form.role === 'MEMBER' && (
               <>
+                {/* Panduan Edukatif Target vs Batas Koin */}
+                <div className="p-3 rounded-xl bg-accent-magic/5 border border-accent-magic/20 space-y-1.5 text-xs">
+                  <p className="font-bold text-accent-magic text-[11px] uppercase tracking-wider">
+                    Panduan Target vs Batas Koin
+                  </p>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-[11px] text-text-secondary leading-relaxed">
+                    <div className="p-2 rounded-lg bg-surface border border-border-subtle">
+                      <strong className="text-text-primary block mb-0.5">🎯 Target Koin</strong>
+                      Estimasi reward bulanan. Sistem otomatis membagi koin pada tugas harian agar mendekati angka ini.
+                    </div>
+                    <div className="p-2 rounded-lg bg-surface border border-border-subtle">
+                      <strong className="text-text-primary block mb-0.5">🛡️ Batas Koin (Cap)</strong>
+                      Plafon maksimal pengaman budget jika anggota banyak mengerjakan bonus task/streak.
+                    </div>
+                  </div>
+                  <p className="text-[10px] text-text-secondary">
+                    💡 <strong>Rekomendasi:</strong> Samakan Batas Koin dengan Target, atau beri toleransi +10%–20%.
+                  </p>
+                </div>
+
                 <div className="space-y-1">
                   <label className="text-xs font-bold text-text-secondary">Target Koin Bulanan (0 = tanpa payout)</label>
                   <input
@@ -154,17 +174,18 @@ export const CreateMemberModal: React.FC<CreateMemberModalProps> = ({
                     required
                     value={form.monthly_coin_target}
                     onChange={(e) => setForm({ ...form, monthly_coin_target: parseInt(e.target.value || '0', 10) })}
-                    className="w-full p-2.5 rounded-xl bg-surface border border-border-subtle text-xs sm:text-sm text-text-primary focus:outline-none focus:border-accent-magic"
+                    className="w-full p-2.5 rounded-xl bg-surface border border-border-subtle text-xs sm:text-sm font-bold text-text-primary focus:outline-none focus:border-accent-magic"
                   />
-                  <p className="text-[11px] text-text-secondary">Sistem akan menghitung pembagian koin otomatis berdasarkan target dan bobot task. Nilai 0 berarti tanpa payout koin (XP dan streak tetap berjalan).</p>
+                  <p className="text-[11px] text-text-secondary">Sistem akan menghitung pembagian koin otomatis berdasarkan target ini. Nilai 0 berarti tanpa payout koin.</p>
                 </div>
-                <div className="space-y-3 p-3.5 rounded-xl bg-amber-50/70 dark:bg-amber-950/20 border border-amber-200/80">
+
+                <div className="space-y-3 p-3.5 rounded-xl bg-surface-elevated border border-border-subtle">
                   <div className="flex items-center justify-between">
                     <label className="text-xs font-bold text-text-primary">
-                      Batas Koin Bulanan Anggota
+                      Batas Koin Bulanan (Earning Cap)
                     </label>
                     <span className="text-[10px] font-semibold text-text-secondary">
-                      {form.monthly_earning_cap > 0 ? 'Batas Khusus' : 'Ikuti Batas Standar'}
+                      {form.monthly_earning_cap > 0 ? `Batas Khusus (${form.monthly_earning_cap} koin)` : 'Standar Sistem (3.320 koin)'}
                     </span>
                   </div>
 
@@ -177,7 +198,7 @@ export const CreateMemberModal: React.FC<CreateMemberModalProps> = ({
                         onChange={() => setForm({ ...form, monthly_earning_cap: 0 })}
                         className="text-accent-magic cursor-pointer"
                       />
-                      <span>Gunakan batas koin bulanan standar (global)</span>
+                      <span>Gunakan batas koin bulanan standar sistem (3.320 koin / bulan)</span>
                     </label>
 
                     <label className="flex items-center gap-2 cursor-pointer text-xs text-text-primary">
@@ -185,7 +206,7 @@ export const CreateMemberModal: React.FC<CreateMemberModalProps> = ({
                         type="radio"
                         name="create_cap_mode"
                         checked={form.monthly_earning_cap > 0}
-                        onChange={() => setForm({ ...form, monthly_earning_cap: 3000 })}
+                        onChange={() => setForm({ ...form, monthly_earning_cap: form.monthly_coin_target > 0 ? form.monthly_coin_target : 3320 })}
                         className="text-accent-magic cursor-pointer"
                       />
                       <span>Atur batas koin khusus untuk anggota ini</span>
@@ -193,7 +214,29 @@ export const CreateMemberModal: React.FC<CreateMemberModalProps> = ({
                   </div>
 
                   {form.monthly_earning_cap > 0 && (
-                    <div className="pt-2">
+                    <div className="pt-2 border-t border-border-subtle/60 space-y-2">
+                      <div className="flex items-center justify-between">
+                        <label className="text-[11px] font-bold text-text-secondary">
+                          Batas Koin Khusus (Per Bulan):
+                        </label>
+                        <div className="flex items-center gap-1 text-[10px] text-text-secondary">
+                          <span>Pilihan:</span>
+                          <button
+                            type="button"
+                            onClick={() => setForm({ ...form, monthly_earning_cap: form.monthly_coin_target > 0 ? form.monthly_coin_target : 3320 })}
+                            className="px-2 py-0.5 rounded bg-surface border border-border-subtle hover:text-text-primary"
+                          >
+                            = Target ({form.monthly_coin_target > 0 ? form.monthly_coin_target : 3320})
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setForm({ ...form, monthly_earning_cap: Math.round((form.monthly_coin_target > 0 ? form.monthly_coin_target : 3320) * 1.1) })}
+                            className="px-2 py-0.5 rounded bg-surface border border-border-subtle hover:text-text-primary"
+                          >
+                            +10%
+                          </button>
+                        </div>
+                      </div>
                       <div className="relative">
                         <input
                           type="number"
@@ -202,62 +245,51 @@ export const CreateMemberModal: React.FC<CreateMemberModalProps> = ({
                           value={form.monthly_earning_cap}
                           onChange={(e) => setForm({ ...form, monthly_earning_cap: Math.max(0, parseInt(e.target.value || '0', 10)) })}
                           placeholder="Contoh: 3500"
-                          className="w-full p-2.5 pr-24 rounded-xl bg-surface border border-border-subtle text-xs sm:text-sm font-bold text-text-primary focus:outline-none focus:border-accent-magic"
+                          className="w-full p-2.5 pr-24 rounded-xl bg-surface border border-border-subtle text-xs sm:text-sm font-bold text-text-primary focus:outline-none focus:border-accent-magic font-mono"
                         />
                         <span className="absolute right-3 top-2.5 text-xs text-text-secondary">koin / bulan</span>
                       </div>
-                      <p className="text-[10px] text-text-secondary mt-1">
-                        Batas khusus ini hanya berlaku untuk anggota ini dan menggantikan batas global.
+                      <p className="text-[10px] text-text-secondary">
+                        Batas khusus ini hanya berlaku untuk anggota ini dan menggantikan batas standar sistem.
                       </p>
                     </div>
                   )}
 
                   <p className="text-[11px] text-text-secondary leading-relaxed">
-                    Jika perolehan koin bulan ini mencapai batas, anggota tidak dapat memperoleh koin tambahan sampai awal bulan berikutnya. Saldo koin tidak akan berkurang.
+                    Jika perolehan koin bulan ini mencapai batas, anggota tidak dapat memperoleh koin tambahan dari tugas sampai bulan berikutnya. Saldo yang sudah terkumpul tidak akan berkurang.
                   </p>
                 </div>
-                <div className="space-y-2 p-3 rounded-xl bg-violet-50 dark:bg-violet-950/20 border border-violet-200">
-                  <label className="text-xs font-bold text-text-secondary">Pengaturan Pencairan Khusus Anggota</label>
+
+                <div className="space-y-2 p-3.5 rounded-xl bg-surface-elevated border border-border-subtle">
+                  <label className="text-xs font-bold text-text-primary">Ketentuan Pencairan Koin</label>
                   <div className="grid grid-cols-2 gap-2">
                     <div className="space-y-1">
-                      <label className="text-[11px] font-bold text-text-secondary">Frekuensi</label>
-                      <select value={form.payout_frequency} onChange={(e) => setForm({ ...form, payout_frequency: e.target.value as any })} className="w-full p-2 rounded-lg border border-border-subtle text-xs font-bold">
-                        <option value="THRESHOLD">Saat batas tercapai (fleksibel)</option>
-                        <option value="WEEKLY">Setiap minggu</option>
-                        <option value="MONTHLY">Setiap bulan</option>
+                      <label className="text-[11px] font-bold text-text-secondary">Frekuensi Pencairan</label>
+                      <select
+                        value={form.payout_frequency === 'MONTHLY' ? 'THRESHOLD' : form.payout_frequency}
+                        onChange={(e) => setForm({ ...form, payout_frequency: e.target.value as any })}
+                        className="w-full p-2 rounded-lg bg-surface border border-border-subtle text-xs font-bold text-text-primary"
+                      >
+                        <option value="THRESHOLD">Fleksibel (Kapan Saja)</option>
+                        <option value="WEEKLY">Jadwal Mingguan</option>
                       </select>
                     </div>
                     <div className="space-y-1">
                       <label className="text-[11px] font-bold text-text-secondary">Minimal Penarikan (Koin)</label>
-                      <input type="number" min={1} max={100000} value={form.minimum_withdrawal_coins} onChange={(e) => setForm({ ...form, minimum_withdrawal_coins: parseInt(e.target.value || '500', 10) })} className="w-full p-2 rounded-lg border border-border-subtle text-xs" />
+                      <input
+                        type="number"
+                        step={500}
+                        min={500}
+                        max={100000}
+                        value={form.minimum_withdrawal_coins}
+                        onChange={(e) => setForm({ ...form, minimum_withdrawal_coins: Math.max(500, parseInt(e.target.value || '500', 10)) })}
+                        className="w-full p-2 rounded-lg bg-surface border border-border-subtle text-xs font-mono font-bold"
+                      />
                     </div>
                   </div>
-                  {form.payout_frequency === 'WEEKLY' && (
-                    <div className="space-y-1">
-                      <label className="text-[11px] font-bold text-text-secondary">Hari Pencairan Mingguan</label>
-                      <select value={form.payout_weekday} onChange={(e) => setForm({ ...form, payout_weekday: parseInt(e.target.value || '1', 10) })} className="w-full p-2 rounded-lg border border-border-subtle text-xs font-bold">
-                        <option value={1}>Senin</option>
-                        <option value={2}>Selasa</option>
-                        <option value={3}>Rabu</option>
-                        <option value={4}>Kamis</option>
-                        <option value={5}>Jumat</option>
-                        <option value={6}>Sabtu</option>
-                        <option value={0}>Minggu</option>
-                      </select>
-                    </div>
-                  )}
-                  {form.payout_frequency === 'MONTHLY' && (
-                    <div className="grid grid-cols-2 gap-2">
-                      <div className="space-y-1">
-                        <label className="text-[11px] font-bold text-text-secondary">Tanggal Mulai (1–31)</label>
-                        <input type="number" min={1} max={31} value={form.payout_month_start_day} onChange={(e) => setForm({ ...form, payout_month_start_day: parseInt(e.target.value || '24', 10) })} className="w-full p-2 rounded-lg border border-border-subtle text-xs" />
-                      </div>
-                      <div className="space-y-1">
-                        <label className="text-[11px] font-bold text-text-secondary">Tanggal Selesai (1–31)</label>
-                        <input type="number" min={1} max={31} value={form.payout_month_end_day} onChange={(e) => setForm({ ...form, payout_month_end_day: parseInt(e.target.value || '26', 10) })} className="w-full p-2 rounded-lg border border-border-subtle text-xs" />
-                      </div>
-                    </div>
-                  )}
+                  <p className="text-[10px] text-text-secondary">
+                    Penarikan koin dapat diajukan kapan saja setelah mencapai minimal nominal (dalam kelipatan 500 koin).
+                  </p>
                 </div>
               </>
             )}
