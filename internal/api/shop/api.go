@@ -346,6 +346,10 @@ func (a *API) HandleRedeem(w http.ResponseWriter, r *http.Request) {
 		shared.WriteJSONError(w, fmt.Sprintf("jumlah koin (%d) di bawah minimum penarikan (%d) untuk konfigurasi Anda", req.Coins, effectivePayout.MinimumWithdrawalCoins), http.StatusBadRequest)
 		return
 	}
+	if req.Coins%500 != 0 {
+		shared.WriteJSONError(w, "jumlah koin penarikan harus kelipatan 500 (contoh: 500, 1000, 1500)", http.StatusBadRequest)
+		return
+	}
 	// Final eligibility check including balance threshold + schedule (balance check is done in RPC atomically, but we pre-check requested amount)
 	// Fetch balance to validate threshold semantics early – only if response explicitly contains coins field
 	if raw, err := a.client.Get(ctx, "odyssey_user_profiles", fmt.Sprintf("uid=eq.%s&select=coins", uid)); err == nil && len(raw) > 2 && strings.Contains(string(raw), "\"coins\"") {

@@ -486,7 +486,7 @@ export const RedemptionScheduleSection: React.FC<{ settings: EconomySettings }> 
         </p>
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-4 gap-3">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
         <div className="space-y-1">
           <label htmlFor="input-start-day" className="text-xs font-bold text-text-secondary">
             Tanggal Buka Pengajuan <span className="text-status-error">*</span>
@@ -538,21 +538,12 @@ export const RedemptionScheduleSection: React.FC<{ settings: EconomySettings }> 
           <p className="text-[10px] text-text-secondary">Hari transfer dana reward</p>
         </div>
 
-        <div className="space-y-1">
-          <label htmlFor="input-max-payout" className="text-xs font-bold text-text-secondary">
-            Maksimal Penarikan (Koin) <span className="text-status-error">*</span>
-          </label>
-          <input
-            id="input-max-payout"
-            type="number"
-            min={1}
-            required
-            value={maxPayoutInput}
-            onChange={(e) => setMaxPayoutInput(e.target.value)}
-            className="w-full p-2.5 rounded-xl bg-surface-elevated border border-border-subtle text-xs sm:text-sm font-bold text-text-primary focus:outline-none focus:border-accent-magic font-mono"
-          />
-          <p className="text-[10px] text-text-secondary">Batas tarik per transaksi</p>
-        </div>
+        <input
+          id="input-max-payout"
+          type="hidden"
+          value={maxPayoutInput}
+          onChange={(e) => setMaxPayoutInput(e.target.value)}
+        />
       </div>
     </div>
   )
@@ -657,19 +648,18 @@ export const SecurityAdvancedSection: React.FC<{ settings: EconomySettings }> = 
 export const KpiPreviewStrip: React.FC<{
   targetRpNum: number
   targetCoinsCalc: number
-  maxPayoutInput: string
+  maxPayoutInput?: string
   monthlyCapInput: string
   maxCapCeilingInput: string
   payoutDayInput: string
-}> = ({ targetRpNum, targetCoinsCalc, maxPayoutInput, monthlyCapInput, maxCapCeilingInput, payoutDayInput }) => (
+}> = ({ targetRpNum, targetCoinsCalc, monthlyCapInput, maxCapCeilingInput, payoutDayInput }) => (
   <div className="p-3 rounded-xl bg-surface-elevated border border-border-subtle text-xs flex flex-col sm:flex-row sm:items-center justify-between gap-2">
     <div className="flex items-center gap-1.5 text-text-secondary font-bold text-[11px] uppercase tracking-wider">
       <span>Ringkasan Parameter Aktif</span>
       <ArrowRight className="w-3 h-3 text-accent-magic" />
     </div>
     <div className="font-bold text-text-primary text-[11px] sm:text-xs">
-      Target Rp {targetRpNum.toLocaleString('id-ID')} ({targetCoinsCalc} koin) • Maks{' '}
-      {maxPayoutInput} koin • Cap {monthlyCapInput || 'unlimited'} (Ceiling {maxCapCeilingInput || 'none'}) • Gajian tgl {payoutDayInput}
+      Target Rp {targetRpNum.toLocaleString('id-ID')} ({targetCoinsCalc} koin) • Cap {monthlyCapInput || 'unlimited'} (Ceiling {maxCapCeilingInput || 'none'}) • Gajian tgl {payoutDayInput}
     </div>
   </div>
 )

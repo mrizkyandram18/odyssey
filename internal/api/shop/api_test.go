@@ -420,3 +420,43 @@ func TestAdminListClaims_TenantIsolationAndPagination(t *testing.T) {
 		t.Errorf("expected enriched claim view, got %+v", res.Items)
 	}
 }
+
+func TestShopRedeem_MultipleOf500Enforced(t *testing.T) {
+	configData, _ := json.Marshal([]map[string]any{
+		{"key": "redemption_start_day", "value": "1"},
+		{"key": "redemption_end_day", "value": "31"},
+	})
+	client := &mockSupabaseClient{
+		getResp: configData,
+		rpcResp: []byte(`{"success":true,"claim_id":101,"new_balance":220}`),
+	}
+	api := NewAPI(client)
+
+	// Non-multiple of 500 (e.g. 720) must be rejected with 400 Bad Request
+	body720 := `{"coins":720,"target_type":"EWALLET","target_value":"GoPay - 0812345678"}`
+	req1 := httptest.NewRequest(http.MethodPost, "/api/shop/redeem", strings.NewReader(body720))
+	req1.Header.Set("Content-Type", "application/json")
+	claims := &auth.SessionClaims{UID: "user-720", Role: "MEMBER"}
+	req1 = req1.WithContext(auth.ContextWithClaims(req1.Context(), claims))
+
+	rec1 := httptest.NewRecorder()
+	api.Handler(rec1, req1)
+	if rec1.Code != http.StatusBadRequest {
+		t.Fatalf("expected 400 for 720 coins (non-multiple of 500), got %d: %s", rec1.Code, rec1.Body.String())
+	}
+	if !strings.Contains(rec1.Body.String(), "kelipatan 500") {
+		t.Fatalf("expected multiple of 500 error message, got %s", rec1.Body.String())
+	}
+
+	// Multiple of 500 (e.g. 500) must pass
+	body500 := `{"coins":500,"target_type":"EWALLET","target_value":"GoPay - 0812345678"}`
+	req2 := httptest.NewRequest(http.MethodPost, "/api/shop/redeem", strings.NewReader(body500))
+	req2.Header.Set("Content-Type", "application/json")
+	req2 = req2.WithContext(auth.ContextWithClaims(req2.Context(), claims))
+
+	rec2 := httptest.NewRecorder()
+	api.Handler(rec2, req2)
+	if rec2.Code != http.StatusOK {
+		t.Fatalf("expected 200 for 500 coins, got %d: %s", rec2.Code, rec2.Body.String())
+	}
+}

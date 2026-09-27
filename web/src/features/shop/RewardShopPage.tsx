@@ -140,15 +140,21 @@ export const RewardShopPage: React.FC = () => {
           <div className="h-1.5 rounded-full bg-surface-elevated overflow-hidden">
             <div
               className="h-full rounded-full transition-all bg-accent-gold"
-              style={{ width: `${payoutTargetCoins > 0 ? Math.min(100, Math.round(((userCoins + usedPayoutCoins) / payoutTargetCoins) * 100)) : 0}%` }}
+              style={{ width: `${payoutTargetCoins > 0 ? Math.min(100, Math.round((userCoins / payoutTargetCoins) * 100)) : 0}%` }}
             />
           </div>
           <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1 text-[11px] text-text-secondary">
             <span>{payoutTargetCoins > 0 ? `Target ${payoutTargetCoins.toLocaleString('id-ID')} Koin = Rp ${payoutTargetRupiah.toLocaleString('id-ID')}` : 'Belum ada target (hubungi admin)'}</span>
-            <span className="font-semibold text-text-primary">Sudah dicairkan {usedPayoutCoins.toLocaleString('id-ID')}</span>
+            {usedPayoutCoins > 0 && (
+              <span className="font-semibold text-text-primary">Total pernah dicairkan {usedPayoutCoins.toLocaleString('id-ID')} Koin</span>
+            )}
           </div>
           <p className="text-[11px] text-text-secondary leading-relaxed">
-            Periode {config?.earning_period_days ?? 30} hari • Gajian tgl {config?.payout_day ?? 24} • <span className="font-semibold text-text-primary">Koin</span> bisa ditukar, <span className="font-semibold text-text-primary">EXP</span> untuk Level.
+            {effFreq === 'THRESHOLD'
+              ? `Pencairan fleksibel (kapan saja minimal ${effMin?.toLocaleString('id-ID') ?? 500} Koin) • Kelipatan 500 Koin • Koin bisa ditukar, EXP untuk Level.`
+              : effFreq === 'WEEKLY'
+              ? `Jadwal pencairan mingguan: setiap ${weekdayNames[effWeekday ?? 1]} • Minimal ${effMin?.toLocaleString('id-ID') ?? 500} Koin • Koin bisa ditukar, EXP untuk Level.`
+              : `Periode penukaran tgl ${startDay}–${endDay} • Gajian tgl ${config?.payout_day ?? 24} • Koin bisa ditukar, EXP untuk Level.`}
           </p>
           {effMin !== undefined && effMin !== null && effMin > 0 && (
             <p className="text-[11px] text-text-secondary leading-relaxed" data-testid="minimum-progress">
@@ -308,11 +314,11 @@ export const RewardShopPage: React.FC = () => {
             <ol className="mt-2.5 space-y-1.5 text-xs text-text-secondary list-decimal list-inside leading-relaxed">
               <li>Selesaikan tugas harian untuk kumpulkan koin</li>
               {effFreq === 'THRESHOLD' ? (
-                <li>Capai minimal <strong className="text-text-primary">{effMin?.toLocaleString('id-ID')} koin</strong> lalu tukar kapan aja</li>
+                <li>Capai minimal <strong className="text-text-primary">{effMin?.toLocaleString('id-ID')} koin</strong> lalu tukar kapan aja (kelipatan 500 koin)</li>
               ) : effFreq === 'WEEKLY' ? (
-                <li>Tunggu hari <strong className="text-text-primary">{weekdayNames[effWeekday ?? 1]}</strong> untuk tukar (min {effMin?.toLocaleString('id-ID')} koin)</li>
+                <li>Tunggu hari <strong className="text-text-primary">{weekdayNames[effWeekday ?? 1]}</strong> untuk tukar (min {effMin?.toLocaleString('id-ID')} koin, kelipatan 500 koin)</li>
               ) : (
-                <li>Tunggu periode penukaran tanggal <strong className="text-text-primary">{startDay}–{endDay}</strong></li>
+                <li>Tunggu periode penukaran tanggal <strong className="text-text-primary">{startDay}–{endDay}</strong> (kelipatan 500 koin)</li>
               )}
               <li>Tukarkan ke Bank atau E-Wallet — pengajuan tercatat PENDING dan koin langsung dipotong</li>
               <li>Satu pengajuan PENDING dalam satu waktu — pengajuan baru bisa dibuat setelah yang lama diproses</li>

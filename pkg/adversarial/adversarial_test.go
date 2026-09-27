@@ -1093,12 +1093,12 @@ func TestAdversarial_100ConcurrentRedemptionsRace(t *testing.T) {
 
 	// Initial user balance: exactly 100 coins
 	dbMock.profiles["poor-user"] = &db.UserProfile{
-		UID: "poor-user", FamilyID: "race-family", Role: "SEEKER", Coins: 100,
+		UID: "poor-user", FamilyID: "race-family", Role: "SEEKER", Coins: 500,
 	}
 
 	shopAPI := apiShop.NewAPI(dbMock)
 
-	// Launch 100 simultaneous redemptions of 100 coins each
+	// Launch 100 simultaneous redemptions of 500 coins each
 	const concurrency = 100
 	var wg sync.WaitGroup
 	var successCount int64
@@ -1112,7 +1112,7 @@ func TestAdversarial_100ConcurrentRedemptionsRace(t *testing.T) {
 			defer wg.Done()
 			<-startSignal
 
-			payload := `{"catalog_id":1,"coins":100,"target_type":"GOPAY","target_value":"08123456789"}`
+			payload := `{"catalog_id":1,"coins":500,"target_type":"GOPAY","target_value":"08123456789"}`
 			req := httptest.NewRequest(http.MethodPost, "/api/shop/redeem", bytes.NewBufferString(payload))
 			ctx := auth.ContextWithClaims(req.Context(), &auth.SessionClaims{UID: "poor-user", FamilyID: "race-family", Role: "SEEKER"})
 			w := httptest.NewRecorder()
@@ -1135,7 +1135,7 @@ func TestAdversarial_100ConcurrentRedemptionsRace(t *testing.T) {
 	// 2. 99 redemptions rejected (insufficient funds or single pending claim invariant)
 	// 3. User balance is EXACTLY 0 (NEVER NEGATIVE)
 	if successCount != 1 {
-		t.Fatalf("OVER-REDEMPTION DETECTED: %d redemptions succeeded with only 100 coins!", successCount)
+		t.Fatalf("OVER-REDEMPTION DETECTED: %d redemptions succeeded with only 500 coins!", successCount)
 	}
 	if dbMock.profiles["poor-user"].Coins != 0 {
 		t.Fatalf("Expected balance 0, got %d", dbMock.profiles["poor-user"].Coins)

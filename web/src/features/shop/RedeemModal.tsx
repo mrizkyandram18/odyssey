@@ -1,4 +1,4 @@
-﻿import React, { useState } from 'react'
+import React, { useState } from 'react'
 import { motion } from 'framer-motion'
 import { Coins, Wallet, Building2, AlertCircle, CheckCircle2, Banknote, X, ArrowLeft, ArrowRight, ShieldAlert } from 'lucide-react'
 import { shopApi } from '../../shared/lib/api'
@@ -37,13 +37,14 @@ export const RedeemModal: React.FC<RedeemModalProps> = ({
   const [provider, setProvider] = useState('GoPay')
   const [accountNumber, setAccountNumber] = useState('')
   const [accountName, setAccountName] = useState('')
-  const [coinsToRedeem, setCoinsToRedeem] = useState<number>(userCoins)
+  const maxRedeemable = Math.floor(userCoins / 500) * 500
+  const [coinsToRedeem, setCoinsToRedeem] = useState<number>(() => (maxRedeemable >= 500 ? maxRedeemable : 500))
   const [submitting, setSubmitting] = useState(false)
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
 
   const calculatedCash = (coinsToRedeem || 0) * conversionRate
-  const minAmount = minimumWithdrawal ?? 0
-  const isValidAmount = coinsToRedeem > 0 && coinsToRedeem >= minAmount && coinsToRedeem <= userCoins
+  const minAmount = minimumWithdrawal && minimumWithdrawal > 0 ? minimumWithdrawal : 500
+  const isValidAmount = coinsToRedeem > 0 && coinsToRedeem >= minAmount && coinsToRedeem <= userCoins && coinsToRedeem % 500 === 0
 
   const handleTypeChange = (type: 'EWALLET' | 'BANK') => {
     setTargetType(type)
@@ -79,8 +80,12 @@ export const RedeemModal: React.FC<RedeemModalProps> = ({
     }
 
     if (!isValidAmount) {
-      if (minAmount > 0 && Number(coinsToRedeem) < minAmount) {
+      if (Number(coinsToRedeem) > userCoins) {
+        setErrorMessage('Jumlah koin melebihi saldo Anda')
+      } else if (minAmount > 0 && Number(coinsToRedeem) < minAmount) {
         setErrorMessage(`Minimal penukaran ${minAmount.toLocaleString('id-ID')} Koin`)
+      } else if (Number(coinsToRedeem) % 500 !== 0) {
+        setErrorMessage('Jumlah koin harus kelipatan 500 (contoh: 500, 1.000, 1.500)')
       } else {
         setErrorMessage('Jumlah koin yang ditukarkan tidak valid')
       }
@@ -298,15 +303,17 @@ export const RedeemModal: React.FC<RedeemModalProps> = ({
                   <span className="text-[11px] text-text-secondary">
                     Saldo: <strong>{userCoins.toLocaleString('id-ID')} Koin</strong>
                     {minAmount > 0 && <> • Minimal {minAmount.toLocaleString('id-ID')}</>}
+                    {maxRedeemable >= 500 && <> • Maks. {maxRedeemable.toLocaleString('id-ID')}</>}
                   </span>
                 </div>
                 <div className="relative">
                   <input
                     type="number"
-                    min={minAmount > 0 ? minAmount : 1}
-                    max={userCoins}
+                    step={500}
+                    min={minAmount > 0 ? minAmount : 500}
+                    max={maxRedeemable}
                     data-testid="coins-input"
-                    value={coinsToRedeem}
+                    value={coinsToRedeem || ''}
                     onChange={(e) => setCoinsToRedeem(Number(e.target.value))}
                     className="w-full p-3.5 rounded-xl bg-surface border border-border-subtle text-base font-bold text-text-primary focus:outline-none focus:border-accent-magic font-mono"
                   />
@@ -316,22 +323,37 @@ export const RedeemModal: React.FC<RedeemModalProps> = ({
                   </div>
                 </div>
 
+                <p className="text-[10px] text-text-secondary">
+                  Penarikan harus kelipatan 500 Koin (contoh: 500, 1.000, 1.500, dst.)
+                </p>
+
                 {/* Quick select buttons */}
                 <div className="flex gap-2 pt-1">
-                  <button
-                    type="button"
-                    onClick={() => setCoinsToRedeem(userCoins)}
-                    className="px-3 py-1 rounded-lg bg-surface border border-border-subtle text-[11px] font-bold text-text-secondary hover:text-text-primary"
-                  >
-                    Semua Koin ({userCoins})
-                  </button>
-                  {userCoins >= 2 && (
+                  {maxRedeemable >= 500 && (
                     <button
                       type="button"
-                      onClick={() => setCoinsToRedeem(Math.floor(userCoins / 2))}
+                      onClick={() => setCoinsToRedeem(maxRedeemable)}
                       className="px-3 py-1 rounded-lg bg-surface border border-border-subtle text-[11px] font-bold text-text-secondary hover:text-text-primary"
                     >
-                      50% ({Math.floor(userCoins / 2)})
+                      Maksimal ({maxRedeemable.toLocaleString('id-ID')})
+                    </button>
+                  )}
+                  {maxRedeemable > 500 && (
+                    <button
+                      type="button"
+                      onClick={() => setCoinsToRedeem(500)}
+                      className="px-3 py-1 rounded-lg bg-surface border border-border-subtle text-[11px] font-bold text-text-secondary hover:text-text-primary"
+                    >
+                      500 Koin
+                    </button>
+                  )}
+                  {maxRedeemable >= 2000 && (
+                    <button
+                      type="button"
+                      onClick={() => setCoinsToRedeem(Math.floor(maxRedeemable / 1000) * 500)}
+                      className="px-3 py-1 rounded-lg bg-surface border border-border-subtle text-[11px] font-bold text-text-secondary hover:text-text-primary"
+                    >
+                      50% ({(Math.floor(maxRedeemable / 1000) * 500).toLocaleString('id-ID')})
                     </button>
                   )}
                 </div>
