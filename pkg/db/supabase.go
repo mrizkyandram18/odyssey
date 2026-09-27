@@ -25,6 +25,7 @@ var allowedTables = map[string]bool{
 	"odyssey_system_config":          true,
 	"odyssey_user_payout_config":     true,
 	"odyssey_member_monthly_targets": true,
+	"odyssey_historical_compensation_grants": true,
 	"reward_tickets":                 true,
 	"user_cosmetics":                 true,
 	"cosmetic_items":                 true,
