@@ -29,7 +29,6 @@ export const RewardShopPage: React.FC = () => {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [isRedeemModalOpen, setIsRedeemModalOpen] = useState(false)
-
   const userCoins = profile?.coins || 0
 
   const loadData = useCallback(async () => {
@@ -67,10 +66,8 @@ export const RewardShopPage: React.FC = () => {
   }
 
   const conversionRate = config ? config.conversion_rate : 0
-  const maxPayoutCoins = config ? config.max_payout_coins : 0
   const payoutTargetCoins = config ? config.payout_target_coins : 0
   const payoutTargetRupiah = config ? config.payout_target_rupiah : 0
-  const maxPayoutCash = maxPayoutCoins * conversionRate
   const estimatedCash = userCoins * conversionRate
   // Per-user effective payout: THRESHOLD not blocked by global 21-26 window
   const effFreq = config?.effective_payout_frequency
@@ -85,8 +82,6 @@ export const RewardShopPage: React.FC = () => {
   const approvedCoins = claims.filter((c) => c.status === 'APPROVED').reduce((s, c) => s + c.coins_redeemed, 0)
   const pendingCoins = pendingClaims.reduce((s, c) => s + c.coins_redeemed, 0)
   const usedPayoutCoins = approvedCoins + pendingCoins
-  const remainingCoins = Math.max(0, maxPayoutCoins - usedPayoutCoins)
-  const isMaxReached = usedPayoutCoins >= maxPayoutCoins
 
   return (
     <div className="w-full flex flex-col gap-4">
@@ -138,23 +133,34 @@ export const RewardShopPage: React.FC = () => {
         <div className="mt-3.5 space-y-2">
           <div className="flex items-center justify-between text-[11px] font-bold gap-2">
             <span className="text-text-secondary">Progress pencairan</span>
-            <span className={isMaxReached ? 'text-status-success' : 'text-text-primary truncate'}>
-              {payoutTargetCoins > 0 ? (isMaxReached ? 'Maksimum tercapai' : `Rp ${estimatedCash.toLocaleString('id-ID')} / Rp ${payoutTargetRupiah.toLocaleString('id-ID')}`) : 'Belum ada target'}
+            <span className="text-text-primary truncate">
+              {payoutTargetCoins > 0 ? `Rp ${estimatedCash.toLocaleString('id-ID')} / Rp ${payoutTargetRupiah.toLocaleString('id-ID')}` : 'Belum ada target'}
             </span>
           </div>
           <div className="h-1.5 rounded-full bg-surface-elevated overflow-hidden">
             <div
-              className={`h-full rounded-full transition-all ${isMaxReached ? 'bg-status-success' : 'bg-accent-gold'}`}
+              className="h-full rounded-full transition-all bg-accent-gold"
               style={{ width: `${payoutTargetCoins > 0 ? Math.min(100, Math.round(((userCoins + usedPayoutCoins) / payoutTargetCoins) * 100)) : 0}%` }}
             />
           </div>
           <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1 text-[11px] text-text-secondary">
             <span>{payoutTargetCoins > 0 ? `Target ${payoutTargetCoins.toLocaleString('id-ID')} Koin = Rp ${payoutTargetRupiah.toLocaleString('id-ID')}` : 'Belum ada target (hubungi admin)'}</span>
-            <span className="font-semibold text-text-primary">Sisa kuota {remainingCoins.toLocaleString('id-ID')}</span>
+            <span className="font-semibold text-text-primary">Sudah dicairkan {usedPayoutCoins.toLocaleString('id-ID')}</span>
           </div>
           <p className="text-[11px] text-text-secondary leading-relaxed">
             Periode {config?.earning_period_days ?? 30} hari • Gajian tgl {config?.payout_day ?? 24} • <span className="font-semibold text-text-primary">Koin</span> bisa ditukar, <span className="font-semibold text-text-primary">EXP</span> untuk Level.
           </p>
+          {effMin !== undefined && effMin !== null && effMin > 0 && (
+            <p className="text-[11px] text-text-secondary leading-relaxed" data-testid="minimum-progress">
+              {userCoins >= effMin ? (
+                <>Minimum pencairan {effMin.toLocaleString('id-ID')} Koin sudah tercapai.</>
+              ) : (
+                <>
+                  Sisa {(effMin - userCoins).toLocaleString('id-ID')} Koin menuju minimum pencairan ({effMin.toLocaleString('id-ID')} Koin).
+                </>
+              )}
+            </p>
+          )}
         </div>
       </div>
 
@@ -279,18 +285,6 @@ export const RewardShopPage: React.FC = () => {
             </div>
           </div>
 
-          {isMaxReached && (
-            <div className="p-3 rounded-xl bg-status-success/10 border border-status-success/20 flex items-start gap-2.5">
-              <CheckCircle2 className="w-4 h-4 text-status-success shrink-0 mt-0.5" />
-              <div>
-                <p className="font-bold text-xs text-status-success">Maximum pencairan tercapai 🎉</p>
-                <p className="text-xs text-text-secondary leading-relaxed mt-0.5">
-                  Kamu sudah mencapai batas {maxPayoutCoins.toLocaleString('id-ID')} Koin = Rp {maxPayoutCash.toLocaleString('id-ID')}. Koin tambahan tetap menambah EXP & Level.
-                </p>
-              </div>
-            </div>
-          )}
-
           {pendingClaims.length > 0 && (
             <div className="p-3 rounded-xl bg-accent-gold/10 border border-accent-gold/20 flex items-start gap-2.5">
               <Clock className="w-4 h-4 text-accent-gold shrink-0 mt-0.5" />
@@ -298,6 +292,9 @@ export const RewardShopPage: React.FC = () => {
                 <p className="font-bold text-xs text-text-primary">Pengajuan menunggu verifikasi</p>
                 <p className="text-xs text-text-secondary leading-relaxed mt-0.5">
                   {pendingClaims[0].coins_redeemed.toLocaleString('id-ID')} Koin — {pendingClaims[0].target_value}
+                </p>
+                <p className="text-[11px] text-text-secondary leading-relaxed mt-1">
+                  Status PENDING artinya koin sudah dipotong dan menunggu diproses admin. Selama ada pengajuan PENDING, kamu belum bisa mengajukan lagi. Jika disetujui, dana ditransfer manual oleh admin; jika ditolak, koin dikembalikan otomatis ke saldo.
                 </p>
               </div>
             </div>
@@ -317,9 +314,10 @@ export const RewardShopPage: React.FC = () => {
               ) : (
                 <li>Tunggu periode penukaran tanggal <strong className="text-text-primary">{startDay}–{endDay}</strong></li>
               )}
-              <li>Tukarkan ke Bank atau E-Wallet</li>
+              <li>Tukarkan ke Bank atau E-Wallet — pengajuan tercatat PENDING dan koin langsung dipotong</li>
+              <li>Satu pengajuan PENDING dalam satu waktu — pengajuan baru bisa dibuat setelah yang lama diproses</li>
+              <li>Jika disetujui, dana ditransfer manual oleh admin (pantau mutasi tujuanmu — aplikasi tidak melacak transfer). Jika ditolak, koin dikembalikan otomatis</li>
             </ol>
-            {effFreq && <p className="text-[10px] text-text-secondary mt-2">Mode: {effFreq} • Min: {effMin?.toLocaleString('id-ID')} koin</p>}
           </div>
         </div>
       ) : (
@@ -371,7 +369,7 @@ export const RewardShopPage: React.FC = () => {
                       {claim.status === 'APPROVED' ? (
                         <>
                           <CheckCircle2 className="w-3 h-3" />
-                          <span>Berhasil Ditransfer</span>
+                          <span>Disetujui</span>
                         </>
                       ) : claim.status === 'PENDING' ? (
                         <>
@@ -407,6 +405,11 @@ export const RewardShopPage: React.FC = () => {
                     </div>
                   </div>
 
+                  {claim.status === 'APPROVED' && (
+                    <p className="text-[11px] text-text-secondary leading-relaxed">
+                      Pengajuan disetujui admin. Dana ditransfer manual — cek mutasi pada tujuan pencairanmu.
+                    </p>
+                  )}
                   {claim.admin_notes && (
                     <div className="text-[11px] p-2.5 rounded-xl bg-surface-elevated border border-border-subtle text-text-secondary">
                       <strong className="text-text-primary">Catatan Admin:</strong>{' '}
