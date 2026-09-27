@@ -89,6 +89,8 @@ export interface Explorer {
   avatar_frame?: string
   equipped_explorer_effect?: string
   must_change_password?: boolean
+  monthly_coin_target?: number
+  monthly_earning_cap?: number
   created_at: string
   updated_at: string
 }
@@ -345,6 +347,7 @@ export interface RedemptionConfig {
   effective_window_end?: number
   effective_weekday?: number
   effective_monthly_target?: number
+  earned_this_period?: number
 }
 
 export interface CosmeticCatalogItem {

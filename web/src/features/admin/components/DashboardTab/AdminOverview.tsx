@@ -10,6 +10,7 @@ import { useAdminSubmissions } from '../../hooks/useAdminSubmissions'
 import { useAdminClaims } from '../../hooks/useAdminClaims'
 import { useAdminMembers } from '../../hooks/useAdminMembers'
 import { useAdminConfig } from '../../hooks/useAdminConfig'
+import { calculateTargetPace } from '../../../../shared/lib/targetPace'
 
 export type AdminTab = 'overview' | 'submissions' | 'claims' | 'tasks' | 'members' | 'rewards' | 'settings'
 
@@ -82,11 +83,21 @@ export const AdminOverview: React.FC<AdminOverviewProps> = ({
     (m) => !m.is_active || (m.inactive_days != null && m.inactive_days >= inactiveDaysLimit)
   )
   const cappedMembers = members.filter((m) => {
+    if (!m.is_active) return false
     const cap = m.effective_earning_cap ?? m.monthly_earning_cap ?? 0
     const earned = m.earned_this_period ?? 0
     return cap > 0 && earned >= cap
   })
-  const membersNeedingAttention = inactiveMembers.length + cappedMembers.length
+  const behindTargetMembers = members.filter((m) => {
+    if (!m.is_active) return false
+    const cap = m.effective_earning_cap ?? m.monthly_earning_cap ?? 0
+    const earned = m.earned_this_period ?? 0
+    if (cap > 0 && earned >= cap) return false // already counted in capped
+    const target = m.monthly_coin_target ?? config?.default_monthly_coin_target ?? 3320
+    const pace = calculateTargetPace(earned, target)
+    return pace.status === 'CRITICAL' || pace.status === 'BEHIND'
+  })
+  const membersNeedingAttention = inactiveMembers.length + cappedMembers.length + behindTargetMembers.length
 
   // 4. Redemption Period (window status lives in the admin header pill;
   // the dashboard shows only actionable queues — triage-only rule)
@@ -242,8 +253,10 @@ export const AdminOverview: React.FC<AdminOverviewProps> = ({
                     </h4>
                     <p className="text-xs text-text-secondary mt-1">
                       {inactiveMembers.length > 0 && `${inactiveMembers.length} anggota inaktif / diblokir.`}
-                      {inactiveMembers.length > 0 && cappedMembers.length > 0 && ' '}
+                      {inactiveMembers.length > 0 && (cappedMembers.length > 0 || behindTargetMembers.length > 0) && ' '}
                       {cappedMembers.length > 0 && `${cappedMembers.length} anggota telah mencapai batas koin bulanan.`}
+                      {cappedMembers.length > 0 && behindTargetMembers.length > 0 && ' '}
+                      {behindTargetMembers.length > 0 && `${behindTargetMembers.length} anggota tertinggal dari target bulanan.`}
                     </p>
                   </div>
                 </div>

@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react'
 import { Link } from 'react-router-dom'
-import { Flame, Coins, Trophy, Calendar, RefreshCw, CheckCircle2, Clock, Lock, ArrowRight, AlertTriangle, Play, Video, FileText, Camera, HelpCircle, PenLine, Gamepad2, Sparkles, Banknote } from 'lucide-react'
+import { Flame, Coins, Trophy, Calendar, RefreshCw, CheckCircle2, Clock, Lock, ArrowRight, AlertTriangle, Play, Video, FileText, Camera, HelpCircle, PenLine, Gamepad2, Sparkles, Banknote, Target } from 'lucide-react'
 import type { TaskView, RedemptionConfig } from '../../shared/types'
 import { tasksApi, shopApi } from '../../shared/lib/api'
 import { useSession } from '../../shared/hooks/useSession'
@@ -17,6 +17,7 @@ import { MiniGameModal } from './MiniGameModal'
 import { TicketCard } from '../home/TicketCard'
 import { AnnouncementBanner } from '../../shared/components/molecules/AnnouncementBanner'
 import { levelProgress } from '../../shared/lib/level'
+import { calculateTargetPace } from '../../shared/lib/targetPace'
 
 // Helper: greeting by time
 function getGreeting() {
@@ -183,6 +184,14 @@ export const LinearPath: React.FC = () => {
       effMin !== undefined && effMin !== null ? Math.max(0, effMin - userCoins) : null
     return { earnedTodayCoins, earnedTodayXP, effMin, conv, remainingToMin }
   }, [tasks, shopConfig, userCoins])
+
+  // Evaluasi pencapaian target bulanan (checkpoint)
+  const targetCheckpoint = useMemo(() => {
+    const target = shopConfig?.effective_monthly_target ?? profile?.monthly_coin_target ?? 0
+    if (!target || target <= 0) return null
+    const currentEarned = shopConfig?.earned_this_period ?? earned ?? 0
+    return calculateTargetPace(currentEarned, target)
+  }, [shopConfig, profile?.monthly_coin_target, earned])
 
   return (
     <div className="w-full flex flex-col gap-4">
@@ -526,6 +535,72 @@ export const LinearPath: React.FC = () => {
           })()}
         </div>
       </div>
+
+      {/* Monthly Target Checkpoint Card */}
+      {targetCheckpoint && (
+        <div
+          data-testid="monthly-target-checkpoint"
+          className={`rounded-2xl border p-4 transition-colors ${
+            targetCheckpoint.status === 'CRITICAL'
+              ? 'bg-status-error/5 border-status-error/30'
+              : targetCheckpoint.status === 'BEHIND'
+              ? 'bg-amber-500/5 border-amber-500/30'
+              : 'bg-surface border-border-subtle'
+          }`}
+        >
+          <div className="flex items-start justify-between gap-3">
+            <div className="flex items-center gap-2.5">
+              <div
+                className={`w-8 h-8 rounded-xl flex items-center justify-center text-sm font-black ${
+                  targetCheckpoint.status === 'CRITICAL'
+                    ? 'bg-status-error/15 text-status-error'
+                    : targetCheckpoint.status === 'BEHIND'
+                    ? 'bg-amber-500/15 text-amber-600 dark:text-amber-400'
+                    : 'bg-accent-magic/10 text-accent-magic'
+                }`}
+              >
+                <Target className="w-4 h-4" />
+              </div>
+              <div>
+                <p className="text-[10px] font-black uppercase tracking-wider text-text-secondary">
+                  Target Koin Bulanan
+                </p>
+                <p className="text-sm font-black text-text-primary leading-none mt-0.5">
+                  {targetCheckpoint.earned.toLocaleString('id-ID')} / {targetCheckpoint.target.toLocaleString('id-ID')}{' '}
+                  <span className="text-xs font-semibold text-text-secondary">Koin</span>
+                </p>
+              </div>
+            </div>
+
+            <span
+              className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-extrabold border ${targetCheckpoint.badgeClass}`}
+            >
+              {targetCheckpoint.label}
+            </span>
+          </div>
+
+          {/* Progress bar with Month Progress Comparison */}
+          <div className="mt-3 space-y-1.5">
+            <div className="relative h-2 w-full bg-surface-elevated rounded-full overflow-hidden border border-border-subtle/50">
+              <div
+                className={`h-full bg-gradient-to-r ${targetCheckpoint.barGradient} rounded-full transition-all duration-500`}
+                style={{ width: `${targetCheckpoint.targetPercent}%` }}
+              />
+            </div>
+
+            <div className="flex items-center justify-between text-[11px] text-text-secondary">
+              <span>{targetCheckpoint.targetPercent}% tercapai</span>
+              <span>
+                Hari ke-{targetCheckpoint.dayOfMonth} dari {targetCheckpoint.daysInMonth} ({targetCheckpoint.monthProgress}%)
+              </span>
+            </div>
+          </div>
+
+          <p className="text-xs mt-2 leading-relaxed text-text-secondary">
+            {targetCheckpoint.message}
+          </p>
+        </div>
+      )}
 
       {/* 5. Quest Stepper List ("Misi Petualangan Hari Ini") */}
       {tasks.length > 0 && !error && (

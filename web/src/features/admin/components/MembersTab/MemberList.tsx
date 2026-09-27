@@ -4,6 +4,7 @@ import { useAdminMembers } from '../../hooks/useAdminMembers'
 import { CreateMemberModal } from './CreateMemberModal'
 import { EditMemberModal } from './EditMemberModal'
 import { Avatar } from '../../../../shared/components/atoms/Avatar'
+import { calculateTargetPace } from '../../../../shared/lib/targetPace'
 
 function formatCycle(start?: string, end?: string): string {
   if (!start || !end) return '—'
@@ -122,6 +123,19 @@ export const MemberList: React.FC<MemberListProps> = ({ controller }) => {
     processingId,
   } = controller || defaultController
 
+  const confirmAndBlock = (member: any) => {
+    const defaultReason = 'Tidak memenuhi target minimal bulanan'
+    let reason: string | null = defaultReason
+    if (typeof window !== 'undefined' && typeof window.prompt === 'function') {
+      reason = window.prompt(
+        `Blokir akun ${member.explorer_name} (@${member.username})?\n\nAlasan pemblokiran (opsional):`,
+        defaultReason
+      )
+      if (reason === null) return
+    }
+    handleBlock(member, reason?.trim() || defaultReason)
+  }
+
   return (
     <div className="space-y-4">
       {error && (
@@ -182,7 +196,7 @@ export const MemberList: React.FC<MemberListProps> = ({ controller }) => {
                     <th className="px-3 py-3 font-semibold">Role</th>
                     <th className="px-3 py-3 font-semibold">Aktivitas & Siklus</th>
                     <th className="px-3 py-3 font-semibold">Status</th>
-                    <th className="px-4 py-3 font-semibold">Perolehan Koin Bulan Ini</th>
+                    <th className="px-4 py-3 font-semibold">Target & Perolehan Koin</th>
                     <th className="px-3 py-3 text-right font-semibold">Saldo & Tingkat</th>
                     <th className="px-4 py-3 text-right font-semibold">Aksi</th>
                   </tr>
@@ -193,7 +207,8 @@ export const MemberList: React.FC<MemberListProps> = ({ controller }) => {
                     const earned = member.earned_this_period ?? 0
                     // Effective cap is what the backend enforces (base + level bonus, ceiling-clamped).
                     const capVal = member.effective_earning_cap ?? member.monthly_earning_cap ?? 0
-                    const percent = capVal > 0 ? Math.min(100, Math.round((earned / capVal) * 100)) : 0
+                    const targetVal = member.monthly_coin_target ?? 3320
+                    const pace = calculateTargetPace(earned, targetVal)
                     return (
                       <tr key={member.uid} className="transition-colors hover:bg-surface-elevated/40">
                         <td className="px-4 py-3">
@@ -244,23 +259,29 @@ export const MemberList: React.FC<MemberListProps> = ({ controller }) => {
                           </div>
                         </td>
                         <td className="px-4 py-3">
-                          <div className="space-y-1.5 max-w-[200px]">
+                          <div className="space-y-1.5 max-w-[210px]">
                             <div className="flex items-center justify-between text-[11px]">
                               <span className="font-mono font-bold text-text-primary">
-                                {earned.toLocaleString('id-ID')} / {capVal > 0 ? `${capVal.toLocaleString('id-ID')} koin` : 'Standar'}
+                                {earned.toLocaleString('id-ID')} / {targetVal.toLocaleString('id-ID')}
                               </span>
-                              <span className={`text-[10px] font-bold px-1.5 py-0.2 rounded-full ${member.earning_locked ? 'bg-accent-reward/15 text-accent-reward' : 'text-text-secondary'}`}>
-                                {member.earning_locked ? '🔒 Penuh' : (capVal > 0 ? 'Khusus' : 'Global')}
+                              <span
+                                className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full border ${pace.badgeClass}`}
+                              >
+                                {pace.label}
                               </span>
                             </div>
-                            {capVal > 0 && (
-                              <div className="w-full h-1.5 rounded-full bg-surface-elevated border border-border-subtle overflow-hidden">
-                                <div
-                                  className={`h-full transition-all ${member.earning_locked ? 'bg-accent-reward' : 'bg-accent-magic'}`}
-                                  style={{ width: `${percent}%` }}
-                                />
-                              </div>
-                            )}
+                            <div className="w-full h-1.5 rounded-full bg-surface-elevated border border-border-subtle overflow-hidden">
+                              <div
+                                className={`h-full bg-gradient-to-r ${pace.barGradient} transition-all`}
+                                style={{ width: `${pace.targetPercent}%` }}
+                              />
+                            </div>
+                            <div className="flex items-center justify-between text-[10px] text-text-secondary">
+                              <span>Batas: {capVal > 0 ? `${capVal.toLocaleString('id-ID')} koin` : 'Global'}</span>
+                              {member.earning_locked && (
+                                <span className="font-bold text-status-warning">🔒 Penuh</span>
+                              )}
+                            </div>
                           </div>
                         </td>
                         <td className="px-3 py-3 text-right">
@@ -290,7 +311,7 @@ export const MemberList: React.FC<MemberListProps> = ({ controller }) => {
                               <button
                                 type="button"
                                 data-testid={`block-button-${member.uid}`}
-                                onClick={() => handleBlock(member)}
+                                onClick={() => confirmAndBlock(member)}
                                 className="rounded-lg bg-status-error/10 border border-status-error/20 px-3 py-1.5 text-xs font-bold text-status-error transition hover:bg-status-error/20 cursor-pointer"
                                 aria-label={`Block ${member.explorer_name}`}
                               >
@@ -374,7 +395,7 @@ export const MemberList: React.FC<MemberListProps> = ({ controller }) => {
                         <button
                           type="button"
                           data-testid={`block-button-${member.uid}`}
-                          onClick={() => handleBlock(member)}
+                          onClick={() => confirmAndBlock(member)}
                           className="rounded-lg bg-red-50 px-3 py-1.5 text-xs font-bold text-red-700"
                           aria-label={`Block ${member.explorer_name}`}
                         >
@@ -429,20 +450,32 @@ export const MemberList: React.FC<MemberListProps> = ({ controller }) => {
                       </p>
                     </div>
                     <div className="text-right">
-                      <p className="text-[11px] font-semibold uppercase tracking-wide text-zinc-500">Koin & Level</p>
-                      <p className="mt-1 inline-flex items-center gap-3 font-bold">
-                        <span className="inline-flex items-center gap-1 text-amber-600">
-                          <Coins className="h-3.5 w-3.5" aria-hidden="true" />
-                          {member.coins.toLocaleString('id-ID')}
-                        </span>
-                        <span className="inline-flex items-center gap-1 text-violet-600">
-                          <Sparkles className="h-3 w-3" aria-hidden="true" />
-                          Lv {member.level}
-                        </span>
-                      </p>
-                      <p className={`mt-1 text-[10px] font-bold inline-flex px-2 py-0.5 rounded-full border ${member.earning_locked ? 'bg-amber-100 text-amber-700 border-amber-200' : 'bg-emerald-50 text-emerald-700 border-emerald-200'}`} title={member.earning_locked ? 'Perolehan koin bulan ini telah mencapai batas' : 'Bisa mendapatkan koin'}>
-                        {member.earned_this_period ?? 0}/{capVal > 0 ? capVal.toLocaleString('id-ID') : 'Batas Global'} {member.earning_locked ? '🔒 Penuh' : '✓ Aktif'}
-                      </p>
+                      <p className="text-[11px] font-semibold uppercase tracking-wide text-zinc-500">Target & Batas</p>
+                      {(() => {
+                        const targetVal = member.monthly_coin_target ?? 3320
+                        const earned = member.earned_this_period ?? 0
+                        const pace = calculateTargetPace(earned, targetVal)
+                        return (
+                          <>
+                            <p className="mt-1 font-mono text-xs font-bold text-zinc-900">
+                              {earned.toLocaleString('id-ID')} / {targetVal.toLocaleString('id-ID')}
+                            </p>
+                            <div className="mt-1 flex items-center justify-end gap-1 flex-wrap">
+                              <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full border ${pace.badgeClass}`}>
+                                {pace.label}
+                              </span>
+                              {member.earning_locked && (
+                                <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-amber-100 text-amber-800 border border-amber-200">
+                                  🔒 Penuh
+                                </span>
+                              )}
+                            </div>
+                            <p className="text-[10px] text-zinc-500 mt-0.5">
+                              Batas: {capVal > 0 ? `${capVal.toLocaleString('id-ID')} koin` : 'Global'}
+                            </p>
+                          </>
+                        )
+                      })()}
                     </div>
                   </div>
                   {!member.is_active && member.block_reason && (

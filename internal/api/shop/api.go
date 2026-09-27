@@ -189,6 +189,29 @@ func (a *API) HandleGetShopConfig(w http.ResponseWriter, r *http.Request) {
 				tz = shared.DefaultTimezone
 			}
 			isEligible, reason := payout.IsEligible(eff, balance, time.Now(), tz)
+
+			// Compute coins earned in current calendar month for performance checkpoint
+			earnedThisPeriod := 0
+			loc, _ := time.LoadLocation(tz)
+			if loc == nil {
+				loc = time.FixedZone("WIB", 7*3600)
+			}
+			nowInTz := time.Now().In(loc)
+			lastDay := time.Date(nowInTz.Year(), nowInTz.Month()+1, 0, 0, 0, 0, 0, loc).Day()
+			periodStart := time.Date(nowInTz.Year(), nowInTz.Month(), 1, 0, 0, 0, 0, loc).UTC().Format(time.RFC3339)
+			periodEnd := time.Date(nowInTz.Year(), nowInTz.Month(), lastDay+1, 0, 0, 0, 0, loc).UTC().Format(time.RFC3339)
+			txParams := fmt.Sprintf("user_uid=eq.%s&type=eq.TASK_REWARD&created_at=gte.%s&created_at=lt.%s&select=amount", uid, periodStart, periodEnd)
+			if raw, err := a.client.Get(ctx, "odyssey_coin_transactions", txParams); err == nil && len(raw) > 2 {
+				var rows []struct {
+					Amount int `json:"amount"`
+				}
+				if err := json.Unmarshal(raw, &rows); err == nil {
+					for _, r := range rows {
+						earnedThisPeriod += r.Amount
+					}
+				}
+			}
+
 			// Keep per-user monthly target separate from shop payout quota (3200 global). Expose as effective_monthly_target for UI if needed, but don't override global payout target.
 			// Shop's Target 3.200 stays global (payout_target_rupiah/max), per-user 3320 is for task reward distribution only.
 			// Override is_open window for UI: for THRESHOLD always based on eligibility, for WEEKLY/MONTHLY based on schedule
@@ -203,6 +226,7 @@ func (a *API) HandleGetShopConfig(w http.ResponseWriter, r *http.Request) {
 				EffectiveWindowEnd         int    `json:"effective_window_end"`
 				EffectiveWeekday           int    `json:"effective_weekday"`
 				EffectiveMonthlyTarget     int    `json:"effective_monthly_target"`
+				EarnedThisPeriod           int    `json:"earned_this_period"`
 			}{
 				RedemptionConfig:           cfg,
 				EffectivePayoutFrequency:   string(eff.Frequency),
@@ -213,6 +237,7 @@ func (a *API) HandleGetShopConfig(w http.ResponseWriter, r *http.Request) {
 				EffectiveWindowEnd:         eff.PayoutMonthEndDay,
 				EffectiveWeekday:           eff.PayoutWeekday,
 				EffectiveMonthlyTarget:     effMonthlyTarget,
+				EarnedThisPeriod:           earnedThisPeriod,
 			}
 			// For THRESHOLD, override IsOpen to reflect eligibility so frontend shows "Dibuka" when eligible
 			if eff.Frequency == payout.FrequencyThreshold {
