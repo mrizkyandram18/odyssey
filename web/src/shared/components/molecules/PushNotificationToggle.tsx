@@ -15,10 +15,10 @@ export function PushNotificationToggle() {
           </div>
           <div>
             <h3 className="font-heading text-xl text-text-primary flex items-center gap-2">
-              Push Notifications (PWA)
+              Notifikasi Push (PWA)
             </h3>
             <p className="text-xs text-text-secondary mt-1">
-              Receive updates for daily tasks and reward notifications even when Odyssey is closed.
+              Terima pembaruan tugas harian dan reward meski Odyssey sedang tertutup. Pengiriman tergantung izin browser dan perangkatmu.
             </p>
           </div>
         </div>
@@ -29,23 +29,23 @@ export function PushNotificationToggle() {
           {status === 'enabled' && (
             <span className="font-medium text-accent-nature flex items-center gap-1.5" data-testid="push-status-enabled">
               <span className="h-2 w-2 rounded-full bg-accent-nature animate-pulse" />
-              Push notifications active
+              Notifikasi push aktif
             </span>
           )}
           {status === 'permission_required' && (
             <span className="text-text-secondary" data-testid="push-status-required">
-              Permission required to send Web Push notifications.
+              Perlu izin untuk mengaktifkan notifikasi push.
             </span>
           )}
           {status === 'blocked' && (
             <span className="text-accent-danger flex items-center gap-1" data-testid="push-status-blocked">
               <AlertTriangle size={14} />
-              Notifications blocked in browser settings.
+              Notifikasi diblokir di pengaturan browser.
             </span>
           )}
           {status === 'unsupported' && (
             <span className="text-text-secondary italic" data-testid="push-status-unsupported">
-              Web Push is not supported in this browser environment.
+              Push tidak didukung di browser ini.
             </span>
           )}
           {status === 'loading' && (
@@ -64,7 +64,7 @@ export function PushNotificationToggle() {
               className="flex items-center gap-2"
               data-testid="disable-push-btn"
             >
-              <BellOff size={14} /> Disable Notifications
+              <BellOff size={14} /> Matikan Notifikasi
             </Button>
           )}
           {(status === 'permission_required' || status === 'error') && (
@@ -75,7 +75,7 @@ export function PushNotificationToggle() {
               className="flex items-center gap-2"
               data-testid="enable-push-btn"
             >
-              <Bell size={14} /> Enable Notifications
+              <Bell size={14} /> Aktifkan Notifikasi
             </Button>
           )}
         </div>

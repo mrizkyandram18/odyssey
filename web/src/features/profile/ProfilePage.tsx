@@ -352,6 +352,9 @@ export function ProfilePage() {
                     <p className="text-[11px] text-text-secondary text-center leading-relaxed pt-1">
                       {progress.required - progress.have} Bintang lagi menuju Tingkat {progress.level + 1}
                     </p>
+                    <p className="text-[11px] text-text-secondary text-center leading-relaxed">
+                      Bintang (XP) menentukan tingkatmu.
+                    </p>
 
                     <div className="pt-2 border-t border-border-subtle flex items-center justify-between text-xs">
                       <span className="text-text-secondary font-medium">Hiasan profil aktif</span>

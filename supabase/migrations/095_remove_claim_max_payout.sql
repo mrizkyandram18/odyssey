@@ -117,18 +117,10 @@ END;
 $$;
 REVOKE ALL ON FUNCTION odyssey_create_claim(TEXT, INT, TEXT, TEXT, BIGINT) FROM PUBLIC;
 GRANT EXECUTE ON FUNCTION odyssey_create_claim(TEXT, INT, TEXT, TEXT, BIGINT) TO service_role;
--- Keep 4-arg overload for backward compat
+-- Drop legacy 4-arg overload to prevent PostgREST PGRST203 candidate ambiguity.
+-- The 5-arg function has p_reward_id BIGINT DEFAULT NULL, so 4-arg callers
+-- seamlessly resolve to the 5-arg function.
 DROP FUNCTION IF EXISTS odyssey_create_claim(TEXT, INT, TEXT, TEXT);
-CREATE OR REPLACE FUNCTION odyssey_create_claim(
-    p_user_uid TEXT,
-    p_coins INT,
-    p_target_type TEXT,
-    p_target_value TEXT
-) RETURNS JSONB LANGUAGE sql SECURITY DEFINER SET search_path = public AS $$
-    SELECT odyssey_create_claim(p_user_uid, p_coins, p_target_type, p_target_value, NULL);
-$$;
-REVOKE ALL ON FUNCTION odyssey_create_claim(TEXT, INT, TEXT, TEXT) FROM PUBLIC;
-GRANT EXECUTE ON FUNCTION odyssey_create_claim(TEXT, INT, TEXT, TEXT) TO service_role;
 
 INSERT INTO odyssey_schema_version(key,value) VALUES('schema_version','095_remove_claim_max_payout')
 ON CONFLICT(key) DO UPDATE SET value=EXCLUDED.value, updated_at=timezone('utc'::text, now());

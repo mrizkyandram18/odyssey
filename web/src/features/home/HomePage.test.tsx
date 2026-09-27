@@ -87,4 +87,53 @@ describe('HomePage', () => {
     expect((await screen.findAllByText('3 Hari', undefined, { timeout: 3000 })).length).toBeGreaterThan(0)
     expect((await screen.findAllByText(/150/, undefined, { timeout: 3000 })).length).toBeGreaterThan(0)
   })
+
+  it('renders all-done closure with milestone, streak explainer, and level meaning', async () => {
+    vi.mocked(useSession).mockReturnValue({
+      session: { uid: 'u1' } as any,
+      profile: {
+        uid: 'u1',
+        explorer_name: 'Tester',
+        level: 3,
+        xp: 500,
+        coins: 200,
+        streak_days: 7,
+      } as any,
+      loading: false,
+      error: null,
+      login: vi.fn(),
+      logout: vi.fn(),
+      refreshProfile: vi.fn(),
+    })
+    vi.mocked(tasksApi.getToday).mockResolvedValueOnce({
+      tasks: [1, 2, 3].map((n) => ({
+        id: n,
+        title: `Tugas ${n}`,
+        description: `Deskripsi ${n}`,
+        task_type: 'QUIZ',
+        step_order: n,
+        reward_coins: 40,
+        reward_xp: 100,
+        config: {},
+        is_locked: false,
+        status: 'APPROVED',
+        coins_earned: 40,
+        xp_earned: 100,
+      })),
+    })
+
+    render(
+      <MemoryRouter>
+        <HomePage />
+      </MemoryRouter>
+    )
+
+    expect(await screen.findByText(/Misi Sempurna/, undefined, { timeout: 3000 })).toBeInTheDocument()
+    // earnedToday sums actual credited coins/xp: 3×40 / 3×100
+    expect((await screen.findAllByText(/\+120 Koin/, undefined, { timeout: 3000 })).length).toBeGreaterThan(0)
+    expect((await screen.findAllByText(/7 hari berturut-turut/, undefined, { timeout: 3000 })).length).toBeGreaterThan(0)
+    expect(screen.getByText('Cara kerja streak')).toBeInTheDocument()
+    expect(screen.getByText(/Streak bertambah setiap ada tugas yang disetujui/)).toBeInTheDocument()
+    expect((await screen.findAllByText(/Bintang \(XP\) menentukan tingkatmu/, undefined, { timeout: 3000 })).length).toBeGreaterThan(0)
+  })
 })

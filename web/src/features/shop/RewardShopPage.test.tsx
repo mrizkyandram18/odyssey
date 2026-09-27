@@ -161,6 +161,6 @@ describe('RewardShopPage Component', () => {
 
     expect(await screen.findByText('Pencairan EWALLET')).toBeInTheDocument()
     expect(screen.getByText('GoPay - 0812345678')).toBeInTheDocument()
-    expect(screen.getByText('Berhasil Ditransfer')).toBeInTheDocument()
+    expect(screen.getByText('Disetujui')).toBeInTheDocument()
   })
 })

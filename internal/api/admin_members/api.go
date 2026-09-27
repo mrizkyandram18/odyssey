@@ -1068,37 +1068,47 @@ func (a *API) HandleCreateMember(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 	}
-	// Validate payout config fields if provided
-	if req.PayoutFrequency != nil && !payout.IsValidFrequency(*req.PayoutFrequency) {
-		shared.WriteJSONError(w, "payout_frequency tidak valid (THRESHOLD|WEEKLY|MONTHLY)", http.StatusBadRequest)
-		return
+	// Validate payout config fields if provided (canonical rules in pkg/payout)
+	if req.PayoutFrequency != nil {
+		if verr := payout.ValidatePayoutFrequencyValue(*req.PayoutFrequency); verr != nil {
+			shared.WriteJSONError(w, "payout_frequency tidak valid (THRESHOLD|WEEKLY|MONTHLY)", http.StatusBadRequest)
+			return
+		}
 	}
 	if req.MinimumWithdrawalCoins != nil {
-		if *req.MinimumWithdrawalCoins < 1 || *req.MinimumWithdrawalCoins > 100000 {
-			shared.WriteJSONError(w, "minimum_withdrawal_coins harus 1..100000", http.StatusBadRequest)
-			return
-		}
 		sysMin := payout.GetSystemMinimumWithdrawal(ctx, a.client)
-		if *req.MinimumWithdrawalCoins < sysMin {
-			shared.WriteJSONError(w, fmt.Sprintf("minimum_withdrawal_coins (%d) di bawah system minimum (%d)", *req.MinimumWithdrawalCoins, sysMin), http.StatusBadRequest)
+		if verr := payout.ValidateMinimumWithdrawalValue(*req.MinimumWithdrawalCoins, sysMin); verr != nil {
+			if verr.Rule == payout.PayoutRuleBelowSystem {
+				shared.WriteJSONError(w, fmt.Sprintf("minimum_withdrawal_coins (%d) di bawah system minimum (%d)", *req.MinimumWithdrawalCoins, sysMin), http.StatusBadRequest)
+			} else {
+				shared.WriteJSONError(w, "minimum_withdrawal_coins harus 1..100000", http.StatusBadRequest)
+			}
 			return
 		}
 	}
-	if req.PayoutWeekday != nil && (*req.PayoutWeekday < 0 || *req.PayoutWeekday > 6) {
-		shared.WriteJSONError(w, "payout_weekday harus 0..6", http.StatusBadRequest)
-		return
+	if req.PayoutWeekday != nil {
+		if verr := payout.ValidatePayoutWeekdayValue(*req.PayoutWeekday); verr != nil {
+			shared.WriteJSONError(w, "payout_weekday harus 0..6", http.StatusBadRequest)
+			return
+		}
 	}
-	if req.PayoutMonthStartDay != nil && (*req.PayoutMonthStartDay < 1 || *req.PayoutMonthStartDay > 31) {
-		shared.WriteJSONError(w, "payout_month_start_day harus 1..31", http.StatusBadRequest)
-		return
+	if req.PayoutMonthStartDay != nil {
+		if verr := payout.ValidatePayoutMonthDayValue(payout.PayoutFieldMonthStart, *req.PayoutMonthStartDay); verr != nil {
+			shared.WriteJSONError(w, "payout_month_start_day harus 1..31", http.StatusBadRequest)
+			return
+		}
 	}
-	if req.PayoutMonthEndDay != nil && (*req.PayoutMonthEndDay < 1 || *req.PayoutMonthEndDay > 31) {
-		shared.WriteJSONError(w, "payout_month_end_day harus 1..31", http.StatusBadRequest)
-		return
+	if req.PayoutMonthEndDay != nil {
+		if verr := payout.ValidatePayoutMonthDayValue(payout.PayoutFieldMonthEnd, *req.PayoutMonthEndDay); verr != nil {
+			shared.WriteJSONError(w, "payout_month_end_day harus 1..31", http.StatusBadRequest)
+			return
+		}
 	}
-	if req.PayoutMonthStartDay != nil && req.PayoutMonthEndDay != nil && *req.PayoutMonthStartDay > *req.PayoutMonthEndDay {
-		shared.WriteJSONError(w, "payout_month_start_day tidak boleh > end_day", http.StatusBadRequest)
-		return
+	if req.PayoutMonthStartDay != nil && req.PayoutMonthEndDay != nil {
+		if verr := payout.ValidatePayoutMonthOrder(*req.PayoutMonthStartDay, *req.PayoutMonthEndDay); verr != nil {
+			shared.WriteJSONError(w, "payout_month_start_day tidak boleh > end_day", http.StatusBadRequest)
+			return
+		}
 	}
 
 	// 1. Check username uniqueness (profiles.username SOT)
@@ -1281,37 +1291,47 @@ func (a *API) HandleUpdateMember(w http.ResponseWriter, r *http.Request, targetU
 			return
 		}
 	}
-	// Validate payout fields
-	if req.PayoutFrequency != nil && !payout.IsValidFrequency(*req.PayoutFrequency) {
-		shared.WriteJSONError(w, "payout_frequency tidak valid", http.StatusBadRequest)
-		return
+	// Validate payout fields (canonical rules in pkg/payout)
+	if req.PayoutFrequency != nil {
+		if verr := payout.ValidatePayoutFrequencyValue(*req.PayoutFrequency); verr != nil {
+			shared.WriteJSONError(w, "payout_frequency tidak valid", http.StatusBadRequest)
+			return
+		}
 	}
 	if req.MinimumWithdrawalCoins != nil {
-		if *req.MinimumWithdrawalCoins < 1 || *req.MinimumWithdrawalCoins > 100000 {
-			shared.WriteJSONError(w, "minimum_withdrawal_coins harus 1..100000", http.StatusBadRequest)
-			return
-		}
 		sysMin := payout.GetSystemMinimumWithdrawal(ctx, a.client)
-		if *req.MinimumWithdrawalCoins < sysMin {
-			shared.WriteJSONError(w, fmt.Sprintf("minimum_withdrawal_coins (%d) di bawah system minimum (%d)", *req.MinimumWithdrawalCoins, sysMin), http.StatusBadRequest)
+		if verr := payout.ValidateMinimumWithdrawalValue(*req.MinimumWithdrawalCoins, sysMin); verr != nil {
+			if verr.Rule == payout.PayoutRuleBelowSystem {
+				shared.WriteJSONError(w, fmt.Sprintf("minimum_withdrawal_coins (%d) di bawah system minimum (%d)", *req.MinimumWithdrawalCoins, sysMin), http.StatusBadRequest)
+			} else {
+				shared.WriteJSONError(w, "minimum_withdrawal_coins harus 1..100000", http.StatusBadRequest)
+			}
 			return
 		}
 	}
-	if req.PayoutWeekday != nil && (*req.PayoutWeekday < 0 || *req.PayoutWeekday > 6) {
-		shared.WriteJSONError(w, "payout_weekday harus 0..6", http.StatusBadRequest)
-		return
+	if req.PayoutWeekday != nil {
+		if verr := payout.ValidatePayoutWeekdayValue(*req.PayoutWeekday); verr != nil {
+			shared.WriteJSONError(w, "payout_weekday harus 0..6", http.StatusBadRequest)
+			return
+		}
 	}
-	if req.PayoutMonthStartDay != nil && (*req.PayoutMonthStartDay < 1 || *req.PayoutMonthStartDay > 31) {
-		shared.WriteJSONError(w, "payout_month_start_day harus 1..31", http.StatusBadRequest)
-		return
+	if req.PayoutMonthStartDay != nil {
+		if verr := payout.ValidatePayoutMonthDayValue(payout.PayoutFieldMonthStart, *req.PayoutMonthStartDay); verr != nil {
+			shared.WriteJSONError(w, "payout_month_start_day harus 1..31", http.StatusBadRequest)
+			return
+		}
 	}
-	if req.PayoutMonthEndDay != nil && (*req.PayoutMonthEndDay < 1 || *req.PayoutMonthEndDay > 31) {
-		shared.WriteJSONError(w, "payout_month_end_day harus 1..31", http.StatusBadRequest)
-		return
+	if req.PayoutMonthEndDay != nil {
+		if verr := payout.ValidatePayoutMonthDayValue(payout.PayoutFieldMonthEnd, *req.PayoutMonthEndDay); verr != nil {
+			shared.WriteJSONError(w, "payout_month_end_day harus 1..31", http.StatusBadRequest)
+			return
+		}
 	}
-	if req.PayoutMonthStartDay != nil && req.PayoutMonthEndDay != nil && *req.PayoutMonthStartDay > *req.PayoutMonthEndDay {
-		shared.WriteJSONError(w, "payout_month_start_day tidak boleh > end_day", http.StatusBadRequest)
-		return
+	if req.PayoutMonthStartDay != nil && req.PayoutMonthEndDay != nil {
+		if verr := payout.ValidatePayoutMonthOrder(*req.PayoutMonthStartDay, *req.PayoutMonthEndDay); verr != nil {
+			shared.WriteJSONError(w, "payout_month_start_day tidak boleh > end_day", http.StatusBadRequest)
+			return
+		}
 	}
 	profPatch := map[string]any{}
 	if req.ExplorerName != nil {

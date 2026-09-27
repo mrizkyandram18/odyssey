@@ -125,4 +125,85 @@ describe('DecisionGameModal', () => {
     expect(formatRupiah(-75000)).toBe('-Rp75.000')
     expect(formatRupiah(0)).toBe('Rp0')
   })
+
+  describe('POINTS mode (Prioritas Dulu, Baru Gas)', () => {
+    const priorityScenario = {
+      currency: 'POINTS',
+      initial_balance: 0,
+      events: [
+        {
+          id: 'sit_1',
+          title: 'Deadline Mendekat vs Pesan Santai',
+          options: [
+            { id: 'a', label: 'Tutup notifikasi dan fokus laporan', delta: 20 },
+            { id: 'b', label: 'Buka chat sebentar sambil kerja', delta: 5 },
+          ],
+        },
+        {
+          id: 'sit_2',
+          title: 'Rekan Minta Bantuan vs Tugas Sendiri',
+          options: [
+            { id: 'a', label: 'Jelaskan sopan dan bantu setelah selesai', delta: 20 },
+            { id: 'b', label: 'Tinggalkan tugas sendiri', delta: 5 },
+          ],
+        },
+      ],
+    }
+
+    const priorityTask = {
+      id: 701,
+      step_order: 1,
+      title: 'Prioritas Dulu, Baru Gas',
+      description: 'Hadapi 6 situasi nyata.',
+      task_type: 'MINI_GAME',
+      status: 'UNLOCKED',
+      reward_coins: 50,
+      reward_xp: 100,
+      config: { game: 'DECISION_PRIORITY', target_score: 100, scenario: priorityScenario },
+    } as unknown as TaskView
+
+    it('renders Skor Prioritas header and initial points in POINTS mode', () => {
+      render(
+        <DecisionGameModal
+          task={priorityTask}
+          onClose={vi.fn()}
+          onSuccess={vi.fn()}
+        />
+      )
+      expect(screen.getByText('Skor Prioritas')).toBeInTheDocument()
+      expect(screen.getByTestId('current-balance')).toHaveTextContent('0 Poin')
+      expect(screen.getByText('+20 Poin')).toBeInTheDocument()
+      expect(screen.getByText('+5 Poin')).toBeInTheDocument()
+    })
+
+    it('accumulates points and submits DECISION_PRIORITY game type', async () => {
+      const mocked = tasksApi.submit as unknown as ReturnType<typeof vi.fn>
+      mocked.mockResolvedValue({ success: true, coins_earned: 50, xp_earned: 100 })
+
+      render(
+        <DecisionGameModal
+          task={priorityTask}
+          onClose={vi.fn()}
+          onSuccess={vi.fn()}
+        />
+      )
+
+      fireEvent.click(screen.getByTestId('option-sit_1-a'))
+      expect(screen.getByTestId('current-balance')).toHaveTextContent('20 Poin')
+
+      fireEvent.click(screen.getByTestId('option-sit_2-a'))
+      expect(screen.getByTestId('final-balance')).toHaveTextContent('40 Poin')
+      expect(screen.getByText('Tantangan Selesai!')).toBeInTheDocument()
+
+      fireEvent.click(screen.getByText(/Klaim Reward/))
+      await waitFor(() => expect(mocked).toHaveBeenCalledTimes(1))
+
+      const payload = mocked.mock.calls[0][1]
+      expect(payload.answers.game).toBe('DECISION_PRIORITY')
+      expect(payload.answers.choices).toEqual({ sit_1: 'a', sit_2: 'a' })
+      expect(payload.answers.final_balance).toBe(40)
+      await waitFor(() => expect(screen.getByText(/Tantangan prioritas/i)).toBeInTheDocument())
+    })
+  })
 })
+

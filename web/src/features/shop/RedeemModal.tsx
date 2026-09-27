@@ -461,7 +461,7 @@ export const RedeemModal: React.FC<RedeemModalProps> = ({
                   Pengajuan Berhasil Dikirim! 🎉
                 </h4>
                 <p className="text-xs text-text-secondary max-w-xs mx-auto leading-relaxed">
-                  Koinmu telah dipotong dan dicatat. Notifikasi telah diteruskan ke tim untuk verifikasi dan transfer dana.
+                  Koinmu telah dipotong dan pengajuan tercatat PENDING. Pantau statusnya di tab Riwayat — jika disetujui, dana ditransfer manual oleh admin; jika ditolak, koin dikembalikan otomatis.
                 </p>
               </div>
 

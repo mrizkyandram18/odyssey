@@ -20,6 +20,7 @@ export const CameraCaptureModal: React.FC<CameraCaptureModalProps> = ({ task, on
   const cameraInputRef = useRef<HTMLInputElement>(null)
   const [capturedFile, setCapturedFile] = useState<File | null>(null)
   const [previewUrl, setPreviewUrl] = useState<string | null>(null)
+  const [note, setNote] = useState('')
   const [compressing, setCompressing] = useState(false)
   const [uploading, setUploading] = useState(false)
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
@@ -56,11 +57,16 @@ export const CameraCaptureModal: React.FC<CameraCaptureModalProps> = ({ task, on
       const uploadRes = await uploadTaskProof(capturedFile)
 
       // 2. Submit task manual verification
+      // note carries the member's short written explanation (same payload
+      // convention as DocUploadModal). Admin review UI renders
+      // payload.note generically; ADMIN_REVIEW enforcement (reject when
+      // the explanation is missing) uses the existing verify flow.
       const res = await tasksApi.submit(task.id, {
         payload: {
           file_url: uploadRes.file_url,
           file_name: uploadRes.file_name,
           file_size: uploadRes.file_size,
+          note: note.trim(),
           captured_at: new Date().toISOString(),
         },
       })
@@ -197,6 +203,21 @@ export const CameraCaptureModal: React.FC<CameraCaptureModalProps> = ({ task, on
                     Mengompres foto & menambahkan watermark...
                   </div>
                 )}
+
+                {/* Short written explanation (same convention as DocUploadModal).
+                    Shown for every gallery-upload photo task; tasks whose
+                    instruction asks for an explanation are enforced via the
+                    existing ADMIN_REVIEW approve/reject flow. */}
+                <div className="space-y-1.5">
+                  <label className="text-xs font-bold text-text-secondary">Penjelasan Singkat:</label>
+                  <textarea
+                    rows={2}
+                    value={note}
+                    onChange={(e) => setNote(e.target.value)}
+                    placeholder="Tulis penjelasan singkat tentang fotomu (misalnya apa yang bisa dibuat lebih baik dan alasannya)..."
+                    className="w-full p-3 rounded-xl bg-surface border border-border-subtle text-sm text-text-primary placeholder:text-text-secondary/50 focus:outline-none focus:border-accent-magic resize-none"
+                  />
+                </div>
 
                 {errorMessage && (
                   <div className="p-3.5 rounded-xl bg-status-error/15 border border-status-error/30 text-status-error text-sm flex items-center gap-2">

@@ -28,7 +28,7 @@ describe('PushNotificationToggle', () => {
 
     render(<PushNotificationToggle />)
 
-    expect(screen.getByText(/Permission required/i)).toBeInTheDocument()
+    expect(screen.getByText(/Perlu izin/i)).toBeInTheDocument()
     const enableBtn = screen.getByTestId('enable-push-btn')
     expect(enableBtn).toBeInTheDocument()
 

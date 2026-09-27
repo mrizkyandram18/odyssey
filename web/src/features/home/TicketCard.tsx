@@ -36,7 +36,11 @@ export function TicketCard() {
       setTickets(res.tickets ?? 0)
       if (res.granted) setShowCapsule(true)
     } catch (e) {
-      setHint(e instanceof Error ? e.message : 'Belum bisa mengambil tiket')
+      const raw = e instanceof Error ? e.message : 'Belum bisa mengambil tiket'
+      // P0023 = belum ada tugas hari ini yang disetujui — syarat tiket harian.
+      setHint(/p0023|no approved|belum ada.*disetujui/i.test(raw)
+        ? 'Tiket terbuka setelah ada tugas hari ini yang disetujui.'
+        : raw)
     } finally {
       setClaiming(false)
     }

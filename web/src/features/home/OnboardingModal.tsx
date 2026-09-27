@@ -35,10 +35,16 @@ export function OnboardingModal() {
               {step === 1 && (
                 <div className="flex flex-col h-full justify-between items-center text-center">
                   <div className="mb-6 flex flex-col items-center">
-                    <span className="text-6xl block mb-6">👨‍👩‍👧‍👦</span>
+                    <span className="text-6xl block mb-6">📝</span>
                     <h2 className="font-heading text-2xl font-bold text-text-primary mb-4 leading-snug">
-                      Odyssey membantu kamu belajar hal yang berguna untuk kehidupan sehari-hari.
+                      1. Kerjakan tugas harian
                     </h2>
+                    <p className="text-sm text-text-secondary leading-relaxed max-w-xs">
+                      Setiap hari ada daftar tugas berurutan: video, kuis, foto, atau jawaban singkat. Selesaikan dari langkah pertama.
+                    </p>
+                    <p className="text-xs text-text-secondary leading-relaxed max-w-xs mt-3">
+                      Sebagian tugas dinilai otomatis, sebagian menunggu verifikasi admin sebelum reward masuk.
+                    </p>
                   </div>
                   <Button size="lg" className="w-full text-lg shadow-sm" onClick={handleNext}>
                     Selanjutnya
@@ -49,30 +55,16 @@ export function OnboardingModal() {
               {step === 2 && (
                 <div className="flex flex-col h-full justify-between text-center">
                   <div className="mb-6">
-                    <h2 className="font-heading text-xl font-bold text-text-primary mb-6">Topik yang akan dipelajari:</h2>
-                    <div className="flex flex-col gap-5 text-left max-w-xs mx-auto">
-                      <div className="flex items-center gap-4 bg-surface p-3 rounded-2xl border border-border-subtle shadow-sm">
-                        <span className="text-3xl bg-orange-100 p-2 rounded-xl">🛡️</span>
-                        <div>
-                          <h3 className="font-bold text-text-primary">Aman di internet</h3>
-                          <p className="text-xs text-text-secondary mt-1">Belajar bijak dan aman online.</p>
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-4 bg-surface p-3 rounded-2xl border border-border-subtle shadow-sm">
-                        <span className="text-3xl bg-green-100 p-2 rounded-xl">💰</span>
-                        <div>
-                          <h3 className="font-bold text-text-primary">Mengatur uang</h3>
-                          <p className="text-xs text-text-secondary mt-1">Kelola keuangan untuk masa depan.</p>
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-4 bg-surface p-3 rounded-2xl border border-border-subtle shadow-sm">
-                        <span className="text-3xl bg-blue-100 p-2 rounded-xl">💼</span>
-                        <div>
-                          <h3 className="font-bold text-text-primary">Siap kerja</h3>
-                          <p className="text-xs text-text-secondary mt-1">Persiapkan karir dan keterampilan.</p>
-                        </div>
-                      </div>
-                    </div>
+                    <span className="text-6xl block mb-6">🪙</span>
+                    <h2 className="font-heading text-2xl font-bold text-text-primary mb-4 leading-snug">
+                      2. Dapatkan Koin & Bintang
+                    </h2>
+                    <p className="text-sm text-text-secondary leading-relaxed max-w-xs mx-auto">
+                      Tugas yang disetujui memberi <strong className="text-text-primary">Koin</strong> untuk ditukar dan <strong className="text-text-primary">Bintang (XP)</strong> untuk naik tingkat.
+                    </p>
+                    <p className="text-xs text-text-secondary leading-relaxed max-w-xs mx-auto mt-3">
+                      Besaran Koin mengikuti target dan batas periode yang berlaku, jadi angka per tugas bisa berbeda dari waktu ke waktu.
+                    </p>
                   </div>
                   <Button size="lg" className="w-full text-lg shadow-sm" onClick={handleNext}>
                     Selanjutnya
@@ -83,17 +75,17 @@ export function OnboardingModal() {
               {step === 3 && (
                 <div className="flex flex-col h-full justify-between text-center">
                   <div className="mb-6">
-                    <span className="text-6xl block mb-6">⏱️</span>
-                    <h2 className="font-heading text-2xl font-bold text-text-primary mb-2">Setiap hari cukup beberapa menit.</h2>
+                    <span className="text-6xl block mb-6">💸</span>
+                    <h2 className="font-heading text-2xl font-bold text-text-primary mb-2">3. Tukarkan Koin menjadi uang.</h2>
                     <div className="mt-6 flex items-center justify-center gap-2 text-xs md:text-sm font-semibold text-text-secondary flex-wrap">
-                       <span className="bg-surface border border-border-subtle px-3 py-1 rounded-full">Selesaikan Misi</span>
+                       <span className="bg-surface border border-border-subtle px-3 py-1 rounded-full">Selesaikan Tugas</span>
                        <span>→</span>
-                       <span className="bg-amber-500/10 text-amber-700 dark:text-amber-300 px-3 py-1 rounded-full font-bold">Koin & Bintang</span>
+                       <span className="bg-amber-500/10 text-amber-700 dark:text-amber-300 px-3 py-1 rounded-full font-bold">Koin Masuk</span>
                        <span>→</span>
-                       <span className="bg-accent-magic/10 text-accent-magic px-3 py-1 rounded-full font-bold">Buka Hadiah</span>
+                       <span className="bg-accent-magic/10 text-accent-magic px-3 py-1 rounded-full font-bold">Cairkan di Penukaran Koin</span>
                     </div>
                     <p className="text-sm text-text-secondary mt-6">
-                      Kumpulkan koin, naikkan tingkat avatarmu, dan buka hadiah hiasan profil!
+                      Buka halaman <strong className="text-text-primary">Penukaran Koin</strong> untuk melihat saldo, minimum pencairan, dan status pengajuanmu.
                     </p>
                   </div>
                   <Button size="lg" className="w-full text-lg shadow-sm" onClick={handleStart}>

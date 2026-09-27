@@ -1,7 +1,7 @@
 import React, { useState, useMemo } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import confetti from 'canvas-confetti'
-import { Wallet, CheckCircle2, X, Sparkles, Award, AlertCircle, ChevronRight, RotateCcw, TrendingUp, TrendingDown, Minus } from 'lucide-react'
+import { Wallet, CheckCircle2, X, Sparkles, Award, AlertCircle, ChevronRight, RotateCcw, TrendingUp, TrendingDown, Minus, Target } from 'lucide-react'
 import type { TaskView, DecisionScenario } from '../../shared/types'
 import { tasksApi } from '../../shared/lib/api'
 import { isEarningCapError, EARNING_CAP_MESSAGE } from '../../shared/lib/earning'
@@ -21,8 +21,9 @@ export function formatRupiah(n: number): string {
 
 export const DecisionGameModal: React.FC<DecisionGameModalProps> = ({ task, onClose, onSuccess, onNextTask }) => {
   const scenario = (task.config?.scenario || null) as DecisionScenario | null
+  const isPointMode = scenario?.currency === 'POINTS'
   const events = useMemo(() => (Array.isArray(scenario?.events) ? scenario!.events : []), [scenario])
-  const initialBalance = scenario?.initial_balance ?? 500000
+  const initialBalance = scenario?.initial_balance ?? (isPointMode ? 0 : 500000)
 
   const isApproved = task.status === 'APPROVED'
   const [eventIndex, setEventIndex] = useState(0)
@@ -66,13 +67,30 @@ export const DecisionGameModal: React.FC<DecisionGameModalProps> = ({ task, onCl
     setErrorMessage(null)
   }
 
+  const formatBalance = (val: number) => {
+    if (isPointMode) {
+      return `${val} Poin`
+    }
+    return formatRupiah(val)
+  }
+
+  const formatDelta = (delta: number) => {
+    if (isPointMode) {
+      if (delta === 0) return '0 Poin'
+      return `${delta > 0 ? '+' : ''}${delta} Poin`
+    }
+    if (delta === 0) return 'Rp0'
+    return `${delta > 0 ? '+' : ''}${formatRupiah(delta)}`
+  }
+
   const handleSubmit = async () => {
     setSubmitting(true)
     setErrorMessage(null)
     try {
+      const gameType = (task.config?.game as string) || (isPointMode ? 'DECISION_PRIORITY' : 'DECISION_FINANCE')
       const res = await tasksApi.submit(task.id, {
         answers: {
-          game: 'DECISION_FINANCE',
+          game: gameType,
           choices,
           // Informational only — server recomputes final_balance authoritatively.
           final_balance: currentBalance,
@@ -142,11 +160,15 @@ export const DecisionGameModal: React.FC<DecisionGameModalProps> = ({ task, onCl
                 <div className="flex items-center justify-between p-3 rounded-2xl bg-surface border border-border-subtle">
                   <div>
                     <span className="text-[10px] uppercase tracking-wider font-extrabold text-accent-magic block">
-                      Saldo Simulasi (Uang Virtual)
+                      {isPointMode ? 'Skor Prioritas' : 'Saldo Simulasi (Uang Virtual)'}
                     </span>
                     <div className="flex items-center gap-1.5 text-text-primary font-heading font-bold text-base mt-0.5">
-                      <Wallet className="w-4 h-4 text-accent-magic" />
-                      <span data-testid="current-balance">{formatRupiah(currentBalance)}</span>
+                      {isPointMode ? (
+                        <Target className="w-4 h-4 text-accent-magic" />
+                      ) : (
+                        <Wallet className="w-4 h-4 text-accent-magic" />
+                      )}
+                      <span data-testid="current-balance">{formatBalance(currentBalance)}</span>
                     </div>
                   </div>
                   <div className="text-right">
@@ -178,7 +200,9 @@ export const DecisionGameModal: React.FC<DecisionGameModalProps> = ({ task, onCl
                     <div className="space-y-2">
                       {currentEvent.options?.map((opt) => {
                         const delta = Number(opt.delta) || 0
-                        const displayLabel = String(opt.label || '').replace(/\s*\([+-]?Rp[0-9.]+\)\s*$/i, '')
+                        const displayLabel = isPointMode
+                          ? String(opt.label || '')
+                          : String(opt.label || '').replace(/\s*\([+-]?Rp[0-9.]+\)\s*$/i, '')
                         return (
                           <button
                             key={opt.id}
@@ -191,7 +215,7 @@ export const DecisionGameModal: React.FC<DecisionGameModalProps> = ({ task, onCl
                               <span className="text-sm font-bold">{displayLabel}</span>
                               <span className={`inline-flex items-center gap-1 text-xs font-extrabold shrink-0 ${delta < 0 ? 'text-status-error' : delta > 0 ? 'text-status-success' : 'text-text-secondary'}`}>
                                 {delta < 0 ? <TrendingDown className="w-3.5 h-3.5" /> : delta > 0 ? <TrendingUp className="w-3.5 h-3.5" /> : <Minus className="w-3.5 h-3.5" />}
-                                {delta === 0 ? 'Rp0' : `${delta > 0 ? '+' : ''}${formatRupiah(delta)}`}
+                                {formatDelta(delta)}
                               </span>
                             </span>
                             {opt.hint && <span className="block text-[11px] text-text-secondary mt-1">{opt.hint}</span>}
@@ -203,14 +227,22 @@ export const DecisionGameModal: React.FC<DecisionGameModalProps> = ({ task, onCl
                 ) : (
                   <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="p-4 rounded-2xl bg-accent-magic/10 border border-accent-magic/30 text-center space-y-2">
                     <div className="text-2xl">🎉</div>
-                    <h4 className="font-heading font-bold text-text-primary text-base">Simulasi Selesai!</h4>
+                    <h4 className="font-heading font-bold text-text-primary text-base">
+                      {isPointMode ? 'Tantangan Selesai!' : 'Simulasi Selesai!'}
+                    </h4>
                     <p className="text-xs text-text-secondary">
-                      Saldo akhir kamu:{' '}
-                      <strong className="text-accent-magic font-extrabold text-sm" data-testid="final-balance">{formatRupiah(currentBalance)}</strong>{' '}
-                      (mulai dari {formatRupiah(initialBalance)})
+                      {isPointMode ? 'Skor prioritas akhir kamu:' : 'Saldo akhir kamu:'}{' '}
+                      <strong className="text-accent-magic font-extrabold text-sm" data-testid="final-balance">{formatBalance(currentBalance)}</strong>{' '}
+                      {isPointMode ? '' : `(mulai dari ${formatRupiah(initialBalance)})`}
                     </p>
                     <p className="text-[11px] text-text-secondary leading-relaxed">
-                      {currentBalance >= initialBalance
+                      {isPointMode
+                        ? currentBalance >= 100
+                          ? 'Luar biasa! Pilihan prioritasmu sangat tepat dan strategis dalam menangani setiap situasi kerja.'
+                          : currentBalance >= 60
+                          ? 'Bagus! Kamu sudah memahami cara memilah tugas penting vs mendesak dengan cukup baik.'
+                          : 'Bagus untuk latihan! Terus latih kebiasaan fokus pada hal penting sebelum mengerjakan yang lain.'
+                        : currentBalance >= initialBalance
                         ? 'Hebat! Kamu berhasil menjaga bahkan menambah uangmu. Pertahankan kebiasaan baik ini.'
                         : currentBalance >= initialBalance * 0.5
                         ? 'Lumayan! Uangmu berkurang tapi masih aman. Coba pikirkan pilihan mana yang bisa lebih hemat.'
@@ -259,7 +291,11 @@ export const DecisionGameModal: React.FC<DecisionGameModalProps> = ({ task, onCl
                 </div>
                 <div>
                   <h4 className="font-heading font-bold text-2xl text-text-primary">Luar Biasa! Simulasi Berhasil 🏆</h4>
-                  <p className="text-sm text-text-secondary mt-1">Kamu menyelesaikan simulasi keuangan dan mendapatkan reward.</p>
+                  <p className="text-sm text-text-secondary mt-1">
+                    {isPointMode
+                      ? 'Kamu menyelesaikan tantangan prioritas dan mendapatkan reward.'
+                      : 'Kamu menyelesaikan simulasi keuangan dan mendapatkan reward.'}
+                  </p>
                 </div>
                 <div className="inline-flex items-center gap-4 px-6 py-3 rounded-2xl bg-accent-gold/15 border border-accent-gold/30">
                   <div className="flex items-center gap-1.5 text-accent-gold font-bold">

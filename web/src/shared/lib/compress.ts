@@ -106,15 +106,29 @@ export async function compressImage(
   })
 }
 
+import { getSession } from './session'
+
 export async function uploadTaskProof(
   file: File
 ): Promise<{ file_url: string; file_name: string; file_size: number }> {
   const formData = new FormData()
   formData.append('file', file)
 
-  const token = typeof localStorage !== 'undefined' ? localStorage.getItem('odyssey_session_token') || '' : ''
+  // Session lives under `odyssey_session` (see session.ts). The legacy
+  // `odyssey_session_token` key is kept as a fallback so older cached
+  // logins keep working until they re-login.
+  let token = ''
+  try {
+    token = getSession()?.token || ''
+  } catch {
+    token = ''
+  }
+  if (!token && typeof localStorage !== 'undefined') {
+    token = localStorage.getItem('odyssey_session_token') || ''
+  }
   const response = await fetch('/api/tasks/upload', {
     method: 'POST',
+    credentials: 'include',
     headers: {
       Authorization: `Bearer ${token}`,
       'X-User-Session': token,

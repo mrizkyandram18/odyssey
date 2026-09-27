@@ -4,4 +4,4 @@ export function isEarningCapError(err: unknown): boolean {
 }
 
 export const EARNING_CAP_MESSAGE =
-  'Batas earning bulanan tercapai. Kamu tidak dapat memperoleh coin lagi sampai bulan berikutnya. Saldo tetap aman.'
+  'Batas earning bulan berjalan tercapai. Kamu tidak dapat memperoleh Koin lagi sampai bulan berikutnya. Saldo tetap aman.'

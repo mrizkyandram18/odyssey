@@ -1,75 +1,67 @@
 # Odyssey
 
-Cooperative adventure platform for private family groups.
+Private family daily-task → coin → redemption platform.
 
-## Tech Stack
+## Stack
 
-- Frontend: React 19, Vite, TypeScript, Tailwind CSS
-- Backend: Go 1.25 (mostly standard library)
-- Database: Supabase (PostgreSQL) — shared project, `odyssey_*` tables only
-- Auth: Gatekeeper (external, immutable) via Authentication Provider adapter
+- Backend: Go 1.25 stdlib monolith, no framework (`pkg/`, `internal/api/`)
+- Frontend: React 19, Vite, TypeScript, Tailwind PWA (`web/`)
+- Database: Supabase Postgres via PostgREST + RPC + Storage
+- Auth: local username/password (bcrypt) + device binding + HMAC sessions
+- Integrations: Telegram (best-effort admin notify), Web Push VAPID
+- Deploy: single container (compose) or Vercel; blocking CI (`ci.yml`)
+
+## Rules (enforced by code/schema — do not violate)
+
+- `odyssey_coin_transactions` is append-only (trigger rejects UPDATE/DELETE).
+- One rewarded approval per user per task (`UNIQUE(task_id, user_uid)` + RPC `P0004` guard).
+- Answer keys never reach the browser (response sanitizer in `family_tasks`).
+- New tables need a migration AND an `allowedTables` entry in `pkg/db/supabase.go`.
+- Member reads/writes are family-scoped in Go filters and re-checked in SQL.
+- Coins leave only via admin-approved claims inside window/policy; money transfer is manual.
+- Earning cap `0` = unlimited (bonuses/ceilings must not apply to it).
+- Boot requires `SUPABASE_URL`, `SUPABASE_SERVICE_KEY`, `PARENT_ID` (unused leftover, still enforced), `SESSION_SIGNING_SECRET`.
+- Config precedence: per-user → `odyssey_system_config` key → compiled default.
+
+## Structure
+
+- `internal/api/<domain>/` - HTTP handlers: `login`, `me`, `family_tasks`, `shop`, `rewards`, `admin_tasks`, `admin_members`, `payout_config`, `families`, `push`, `status`, `dev` (binary entry)
+- `api/index.go` - Vercel serverless entry
+- `pkg/auth|db|tasks|payout|push|shared|observability|server` - cross-domain packages
+- `web/src/{app,features,shared}` - PWA; API client `shared/lib/api.ts`, types `shared/types`
+- `supabase/migrations/` - canonical schema/RPC history
+- `scripts/` - ops, smoke, seed, verify scripts
+- `docs/` - current documentation (6 files, see below)
+
+## Build & Run
+
+- **Backend:** `go run ./internal/api/dev`
+- **Frontend:** `cd web && npm install && npm run dev`
+- **Build:** `go build ./...`, `cd web && npm run build`
+
+## Test & Lint
+
+- **Backend:** `go test -count=1 ./...`; `go vet ./...`; gofmt must be clean
+- **Frontend:** `cd web && npm run test` (Vitest); `npx tsc --noEmit`; `npx eslint .`
 
 ## Documentation
 
-| File | Purpose |
+Source of truth (in order): source code → migrations/RPC → config examples → tests → deployment/CI. These docs describe; the code decides.
+
+| File | Covers |
 |---|---|
-| `CLAUDE.md` | This file. Project overview for the assistant. |
-| `docs/vision.md` | Product vision, audience, success criteria. |
-| `docs/principles.md` | 11 design principles (priority-ordered). |
-| `docs/non-goals.md` | Explicit boundaries — what Odyssey will never become. |
-| `docs/domain-model.md` | Core domain entities, layers, and table mapping. |
-| `docs/architecture.md` | High-level architecture, module map, deployment. |
-| `docs/gameplay.md` | Core gameplay, missions, roles, daily turn, creative missions. |
-| `docs/game-loop.md` | Moment-to-moment, daily, quest, progression loops. |
-| `docs/progression.md` | Explorer Level, crew level, Journey Progress, milestones. |
-| `docs/economy.md` | XP / Collections / Gifts / Inspiration design. |
-| `docs/integrations.md` | Gatekeeper (adapter), Family Reward (deferred), Supabase. |
-| `docs/roadmap.md` | Phase 0–5 roadmap, MVP scope. |
-| `docs/glossary.md` | Domain terminology. |
-| `docs/coding-standards.md` | Go + TypeScript conventions. |
-| `docs/ui-guidelines.md` | Mobile-first, PWA, component, motion, voice. |
-| `docs/ai.md` | Future AI integration (story, quest, comic, quiz). |
-| `docs/future.md` | Future expansion ideas backlog. |
-| `docs/release/` | Phase 1 release engineering reports & checklists. |
-| `docs/decisions/` | Architecture Decision Records (ADRs). |
+| `docs/README.md` | Overview, map, reading order |
+| `docs/architecture.md` | Goals, constraints, building blocks, flows, deployment, risks, glossary |
+| `docs/database.md` | Tables, RPCs, ledger, invariants |
+| `docs/api.md` | HTTP surface by capability |
+| `docs/operations.md` | Dev, config, deploy, CI, troubleshooting |
+| `docs/decisions.md` | Architecture-significant decisions with evidence |
 
-**Start here:** `vision.md` → `principles.md` → `non-goals.md` →
-`domain-model.md` → `architecture.md` →
-`decisions/ADR-001` through `ADR-004`.
+If code and docs disagree, implementation/DB constraints win — fix the docs.
 
-## Key Constraints
+## Agent Rules
 
-- ONLY new tables prefixed `odyssey_` in shared Supabase (never modify existing business tables).
-- Real rewards via Family Reward integration only — deferred to Phase 5 (approved by ADR-004).
-- NO real money inside Odyssey — XP, Collections, Gifts, and Inspiration are fictional only.
-- MVP resources: XP, Collections, Gifts, Story Fragments, Inspiration. No Adventure Tokens, no Coins (Coin currency is Phase 2).
-- Mobile-first, PWA-first (offline-first deferred to a future phase).
-- Gatekeeper BOTH login mode (device trust + credential) is the ONLY authentication path.
-  Verified through an Authentication Provider adapter — the domain never touches Firestore directly.
-- Gatekeeper and Family Reward must NEVER be modified.
-
-## Reference Systems (READ ONLY — do not modify)
-
-| System | Path | Notes |
-|---|---|---|
-| Family Reward | `D:\Personal\Projects\kuota - Copy` | Auth flow, API style, DB conventions. |
-| Gatekeeper | Android app (Firestore-backed) | Device trust, `users/{PARENT_ID}/children/{uid}`. |
-
-## Development & Project Structure
-
-### Build & Run
-- **Backend:** `go run api/dev/main.go`
-- **Frontend:** `cd web && npm run dev`
-- **Build (CI):** `go build ./...` for backend, `npm run build` for frontend.
-
-### Testing
-- **Backend Tests:** `go test -v -race -count=1 ./...`
-- **Frontend Tests:** `npm run test` (Vitest)
-- **Linting:** `go vet ./...` and `go fmt ./...` for Go, `npm run lint` for frontend.
-
-### Directories
-- `api/` - HTTP entry points
-- `cmd/` - CLI utilities
-- `docs/` - Architecture & ADRs
-- `pkg/` - Core domain, database, auth
-- `web/` - React frontend
+- Verify claims against code/schema/tests; never invent behavior, rationale, or SLOs.
+- Mark the unverifiable as `UNVERIFIED`/`UNDEFINED` with the evidence still needed.
+- Keep changes minimal and scoped; docs-only tasks must not touch code, migrations, or config behavior.
+- No commit/push/PR unless explicitly requested.

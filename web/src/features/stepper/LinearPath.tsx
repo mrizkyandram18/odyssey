@@ -170,6 +170,20 @@ export const LinearPath: React.FC = () => {
   // Level progress curve based on server-side formula: level = floor(sqrt(xp/100)) + 1
   const userProgress = levelProgress(userXP, userLevel)
 
+  // Ringkasan hari ini — hanya dari nilai yang benar-benar tersedia:
+  // coins_earned/xp_earned per tugas (aktual yang dikreditkan), saldo profil,
+  // dan minimum pencairan efektif dari /api/shop/config.
+  const daySummary = useMemo(() => {
+    const approved = tasks.filter((t) => t.status === 'APPROVED')
+    const earnedTodayCoins = approved.reduce((s, t) => s + (t.coins_earned || 0), 0)
+    const earnedTodayXP = approved.reduce((s, t) => s + (t.xp_earned || 0), 0)
+    const effMin = shopConfig?.effective_minimum_withdrawal
+    const conv = shopConfig?.conversion_rate || 0
+    const remainingToMin =
+      effMin !== undefined && effMin !== null ? Math.max(0, effMin - userCoins) : null
+    return { earnedTodayCoins, earnedTodayXP, effMin, conv, remainingToMin }
+  }, [tasks, shopConfig, userCoins])
+
   return (
     <div className="w-full flex flex-col gap-4">
       {/* 1. Greeting & Adventurer Status Bar */}
@@ -234,7 +248,7 @@ export const LinearPath: React.FC = () => {
           </div>
           <h2 className="text-base font-extrabold text-text-primary mt-3.5">Belum ada petualangan hari ini</h2>
           <p className="text-xs text-text-secondary mt-1.5 leading-relaxed max-w-[32ch] mx-auto">
-            Misi harian sedang disiapkan. Kamu akan mendapatkan notifikasi begitu misi baru tersedia!
+            Misi harian sedang disiapkan. Cek lagi besok untuk misi berikutnya.
           </p>
         </div>
       ) : stats.isAllDone ? (
@@ -251,9 +265,50 @@ export const LinearPath: React.FC = () => {
                 Semua tugas hari ini selesai 🎉
               </h2>
               <p className="text-xs text-text-secondary mt-1 leading-relaxed">
-                Hebat sekali! Kamu telah menuntaskan seluruh {stats.total} petualangan hari ini. Koin & Bintang sudah masuk ke kantongmu!
+                Hebat sekali! Kamu telah menuntaskan seluruh {stats.total} petualangan hari ini.
               </p>
             </div>
+          </div>
+
+          <div className="mt-4 rounded-2xl bg-surface/80 border border-emerald-500/20 p-3.5 space-y-1.5">
+            <p className="text-xs text-text-primary font-bold">
+              {stats.total}/{stats.total} tugas selesai • +{daySummary.earnedTodayCoins.toLocaleString('id-ID')} Koin • +{daySummary.earnedTodayXP.toLocaleString('id-ID')} Bintang{userStreak > 0 ? ` • 🔥 ${userStreak} hari streak` : ''}
+            </p>
+            <p className="text-xs text-text-secondary">
+              Saldo: <strong className="text-text-primary">{userCoins.toLocaleString('id-ID')} Koin</strong>
+              {daySummary.conv > 0 && (
+                <> (≈ Rp {(userCoins * daySummary.conv).toLocaleString('id-ID')})</>
+              )}
+            </p>
+            {daySummary.remainingToMin !== null && daySummary.effMin !== undefined && (
+              <p className="text-xs text-text-secondary leading-relaxed">
+                {daySummary.remainingToMin > 0 ? (
+                  <>
+                    Sisa <strong className="text-text-primary">{daySummary.remainingToMin.toLocaleString('id-ID')} Koin</strong> menuju minimum pencairan ({daySummary.effMin.toLocaleString('id-ID')} Koin).
+                  </>
+                ) : (
+                  <>Minimum pencairan ({daySummary.effMin.toLocaleString('id-ID')} Koin) sudah tercapai — kamu bisa mengajukan pencairan.</>
+                )}
+              </p>
+            )}
+            <p className="text-[11px] text-text-secondary leading-relaxed">
+              Cek lagi besok untuk misi berikutnya.
+            </p>
+            {userStreak === 7 || userStreak === 30 || userStreak === 100 ? (
+              <p className="text-xs font-extrabold text-amber-600 dark:text-amber-400 leading-relaxed">
+                🔥 {userStreak} hari berturut-turut! Pertahankan besok.
+              </p>
+            ) : null}
+            {userStreak > 0 && (
+              <details className="text-[11px] text-text-secondary leading-relaxed">
+                <summary className="cursor-pointer font-bold text-accent-magic hover:underline">
+                  Cara kerja streak
+                </summary>
+                <p className="mt-1">
+                  Streak bertambah setiap ada tugas yang disetujui — bukan saat mengumpulkan. Tugas yang masih menunggu verifikasi belum menambah streak. Jika sehari penuh tanpa ada persetujuan, streak kembali ke 1. Tidak ada hari tenggang.
+                </p>
+              </details>
+            )}
           </div>
 
           <div className="grid grid-cols-2 gap-2 mt-4 pt-3 border-t border-emerald-500/20">
@@ -305,17 +360,22 @@ export const LinearPath: React.FC = () => {
             </p>
           </div>
 
-          {/* Reward Preview Chips */}
+          {/* Reward Preview Chips — bobot tugas; final mengikuti target & batas periode */}
           <div className="mt-3.5 flex items-center gap-2 flex-wrap">
             <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-amber-500/10 text-amber-700 dark:text-amber-300 border border-amber-500/20 font-black text-xs">
               <Coins className="w-3.5 h-3.5 text-amber-500" />
-              <span>+{stats.nextTask.reward_coins} Koin</span>
+              <span>Bobot +{stats.nextTask.reward_coins} Koin</span>
             </span>
             <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-sky-500/10 text-sky-700 dark:text-sky-300 border border-sky-500/20 font-black text-xs">
               <Sparkles className="w-3.5 h-3.5 text-sky-500" />
               <span>+{stats.nextTask.reward_xp} Bintang</span>
             </span>
           </div>
+          <p className="text-[11px] text-text-secondary mt-2 leading-relaxed">
+            {stats.nextTask.evaluation_type === 'ADMIN_REVIEW'
+              ? 'Tugas ini perlu verifikasi admin — Koin & Bintang masuk setelah disetujui. Besaran Koin mengikuti target dan batas periode yang berlaku.'
+              : 'Koin masuk otomatis setelah selesai. Besaran Koin mengikuti target dan batas periode yang berlaku.'}
+          </p>
 
           {/* Primary CTA Button */}
           <button
@@ -340,8 +400,16 @@ export const LinearPath: React.FC = () => {
           </div>
           <h2 className="text-sm font-bold text-text-primary mt-3">Menunggu verifikasi admin</h2>
           <p className="text-xs text-text-secondary mt-1 leading-relaxed">
-            Semua tugas sudah kamu kumpulkan. Koin akan otomatis masuk setelah admin memeriksa dokumen bukti.
+            Semua tugas sudah kamu kumpulkan dan sedang diverifikasi. Koin & Bintang masuk otomatis setelah admin menyetujui.
           </p>
+          <div className="mt-3 rounded-xl bg-surface-elevated border border-border-subtle p-3 text-left space-y-1.5">
+            <p className="text-[11px] text-text-secondary leading-relaxed">
+              <strong className="text-text-primary">Yang terjadi berikutnya:</strong> admin memeriksa bukti yang kamu kirim. Jika disetujui, reward masuk ke saldo; jika perlu revisi, tugas kembali dengan catatan admin.
+            </p>
+            <p className="text-[11px] text-text-secondary leading-relaxed">
+              Tiket Hadiah bisa diambil setelah ada tugas hari ini yang disetujui.
+            </p>
+          </div>
         </Card>
       )}
 
@@ -361,10 +429,16 @@ export const LinearPath: React.FC = () => {
               <Lock className="w-4 h-4 text-amber-800 dark:text-amber-200" />
             </div>
             <div className="flex-1 min-w-0">
-              <h3 className="text-sm font-extrabold text-amber-950 dark:text-amber-200">Batas Koin Bulanan tercapai</h3>
+              <h3 className="text-sm font-extrabold text-amber-950 dark:text-amber-200">Batas Koin tercapai</h3>
               <p className="text-xs text-amber-800/90 dark:text-amber-300 mt-1 leading-relaxed">
-                Kamu sudah mencapai {earned ?? '—'} / {earningCap ?? '—'} koin bulan ini. Tugas tetap terlihat, tapi tidak menghasilkan koin sampai bulan berikutnya. Saldo {userCoins.toLocaleString('id-ID')} koin tetap aman.
+                Kamu sudah mencapai {earned ?? '—'} / {earningCap ?? '—'} Koin pada periode batas berjalan. Tugas tetap terlihat, tapi tidak menambah saldo Koin sampai periode berikutnya — tugas ini tetap memberi Bintang (XP). Saldo {userCoins.toLocaleString('id-ID')} Koin tetap aman.
               </p>
+              {shopConfig?.effective_monthly_target !== undefined && shopConfig.effective_monthly_target > 0 && (
+                <p className="text-[11px] text-amber-800/80 dark:text-amber-300/90 mt-1.5 leading-relaxed">
+                  Target reward periode ini: {shopConfig.effective_monthly_target.toLocaleString('id-ID')} Koin
+                  . Target dan batas adalah dua hal berbeda: target menentukan pembagian reward, batas menghentikan perolehan Koin.
+                </p>
+              )}
             </div>
           </div>
         </div>
@@ -400,6 +474,9 @@ export const LinearPath: React.FC = () => {
             </div>
             <p className="text-[10.5px] text-text-secondary text-right">
               {userProgress.required - userProgress.have} Bintang lagi menuju Tingkat {userProgress.level + 1}
+            </p>
+            <p className="text-[10.5px] text-text-secondary">
+              Bintang (XP) menentukan tingkatmu.
             </p>
           </div>
         </div>
@@ -541,8 +618,35 @@ export const LinearPath: React.FC = () => {
                       {task.title}
                     </span>
                     <span className="text-xs text-text-secondary line-clamp-1 mt-0.5">
-                      {task.description || (isLocked ? 'Selesaikan tugas sebelumnya untuk membuka' : `+${task.reward_coins} koin • +${task.reward_xp} Bintang`)}
+                      {task.description || (isLocked ? 'Selesaikan tugas sebelumnya untuk membuka' : `Bobot +${task.reward_coins} Koin • +${task.reward_xp} Bintang`)}
                     </span>
+                    {isPending && (
+                      <span className="block text-[11px] text-amber-700 dark:text-amber-300 mt-1 leading-relaxed">
+                        Sedang diverifikasi admin
+                        {task.submitted_at && (
+                          <> • dikumpulkan {new Date(task.submitted_at).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}</>
+                        )}
+                        <> • reward & tiket menunggu persetujuan</>
+                      </span>
+                    )}
+                    {isRejected && (
+                      <span className="block text-[11px] text-status-error mt-1 leading-relaxed">
+                        Perlu revisi — perbaiki lalu kirim ulang. Langkah berikutnya terkunci sampai tugas ini disetujui.
+                        {task.admin_notes && (
+                          <span className="block truncate">Catatan admin: {task.admin_notes}</span>
+                        )}
+                      </span>
+                    )}
+                    {isApproved && (task.coins_earned > 0 || task.xp_earned > 0) && (
+                      <span className="block text-[11px] text-status-success mt-0.5 font-semibold">
+                        +{task.coins_earned.toLocaleString('id-ID')} Koin • +{task.xp_earned.toLocaleString('id-ID')} Bintang masuk
+                      </span>
+                    )}
+                    {isApproved && task.coins_earned === 0 && (
+                      <span className="block text-[11px] text-text-secondary mt-0.5 leading-relaxed">
+                        Tidak menambah Koin (batas/target periode) — Bintang tetap masuk.
+                      </span>
+                    )}
                   </span>
 
                   {/* Right Status / Action Pill */}

@@ -1,6 +1,7 @@
 import { useState, useCallback, useEffect } from 'react'
 import { adminTasksApi } from '../../../shared/lib/api'
 import type { TaskView, TaskType } from '../../../shared/types'
+import { buildTaskConfig } from './taskConfigBuilder'
 
 export interface NewTaskFormState {
   title: string
@@ -190,112 +191,26 @@ export function useAdminTasks() {
       return
     }
 
-    let config: Record<string, any> = {}
-    if (newTask.task_type === 'VIDEO') {
-      if (newTask.video_mode === 'recording') {
-        // User-recorded video (e.g. 60s self-intro): YouTube URL NOT required.
-        // Backend forces ADMIN_REVIEW for recording tasks (ResolveEvaluationTypeForConfig).
-        const recording: Record<string, any> = {
-          enabled: true,
-          max_duration_seconds: Math.max(1, Math.min(600, Number(newTask.video_max_duration) || 60)),
-          camera_facing: newTask.video_camera_facing,
-        }
-        if (newTask.video_instruction.trim()) {
-          recording.instruction = newTask.video_instruction.trim()
-        }
-        config = { recording }
-      } else {
-        if (!newTask.video_url.trim()) {
-          alert('URL Video YouTube wajib diisi')
-          return
-        }
-        config = { video_url: newTask.video_url.trim(), youtube_url: newTask.video_url.trim() }
-        if (newTask.video_answer_mode === 'quiz') {
-        for (let i = 0; i < newTask.questions.length; i++) {
-          const q = newTask.questions[i]
-          if (!q.question.trim()) { alert(`Pertanyaan ke-${i + 1} belum diisi`); return }
-          if (q.options.some((opt) => !opt.trim())) { alert(`Opsi ke-${i + 1} belum lengkap`); return }
-          if (!q.correct_answer.trim()) { alert(`Kunci #${i + 1} wajib dipilih`); return }
-        }
-        config.questions = newTask.questions
-      } else if (newTask.video_answer_mode === 'essay') {
-        if (!newTask.text_prompt.trim()) { alert('Prompt essay tidak boleh kosong'); return }
-        config.prompt = newTask.text_prompt.trim()
-        config.minimum_characters = newTask.text_min_chars
-        config.maximum_characters = newTask.text_max_chars
-      }
-      }
-    } else if (newTask.task_type === 'QUIZ') {
-      for (let i = 0; i < newTask.questions.length; i++) {
-        const q = newTask.questions[i]
-        if (!q.question.trim()) {
-          alert(`Pertanyaan ke-${i + 1} belum diisi`)
-          return
-        }
-        if (q.options.some((opt) => !opt.trim())) {
-          alert(`Semua opsi pilihan jawaban pada pertanyaan ke-${i + 1} wajib diisi`)
-          return
-        }
-        if (!q.correct_answer.trim()) {
-          alert(`Kunci jawaban pada pertanyaan ke-${i + 1} wajib dipilih`)
-          return
-        }
-      }
-      config = { questions: newTask.questions }
-    } else if (newTask.task_type === 'PHOTO_UPLOAD') {
-      config = {
-        min_photos: newTask.photo_min_count,
-        camera_only: Boolean(newTask.photo_camera_only),
-      }
-      if (newTask.photo_camera_only) {
-        config.camera_facing = newTask.photo_camera_facing
-        if (newTask.photo_camera_instruction.trim()) {
-          config.camera_instruction = newTask.photo_camera_instruction.trim()
-        }
-      }
-    } else if (newTask.task_type === 'DOCUMENT_UPLOAD') {
-      const exts = newTask.doc_allowed_extensions
-        .split(',')
-        .map((s) => s.trim().toLowerCase().replace(/^\./, ''))
-        .filter(Boolean)
-      config = {
-        allowed_extensions: exts,
-        max_file_size_mb: newTask.doc_max_size_mb,
-      }
-    } else if (newTask.task_type === 'TEXT_RESPONSE') {
-      if (!newTask.text_prompt.trim()) {
-        alert('Instruksi/pertanyaan esai tidak boleh kosong')
-        return
-      }
-      config = {
-        prompt: newTask.text_prompt.trim(),
-        minimum_characters: newTask.text_min_chars,
-        maximum_characters: newTask.text_max_chars,
-      }
-    } else if (newTask.task_type === 'MINI_GAME') {
-      config = {
-        game: newTask.game_type,
-        target_score: newTask.game_target_score,
-        max_moves: newTask.game_max_moves,
-      }
-      // Decision/finance scenario (optional): raw JSON parsed into config.scenario.
-      // Server validates structure (ValidateTaskInput) and recomputes results.
-      if (newTask.game_scenario_json.trim()) {
-        let parsed: any
-        try {
-          parsed = JSON.parse(newTask.game_scenario_json)
-        } catch {
-          alert('Scenario JSON tidak valid. Periksa format JSON.')
-          return
-        }
-        const scenario = parsed && typeof parsed === 'object' && parsed.scenario ? parsed.scenario : parsed
-        if (!scenario || typeof scenario !== 'object' || !Array.isArray(scenario.events)) {
-          alert('Scenario harus memiliki object dengan key "events" (array).')
-          return
-        }
-        config.scenario = scenario
-      }
-    }
+    // Single canonical task_type → config mapping (taskConfigBuilder).
+    // Create parity: YouTube URL required, min_photos without max_files,
+    // standalone QUIZ drops video_url, no stored-config preservation.
+    const config = buildTaskConfig(newTask, {
+      requireVideoUrl: true,
+      includePhotoMaxFiles: false,
+      includeQuizYoutubeUrl: false,
+      messages: {
+        videoUrlRequired: 'URL Video YouTube wajib diisi',
+        videoUrlInvalid: 'URL video harus http(s)',
+        quizVideoEmpty: (i) => `Pertanyaan ke-${i + 1} belum diisi`,
+        quizVideoOptions: (i) => `Opsi ke-${i + 1} belum lengkap`,
+        quizVideoKey: (i) => `Kunci #${i + 1} wajib dipilih`,
+        quizEmpty: (i) => `Pertanyaan ke-${i + 1} belum diisi`,
+        quizOptions: (i) => `Semua opsi pilihan jawaban pada pertanyaan ke-${i + 1} wajib diisi`,
+        quizKey: (i) => `Kunci jawaban pada pertanyaan ke-${i + 1} wajib dipilih`,
+        textPromptEmpty: 'Instruksi/pertanyaan esai tidak boleh kosong',
+      },
+    })
+    if (!config) return
 
     setIsCreatingTask(true)
     try {
@@ -453,97 +368,28 @@ export function useAdminTasks() {
       alert('Judul tugas tidak boleh kosong')
       return
     }
-    // Build config based on current task_type
-    let config: Record<string, any> = {}
-    const t = editTaskForm.task_type
-    if (t === 'VIDEO') {
-      if (editTaskForm.video_mode === 'recording') {
-        const recording: Record<string, any> = {
-          enabled: true,
-          max_duration_seconds: Math.max(1, Math.min(600, Number(editTaskForm.video_max_duration) || 60)),
-          camera_facing: editTaskForm.video_camera_facing,
-        }
-        if (editTaskForm.video_instruction.trim()) {
-          recording.instruction = editTaskForm.video_instruction.trim()
-        }
-        config = { recording }
-        // Preserve any non-YouTube custom keys already on the task (defensive).
-        if (editTaskForm.config && typeof editTaskForm.config === 'object') {
-          for (const [k, v] of Object.entries(editTaskForm.config)) {
-            if (k !== 'video_url' && k !== 'youtube_url' && k !== 'questions' && k !== 'prompt' && !(k in config)) {
-              config[k] = v
-            }
-          }
-        }
-      } else {
-        if (editTaskForm.video_url.trim() && !editTaskForm.video_url.trim().startsWith('http')) {
-          alert('URL video harus http(s)')
-          return
-        }
-        config = { video_url: editTaskForm.video_url.trim() }
-        if (editTaskForm.video_url.trim()) config.youtube_url = editTaskForm.video_url.trim()
-      if (editTaskForm.video_answer_mode === 'quiz') {
-        for (let i = 0; i < editTaskForm.questions.length; i++) {
-          const q = editTaskForm.questions[i]
-          if (!q.question.trim()) { alert(`Pertanyaan #${i + 1} belum diisi`); return }
-          if (q.options.some((o: string) => !o.trim())) { alert(`Opsi #${i + 1} belum lengkap`); return }
-          if (!q.correct_answer.trim()) { alert(`Kunci #${i + 1} belum dipilih`); return }
-        }
-        config.questions = editTaskForm.questions
-      } else if (editTaskForm.video_answer_mode === 'essay') {
-        if (!editTaskForm.text_prompt.trim()) { alert('Prompt essay tidak boleh kosong'); return }
-        config.prompt = editTaskForm.text_prompt.trim()
-        config.minimum_characters = editTaskForm.text_min_chars
-        config.maximum_characters = editTaskForm.text_max_chars
-      }
-      }
-    } else if (t === 'QUIZ') {
-      for (let i = 0; i < editTaskForm.questions.length; i++) {
-        const q = editTaskForm.questions[i]
-        if (!q.question.trim()) { alert(`Pertanyaan #${i + 1} belum diisi`); return }
-        if (q.options.some((o: string) => !o.trim())) { alert(`Opsi pertanyaan #${i + 1} belum lengkap`); return }
-        if (!q.correct_answer.trim()) { alert(`Kunci jawaban #${i + 1} belum dipilih`); return }
-      }
-      config = { questions: editTaskForm.questions }
-      if (editTaskForm.video_url.trim()) config.youtube_url = editTaskForm.video_url.trim()
-      } else if (t === 'PHOTO_UPLOAD') {
-      config = {
-        max_files: editTaskForm.photo_min_count,
-        min_photos: editTaskForm.photo_min_count,
-        camera_only: Boolean(editTaskForm.photo_camera_only),
-      }
-      if (editTaskForm.photo_camera_only) {
-        config.camera_facing = editTaskForm.photo_camera_facing
-        if (editTaskForm.photo_camera_instruction.trim()) {
-          config.camera_instruction = editTaskForm.photo_camera_instruction.trim()
-        }
-      }
-    } else if (t === 'DOCUMENT_UPLOAD') {
-      const exts = editTaskForm.doc_allowed_extensions.split(',').map((s: string) => s.trim().toLowerCase().replace(/^\./, '')).filter(Boolean)
-      config = { allowed_extensions: exts, max_file_size_mb: editTaskForm.doc_max_size_mb }
-    } else if (t === 'TEXT_RESPONSE') {
-      if (!editTaskForm.text_prompt.trim()) { alert('Prompt esai tidak boleh kosong'); return }
-      config = { prompt: editTaskForm.text_prompt.trim(), minimum_characters: editTaskForm.text_min_chars, maximum_characters: editTaskForm.text_max_chars }
-    } else if (t === 'MINI_GAME') {
-      config = { game: editTaskForm.game_type, target_score: editTaskForm.game_target_score, max_moves: editTaskForm.game_max_moves }
-      if (editTaskForm.game_scenario_json.trim()) {
-        let parsed: any
-        try {
-          parsed = JSON.parse(editTaskForm.game_scenario_json)
-        } catch {
-          alert('Scenario JSON tidak valid. Periksa format JSON.')
-          return
-        }
-        const scenario = parsed && typeof parsed === 'object' && parsed.scenario ? parsed.scenario : parsed
-        if (!scenario || typeof scenario !== 'object' || !Array.isArray(scenario.events)) {
-          alert('Scenario harus memiliki object dengan key "events" (array).')
-          return
-        }
-        config.scenario = scenario
-      }
-    } else {
-      config = editTaskForm.config || {}
-    }
+    // Single canonical task_type → config mapping (taskConfigBuilder).
+    // Edit parity: YouTube URL optional (http(s) checked when set), stored
+    // custom keys preserved on recording/GENERAL, max_files written,
+    // standalone QUIZ carries youtube_url over.
+    const config = buildTaskConfig(editTaskForm, {
+      requireVideoUrl: false,
+      preserveConfig: editTaskForm.config,
+      includePhotoMaxFiles: true,
+      includeQuizYoutubeUrl: true,
+      messages: {
+        videoUrlRequired: 'URL Video YouTube wajib diisi',
+        videoUrlInvalid: 'URL video harus http(s)',
+        quizVideoEmpty: (i) => `Pertanyaan #${i + 1} belum diisi`,
+        quizVideoOptions: (i) => `Opsi #${i + 1} belum lengkap`,
+        quizVideoKey: (i) => `Kunci #${i + 1} belum dipilih`,
+        quizEmpty: (i) => `Pertanyaan #${i + 1} belum diisi`,
+        quizOptions: (i) => `Opsi pertanyaan #${i + 1} belum lengkap`,
+        quizKey: (i) => `Kunci jawaban #${i + 1} belum dipilih`,
+        textPromptEmpty: 'Prompt esai tidak boleh kosong',
+      },
+    })
+    if (!config) return
 
     setIsSavingTask(true)
     try {

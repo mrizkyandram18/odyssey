@@ -102,7 +102,7 @@ export const AdminPage: React.FC<AdminPageProps> = ({ initialTab = 'overview' })
   const isAdmin = role === 'ADMIN' || role === 'GUIDE' || role === 'BUILDER'
 
   if (!isAdmin) {
-    return <Navigate to="/home" replace />
+    return <Navigate to="/" replace />
   }
 
   const periodRange = config

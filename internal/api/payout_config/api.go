@@ -105,7 +105,7 @@ func (a *API) HandleUpsert(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	freq := payout.NormalizeFrequency(req.PayoutFrequency)
-	if !payout.IsValidFrequency(req.PayoutFrequency) {
+	if verr := payout.ValidatePayoutFrequencyValue(req.PayoutFrequency); verr != nil {
 		shared.WriteJSONError(w, "payout_frequency tidak valid (THRESHOLD|WEEKLY|MONTHLY)", http.StatusBadRequest)
 		return
 	}
@@ -113,16 +113,15 @@ func (a *API) HandleUpsert(w http.ResponseWriter, r *http.Request) {
 	sysMin := payout.GetSystemMinimumWithdrawal(ctx, a.client)
 	// Allow admin to set any >0, but if below system min, still allow? Spec says systemMinimumWithdrawal configurable then userMinimum >= systemMinimum if intended.
 	// We enforce system min as floor.
-	if req.MinimumWithdrawalCoins <= 0 {
-		shared.WriteJSONError(w, "minimum_withdrawal_coins harus > 0", http.StatusBadRequest)
-		return
-	}
-	if req.MinimumWithdrawalCoins < sysMin {
-		shared.WriteJSONError(w, fmt.Sprintf("minimum_withdrawal_coins (%d) di bawah system minimum (%d)", req.MinimumWithdrawalCoins, sysMin), http.StatusBadRequest)
-		return
-	}
-	if req.MinimumWithdrawalCoins > 100000 {
-		shared.WriteJSONError(w, "minimum_withdrawal_coins terlalu besar (max 100000)", http.StatusBadRequest)
+	if verr := payout.ValidateMinimumWithdrawalValue(req.MinimumWithdrawalCoins, sysMin); verr != nil {
+		switch verr.Rule {
+		case payout.PayoutRuleTooSmall:
+			shared.WriteJSONError(w, "minimum_withdrawal_coins harus > 0", http.StatusBadRequest)
+		case payout.PayoutRuleBelowSystem:
+			shared.WriteJSONError(w, fmt.Sprintf("minimum_withdrawal_coins (%d) di bawah system minimum (%d)", req.MinimumWithdrawalCoins, sysMin), http.StatusBadRequest)
+		default:
+			shared.WriteJSONError(w, "minimum_withdrawal_coins terlalu besar (max 100000)", http.StatusBadRequest)
+		}
 		return
 	}
 	// Validate schedule per frequency
@@ -144,7 +143,7 @@ func (a *API) HandleUpsert(w http.ResponseWriter, r *http.Request) {
 				req.PayoutWeekday = &v
 			}
 		}
-		if *req.PayoutWeekday < 0 || *req.PayoutWeekday > 6 {
+		if verr := payout.ValidatePayoutWeekdayValue(*req.PayoutWeekday); verr != nil {
 			shared.WriteJSONError(w, "payout_weekday harus 0..6 (0=Sunday)", http.StatusBadRequest)
 			return
 		}
@@ -181,11 +180,15 @@ func (a *API) HandleUpsert(w http.ResponseWriter, r *http.Request) {
 				}
 			}
 		}
-		if *req.PayoutMonthStartDay < 1 || *req.PayoutMonthStartDay > 31 || *req.PayoutMonthEndDay < 1 || *req.PayoutMonthEndDay > 31 {
+		if verr := payout.ValidatePayoutMonthDayValue(payout.PayoutFieldMonthStart, *req.PayoutMonthStartDay); verr != nil {
 			shared.WriteJSONError(w, "payout_month_start/end_day harus 1..31", http.StatusBadRequest)
 			return
 		}
-		if *req.PayoutMonthStartDay > *req.PayoutMonthEndDay {
+		if verr := payout.ValidatePayoutMonthDayValue(payout.PayoutFieldMonthEnd, *req.PayoutMonthEndDay); verr != nil {
+			shared.WriteJSONError(w, "payout_month_start/end_day harus 1..31", http.StatusBadRequest)
+			return
+		}
+		if verr := payout.ValidatePayoutMonthOrder(*req.PayoutMonthStartDay, *req.PayoutMonthEndDay); verr != nil {
 			shared.WriteJSONError(w, "payout_month_start_day tidak boleh lebih besar dari end_day", http.StatusBadRequest)
 			return
 		}

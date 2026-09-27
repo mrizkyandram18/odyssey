@@ -11,8 +11,8 @@ self.addEventListener('activate', (event) => {
 self.addEventListener('push', (event) => {
   let data = {
     title: 'Odyssey',
-    body: "It's your turn!",
-    url: '/#/home',
+    body: 'Ada pembaruan di Odyssey — buka untuk melihatnya.',
+    url: '/#/',
     tag: 'odyssey-turn',
   }
 
@@ -31,7 +31,7 @@ self.addEventListener('push', (event) => {
     badge: '/favicon-32x32.png',
     tag: data.tag || 'odyssey-notification',
     data: {
-      url: data.url || '/#/home',
+      url: data.url || '/#/',
     },
   }
 
@@ -41,7 +41,7 @@ self.addEventListener('push', (event) => {
 self.addEventListener('notificationclick', (event) => {
   event.notification.close()
 
-  const targetUrl = new URL(event.notification.data?.url || '/#/home', self.location.origin).href
+  const targetUrl = new URL(event.notification.data?.url || '/#/', self.location.origin).href
 
   event.waitUntil(
     self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((windowClients) => {

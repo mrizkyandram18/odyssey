@@ -83,9 +83,14 @@ export function LoginPage() {
             >
               Masuk
             </Button>
-            <p className="text-center text-[11px] text-text-secondary">
-              Login menggunakan akun terdaftar
-            </p>
+            <div className="space-y-1">
+              <p className="text-center text-[11px] text-text-secondary">
+                Login menggunakan akun terdaftar
+              </p>
+              <p className="text-center text-[11px] text-text-secondary leading-relaxed">
+                Satu akun terikat ke satu perangkat. Jika ganti HP, minta admin untuk reset perangkat.
+              </p>
+            </div>
           </form>
         </Card>
       </div>
