@@ -43,6 +43,30 @@ func SchemaVersionString() string {
 	return SchemaVersion
 }
 
+// schemaVersionReadTimeout bounds the per-request live schema-version
+// read so a slow database degrades /api/status to the cached value
+// instead of hanging the endpoint.
+const schemaVersionReadTimeout = 3 * time.Second
+
+// LiveSchemaVersion returns the current schema version read live from
+// the database on every call, so long-lived processes (e.g. warm
+// serverless instances that booted before a migration was applied)
+// can never serve a stale value. On success it also refreshes the
+// cached runtime value; on any failure (including a nil client) it
+// falls back to the cached runtime/build-time value.
+func LiveSchemaVersion(ctx context.Context, client SupabaseClient) string {
+	if client == nil {
+		return SchemaVersionString()
+	}
+	rctx, cancel := context.WithTimeout(ctx, schemaVersionReadTimeout)
+	defer cancel()
+	if v, err := ReadSchemaVersion(rctx, client); err == nil && v != "" {
+		SetRuntimeSchemaVersion(v)
+		return v
+	}
+	return SchemaVersionString()
+}
+
 // ReadSchemaVersion reads the current schema version from the
 // odyssey_schema_version table in the database. Returns the build-time
 // SchemaVersion (or "0") if the database is unavailable so that the

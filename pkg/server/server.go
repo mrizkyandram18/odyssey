@@ -122,9 +122,12 @@ func BuildHandler() (*Server, error) {
 
 	status.Setup(status.FuncStatusProvider(func(ctx context.Context) map[string]any {
 		return map[string]any{
-			"app":            "odyssey",
-			"version":        observability.Version,
-			"schema_version": observability.SchemaVersionString(),
+			"app":     "odyssey",
+			"version": observability.Version,
+			// Read live on every request so warm instances never serve a
+			// schema version that predates the latest applied migration;
+			// falls back to the boot-time cached value when unreadable.
+			"schema_version": observability.LiveSchemaVersion(ctx, supabaseClient),
 			"uptime_seconds": int64(time.Since(metrics.BootTime()).Seconds()),
 			"boot_time":      metrics.BootTime().UTC().Format(time.RFC3339),
 		}

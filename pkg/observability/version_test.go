@@ -227,3 +227,62 @@ func TestReadSchemaVersion_NilClient(t *testing.T) {
 		t.Fatal("expected error for nil client")
 	}
 }
+
+func TestLiveSchemaVersion_PrefersLiveOverStaleBootCache(t *testing.T) {
+	// Regression test: a warm instance that booted before a migration
+	// (boot cache "099") must serve the live value ("100"), not the
+	// stale boot-time value.
+	SchemaVersion = "0"
+	SetRuntimeSchemaVersion("099_stale_boot_value")
+	defer func() {
+		SchemaVersion = "0"
+		SetRuntimeSchemaVersion("")
+	}()
+
+	client := &mockSupabaseClient{data: []byte(`[{"key":"schema_version","value":"100_live_value"}]`)}
+	if v := LiveSchemaVersion(context.Background(), client); v != "100_live_value" {
+		t.Fatalf("expected live value 100_live_value, got %s", v)
+	}
+}
+
+func TestLiveSchemaVersion_RefreshesCacheOnSuccess(t *testing.T) {
+	SchemaVersion = "0"
+	SetRuntimeSchemaVersion("099_stale_boot_value")
+	defer func() {
+		SchemaVersion = "0"
+		SetRuntimeSchemaVersion("")
+	}()
+
+	client := &mockSupabaseClient{data: []byte(`[{"key":"schema_version","value":"100_live_value"}]`)}
+	LiveSchemaVersion(context.Background(), client)
+	if SchemaVersionString() != "100_live_value" {
+		t.Errorf("expected runtime cache refreshed to 100_live_value, got %s", SchemaVersionString())
+	}
+}
+
+func TestLiveSchemaVersion_FallsBackToCacheOnDBError(t *testing.T) {
+	SchemaVersion = "8"
+	SetRuntimeSchemaVersion("099_boot_value")
+	defer func() {
+		SchemaVersion = "0"
+		SetRuntimeSchemaVersion("")
+	}()
+
+	client := &mockSupabaseClient{err: errDBUnavailable}
+	if v := LiveSchemaVersion(context.Background(), client); v != "099_boot_value" {
+		t.Fatalf("expected cached fallback 099_boot_value, got %s", v)
+	}
+}
+
+func TestLiveSchemaVersion_NilClientFallsBackToCache(t *testing.T) {
+	SchemaVersion = "8"
+	SetRuntimeSchemaVersion("")
+	defer func() {
+		SchemaVersion = "0"
+		SetRuntimeSchemaVersion("")
+	}()
+
+	if v := LiveSchemaVersion(context.Background(), nil); v != "8" {
+		t.Fatalf("expected build-time fallback 8, got %s", v)
+	}
+}
