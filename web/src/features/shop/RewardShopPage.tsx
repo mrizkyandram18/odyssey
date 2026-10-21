@@ -69,6 +69,8 @@ export const RewardShopPage: React.FC = () => {
   const payoutTargetCoins = config ? config.payout_target_coins : 0
   const payoutTargetRupiah = config ? config.payout_target_rupiah : 0
   const estimatedCash = userCoins * conversionRate
+  const maxRedeemable = Math.floor(userCoins / 500) * 500
+  const withdrawableCash = maxRedeemable * conversionRate
   // Per-user effective payout: THRESHOLD not blocked by global 21-26 window
   const effFreq = config?.effective_payout_frequency
   const effMin = config?.effective_minimum_withdrawal
@@ -123,10 +125,15 @@ export const RewardShopPage: React.FC = () => {
             <p className="text-[11px] text-text-secondary mt-1">≈ Rp {estimatedCash.toLocaleString('id-ID')} • 1 Koin = Rp {conversionRate.toLocaleString('id-ID')}</p>
           </div>
           <div className="text-right shrink-0">
-            <p className="text-[11px] font-bold tracking-widest uppercase text-text-secondary">Estimasi</p>
+            <p className="text-[11px] font-bold tracking-widest uppercase text-text-secondary">Bisa Dicairkan</p>
             <p className="mt-1 flex items-center justify-end gap-1 text-status-success font-extrabold">
               <Banknote className="w-4 h-4 shrink-0" />
-              <span className="text-[15px]">Rp {estimatedCash.toLocaleString('id-ID')}</span>
+              <span className="text-[15px]" data-testid="withdrawable-cash">Rp {withdrawableCash.toLocaleString('id-ID')}</span>
+            </p>
+            <p className="text-[10px] text-text-secondary mt-1">
+              {maxRedeemable > 0 && (effMin ?? 500) > 0 && maxRedeemable < (effMin ?? 500)
+                ? `Butuh ${((effMin ?? 500) - maxRedeemable).toLocaleString('id-ID')} koin lagi`
+                : `${maxRedeemable.toLocaleString('id-ID')} Koin • kelipatan 500`}
             </p>
           </div>
         </div>

@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"odyssey/pkg/auth"
+	"odyssey/pkg/push"
 	"odyssey/pkg/shared"
 )
 
@@ -340,6 +341,87 @@ func TestAdminProcessClaim_Success(t *testing.T) {
 	}
 }
 
+type fakeClaimNotifier struct {
+	uid string
+	n   push.Notification
+}
+
+func (f *fakeClaimNotifier) SendToUser(ctx context.Context, uid string, n push.Notification) error {
+	f.uid = uid
+	f.n = n
+	return nil
+}
+
+func TestAdminProcessClaim_SendsPushNotification(t *testing.T) {
+	claimData, _ := json.Marshal([]map[string]any{
+		{"user_uid": "member-1", "coins_redeemed": 3500},
+	})
+	rpcStatus := "APPROVED"
+	client := &mockSupabaseClient{
+		getResp: claimData,
+		rpcResp: []byte(`{"success":true}`),
+		rpcErr:  nil,
+	}
+	notifier := &fakeClaimNotifier{}
+	api := NewAPI(client)
+	api.SetPushNotifier(notifier)
+
+	mkReq := func() *http.Request {
+		req := httptest.NewRequest(http.MethodPost, "/api/admin/claims/5/process", strings.NewReader(`{"status":"`+rpcStatus+`","notes":"catatan uji"}`))
+		req.Header.Set("Content-Type", "application/json")
+		guideClaims := &auth.SessionClaims{UID: "admin-1", FamilyID: "fam-1", Role: "ADMIN"}
+		return req.WithContext(auth.ContextWithClaims(req.Context(), guideClaims))
+	}
+
+	rpcStatus = "APPROVED"
+	rec := httptest.NewRecorder()
+	api.Handler(rec, mkReq())
+	if rec.Code != http.StatusOK {
+		t.Fatalf("expected 200 OK, got %d: %s", rec.Code, rec.Body.String())
+	}
+	if notifier.uid != "member-1" {
+		t.Fatalf("expected push to member-1, got %q", notifier.uid)
+	}
+	if notifier.n.Title != "Pencairan Disetujui 🎉" || !strings.Contains(notifier.n.Body, "3.500 Koin") || !strings.Contains(notifier.n.URL, "/shop") {
+		t.Fatalf("unexpected approved notification: %+v", notifier.n)
+	}
+
+	notifier.uid = ""
+	notifier.n = push.Notification{}
+	rpcStatus = "REJECTED"
+	rec = httptest.NewRecorder()
+	api.Handler(rec, mkReq())
+	if rec.Code != http.StatusOK {
+		t.Fatalf("expected 200 OK, got %d: %s", rec.Code, rec.Body.String())
+	}
+	if notifier.n.Title != "Pencairan Ditolak" || !strings.Contains(notifier.n.Body, "dikembalikan ke saldo") || !strings.Contains(notifier.n.Body, "catatan uji") {
+		t.Fatalf("unexpected rejected notification: %+v", notifier.n)
+	}
+}
+
+func TestAdminProcessClaim_NoPushWhenNotifierUnset(t *testing.T) {
+	claimData, _ := json.Marshal([]map[string]any{
+		{"user_uid": "member-1", "coins_redeemed": 3500},
+	})
+	client := &mockSupabaseClient{
+		getResp: claimData,
+		rpcResp: []byte(`{"success":true}`),
+	}
+	api := NewAPI(client)
+
+	req := httptest.NewRequest(http.MethodPost, "/api/admin/claims/5/process", strings.NewReader(`{"status":"APPROVED"}`))
+	req.Header.Set("Content-Type", "application/json")
+	guideClaims := &auth.SessionClaims{UID: "admin-1", FamilyID: "fam-1", Role: "ADMIN"}
+	req = req.WithContext(auth.ContextWithClaims(req.Context(), guideClaims))
+
+	rec := httptest.NewRecorder()
+	api.Handler(rec, req)
+
+	if rec.Code != http.StatusOK {
+		t.Fatalf("expected 200 OK, got %d: %s", rec.Code, rec.Body.String())
+	}
+}
+
 func TestAdminListClaims_TenantIsolationAndPagination(t *testing.T) {
 	var requestedProfileParams string
 	var requestedClaimParams string
@@ -458,5 +540,80 @@ func TestShopRedeem_MultipleOf500Enforced(t *testing.T) {
 	api.Handler(rec2, req2)
 	if rec2.Code != http.StatusOK {
 		t.Fatalf("expected 200 for 500 coins, got %d: %s", rec2.Code, rec2.Body.String())
+	}
+}
+
+func TestShopConfig_Authenticated_ComputesEarnedThisPeriod(t *testing.T) {
+	clientGet := func(ctx context.Context, table string, params string) ([]byte, error) {
+		if table == "odyssey_system_config" {
+			configRows := []map[string]any{
+				{"key": "default_monthly_coin_target", "value": "3320"},
+				{"key": "timezone", "value": "Asia/Jakarta"},
+				{"key": "default_payout_frequency", "value": "THRESHOLD"},
+				{"key": "default_minimum_withdrawal_coins", "value": "500"},
+			}
+			return json.Marshal(configRows)
+		}
+		if table == "odyssey_user_payout_config" {
+			return []byte("[]"), nil
+		}
+		if table == "odyssey_user_profiles" {
+			profiles := []map[string]any{
+				{"coins": 1200, "monthly_coin_target": 3320},
+			}
+			return json.Marshal(profiles)
+		}
+		if table == "odyssey_coin_transactions" {
+			if !strings.Contains(params, "type=eq.TASK_REWARD") {
+				t.Errorf("expected coin transaction query to filter by type=eq.TASK_REWARD, got %s", params)
+			}
+			txs := []map[string]any{
+				{"amount": 100},
+				{"amount": 250},
+				{"amount": 50},
+			}
+			return json.Marshal(txs)
+		}
+		return []byte("[]"), nil
+	}
+
+	api := NewAPI(&mockSupabaseClientDynamic{GetFn: clientGet})
+
+	req := httptest.NewRequest(http.MethodGet, "/api/shop/config", nil)
+	claims := &auth.SessionClaims{UID: "user-test-period", Role: "MEMBER"}
+	req = req.WithContext(auth.ContextWithClaims(req.Context(), claims))
+
+	rec := httptest.NewRecorder()
+	api.Handler(rec, req)
+
+	if rec.Code != http.StatusOK {
+		t.Fatalf("expected status 200, got %d: %s", rec.Code, rec.Body.String())
+	}
+
+	var res struct {
+		EarnedThisPeriod           int    `json:"earned_this_period"`
+		EffectiveMonthlyTarget     int    `json:"effective_monthly_target"`
+		EffectivePayoutFrequency   string `json:"effective_payout_frequency"`
+		EffectiveMinimumWithdrawal int    `json:"effective_minimum_withdrawal"`
+		EffectiveIsEligible        bool   `json:"effective_is_eligible"`
+	}
+	if err := json.Unmarshal(rec.Body.Bytes(), &res); err != nil {
+		t.Fatalf("failed to decode response: %v", err)
+	}
+
+	if res.EarnedThisPeriod != 400 {
+		t.Errorf("expected earned_this_period to be 400 (100+250+50), got %d", res.EarnedThisPeriod)
+	}
+	if res.EffectiveMonthlyTarget != 3320 {
+		t.Errorf("expected effective_monthly_target to be 3320, got %d", res.EffectiveMonthlyTarget)
+	}
+	if res.EffectivePayoutFrequency != "THRESHOLD" {
+		t.Errorf("expected effective_payout_frequency to be THRESHOLD, got %s", res.EffectivePayoutFrequency)
+	}
+	if res.EffectiveMinimumWithdrawal != 500 {
+		t.Errorf("expected effective_minimum_withdrawal to be 500, got %d", res.EffectiveMinimumWithdrawal)
+	}
+	if !res.EffectiveIsEligible {
+		t.Errorf("expected effective_is_eligible to be true for balance 1200 >= 500")
 	}
 }

@@ -33,7 +33,7 @@ ticker.
 | Admin | Family admin (`ADMIN`; legacy `GUIDE`/`BUILDER` normalize to admin) managing tasks, submissions, members, claims, config | `web/src/features/admin`, `NormalizeRole` in `pkg/auth/middleware.go` |
 | System | Go service + Postgres RPCs enforcing grading, ledger, caps | `pkg/server/server.go`, `supabase/migrations/042–088` |
 | Telegram bot | Best-effort admin notification on new claims | `pkg/shared/telegram.go`, called only from `internal/api/shop/api.go` |
-| Push service | VAPID web-push delivery (subscribe storage wired; sender has no production call sites) | `internal/api/push/index.go`, `pkg/push/sender.go` |
+| Push service | VAPID web-push delivery (subscribe storage wired; sender notifies members on claim approve/reject) | `internal/api/push/index.go`, `pkg/push/sender.go`, `internal/api/shop/api.go` |
 
 All users belong to exactly one **family** (`family_id`) — the tenancy root.
 Members are created by an admin; there is no self-registration.
@@ -369,8 +369,8 @@ concurrency), fail-fast boot validation, health gates, graceful shutdown,
 blocking lint/type/test/build CI.
 
 `UNDEFINED` (no SLO evidence): latency targets, multi-instance behavior
-(limiters don't coordinate), OS-level push delivery (sender has no
-production call sites — `UNVERIFIED` end-to-end).
+(limiters don't coordinate), OS-level push delivery on real devices
+(`UNVERIFIED` end-to-end).
 
 ## 11. Risks / technical debt (evidence-based)
 

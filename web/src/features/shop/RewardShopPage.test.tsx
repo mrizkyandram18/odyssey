@@ -91,6 +91,18 @@ describe('RewardShopPage Component', () => {
     expect(screen.getByText('Tukarkan Koin Sekarang')).toBeInTheDocument()
   })
 
+  it('shows withdrawable amount floored to 500 multiple', async () => {
+    render(
+      <MemoryRouter>
+        <RewardShopPage />
+      </MemoryRouter>
+    )
+
+    const panel = await screen.findByTestId('withdrawable-cash')
+    expect(panel).toHaveTextContent('Rp 10.000')
+    expect(screen.getByText(/1[.,]?000 Koin • kelipatan 500/)).toBeInTheDocument()
+  })
+
   it('displays closed state with dynamic configured dates when window is closed', async () => {
     vi.mocked(useSession).mockReturnValue({
       session: { uid: 'user-1', role: 'SEEKER' } as any,

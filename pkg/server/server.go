@@ -19,6 +19,7 @@ import (
 	"odyssey/pkg/auth"
 	"odyssey/pkg/db"
 	"odyssey/pkg/observability"
+	pushnotif "odyssey/pkg/push"
 	"odyssey/pkg/shared"
 )
 
@@ -82,6 +83,15 @@ func BuildHandler() (*Server, error) {
 	rewardsAPI := apiRewards.NewAPI(supabaseClient)
 	shopAPI := apiShop.NewAPI(supabaseClient)
 	payoutConfigAPI := apiPayoutConfig.NewAPI(supabaseClient)
+
+	pushSender, pushSenderErr := pushnotif.NewSender(pushnotif.Config{
+		VAPIDPublicKey:  config.VAPIDPublicKey,
+		VAPIDPrivateKey: config.VAPIDPrivateKey,
+		VAPIDSubject:    config.VAPIDSubject,
+	}, pushStore)
+	if pushSenderErr == nil {
+		shopAPI.SetPushNotifier(pushSender)
+	}
 
 	secCfg := shared.DefaultSecurityConfig()
 	secCfg.AllowedOrigins = config.AllowedOrigins

@@ -143,7 +143,8 @@ today), `scripts/apply-seed-052.cjs`, `scripts/smoke-prod-sep*.cjs`
   regardless (best-effort by design).
 - **No push**: check VAPID keys, subscription row, browser permission;
   OS-level delivery is `UNVERIFIED` — confirm on hardware before promising.
-  Note the sender has no production call sites (subscribe storage only).
+  The sender currently only notifies members on claim approve/reject
+  (best-effort — processing never fails on push errors).
 - **Upload auth oddity**: `uploadTaskProof` reads stale key
   `odyssey_session_token` while sessions live under `odyssey_session` —
   confirm headers in DevTools if uploads 401.

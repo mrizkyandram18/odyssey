@@ -13,15 +13,25 @@ import (
 	"odyssey/pkg/auth"
 	"odyssey/pkg/db"
 	"odyssey/pkg/payout"
+	"odyssey/pkg/push"
 	"odyssey/pkg/shared"
 )
 
+type ClaimNotifier interface {
+	SendToUser(ctx context.Context, uid string, n push.Notification) error
+}
+
 type API struct {
-	client db.SupabaseClient
+	client       db.SupabaseClient
+	pushNotifier ClaimNotifier
 }
 
 func NewAPI(client db.SupabaseClient) *API {
 	return &API{client: client}
+}
+
+func (a *API) SetPushNotifier(n ClaimNotifier) {
+	a.pushNotifier = n
 }
 
 type RewardCatalogItem struct {
@@ -647,7 +657,8 @@ func (a *API) HandleAdminProcessClaim(w http.ResponseWriter, r *http.Request, cl
 		return
 	}
 	type ClaimCheck struct {
-		UserUID string `json:"user_uid"`
+		UserUID       string `json:"user_uid"`
+		CoinsRedeemed int    `json:"coins_redeemed"`
 	}
 	var cChecks []ClaimCheck
 	_ = json.Unmarshal(cRaw, &cChecks)
@@ -688,8 +699,42 @@ func (a *API) HandleAdminProcessClaim(w http.ResponseWriter, r *http.Request, cl
 		return
 	}
 
+	if len(cChecks) > 0 && cChecks[0].UserUID != "" {
+		a.notifyClaimProcessed(ctx, cChecks[0].UserUID, cChecks[0].CoinsRedeemed, req.Status, req.Notes)
+	}
+
 	w.Header().Set("Content-Type", "application/json")
 	w.Write(rpcRes)
+}
+
+func (a *API) notifyClaimProcessed(ctx context.Context, uid string, coins int, status string, notes string) {
+	if a.pushNotifier == nil || coins <= 0 {
+		return
+	}
+	cfg := fetchRedemptionConfig(ctx, a.client)
+	rupiah := coins * cfg.ConversionRate
+	var title, body string
+	switch status {
+	case "APPROVED":
+		title = "Pencairan Disetujui 🎉"
+		body = fmt.Sprintf("%s Koin (≈ Rp %s) disetujui admin. Dana ditransfer manual — cek mutasi di tujuan pencairanmu.", formatThousand(coins), formatThousand(rupiah))
+	case "REJECTED":
+		title = "Pencairan Ditolak"
+		body = fmt.Sprintf("Pengajuan %s Koin ditolak. Koin dikembalikan ke saldo.", formatThousand(coins))
+		if n := strings.TrimSpace(notes); n != "" {
+			runes := []rune(n)
+			if len(runes) > 140 {
+				runes = runes[:140]
+				n = string(runes) + "…"
+			}
+			body += " Catatan admin: " + n
+		}
+	default:
+		return
+	}
+	if err := a.pushNotifier.SendToUser(ctx, uid, push.Notification{Title: title, Body: body, URL: "/#/shop"}); err != nil {
+		log.Printf("push: claim notification not sent for uid %q: %v", uid, err)
+	}
 }
 
 func (a *API) Handler(w http.ResponseWriter, r *http.Request) {

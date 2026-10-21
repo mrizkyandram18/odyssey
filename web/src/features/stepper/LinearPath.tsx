@@ -494,7 +494,9 @@ export const LinearPath: React.FC = () => {
         <div className="rounded-2xl bg-surface border border-border-subtle p-4 flex flex-col justify-between gap-2.5">
           {(() => {
             const conv = shopConfig ? shopConfig.conversion_rate : 0
-            const estCash = userCoins * conv
+            const minWithdrawal = shopConfig?.effective_minimum_withdrawal ?? 500
+            const maxRedeemable = Math.floor(userCoins / 500) * 500
+            const estCash = maxRedeemable * conv
             return (
               <>
                 <div className="flex items-center justify-between">
@@ -520,14 +522,14 @@ export const LinearPath: React.FC = () => {
                 </div>
 
                 <div className="text-[11px] text-text-secondary flex items-center justify-between pt-1 border-t border-border-subtle/60">
-                  <span>Estimasi Uang Tunai</span>
+                  <span>Estimasi Cair (kelipatan 500)</span>
                   <span className="font-bold text-text-primary">≈ Rp {estCash.toLocaleString('id-ID')}</span>
                 </div>
 
-                {userCoins >= 500 && (
+                {maxRedeemable >= minWithdrawal && (
                   <div className="p-2 rounded-xl bg-status-success/10 border border-status-success/20 flex items-center gap-1.5 text-xs text-status-success font-bold">
                     <Banknote className="w-3.5 h-3.5 shrink-0" />
-                    <span>Bisa dicairkan sekarang (min. 500 koin)</span>
+                    <span>Bisa dicairkan sekarang (min. {minWithdrawal.toLocaleString('id-ID')} koin)</span>
                   </div>
                 )}
               </>
