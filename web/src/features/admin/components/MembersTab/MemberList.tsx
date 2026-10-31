@@ -207,8 +207,6 @@ export const MemberList: React.FC<MemberListProps> = ({ controller }) => {
                     const earned = member.earned_this_period ?? 0
                     // Effective cap is what the backend enforces (strictly authorized cap, no level bonus inflation).
                     const capVal = member.effective_earning_cap ?? member.monthly_earning_cap ?? 0
-                    const targetVal = member.monthly_coin_target ?? 3320
-                    const pace = calculateTargetPace(earned, targetVal)
                     return (
                       <tr key={member.uid} className="transition-colors hover:bg-surface-elevated/40">
                         <td className="px-4 py-3">
