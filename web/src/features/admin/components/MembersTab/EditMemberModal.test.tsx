@@ -238,4 +238,37 @@ describe('Gate 2-D — honest NULL/0 target display', () => {
     expect(input.value).toBe('0')
     expect(screen.getByText('Tanpa payout')).toBeInTheDocument()
   })
+
+  it('renders explicit income_status options and does not claim cap 0 is 3320 standard', () => {
+    const setForm = vi.fn()
+    render(
+      <EditMemberModal
+        member={{ ...member, role: 'MEMBER' as const }}
+        form={{
+          ...fullForm(null),
+          income_status: 'NOT_CONFIGURED',
+          monthly_earning_cap: 0,
+        }}
+        setForm={setForm}
+        isSaving={false}
+        onClose={vi.fn()}
+        onSave={vi.fn()}
+      />
+    )
+    fireEvent.click(screen.getByText('Target & Batas Koin'))
+
+    // Verify explicit status options exist
+    expect(screen.getByText('Batas Koin Aktif (Dikonfigurasi)')).toBeInTheDocument()
+    expect(screen.getByText('Belum Diatur (Batas Rp0 — Antrean Triage)')).toBeInTheDocument()
+    expect(screen.getByText('Dinonaktifkan (Batas Rp0 — Ditutup)')).toBeInTheDocument()
+
+    // Ensure misleading 3.320 standard radio label is completely gone
+    expect(screen.queryByText(/Gunakan batas koin bulanan standar sistem \(3\.320 koin \/ bulan\)/)).toBeNull()
+    expect(screen.queryByText('Batas Standar Sistem (3.320 koin)')).toBeNull()
+
+    // Verify clicking CONFIGURED updates form
+    const configuredRadio = screen.getByRole('radio', { name: /Batas Koin Aktif/i })
+    fireEvent.click(configuredRadio)
+    expect(setForm).toHaveBeenCalled()
+  })
 })

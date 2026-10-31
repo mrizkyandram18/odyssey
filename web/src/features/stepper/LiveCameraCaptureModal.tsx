@@ -27,6 +27,7 @@ export const LiveCameraCaptureModal: React.FC<LiveCameraCaptureModalProps> = ({ 
   const [previewUrl, setPreviewUrl] = useState<string | null>(null)
   const [compressing, setCompressing] = useState(false)
   const [uploading, setUploading] = useState(false)
+  const isSubmittingRef = useRef(false)
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
   const [submitted, setSubmitted] = useState(isAlreadyDone)
   const [isSupported, setIsSupported] = useState(true)
@@ -239,6 +240,7 @@ export const LiveCameraCaptureModal: React.FC<LiveCameraCaptureModalProps> = ({ 
   }
 
   const handleRetake = () => {
+    if (isSubmittingRef.current || uploading) return
     if (previewUrl && typeof URL.revokeObjectURL === 'function') URL.revokeObjectURL(previewUrl)
     setPreviewUrl(null)
     setCapturedFile(null)
@@ -247,7 +249,9 @@ export const LiveCameraCaptureModal: React.FC<LiveCameraCaptureModalProps> = ({ 
   }
 
   const handleSubmit = async () => {
+    if (isSubmittingRef.current) return
     if (!capturedFile) return
+    isSubmittingRef.current = true
     setUploading(true)
     setErrorMessage(null)
     try {
@@ -263,9 +267,11 @@ export const LiveCameraCaptureModal: React.FC<LiveCameraCaptureModalProps> = ({ 
       if (res.success) {
         setSubmitted(true)
       } else {
+        isSubmittingRef.current = false
         setErrorMessage(res.error || 'Gagal menyimpan submission foto')
       }
     } catch (err: any) {
+      isSubmittingRef.current = false
       if (isEarningCapError(err)) {
         setErrorMessage(EARNING_CAP_MESSAGE)
         try { onSuccess() } catch { /* ignore */ }
@@ -412,7 +418,7 @@ export const LiveCameraCaptureModal: React.FC<LiveCameraCaptureModalProps> = ({ 
                             type="button"
                             data-testid="switch-camera-button"
                             onClick={handleSwitchCamera}
-                            disabled={isSwitchingCamera || isRequesting}
+                            disabled={isSwitchingCamera || isRequesting || uploading}
                             className="py-3 px-3 rounded-xl bg-surface-elevated border border-border-subtle text-text-primary font-bold hover:bg-surface flex items-center justify-center gap-1.5 cursor-pointer shadow-xs active:scale-95 transition-all"
                             title="Putar Kamera Depan / Belakang"
                             aria-label="Putar Kamera"
@@ -424,7 +430,7 @@ export const LiveCameraCaptureModal: React.FC<LiveCameraCaptureModalProps> = ({ 
                             type="button"
                             data-testid="capture-button"
                             onClick={handleCapture}
-                            disabled={compressing || isSwitchingCamera}
+                            disabled={compressing || isSwitchingCamera || uploading}
                             className="flex-1 py-3 rounded-xl bg-accent-magic text-white font-bold shadow hover:brightness-110 disabled:opacity-50 flex items-center justify-center gap-2 cursor-pointer active:scale-95 transition-all"
                           >
                             <Camera className="w-4 h-4" /> Ambil Foto
@@ -444,7 +450,8 @@ export const LiveCameraCaptureModal: React.FC<LiveCameraCaptureModalProps> = ({ 
                         type="button"
                         data-testid="retake-button"
                         onClick={handleRetake}
-                        className="flex-1 py-3 rounded-xl bg-surface-elevated border border-border-subtle text-text-secondary font-bold flex items-center justify-center gap-1.5"
+                        disabled={uploading || compressing}
+                        className="flex-1 py-3 rounded-xl bg-surface-elevated border border-border-subtle text-text-secondary font-bold flex items-center justify-center gap-1.5 disabled:opacity-50 disabled:cursor-not-allowed"
                       >
                         <RefreshCw className="w-4 h-4" /> Ambil Ulang
                       </button>

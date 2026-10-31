@@ -38,11 +38,14 @@ type MemberView struct {
 	Username                   string     `json:"username"`
 	Role                       string     `json:"role"`
 	IsActive                   bool       `json:"is_active"`
+	IncomeStatus               string     `json:"income_status"`
 	Level                      int        `json:"level"`
 	XP                         int64      `json:"xp"`
 	Coins                      int64      `json:"coins"`
 	MonthlyCoinTarget          *int       `json:"monthly_coin_target,omitempty"`
 	MonthlyEarningCap          *int       `json:"monthly_earning_cap,omitempty"`
+	BaseEarningCap             *int       `json:"base_earning_cap,omitempty"`
+	MonthlyAdjustment          int        `json:"monthly_adjustment"`
 	EffectiveEarningCap        *int       `json:"effective_earning_cap,omitempty"`
 	EarnedThisPeriod           int        `json:"earned_this_period,omitempty"`
 	EarningStatus              string     `json:"earning_status,omitempty"`
@@ -71,6 +74,7 @@ type CreateMemberRequest struct {
 	Password               string  `json:"password"`
 	ExplorerName           string  `json:"explorer_name"`
 	Role                   string  `json:"role,omitempty"`
+	IncomeStatus           *string `json:"income_status,omitempty"`
 	MonthlyCoinTarget      *int    `json:"monthly_coin_target,omitempty"`
 	MonthlyEarningCap      *int    `json:"monthly_earning_cap,omitempty"`
 	PayoutFrequency        *string `json:"payout_frequency,omitempty"`
@@ -83,6 +87,8 @@ type CreateMemberRequest struct {
 type UpdateMemberRequest struct {
 	ExplorerName           *string `json:"explorer_name,omitempty"`
 	Role                   *string `json:"role,omitempty"`
+	IncomeStatus           *string `json:"income_status,omitempty"`
+	Reason                 *string `json:"reason,omitempty"`
 	IsActive               *bool   `json:"is_active,omitempty"`
 	Password               *string `json:"password,omitempty"`
 	ResetDevice            *bool   `json:"reset_device,omitempty"`
@@ -187,8 +193,10 @@ func getCapBonusConfig(ctx context.Context, client db.SupabaseClient) (bonusValu
 	return
 }
 
-// applyCapBonusCeiling resolves baseCap (per-user value or system default)
-// with the level bonus map and ceiling clamp: 0 = unlimited, <0 = unconfigured.
+// applyCapBonusCeiling resolves the effective cap for a member.
+// Non-negotiable financial invariant: the administrator-authorized cap is the
+// absolute limit. Level bonuses and derived formulas must NEVER increase the cap
+// above the authorized amount. 0 = unlimited, <0 = unconfigured.
 func applyCapBonusCeiling(baseCap, userLevel int, bonusValue string, ceiling int) int {
 	if baseCap < 0 {
 		return -1
@@ -196,33 +204,15 @@ func applyCapBonusCeiling(baseCap, userLevel int, bonusValue string, ceiling int
 	if baseCap == 0 {
 		return 0
 	}
-	levelBonus := 0
-	if bonusValue != "" {
-		var cfgMap map[string]int
-		if err := json.Unmarshal([]byte(bonusValue), &cfgMap); err == nil {
-			highestThreshold := -1
-			for k, bonusVal := range cfgMap {
-				if th, err := strconv.Atoi(k); err == nil && th <= userLevel && bonusVal >= 0 {
-					if th > highestThreshold {
-						highestThreshold = th
-						levelBonus = bonusVal
-					}
-				}
-			}
-		}
-	}
-	effective := baseCap + levelBonus
-	if ceiling > 0 && effective > ceiling {
-		return ceiling
-	}
-	return effective
+	return baseCap
 }
 
-func earningStatus(cap, earned int) (status string, locked bool) {	if cap < 0 {
+func earningStatus(cap, earned int) (status string, locked bool) {
+	if cap < 0 {
 		return "CONFIG_ERROR", false
 	}
 	if cap == 0 {
-		return "ACTIVE", false
+		return "HALTED", true
 	}
 	if earned >= cap {
 		return "HALTED", true
@@ -403,7 +393,7 @@ func getEarnedThisPeriod(ctx context.Context, client db.SupabaseClient, uids []s
 		loc = time.FixedZone("WIB", 7*3600)
 	}
 	nowInTz := time.Now().In(loc)
-	// Calendar month: 1 → last day (earning cap), not target_earning 1-24
+	// Calendar month: 1 â†’ last day (earning cap), not target_earning 1-24
 	lastDay := time.Date(nowInTz.Year(), nowInTz.Month()+1, 0, 0, 0, 0, 0, loc).Day()
 	periodStart := time.Date(nowInTz.Year(), nowInTz.Month(), 1, 0, 0, 0, 0, loc).UTC().Format(time.RFC3339)
 	periodEnd := time.Date(nowInTz.Year(), nowInTz.Month(), lastDay+1, 0, 0, 0, 0, loc).UTC().Format(time.RFC3339)
@@ -424,56 +414,6 @@ func getEarnedThisPeriod(ctx context.Context, client db.SupabaseClient, uids []s
 		m[r.UserUID] += r.Amount
 	}
 	return m
-}
-
-func getCurrentCycleBounds(ctx context.Context, client db.SupabaseClient) (periodStart time.Time, periodEnd time.Time, loc *time.Location, today time.Time, periodStartStr, periodEndStr string) {
-	tz := shared.LoadConfig().Timezone
-	if tz == "" {
-		tz = shared.DefaultTimezone
-	}
-	if raw, err := client.Get(ctx, "odyssey_system_config", "key=eq.timezone&select=value"); err == nil && len(raw) > 0 {
-		var rows []struct {
-			Value string `json:"value"`
-		}
-		if err := json.Unmarshal(raw, &rows); err == nil && len(rows) > 0 && strings.TrimSpace(rows[0].Value) != "" {
-			if _, err := time.LoadLocation(strings.TrimSpace(rows[0].Value)); err == nil {
-				tz = strings.TrimSpace(rows[0].Value)
-			}
-		}
-	}
-	loc, _ = time.LoadLocation(tz)
-	if loc == nil {
-		loc = time.FixedZone("WIB", 7*3600)
-		tz = shared.DefaultTimezone
-	}
-	today = time.Now().In(loc)
-	nowInTz := today
-	startDay, endDay := 1, 24
-	if raw, err := client.Get(ctx, "odyssey_system_config", "key=in.(target_earning_start_day,target_earning_end_day)&select=key,value"); err == nil && len(raw) > 0 {
-		var rows []struct {
-			Key   string `json:"key"`
-			Value string `json:"value"`
-		}
-		if err := json.Unmarshal(raw, &rows); err == nil {
-			for _, r := range rows {
-				var n int
-				if _, err := fmt.Sscanf(r.Value, "%d", &n); err == nil {
-					if r.Key == "target_earning_start_day" && n >= 1 && n <= 31 {
-						startDay = n
-					}
-					if r.Key == "target_earning_end_day" && n >= 1 && n <= 31 {
-						endDay = n
-					}
-				}
-			}
-		}
-	}
-	periodStart = time.Date(nowInTz.Year(), nowInTz.Month(), startDay, 0, 0, 0, 0, loc)
-	periodEnd = time.Date(nowInTz.Year(), nowInTz.Month(), endDay+1, 0, 0, 0, 0, loc)
-	periodStartStr = periodStart.Format("2006-01-02")
-	// periodEnd is exclusive, display inclusive end as periodEnd-1day
-	periodEndStr = periodEnd.AddDate(0, 0, -1).Format("2006-01-02")
-	return
 }
 
 type inactivityInfo struct {
@@ -510,30 +450,6 @@ func resolveTimezone(ctx context.Context, client db.SupabaseClient) (string, *ti
 	return tz, loc
 }
 
-func resolveTargetEarningDays(ctx context.Context, client db.SupabaseClient) (startDay, endDay int) {
-	startDay, endDay = 1, 24
-	if raw, err := client.Get(ctx, "odyssey_system_config", "key=in.(target_earning_start_day,target_earning_end_day)&select=key,value"); err == nil && len(raw) > 0 {
-		var rows []struct {
-			Key   string `json:"key"`
-			Value string `json:"value"`
-		}
-		if err := json.Unmarshal(raw, &rows); err == nil {
-			for _, r := range rows {
-				var n int
-				if _, err := fmt.Sscanf(r.Value, "%d", &n); err == nil {
-					if r.Key == "target_earning_start_day" && n >= 1 && n <= 31 {
-						startDay = n
-					}
-					if r.Key == "target_earning_end_day" && n >= 1 && n <= 31 {
-						endDay = n
-					}
-				}
-			}
-		}
-	}
-	return
-}
-
 func getEarnedThisPeriodWithLoc(ctx context.Context, client db.SupabaseClient, uids []string, loc *time.Location, startDay, endDay int) map[string]int {
 	if len(uids) == 0 {
 		return map[string]int{}
@@ -558,123 +474,6 @@ func getEarnedThisPeriodWithLoc(ctx context.Context, client db.SupabaseClient, u
 		m[r.UserUID] += r.Amount
 	}
 	return m
-}
-
-func getInactivityTracking(ctx context.Context, client db.SupabaseClient, uids []string, isActiveMap map[string]bool) map[string]inactivityInfo {
-	result := make(map[string]inactivityInfo, len(uids))
-	if len(uids) == 0 {
-		return result
-	}
-	periodStart, periodEnd, loc, today, periodStartStr, periodEndStr := getCurrentCycleBounds(ctx, client)
-	threshold := getAutoBlockThreshold(ctx, client)
-	if threshold < 0 {
-		threshold = shared.DefaultAutoBlockInactivityDays
-	}
-	// Default for all uids
-	for _, uid := range uids {
-		result[uid] = inactivityInfo{
-			CurrentCycleStart: periodStartStr,
-			CurrentCycleEnd:   periodEndStr,
-		}
-	}
-	// Fetch APPROVED submissions for these users
-	params := fmt.Sprintf("user_uid=in.(%s)&status=eq.APPROVED&select=user_uid,created_at,reviewed_at", strings.Join(uids, ","))
-	raw, err := client.Get(ctx, "odyssey_task_submissions", params)
-	if err != nil || len(raw) == 0 || string(raw) == "[]" {
-		// No completions in current cycle for anyone -> mark NO_ACTIVITY
-		for uid, info := range result {
-			if !isActiveMap[uid] {
-				info.Status = "BLOCKED"
-			} else {
-				info.Status = "NO_ACTIVITY_THIS_CYCLE"
-			}
-			result[uid] = info
-		}
-		return result
-	}
-	var rows []struct {
-		UserUID    string  `json:"user_uid"`
-		CreatedAt  string  `json:"created_at"`
-		ReviewedAt *string `json:"reviewed_at"`
-	}
-	_ = json.Unmarshal(raw, &rows)
-	// Group by user, filter to current cycle
-	tmp := make(map[string][]time.Time)
-	countMap := make(map[string]int)
-	lastMap := make(map[string]time.Time)
-	for _, r := range rows {
-		tsStr := r.CreatedAt
-		if r.ReviewedAt != nil && strings.TrimSpace(*r.ReviewedAt) != "" {
-			tsStr = *r.ReviewedAt
-		}
-		// Parse time (supabase returns UTC)
-		var t time.Time
-		var err error
-		// Try RFC3339
-		t, err = time.Parse(time.RFC3339, tsStr)
-		if err != nil {
-			t, err = time.Parse("2006-01-02T15:04:05", tsStr)
-			if err != nil {
-				continue
-			}
-		}
-		// Convert to loc date for cycle check
-		localDateStr := t.In(loc).Format("2006-01-02")
-		localDate, _ := time.ParseInLocation("2006-01-02", localDateStr, loc)
-		psStr := periodStart.Format("2006-01-02")
-		peStr := periodEnd.Format("2006-01-02")
-		ps, _ := time.ParseInLocation("2006-01-02", psStr, loc)
-		pe, _ := time.ParseInLocation("2006-01-02", peStr, loc)
-		if localDate.Before(ps) || !localDate.Before(pe) {
-			continue // outside current cycle
-		}
-		tmp[r.UserUID] = append(tmp[r.UserUID], t)
-		countMap[r.UserUID]++
-		if existing, ok := lastMap[r.UserUID]; !ok || t.After(existing) {
-			lastMap[r.UserUID] = t
-		}
-	}
-	todayDateStr := today.Format("2006-01-02")
-	todayDate, _ := time.ParseInLocation("2006-01-02", todayDateStr, loc)
-	for uid, info := range result {
-		if !isActiveMap[uid] {
-			info.Status = "BLOCKED"
-			result[uid] = info
-			continue
-		}
-		last, ok := lastMap[uid]
-		if !ok {
-			info.Status = "NO_ACTIVITY_THIS_CYCLE"
-			info.HasActivity = false
-			info.Count = 0
-			result[uid] = info
-			continue
-		}
-		// Has activity
-		info.HasActivity = true
-		info.Count = countMap[uid]
-		// LastCompletedAt in UTC, LastCompletedDate in loc
-		cpy := last
-		info.LastCompletedAt = &cpy
-		ldStr := last.In(loc).Format("2006-01-02")
-		info.LastCompletedDate = &ldStr
-		// Inactive days
-		lastDateStr := last.In(loc).Format("2006-01-02")
-		lastDate, _ := time.ParseInLocation("2006-01-02", lastDateStr, loc)
-		days := int(todayDate.Sub(lastDate) / (24 * time.Hour))
-		if days < 0 {
-			days = 0
-		}
-		d := days
-		info.InactiveDays = &d
-		if threshold != 0 && days >= threshold {
-			info.Status = "INACTIVE"
-		} else {
-			info.Status = "ACTIVE"
-		}
-		result[uid] = info
-	}
-	return result
 }
 
 func getInactivityTrackingWithBounds(ctx context.Context, client db.SupabaseClient, uids []string, isActiveMap map[string]bool, periodStart, periodEnd time.Time, loc *time.Location, today time.Time, periodStartStr, periodEndStr string, threshold int) map[string]inactivityInfo {
@@ -871,6 +670,7 @@ func (a *API) HandleListMembers(w http.ResponseWriter, r *http.Request) {
 		ExplorerName      string     `json:"explorer_name"`
 		Role              string     `json:"role"`
 		IsActive          bool       `json:"is_active"`
+		IncomeStatus      string     `json:"income_status"`
 		Level             int        `json:"level"`
 		XP                int64      `json:"xp"`
 		Coins             int64      `json:"coins"`
@@ -911,15 +711,14 @@ func (a *API) HandleListMembers(w http.ResponseWriter, r *http.Request) {
 
 	// Hoist system config reads to avoid duplicate Supabase calls per member
 	_, loc := resolveTimezone(ctx, a.client)
-	// Earning cap uses calendar month (1 → last day), not 1-24 target period
+	// Earning cap uses calendar month (1 â†’ last day), not 1-24 target period
 	nowForCap := time.Now().In(loc)
 	capLastDay := time.Date(nowForCap.Year(), nowForCap.Month()+1, 0, 0, 0, 0, 0, loc).Day()
 	earnedMap := getEarnedThisPeriodWithLoc(ctx, a.client, uids, loc, 1, capLastDay)
 	defaultTarget := getDefaultMonthlyTarget(ctx, a.client)
-	defaultCapCached := getDefaultMonthlyEarningCap(ctx, a.client)
 	// Hoisted once: level-bonus map + ceiling for the effective cap (no per-member reads).
-	capBonusValue, capCeiling := getCapBonusConfig(ctx, a.client)
-	// Inactivity tracking (read-only, cycle-aware) — reuse hoisted loc/days
+	_, capCeiling := getCapBonusConfig(ctx, a.client)
+	// Inactivity tracking (read-only, cycle-aware) â€” reuse hoisted loc/days
 	isActiveMap := make(map[string]bool, len(profs))
 	for _, p := range profs {
 		isActiveMap[p.UID] = p.IsActive
@@ -934,8 +733,23 @@ func (a *API) HandleListMembers(w http.ResponseWriter, r *http.Request) {
 	today := nowInTz
 	threshold := getAutoBlockThreshold(ctx, a.client)
 	trackingMap := getInactivityTrackingWithBounds(ctx, a.client, uids, isActiveMap, periodStart, periodEnd, loc, today, periodStartStr, periodEndStr, threshold)
-	// Batch payout configs — single query for all UIDs
 	payoutMap, _ := payout.GetEffectivePayoutConfigs(ctx, a.client, uids, time.Now())
+
+	// Batch monthly adjustments for current period (Asia/Jakarta)
+	adjMap := make(map[string]int, len(uids))
+	adjParams := fmt.Sprintf("user_uid=in.(%s)&period_year=eq.%d&period_month=eq.%d&select=user_uid,deduction_amount", strings.Join(uids, ","), nowInTz.Year(), int(nowInTz.Month()))
+	if adjRaw, err := a.client.Get(ctx, "odyssey_member_monthly_adjustments", adjParams); err == nil && len(adjRaw) > 0 {
+		var adjRows []struct {
+			UserUID         string `json:"user_uid"`
+			DeductionAmount int    `json:"deduction_amount"`
+		}
+		if err := json.Unmarshal(adjRaw, &adjRows); err == nil {
+			for _, r := range adjRows {
+				adjMap[r.UserUID] = r.DeductionAmount
+			}
+		}
+	}
+
 	items := make([]MemberView, len(profs))
 	for i, p := range profs {
 		username := userMap[p.UID]
@@ -952,22 +766,28 @@ func (a *API) HandleListMembers(w http.ResponseWriter, r *http.Request) {
 		pc := payoutMap[p.UID]
 		minVal := pc.MinimumWithdrawalCoins
 		pcMin := &minVal
-		// resolve per-user earning cap with hoisted fallback (single query)
-		var capVal *int
-		if p.MonthlyEarningCap != nil {
-			capVal = p.MonthlyEarningCap
+
+		incomeStatus := strings.ToUpper(strings.TrimSpace(p.IncomeStatus))
+		if incomeStatus == "" {
+			incomeStatus = "NOT_CONFIGURED"
+		}
+
+		var effCap int
+		if incomeStatus != "CONFIGURED" || p.MonthlyEarningCap == nil || *p.MonthlyEarningCap <= 0 {
+			effCap = 0
 		} else {
-			v := defaultCapCached
-			capVal = &v
+			base := *p.MonthlyEarningCap
+			if capCeiling > 0 && base > capCeiling {
+				base = capCeiling
+			}
+			adj := adjMap[p.UID]
+			effCap = base - adj
+			if effCap < 0 {
+				effCap = 0
+			}
 		}
-		capInt := 0
-		if capVal != nil {
-			capInt = *capVal
-		}
-		// Effective cap (base + level bonus, clamped to ceiling) is what the
-		// backend reward RPCs enforce — the list denominator must match it.
-		effCap := applyCapBonusCeiling(capInt, p.Level, capBonusValue, capCeiling)
 		eStatus, eLocked := earningStatus(effCap, earned)
+
 		items[i] = MemberView{
 			UID:                        p.UID,
 			FamilyID:                   p.FamilyID,
@@ -975,11 +795,14 @@ func (a *API) HandleListMembers(w http.ResponseWriter, r *http.Request) {
 			Username:                   username,
 			Role:                       p.Role,
 			IsActive:                   p.IsActive,
+			IncomeStatus:               incomeStatus,
 			Level:                      p.Level,
 			XP:                         p.XP,
 			Coins:                      p.Coins,
 			MonthlyCoinTarget:          tgt,
-			MonthlyEarningCap:          capVal,
+			MonthlyEarningCap:          p.MonthlyEarningCap,
+			BaseEarningCap:             p.MonthlyEarningCap,
+			MonthlyAdjustment:          adjMap[p.UID],
 			EffectiveEarningCap:        &effCap,
 			EarnedThisPeriod:           earned,
 			EarningStatus:              eStatus,
@@ -1161,6 +984,14 @@ func (a *API) HandleCreateMember(w http.ResponseWriter, r *http.Request) {
 		"created_at":           now.Format(time.RFC3339),
 		"updated_at":           now.Format(time.RFC3339),
 	}
+	incomeStatus := "NOT_CONFIGURED"
+	if req.IncomeStatus != nil {
+		norm := strings.ToUpper(strings.TrimSpace(*req.IncomeStatus))
+		if norm == "CONFIGURED" || norm == "DISABLED" {
+			incomeStatus = norm
+		}
+	}
+	profPayload["income_status"] = incomeStatus
 	if targetVal != nil {
 		profPayload["monthly_coin_target"] = *targetVal
 	}
@@ -1172,6 +1003,18 @@ func (a *API) HandleCreateMember(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		shared.WriteJSONError(w, "gagal membuat profil anggota: "+err.Error(), http.StatusInternalServerError)
 		return
+	}
+
+	if incomeStatus == "CONFIGURED" && req.MonthlyEarningCap != nil {
+		_, _ = a.client.MutateAtomic(ctx, http.MethodPost, "odyssey_cap_audit_logs", map[string]any{
+			"user_uid":          uid,
+			"changed_by":        claims.UID,
+			"old_income_status": "NOT_CONFIGURED",
+			"new_income_status": "CONFIGURED",
+			"old_cap":           nil,
+			"new_cap":           *req.MonthlyEarningCap,
+			"reason":            "Initial member income configuration on creation",
+		}, "", "")
 	}
 
 	// 6. Create current-period target history (best-effort)
@@ -1268,7 +1111,7 @@ func (a *API) HandleUpdateMember(w http.ResponseWriter, r *http.Request, targetU
 	}
 	var checks []ProfileCheck
 	_ = json.Unmarshal(targetRaw, &checks)
-	if len(checks) > 0 && claims.FamilyID != "" && checks[0].FamilyID != "" && checks[0].FamilyID != claims.FamilyID {
+	if len(checks) == 0 || claims.FamilyID == "" || checks[0].FamilyID == "" || checks[0].FamilyID != claims.FamilyID {
 		shared.WriteJSONError(w, "akses ditolak: anggota bukan bagian dari keluarga Anda", http.StatusForbidden)
 		return
 	}
@@ -1366,8 +1209,40 @@ func (a *API) HandleUpdateMember(w http.ResponseWriter, r *http.Request, targetU
 	if req.MonthlyCoinTarget != nil {
 		profPatch["monthly_coin_target"] = *req.MonthlyCoinTarget
 	}
-	if req.MonthlyEarningCap != nil {
-		profPatch["monthly_earning_cap"] = *req.MonthlyEarningCap
+
+	// Atomic income configuration update & audit log via single PostgreSQL RPC
+	if req.IncomeStatus != nil || req.MonthlyEarningCap != nil {
+		var normStatus *string
+		if req.IncomeStatus != nil {
+			norm := strings.ToUpper(strings.TrimSpace(*req.IncomeStatus))
+			if norm != "NOT_CONFIGURED" && norm != "CONFIGURED" && norm != "DISABLED" {
+				shared.WriteJSONError(w, "income_status tidak valid (NOT_CONFIGURED|CONFIGURED|DISABLED)", http.StatusBadRequest)
+				return
+			}
+			normStatus = &norm
+		}
+
+		auditReason := "Perubahan konfigurasi budget bulanan oleh admin"
+		if req.Reason != nil && strings.TrimSpace(*req.Reason) != "" {
+			auditReason = strings.TrimSpace(*req.Reason)
+		}
+
+		rpcPayload := map[string]any{
+			"p_target_uid": targetUID,
+			"p_admin_uid":  claims.UID,
+			"p_reason":     auditReason,
+		}
+		if normStatus != nil {
+			rpcPayload["p_income_status"] = *normStatus
+		}
+		if req.MonthlyEarningCap != nil {
+			rpcPayload["p_monthly_cap"] = *req.MonthlyEarningCap
+		}
+
+		if _, err := a.client.RPC(ctx, "odyssey_admin_update_member_income_config", rpcPayload); err != nil {
+			shared.WriteJSONError(w, "gagal update budget earning: "+err.Error(), http.StatusBadRequest)
+			return
+		}
 	}
 	if req.ResetDevice != nil && *req.ResetDevice {
 		profPatch["device_id"] = nil
@@ -1457,21 +1332,40 @@ func (a *API) HandleUpdateMember(w http.ResponseWriter, r *http.Request, targetU
 			q := defaultTarget
 			tgt = &q
 		}
-		var capVal *int
-		if up.MonthlyEarningCap != nil {
-			capVal = up.MonthlyEarningCap
-		} else {
-			defCap := getDefaultMonthlyEarningCap(ctx, a.client)
-			capVal = &defCap
+		incomeStatus := up.IncomeStatus
+		if incomeStatus == "" {
+			incomeStatus = "NOT_CONFIGURED"
 		}
+		_, loc := resolveTimezone(ctx, a.client)
+		nowInTz := time.Now().In(loc)
+		deduction := 0
+		adjRaw, _ := a.client.Get(ctx, "odyssey_member_monthly_adjustments", fmt.Sprintf("user_uid=eq.%s&period_year=eq.%d&period_month=eq.%d&select=deduction_amount", targetUID, nowInTz.Year(), int(nowInTz.Month())))
+		if len(adjRaw) > 0 {
+			var adjRows []struct {
+				DeductionAmount int `json:"deduction_amount"`
+			}
+			if err := json.Unmarshal(adjRaw, &adjRows); err == nil && len(adjRows) > 0 {
+				deduction = adjRows[0].DeductionAmount
+			}
+		}
+
+		_, capCeiling := getCapBonusConfig(ctx, a.client)
+		var effCap int
+		if incomeStatus != "CONFIGURED" || up.MonthlyEarningCap == nil || *up.MonthlyEarningCap <= 0 {
+			effCap = 0
+		} else {
+			base := *up.MonthlyEarningCap
+			if capCeiling > 0 && base > capCeiling {
+				base = capCeiling
+			}
+			effCap = base - deduction
+			if effCap < 0 {
+				effCap = 0
+			}
+		}
+
 		earnedMap := getEarnedThisPeriod(ctx, a.client, []string{targetUID})
 		earned := earnedMap[targetUID]
-		capInt := 0
-		if capVal != nil {
-			capInt = *capVal
-		}
-		capBonusValue, capCeiling := getCapBonusConfig(ctx, a.client)
-		effCap := applyCapBonusCeiling(capInt, up.Level, capBonusValue, capCeiling)
 		eStatus, eLocked := earningStatus(effCap, earned)
 		effPayout, _ := payout.GetEffectivePayoutConfig(ctx, a.client, targetUID, time.Now())
 		minWd := effPayout.MinimumWithdrawalCoins
@@ -1482,11 +1376,14 @@ func (a *API) HandleUpdateMember(w http.ResponseWriter, r *http.Request, targetU
 			Username:               username,
 			Role:                   up.Role,
 			IsActive:               up.IsActive,
+			IncomeStatus:           incomeStatus,
 			Level:                  up.Level,
 			XP:                     up.XP,
 			Coins:                  up.Coins,
 			MonthlyCoinTarget:      tgt,
-			MonthlyEarningCap:      capVal,
+			MonthlyEarningCap:      up.MonthlyEarningCap,
+			BaseEarningCap:         up.MonthlyEarningCap,
+			MonthlyAdjustment:      deduction,
 			EffectiveEarningCap:    &effCap,
 			EarnedThisPeriod:       earned,
 			EarningStatus:          eStatus,

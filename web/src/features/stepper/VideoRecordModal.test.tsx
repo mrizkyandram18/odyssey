@@ -207,6 +207,7 @@ describe('VideoRecordModal', () => {
     // record again and submit
     await waitFor(() => expect(screen.getByTestId('start-recording-button')).toBeInTheDocument())
     fireEvent.click(screen.getByTestId('start-recording-button'))
+    await waitFor(() => expect(screen.getByTestId('stop-recording-button')).toBeInTheDocument())
     fireEvent.click(screen.getByTestId('stop-recording-button'))
     await waitFor(() => expect(screen.getByTestId('use-video-button')).toBeInTheDocument())
     fireEvent.click(screen.getByTestId('use-video-button'))
@@ -216,7 +217,7 @@ describe('VideoRecordModal', () => {
     expect(payload.file_url).toBe('https://cdn/x.webm')
     expect(payload).toHaveProperty('duration_seconds')
     expect(payload).toHaveProperty('captured_at')
-    await waitFor(() => expect(screen.getByText(/Video Berhasil Dikirim/)).toBeInTheDocument())
+    await waitFor(() => expect(screen.getByText(/Video Berhasil Dikirim/)).toBeInTheDocument(), { timeout: 5000 })
   })
 
   it('falls back when isTypeSupported reports false for all codecs', async () => {

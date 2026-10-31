@@ -204,6 +204,41 @@ describe('DecisionGameModal', () => {
       expect(payload.answers.final_balance).toBe(40)
       await waitFor(() => expect(screen.getByText(/Tantangan prioritas/i)).toBeInTheDocument())
     })
+
+    it('prevents multiple submissions on rapid clicking Klaim Reward (F-04)', async () => {
+      let resolveSubmit: (val: any) => void = () => {}
+      const mocked = tasksApi.submit as unknown as ReturnType<typeof vi.fn>
+      mocked.mockReturnValue(new Promise((resolve) => { resolveSubmit = resolve }))
+
+      render(
+        <DecisionGameModal
+          task={priorityTask}
+          onClose={vi.fn()}
+          onSuccess={vi.fn()}
+        />
+      )
+
+      fireEvent.click(screen.getByTestId('option-sit_1-a'))
+      fireEvent.click(screen.getByTestId('option-sit_2-a'))
+
+      const claimBtn = screen.getByText(/Klaim Reward/)
+      fireEvent.click(claimBtn)
+      fireEvent.click(claimBtn)
+      fireEvent.click(claimBtn)
+
+      expect(mocked).toHaveBeenCalledTimes(1)
+
+      // F-POST-01: In-flight state disables restart and prevents unlocking
+      const restartBtn = screen.getByRole('button', { name: /Ulang/i })
+      expect(restartBtn).toBeDisabled()
+      fireEvent.click(restartBtn)
+      fireEvent.click(claimBtn)
+      expect(mocked).toHaveBeenCalledTimes(1)
+
+      resolveSubmit({ success: true, coins_earned: 50, xp_earned: 100 })
+      await waitFor(() => expect(screen.getByText(/Tantangan prioritas/i)).toBeInTheDocument())
+      expect(mocked).toHaveBeenCalledTimes(1)
+    })
   })
 })
 

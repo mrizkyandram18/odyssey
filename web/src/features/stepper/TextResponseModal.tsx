@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useState, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { FileEdit, CheckCircle2, X, Clock, Sparkles, AlertCircle, ArrowRight } from 'lucide-react'
 import type { TaskView } from '../../shared/types'
@@ -18,6 +18,7 @@ export const TextResponseModal: React.FC<TextResponseModalProps> = ({ task, onCl
   const isAlreadyDone = task.status === 'APPROVED' || task.status === 'PENDING'
   const [response, setResponse] = useState('')
   const [submitting, setSubmitting] = useState(false)
+  const isSubmittingRef = useRef(false)
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
   const [submitted, setSubmitted] = useState(isAlreadyDone)
 
@@ -46,6 +47,7 @@ export const TextResponseModal: React.FC<TextResponseModalProps> = ({ task, onCl
   const isValidLength = charCount >= minChars && charCount <= maxChars
 
   const handleSubmit = async () => {
+    if (isSubmittingRef.current) return
     if (!isValidLength) {
       if (charCount < minChars) {
         setErrorMessage(`Teks jawaban minimal ${minChars} karakter (saat ini ${charCount})`)
@@ -55,6 +57,7 @@ export const TextResponseModal: React.FC<TextResponseModalProps> = ({ task, onCl
       return
     }
 
+    isSubmittingRef.current = true
     setSubmitting(true)
     setErrorMessage(null)
     try {
@@ -68,9 +71,11 @@ export const TextResponseModal: React.FC<TextResponseModalProps> = ({ task, onCl
       if (res.success) {
         setSubmitted(true)
       } else {
+        isSubmittingRef.current = false
         setErrorMessage(res.error || 'Gagal mengirimkan respon teks')
       }
     } catch (err: any) {
+      isSubmittingRef.current = false
       if (isEarningCapError(err)) {
         setErrorMessage(EARNING_CAP_MESSAGE)
         try { (onSuccess as any)?.() } catch { /* ignore */ }
@@ -169,13 +174,14 @@ export const TextResponseModal: React.FC<TextResponseModalProps> = ({ task, onCl
 
                   <textarea
                     rows={5}
+                    disabled={submitting}
                     value={response}
                     onChange={(e) => {
                       setResponse(e.target.value)
                       setErrorMessage(null)
                     }}
                     placeholder="Tuliskan respon kamu di sini dengan jelas..."
-                    className="w-full p-3.5 rounded-xl bg-surface border border-border-subtle text-sm text-text-primary placeholder:text-text-secondary/50 focus:outline-none focus:border-accent-magic resize-none leading-relaxed"
+                    className="w-full p-3.5 rounded-xl bg-surface border border-border-subtle text-sm text-text-primary placeholder:text-text-secondary/50 focus:outline-none focus:border-accent-magic resize-none leading-relaxed disabled:opacity-50 disabled:cursor-not-allowed"
                   />
                 </div>
 

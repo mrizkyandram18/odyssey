@@ -209,11 +209,14 @@ export interface MemberView {
   username: string
   role: Role
   is_active: boolean
+  income_status?: 'NOT_CONFIGURED' | 'CONFIGURED' | 'DISABLED'
   level: number
   xp: number
   coins: number
   monthly_coin_target?: number
   monthly_earning_cap?: number
+  base_earning_cap?: number
+  monthly_adjustment?: number
   effective_earning_cap?: number
   earned_this_period?: number
   earning_status?: 'ACTIVE' | 'HALTED' | 'CONFIG_ERROR'
@@ -243,6 +246,7 @@ export interface CreateMemberInput {
   password: string
   explorer_name: string
   role?: Role
+  income_status?: 'NOT_CONFIGURED' | 'CONFIGURED' | 'DISABLED'
   monthly_coin_target?: number
   monthly_earning_cap?: number
   payout_frequency?: 'THRESHOLD' | 'WEEKLY' | 'MONTHLY'
@@ -255,6 +259,8 @@ export interface CreateMemberInput {
 export interface UpdateMemberInput {
   explorer_name?: string
   role?: Role
+  income_status?: 'NOT_CONFIGURED' | 'CONFIGURED' | 'DISABLED'
+  reason?: string
   is_active?: boolean
   password?: string
   reset_device?: boolean

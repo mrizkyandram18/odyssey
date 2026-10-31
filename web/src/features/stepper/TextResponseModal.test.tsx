@@ -116,4 +116,55 @@ describe('TextResponseModal', () => {
     render(<TextResponseModal task={baseTask} onClose={vi.fn()} onSuccess={vi.fn()} />)
     expect(screen.queryByTestId('task-revision-banner')).toBeNull()
   })
+
+  it('prevents double-submission on rapid consecutive clicks (F-04 concurrency guard)', async () => {
+    let resolveSubmit: (val: any) => void = () => {}
+    const deferredPromise = new Promise((resolve) => {
+      resolveSubmit = resolve
+    })
+    const submitMock = tasksApi.submit as unknown as ReturnType<typeof vi.fn>
+    submitMock.mockReturnValue(deferredPromise)
+
+    render(<TextResponseModal task={baseTask} onClose={vi.fn()} onSuccess={vi.fn()} />)
+    const textarea = screen.getByPlaceholderText(/Tuliskan respon kamu di sini dengan jelas/i)
+    fireEvent.change(textarea, { target: { value: 'Jawaban yang cukup panjang untuk memenuhi batas minimal.' } })
+    const submitBtn = screen.getByRole('button', { name: /Kirim Jawaban Teks/i })
+
+    // Simulate rapid double click
+    fireEvent.click(submitBtn)
+    fireEvent.click(submitBtn)
+    fireEvent.click(submitBtn)
+
+    expect(submitMock).toHaveBeenCalledTimes(1)
+
+    // F-POST-01: Textarea must be disabled during in-flight submission
+    expect(textarea).toBeDisabled()
+
+    // Complete the in-flight submission
+    resolveSubmit({ success: true, status: 'PENDING' })
+    await waitFor(() => expect(screen.getByText(/Jawaban Berhasil Terkirim!/i)).toBeInTheDocument())
+    expect(submitMock).toHaveBeenCalledTimes(1)
+  })
+
+  it('allows retry after a recoverable submission failure (F-04)', async () => {
+    const submitMock = tasksApi.submit as unknown as ReturnType<typeof vi.fn>
+    submitMock
+      .mockRejectedValueOnce(new Error('Network error on first attempt'))
+      .mockResolvedValueOnce({ success: true, status: 'PENDING' })
+
+    render(<TextResponseModal task={baseTask} onClose={vi.fn()} onSuccess={vi.fn()} />)
+    const textarea = screen.getByPlaceholderText(/Tuliskan respon kamu di sini dengan jelas/i)
+    fireEvent.change(textarea, { target: { value: 'Jawaban yang cukup panjang untuk memenuhi batas minimal.' } })
+    const submitBtn = screen.getByRole('button', { name: /Kirim Jawaban Teks/i })
+
+    // 1st click fails
+    fireEvent.click(submitBtn)
+    await waitFor(() => expect(screen.getByText(/Network error on first attempt/i)).toBeInTheDocument())
+    expect(submitMock).toHaveBeenCalledTimes(1)
+
+    // 2nd click after failure succeeds (guard released!)
+    fireEvent.click(submitBtn)
+    await waitFor(() => expect(screen.getByText(/Jawaban Berhasil Terkirim!/i)).toBeInTheDocument())
+    expect(submitMock).toHaveBeenCalledTimes(2)
+  })
 })

@@ -7,19 +7,19 @@ import { Avatar } from '../../../../shared/components/atoms/Avatar'
 import { calculateTargetPace } from '../../../../shared/lib/targetPace'
 
 function formatCycle(start?: string, end?: string): string {
-  if (!start || !end) return '—'
+  if (!start || !end) return 'â€”'
   try {
     const s = new Date(start)
     const e = new Date(end)
     const opts: Intl.DateTimeFormatOptions = { day: 'numeric', month: 'short' }
-    return `${s.toLocaleDateString('id-ID', opts)} – ${e.toLocaleDateString('id-ID', opts)}`
+    return `${s.toLocaleDateString('id-ID', opts)} â€“ ${e.toLocaleDateString('id-ID', opts)}`
   } catch {
-    return `${start} – ${end}`
+    return `${start} â€“ ${end}`
   }
 }
 
 function formatLastTask(member: any): { text: string; sub?: string } {
-  if (!member.last_completed_date) return { text: '—' }
+  if (!member.last_completed_date) return { text: 'â€”' }
   try {
     const d = new Date(member.last_completed_date)
     const text = d.toLocaleDateString('id-ID', { day: 'numeric', month: 'short' })
@@ -31,9 +31,9 @@ function formatLastTask(member: any): { text: string; sub?: string } {
 }
 
 function formatInactive(member: any): string {
-  if (!member.is_active) return '—'
+  if (!member.is_active) return 'â€”'
   if (member.inactivity_status === 'NO_ACTIVITY_THIS_CYCLE') return 'Belum ada aktivitas'
-  if (member.inactive_days == null) return '—'
+  if (member.inactive_days == null) return 'â€”'
   return `${member.inactive_days} hari`
 }
 
@@ -205,7 +205,7 @@ export const MemberList: React.FC<MemberListProps> = ({ controller }) => {
                   {members.map((member) => {
                     const last = formatLastTask(member)
                     const earned = member.earned_this_period ?? 0
-                    // Effective cap is what the backend enforces (base + level bonus, ceiling-clamped).
+                    // Effective cap is what the backend enforces (strictly authorized cap, no level bonus inflation).
                     const capVal = member.effective_earning_cap ?? member.monthly_earning_cap ?? 0
                     const targetVal = member.monthly_coin_target ?? 3320
                     const pace = calculateTargetPace(earned, targetVal)
@@ -243,7 +243,7 @@ export const MemberList: React.FC<MemberListProps> = ({ controller }) => {
                               >
                                 {formatInactive(member)}
                               </span>
-                              <span>•</span>
+                              <span>â€¢</span>
                               <span>{formatCycle(member.current_cycle_start, member.current_cycle_end)}</span>
                             </div>
                           </div>
@@ -277,9 +277,20 @@ export const MemberList: React.FC<MemberListProps> = ({ controller }) => {
                               />
                             </div>
                             <div className="flex items-center justify-between text-[10px] text-text-secondary">
-                              <span>Batas: {capVal > 0 ? `${capVal.toLocaleString('id-ID')} koin` : 'Global'}</span>
+                              <span>
+                                Batas:{' '}
+                                {member.income_status === 'NOT_CONFIGURED' ? (
+                                  <strong className="text-status-warning font-bold">Belum Diatur (Rp0)</strong>
+                                ) : member.income_status === 'DISABLED' ? (
+                                  <strong className="text-zinc-500 font-bold">Dinonaktifkan (Rp0)</strong>
+                                ) : capVal > 0 ? (
+                                  `${capVal.toLocaleString('id-ID')} koin`
+                                ) : (
+                                  'Rp0'
+                                )}
+                              </span>
                               {member.earning_locked && (
-                                <span className="font-bold text-status-warning">🔒 Penuh</span>
+                                <span className="font-bold text-status-warning">ðŸ”’ Penuh</span>
                               )}
                             </div>
                           </div>
@@ -356,7 +367,7 @@ export const MemberList: React.FC<MemberListProps> = ({ controller }) => {
             {members.map((member) => {
               const badge = getStatusConfig(member)
               const last = formatLastTask(member)
-              // Effective cap is what the backend enforces (base + level bonus, ceiling-clamped).
+              // Effective cap is what the backend enforces (strictly authorized cap, no level bonus inflation).
               const capVal = member.effective_earning_cap ?? member.monthly_earning_cap ?? 0
               return (
                 <div key={member.uid} className="rounded-2xl border border-zinc-200 bg-white p-4 shadow-sm">
@@ -466,12 +477,21 @@ export const MemberList: React.FC<MemberListProps> = ({ controller }) => {
                               </span>
                               {member.earning_locked && (
                                 <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-amber-100 text-amber-800 border border-amber-200">
-                                  🔒 Penuh
+                                  ðŸ”’ Penuh
                                 </span>
                               )}
                             </div>
                             <p className="text-[10px] text-zinc-500 mt-0.5">
-                              Batas: {capVal > 0 ? `${capVal.toLocaleString('id-ID')} koin` : 'Global'}
+                              Batas:{' '}
+                              {member.income_status === 'NOT_CONFIGURED' ? (
+                                <strong className="text-status-warning font-bold">Belum Diatur (Rp0)</strong>
+                              ) : member.income_status === 'DISABLED' ? (
+                                <strong className="text-zinc-500 font-bold">Dinonaktifkan (Rp0)</strong>
+                              ) : capVal > 0 ? (
+                                `${capVal.toLocaleString('id-ID')} koin`
+                              ) : (
+                                'Rp0'
+                              )}
                             </p>
                           </>
                         )

@@ -24,7 +24,7 @@ export interface AdminOverviewProps {
 // Queue aging from already-loaded data only. Backend sorts newest-first
 // (created_at DESC), so the global oldest is derivable ONLY when the whole
 // pending set is loaded (default PENDING filter, page 1). Otherwise return
-// null — never guess from a partial page. Read-only, no API/DB change.
+// null â€” never guess from a partial page. Read-only, no API/DB change.
 function oldestPendingAgeLabel(
   items: Array<{ status?: string; created_at?: string }>,
   pendingTotal: number | null | undefined
@@ -99,11 +99,17 @@ export const AdminOverview: React.FC<AdminOverviewProps> = ({
   })
   const membersNeedingAttention = inactiveMembers.length + cappedMembers.length + behindTargetMembers.length
 
-  // 4. Redemption Period (window status lives in the admin header pill;
-  // the dashboard shows only actionable queues — triage-only rule)
+  // 4. Unconfigured Members (Anggota baru belum diatur penghasilan)
+  const unconfiguredMembers = members.filter(
+    (m) => m.is_active && m.role === 'MEMBER' && m.income_status === 'NOT_CONFIGURED'
+  )
 
   // Check if any action is needed
-  const hasActions = pendingSubCount > 0 || pendingClaimsCount > 0 || membersNeedingAttention > 0
+  const hasActions =
+    pendingSubCount > 0 ||
+    pendingClaimsCount > 0 ||
+    membersNeedingAttention > 0 ||
+    unconfiguredMembers.length > 0
 
   return (
     <div className="w-full flex flex-col gap-6 animate-in fade-in duration-200">
@@ -138,7 +144,7 @@ export const AdminOverview: React.FC<AdminOverviewProps> = ({
             </h3>
             {hasActions && (
               <span className="px-2 py-0.5 text-[10px] font-bold rounded-full bg-accent-magic/15 text-accent-magic border border-accent-magic/20">
-                {(pendingSubCount > 0 ? 1 : 0) + (pendingClaimsCount > 0 ? 1 : 0) + (membersNeedingAttention > 0 ? 1 : 0)} Antrean
+                {(pendingSubCount > 0 ? 1 : 0) + (pendingClaimsCount > 0 ? 1 : 0) + (membersNeedingAttention > 0 ? 1 : 0) + (unconfiguredMembers.length > 0 ? 1 : 0)} Antrean
               </span>
             )}
           </div>
@@ -182,7 +188,7 @@ export const AdminOverview: React.FC<AdminOverviewProps> = ({
                         : 'Bukti pengerjaan tugas siap diperiksa untuk pemberian koin reward.'}
                       {oldestSubAge && (
                         <>
-                          {' '}• Tertua: <strong className="text-text-primary">{oldestSubAge}</strong>
+                          {' '}â€¢ Tertua: <strong className="text-text-primary">{oldestSubAge}</strong>
                         </>
                       )}
                     </p>
@@ -221,7 +227,7 @@ export const AdminOverview: React.FC<AdminOverviewProps> = ({
                       Total <strong>{totalCoinsRequested.toLocaleString('id-ID')} Koin</strong> (estimasi Rp {estimatedRupiah.toLocaleString('id-ID')}) menunggu ditransfer.
                       {oldestClaimAge && (
                         <>
-                          {' '}• Tertua: <strong className="text-text-primary">{oldestClaimAge}</strong>
+                          {' '}â€¢ Tertua: <strong className="text-text-primary">{oldestClaimAge}</strong>
                         </>
                       )}
                     </p>
@@ -267,6 +273,40 @@ export const AdminOverview: React.FC<AdminOverviewProps> = ({
                     className="px-3.5 py-1.5 rounded-xl bg-surface-elevated border border-border-subtle text-text-primary hover:bg-surface text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer"
                   >
                     <span>Lihat Anggota</span>
+                    <ArrowRight className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* Action Item: Unconfigured Members Queue */}
+            {unconfiguredMembers.length > 0 && (
+              <div className="p-4 rounded-2xl bg-surface border border-status-warning/40 shadow-xs flex flex-col justify-between gap-3 hover:border-status-warning transition-colors">
+                <div className="flex items-start gap-3">
+                  <div className="w-9 h-9 rounded-xl bg-status-warning/15 text-status-warning flex items-center justify-center shrink-0 mt-0.5">
+                    <Users className="w-4 h-4" />
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center gap-2">
+                      <h4 className="text-xs sm:text-sm font-bold text-text-primary truncate">
+                        {unconfiguredMembers.length} Anggota Belum Memiliki Konfigurasi Penghasilan
+                      </h4>
+                      <span className="px-1.5 py-0.5 rounded text-[10px] font-extrabold bg-status-warning text-black shrink-0">
+                        Budget Rp0
+                      </span>
+                    </div>
+                    <p className="text-xs text-text-secondary mt-1">
+                      {unconfiguredMembers.map((m) => m.explorer_name).join(', ')} saat ini memiliki budget reward Rp0. Atur nominal bulanan agar reward koin dapat berjalan.
+                    </p>
+                  </div>
+                </div>
+                <div className="flex items-center justify-end pt-2 border-t border-border-subtle/60">
+                  <button
+                    type="button"
+                    onClick={() => onNavigateTab('members')}
+                    className="px-3.5 py-1.5 rounded-xl bg-status-warning text-black text-xs font-bold hover:brightness-110 active:scale-95 transition-all flex items-center gap-1.5 cursor-pointer shadow-xs"
+                  >
+                    <span>Atur Penghasilan</span>
                     <ArrowRight className="w-3.5 h-3.5" />
                   </button>
                 </div>

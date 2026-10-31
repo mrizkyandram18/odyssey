@@ -183,4 +183,49 @@ describe('VideoQuizModal Component', () => {
       expect(screen.queryByText(/"code":"P0008"/)).not.toBeInTheDocument()
     })
   })
+
+  it('prevents double-submission on rapid consecutive clicks (F-04)', async () => {
+    let resolveSubmit: (val: any) => void = () => {}
+    vi.mocked(tasksApi.submit).mockReturnValue(
+      new Promise((resolve) => {
+        resolveSubmit = resolve
+      })
+    )
+
+    render(
+      <VideoQuizModal
+        task={mockQuizTask}
+        onClose={vi.fn()}
+        onSuccess={vi.fn()}
+      />
+    )
+
+    fireEvent.click(screen.getByText(/A. Mengabari atasan lebih awal/i))
+    fireEvent.click(screen.getByText(/A. Mendengarkan dengan tenang/i))
+
+    const submitBtn = screen.getByRole('button', { name: /Kirim Jawaban/i })
+    fireEvent.click(submitBtn)
+    fireEvent.click(submitBtn)
+    fireEvent.click(submitBtn)
+
+    expect(tasksApi.submit).toHaveBeenCalledTimes(1)
+
+    // F-POST-01: In-flight state disables option buttons and submit button
+    const optA = screen.getByText(/A. Mengabari atasan lebih awal/i)
+    expect(optA).toBeDisabled()
+    expect(submitBtn).toBeDisabled()
+
+    // Clicking options while in-flight must not reset submission lock
+    const optB = screen.getByText(/B. Membiarkan salah satu tugas tanpa kabar/i)
+    expect(optB).toBeDisabled()
+    fireEvent.click(optB)
+    fireEvent.click(submitBtn)
+    expect(tasksApi.submit).toHaveBeenCalledTimes(1)
+
+    resolveSubmit({ success: true, coins_earned: 40, xp_earned: 100 })
+    await waitFor(() => {
+      expect(screen.getByText(/Hebat! Tugas Selesai/i)).toBeInTheDocument()
+    })
+    expect(tasksApi.submit).toHaveBeenCalledTimes(1)
+  })
 })
