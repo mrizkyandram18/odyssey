@@ -387,4 +387,69 @@ describe('Failure Handling: Clear error displayed without crash', () => {
     expect(screen.queryByTestId('task-revision-banner')).toBeNull()
     expect(screen.getByRole('button', { name: /Buka Kamera/i })).toBeInTheDocument()
   })
+
+  it('disables retake button and prevents double upload while submission is in flight (F-04 / F-POST-01)', async () => {
+    const mockTrack = { stop: vi.fn() }
+    const getUserMedia = vi.fn().mockResolvedValue({
+      getTracks: () => [mockTrack],
+    })
+    vi.stubGlobal('navigator', { mediaDevices: { getUserMedia } })
+    vi.spyOn(HTMLVideoElement.prototype, 'play').mockResolvedValue(undefined as any)
+    vi.spyOn(HTMLCanvasElement.prototype, 'getContext').mockReturnValue({
+      drawImage: vi.fn(),
+    } as any)
+    vi.spyOn(HTMLCanvasElement.prototype, 'toBlob').mockImplementation((cb: any) => {
+      cb(new Blob(['fake-jpeg-bytes'], { type: 'image/jpeg' }))
+    })
+    vi.mocked(compressModule.compressImage).mockResolvedValue({
+      file: new File(['compressed'], 'capture-123.jpg', { type: 'image/jpeg' }),
+      dataUrl: 'data:image/jpeg;base64,fakeDataUrl',
+      width: 1280,
+      height: 960,
+    })
+
+    let resolveUpload: (val: any) => void = () => {}
+    vi.mocked(compressModule.uploadTaskProof).mockReturnValue(
+      new Promise((resolve) => { resolveUpload = resolve })
+    )
+
+    renderLiveModal({ config: { camera_only: true } })
+    fireEvent.click(screen.getByTestId('open-camera-button'))
+    const captureBtn = await screen.findByTestId('capture-button')
+
+    const video = screen.getByTestId('camera-preview')
+    Object.defineProperty(video, 'videoWidth', { value: 1280, configurable: true })
+    Object.defineProperty(video, 'videoHeight', { value: 960, configurable: true })
+
+    fireEvent.click(captureBtn)
+    const useBtn = await screen.findByTestId('use-photo-button')
+    const retakeBtn = screen.getByTestId('retake-button')
+
+    // Submit
+    fireEvent.click(useBtn)
+    // Rapid duplicate click
+    fireEvent.click(useBtn)
+
+    // Should only have initiated 1 upload
+    expect(compressModule.uploadTaskProof).toHaveBeenCalledTimes(1)
+
+    // In-flight state: retake button must be disabled
+    expect(retakeBtn).toBeDisabled()
+
+    // Clicking retake while in flight must not reset lock
+    fireEvent.click(retakeBtn)
+    fireEvent.click(useBtn)
+    expect(compressModule.uploadTaskProof).toHaveBeenCalledTimes(1)
+
+    // Complete upload
+    resolveUpload({
+      file_url: 'https://storage.supabase.co/task-proofs/fake.jpg',
+      file_name: 'capture-123.jpg',
+      file_size: 12345,
+    })
+
+    await waitFor(() => {
+      expect(tasksApi.submit).toHaveBeenCalledTimes(1)
+    })
+  })
 })

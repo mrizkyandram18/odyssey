@@ -21,6 +21,7 @@ export const DocUploadModal: React.FC<DocUploadModalProps> = ({ task, onClose, o
   const [selectedFile, setSelectedFile] = useState<File | null>(null)
   const [note, setNote] = useState('')
   const [uploading, setUploading] = useState(false)
+  const isSubmittingRef = useRef(false)
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
   const [submitted, setSubmitted] = useState(isAlreadyDone)
 
@@ -32,6 +33,7 @@ export const DocUploadModal: React.FC<DocUploadModalProps> = ({ task, onClose, o
   const maxSizeBytes = Math.min(configuredMaxMB, 4) * 1024 * 1024
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (isSubmittingRef.current || uploading) return
     if (e.target.files && e.target.files[0]) {
       const file = e.target.files[0]
       if (file.size > maxSizeBytes) {
@@ -44,7 +46,9 @@ export const DocUploadModal: React.FC<DocUploadModalProps> = ({ task, onClose, o
   }
 
   const handleSubmit = async () => {
+    if (isSubmittingRef.current) return
     if (!selectedFile) return
+    isSubmittingRef.current = true
     setUploading(true)
     setErrorMessage(null)
     try {
@@ -65,9 +69,11 @@ export const DocUploadModal: React.FC<DocUploadModalProps> = ({ task, onClose, o
       if (res.success) {
         setSubmitted(true)
       } else {
+        isSubmittingRef.current = false
         setErrorMessage(res.error || 'Gagal menyimpan submission dokumen')
       }
     } catch (err: any) {
+      isSubmittingRef.current = false
       if (isEarningCapError(err)) {
         setErrorMessage(EARNING_CAP_MESSAGE)
         try { onSuccess() } catch { /* ignore */ }
@@ -169,12 +175,17 @@ export const DocUploadModal: React.FC<DocUploadModalProps> = ({ task, onClose, o
                   type="file"
                   accept={acceptedExtensions}
                   className="hidden"
+                  disabled={uploading}
                   onChange={handleFileChange}
                 />
 
                 <div
-                  onClick={() => fileInputRef.current?.click()}
-                  className={`p-6 border-2 border-dashed rounded-2xl cursor-pointer text-center transition-all ${
+                  onClick={() => {
+                    if (!uploading) fileInputRef.current?.click()
+                  }}
+                  className={`p-6 border-2 border-dashed rounded-2xl text-center transition-all ${
+                    uploading ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'
+                  } ${
                     selectedFile
                       ? 'border-accent-magic bg-accent-magic/10'
                       : 'border-border-subtle hover:border-accent-magic/40 bg-surface'
@@ -202,6 +213,7 @@ export const DocUploadModal: React.FC<DocUploadModalProps> = ({ task, onClose, o
                   <label className="text-xs font-bold text-text-secondary">Catatan Tambahan (Opsional):</label>
                   <textarea
                     rows={2}
+                    disabled={uploading}
                     value={note}
                     onChange={(e) => setNote(e.target.value)}
                     placeholder="Tuliskan keterangan singkat jika ada..."

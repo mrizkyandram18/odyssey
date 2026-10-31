@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react'
+import React, { useState, useMemo, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import confetti from 'canvas-confetti'
 import { Wallet, CheckCircle2, X, Sparkles, Award, AlertCircle, ChevronRight, RotateCcw, TrendingUp, TrendingDown, Minus, Target } from 'lucide-react'
@@ -30,6 +30,7 @@ export const DecisionGameModal: React.FC<DecisionGameModalProps> = ({ task, onCl
   const [choices, setChoices] = useState<Record<string, string>>({})
   const [finished, setFinished] = useState(isApproved)
   const [submitting, setSubmitting] = useState(false)
+  const isSubmittingRef = useRef(false)
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
   const [earnedRewards, setEarnedRewards] = useState<{ coins: number; xp: number } | null>(
     isApproved ? { coins: task.coins_earned ?? task.reward_coins, xp: task.xp_earned ?? task.reward_xp } : null
@@ -49,7 +50,7 @@ export const DecisionGameModal: React.FC<DecisionGameModalProps> = ({ task, onCl
   const progress = events.length === 0 ? 0 : Math.round((Object.keys(choices).length / events.length) * 100)
 
   const handleChoose = (optionId: string) => {
-    if (!currentEvent || finished) return
+    if (isSubmittingRef.current || submitting || !currentEvent || finished) return
     const next = { ...choices, [currentEvent.id]: optionId }
     setChoices(next)
     setErrorMessage(null)
@@ -61,6 +62,7 @@ export const DecisionGameModal: React.FC<DecisionGameModalProps> = ({ task, onCl
   }
 
   const handleRestart = () => {
+    if (isSubmittingRef.current || submitting) return
     setChoices({})
     setEventIndex(0)
     setFinished(false)
@@ -84,6 +86,8 @@ export const DecisionGameModal: React.FC<DecisionGameModalProps> = ({ task, onCl
   }
 
   const handleSubmit = async () => {
+    if (isSubmittingRef.current) return
+    isSubmittingRef.current = true
     setSubmitting(true)
     setErrorMessage(null)
     try {
@@ -104,9 +108,11 @@ export const DecisionGameModal: React.FC<DecisionGameModalProps> = ({ task, onCl
         })
         confetti({ particleCount: 100, spread: 70, origin: { y: 0.6 } })
       } else {
+        isSubmittingRef.current = false
         setErrorMessage(res.error || 'Hasil permainan belum valid. Coba lagi.')
       }
     } catch (err: any) {
+      isSubmittingRef.current = false
       if (isEarningCapError(err)) {
         setErrorMessage(EARNING_CAP_MESSAGE)
         try { onSuccess() } catch { /* ignore */ }
@@ -208,8 +214,9 @@ export const DecisionGameModal: React.FC<DecisionGameModalProps> = ({ task, onCl
                             key={opt.id}
                             type="button"
                             data-testid={`option-${currentEvent.id}-${opt.id}`}
+                            disabled={submitting}
                             onClick={() => handleChoose(String(opt.id))}
-                            className="w-full text-left p-3.5 rounded-xl border border-border-subtle hover:border-accent-magic/50 bg-surface-elevated text-text-primary transition-all active:scale-[0.99]"
+                            className="w-full text-left p-3.5 rounded-xl border border-border-subtle hover:border-accent-magic/50 bg-surface-elevated text-text-primary transition-all active:scale-[0.99] disabled:opacity-50 disabled:cursor-not-allowed"
                           >
                             <span className="flex items-center justify-between gap-2">
                               <span className="text-sm font-bold">{displayLabel}</span>
@@ -261,8 +268,9 @@ export const DecisionGameModal: React.FC<DecisionGameModalProps> = ({ task, onCl
                 <div className="flex gap-2 pt-2">
                   <button
                     type="button"
+                    disabled={submitting}
                     onClick={handleRestart}
-                    className="p-3 rounded-2xl border border-border-subtle bg-surface text-text-secondary hover:text-text-primary font-bold text-xs flex items-center gap-1.5 transition-colors"
+                    className="p-3 rounded-2xl border border-border-subtle bg-surface text-text-secondary hover:text-text-primary font-bold text-xs flex items-center gap-1.5 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     <RotateCcw className="w-4 h-4" />
                     <span>Ulang</span>

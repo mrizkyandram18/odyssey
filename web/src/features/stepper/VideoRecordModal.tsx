@@ -92,6 +92,7 @@ export const VideoRecordModal: React.FC<VideoRecordModalProps> = ({
   const [previewUrl, setPreviewUrl] = useState<string | null>(null)
   const [actualMime, setActualMime] = useState<string>('')
   const [uploading, setUploading] = useState(false)
+  const isSubmittingRef = useRef(false)
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
   const [submitted, setSubmitted] = useState(isAlreadyDone)
 
@@ -332,6 +333,7 @@ export const VideoRecordModal: React.FC<VideoRecordModalProps> = ({
   }
 
   const handleRetake = () => {
+    if (isSubmittingRef.current || uploading) return
     if (previewUrl && typeof URL.revokeObjectURL === 'function') URL.revokeObjectURL(previewUrl)
     setPreviewUrl(null)
     setRecordedFile(null)
@@ -341,6 +343,7 @@ export const VideoRecordModal: React.FC<VideoRecordModalProps> = ({
   }
 
   const handleSubmit = async () => {
+    if (isSubmittingRef.current) return
     if (!recordedFile) return
     if (recordedFile.size > 4.2 * 1024 * 1024) {
       setErrorMessage(
@@ -348,6 +351,7 @@ export const VideoRecordModal: React.FC<VideoRecordModalProps> = ({
       )
       return
     }
+    isSubmittingRef.current = true
     setUploading(true)
     setErrorMessage(null)
     try {
@@ -367,9 +371,11 @@ export const VideoRecordModal: React.FC<VideoRecordModalProps> = ({
       if (res.success) {
         setSubmitted(true)
       } else {
+        isSubmittingRef.current = false
         setErrorMessage(res.error || 'Gagal menyimpan submission video')
       }
     } catch (err: any) {
+      isSubmittingRef.current = false
       if (isEarningCapError(err)) {
         setErrorMessage(EARNING_CAP_MESSAGE)
         try { onSuccess() } catch { /* ignore */ }
@@ -591,7 +597,8 @@ export const VideoRecordModal: React.FC<VideoRecordModalProps> = ({
                         type="button"
                         data-testid="retake-button"
                         onClick={handleRetake}
-                        className="flex-1 py-3 rounded-xl bg-surface-elevated border border-border-subtle text-text-secondary font-bold flex items-center justify-center gap-1.5"
+                        disabled={uploading}
+                        className="flex-1 py-3 rounded-xl bg-surface-elevated border border-border-subtle text-text-secondary font-bold flex items-center justify-center gap-1.5 disabled:opacity-50 disabled:cursor-not-allowed"
                       >
                         <RefreshCw className="w-4 h-4" /> Rekam Ulang
                       </button>

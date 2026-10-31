@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useState, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import confetti from 'canvas-confetti'
 import { Play, CheckCircle2, XCircle, Award, Sparkles, ChevronRight, HelpCircle, X, Gift } from 'lucide-react'
@@ -42,6 +42,7 @@ export const VideoQuizModal: React.FC<VideoQuizModalProps> = ({ task, onClose, o
   )
   const [answers, setAnswers] = useState<Record<string, string>>({})
   const [submitting, setSubmitting] = useState(false)
+  const isSubmittingRef = useRef(false)
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
   const [earnedRewards, setEarnedRewards] = useState<{ coins: number; xp: number } | null>(null)
   const [ticketGranted, setTicketGranted] = useState(false)
@@ -67,6 +68,7 @@ export const VideoQuizModal: React.FC<VideoQuizModalProps> = ({ task, onClose, o
   }
 
   const handleSelectOption = (questionId: string | number, option: string) => {
+    if (isSubmittingRef.current || submitting) return
     const match = option.match(/^([A-Za-z])[.)]\s*(.*)/)
     const normalizedVal = match ? match[1].toUpperCase() : option
     setAnswers((prev) => ({
@@ -81,6 +83,8 @@ export const VideoQuizModal: React.FC<VideoQuizModalProps> = ({ task, onClose, o
     questions.every((q) => !!answers[String(q.id)])
 
   const handleSubmit = async () => {
+    if (isSubmittingRef.current) return
+    isSubmittingRef.current = true
     setSubmitting(true)
     setErrorMessage(null)
     try {
@@ -100,9 +104,11 @@ export const VideoQuizModal: React.FC<VideoQuizModalProps> = ({ task, onClose, o
           origin: { y: 0.6 },
         })
       } else {
+        isSubmittingRef.current = false
         setErrorMessage(extractServerMessage(res.error) || 'Jawaban kuis belum tepat. Periksa kembali jawabanmu.')
       }
     } catch (err: any) {
+      isSubmittingRef.current = false
       if (isEarningCapError(err)) {
         setErrorMessage(EARNING_CAP_MESSAGE)
         try { (onSuccess as any)?.() } catch { /* ignore */ }
@@ -231,8 +237,9 @@ export const VideoQuizModal: React.FC<VideoQuizModalProps> = ({ task, onClose, o
                             <button
                               key={opt}
                               type="button"
+                              disabled={submitting}
                               onClick={() => handleSelectOption(q.id, opt)}
-                              className={`w-full text-left p-3.5 rounded-xl border text-sm font-medium transition-all ${
+                              className={`w-full text-left p-3.5 rounded-xl border text-sm font-medium transition-all disabled:opacity-50 disabled:cursor-not-allowed ${
                                 isSelected
                                   ? 'border-accent-magic bg-accent-magic/15 text-text-primary shadow-sm ring-2 ring-accent-magic/30'
                                   : 'border-border-subtle hover:border-accent-magic/40 bg-surface-elevated text-text-secondary hover:text-text-primary'
@@ -272,8 +279,9 @@ export const VideoQuizModal: React.FC<VideoQuizModalProps> = ({ task, onClose, o
                   {embedUrl && (
                     <button
                       type="button"
+                      disabled={submitting}
                       onClick={() => setCurrentStep('video')}
-                      className="px-4 py-3.5 rounded-2xl border border-border-subtle text-text-secondary hover:text-text-primary font-bold text-sm"
+                      className="px-4 py-3.5 rounded-2xl border border-border-subtle text-text-secondary hover:text-text-primary font-bold text-sm disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                       Tonton Lagi
                     </button>

@@ -253,21 +253,22 @@ describe('Phase 1 — Income Configuration Correctness (F-01 / F-02)', () => {
     expect(result.current.selectedMember).not.toBeNull()
   })
 
-  it('handleCreateMember sets NOT_CONFIGURED when cap is 0 and CONFIGURED when cap > 0', async () => {
+  it('handleCreateMember enforces explicit income_status and cap constraints', async () => {
     vi.mocked(adminMembersApi.getMembers).mockResolvedValue({ items: [], pagination: {} } as any)
     vi.mocked(adminMembersApi.createMember).mockResolvedValue({} as any)
     const { result } = renderHook(() => useAdminMembers())
     await waitFor(() => expect(result.current.isFetching).toBe(false))
 
-    // 1. Cap 0 -> NOT_CONFIGURED
+    // 1. Explicit NOT_CONFIGURED -> cap 0
     act(() => {
       result.current.openCreateModal()
       result.current.setNewMember((prev) => ({
         ...prev,
-        username: 'new_user',
+        username: 'not_configured_user',
         password: 'password123',
-        explorer_name: 'New Explorer',
+        explorer_name: 'Not Configured Explorer',
         role: 'MEMBER',
+        income_status: 'NOT_CONFIGURED',
         monthly_earning_cap: 0,
       }))
     })
@@ -283,7 +284,29 @@ describe('Phase 1 — Income Configuration Correctness (F-01 / F-02)', () => {
       })
     )
 
-    // 2. Cap > 0 -> CONFIGURED
+    // 2. Explicit CONFIGURED with cap <= 0 -> alerts error and prevents submission
+    act(() => {
+      result.current.openCreateModal()
+      result.current.setNewMember((prev) => ({
+        ...prev,
+        username: 'invalid_cap_user',
+        password: 'password123',
+        explorer_name: 'Invalid Cap Explorer',
+        role: 'MEMBER',
+        income_status: 'CONFIGURED',
+        monthly_earning_cap: 0,
+      }))
+    })
+
+    await act(async () => {
+      await result.current.handleCreateMember()
+    })
+
+    expect(window.alert).toHaveBeenCalledWith(
+      expect.stringContaining('Batas earning bulanan untuk status Dikonfigurasi harus antara 1 sampai 10000 koin')
+    )
+
+    // 3. Explicit CONFIGURED with valid cap -> sends CONFIGURED and cap
     act(() => {
       result.current.openCreateModal()
       result.current.setNewMember((prev) => ({
@@ -292,6 +315,7 @@ describe('Phase 1 — Income Configuration Correctness (F-01 / F-02)', () => {
         password: 'password123',
         explorer_name: 'Configured Explorer',
         role: 'MEMBER',
+        income_status: 'CONFIGURED',
         monthly_earning_cap: 4000,
       }))
     })
@@ -304,6 +328,31 @@ describe('Phase 1 — Income Configuration Correctness (F-01 / F-02)', () => {
       expect.objectContaining({
         income_status: 'CONFIGURED',
         monthly_earning_cap: 4000,
+      })
+    )
+
+    // 4. Explicit DISABLED -> sends DISABLED and cap 0
+    act(() => {
+      result.current.openCreateModal()
+      result.current.setNewMember((prev) => ({
+        ...prev,
+        username: 'disabled_user',
+        password: 'password123',
+        explorer_name: 'Disabled Explorer',
+        role: 'MEMBER',
+        income_status: 'DISABLED',
+        monthly_earning_cap: 0,
+      }))
+    })
+
+    await act(async () => {
+      await result.current.handleCreateMember()
+    })
+
+    expect(adminMembersApi.createMember).toHaveBeenCalledWith(
+      expect.objectContaining({
+        income_status: 'DISABLED',
+        monthly_earning_cap: 0,
       })
     )
   })

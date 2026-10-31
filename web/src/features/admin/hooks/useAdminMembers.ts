@@ -21,6 +21,7 @@ export function useAdminMembers(options?: UseAdminMembersOptions) {
     password: '',
     explorer_name: '',
     role: 'MEMBER' as 'ADMIN' | 'MEMBER',
+    income_status: 'NOT_CONFIGURED' as 'NOT_CONFIGURED' | 'CONFIGURED' | 'DISABLED',
     monthly_coin_target: 0,
     monthly_earning_cap: 0,
     payout_frequency: 'THRESHOLD' as 'THRESHOLD' | 'WEEKLY' | 'MONTHLY',
@@ -97,6 +98,7 @@ export function useAdminMembers(options?: UseAdminMembersOptions) {
       password: '',
       explorer_name: '',
       role: 'MEMBER',
+      income_status: 'NOT_CONFIGURED',
       monthly_coin_target: 0,
       monthly_earning_cap: 0,
       payout_frequency: 'THRESHOLD',
@@ -121,9 +123,13 @@ export function useAdminMembers(options?: UseAdminMembersOptions) {
       alert('Target koin bulanan harus 0..10000')
       return
     }
-    if (newMember.role === 'MEMBER' && (newMember.monthly_earning_cap < 0 || newMember.monthly_earning_cap > 10000)) {
-      alert('Batas earning bulanan harus 0..10000')
-      return
+    if (newMember.role === 'MEMBER') {
+      if (newMember.income_status === 'CONFIGURED') {
+        if (newMember.monthly_earning_cap <= 0 || newMember.monthly_earning_cap > 10000) {
+          alert('Batas earning bulanan untuk status Dikonfigurasi harus antara 1 sampai 10000 koin')
+          return
+        }
+      }
     }
     if (newMember.minimum_withdrawal_coins < 1 || newMember.minimum_withdrawal_coins > 100000) {
       alert('Minimum withdrawal harus 1..100000')
@@ -131,17 +137,20 @@ export function useAdminMembers(options?: UseAdminMembersOptions) {
     }
     setIsCreating(true)
     try {
-      const incomeStatus = newMember.role === 'MEMBER'
-        ? (newMember.monthly_earning_cap > 0 ? 'CONFIGURED' : 'NOT_CONFIGURED')
+      const isMember = newMember.role === 'MEMBER'
+      const incomeStatus = isMember ? newMember.income_status : undefined
+      const earningCap = isMember
+        ? (newMember.income_status === 'CONFIGURED' ? newMember.monthly_earning_cap : 0)
         : undefined
+
       const payload: any = {
         username: newMember.username.trim(),
         password: newMember.password.trim(),
         explorer_name: newMember.explorer_name.trim(),
         role: newMember.role,
         income_status: incomeStatus,
-        monthly_coin_target: newMember.role === 'MEMBER' ? newMember.monthly_coin_target : undefined,
-        monthly_earning_cap: newMember.role === 'MEMBER' ? newMember.monthly_earning_cap : undefined,
+        monthly_coin_target: isMember ? newMember.monthly_coin_target : undefined,
+        monthly_earning_cap: earningCap,
         payout_frequency: newMember.payout_frequency,
         minimum_withdrawal_coins: newMember.minimum_withdrawal_coins,
       }

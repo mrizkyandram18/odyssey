@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react'
+import React, { useState, useEffect, useCallback, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import confetti from 'canvas-confetti'
 import { Gamepad2, Award, X, Sparkles, CheckCircle2, RotateCcw, Clock, Target, AlertCircle } from 'lucide-react'
@@ -39,6 +39,7 @@ export const MiniGameModal: React.FC<MiniGameModalProps> = ({ task, onClose, onS
   const [score, setScore] = useState(0)
   const [seconds, setSeconds] = useState(0)
   const [submitting, setSubmitting] = useState(false)
+  const isSubmittingRef = useRef(false)
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
   const [earnedRewards, setEarnedRewards] = useState<{ coins: number; xp: number } | null>(
     isApproved ? { coins: task.coins_earned ?? task.reward_coins, xp: task.xp_earned ?? task.reward_xp } : null
@@ -46,6 +47,7 @@ export const MiniGameModal: React.FC<MiniGameModalProps> = ({ task, onClose, onS
 
   // Initialize deck
   const initializeGame = useCallback(() => {
+    if (isSubmittingRef.current) return
     const selectedIcons = CARD_ICONS.slice(0, pairCount)
     const deck = [...selectedIcons, ...selectedIcons]
       .sort(() => Math.random() - 0.5)
@@ -84,6 +86,7 @@ export const MiniGameModal: React.FC<MiniGameModalProps> = ({ task, onClose, onS
 
   // Handle Card Click
   const handleCardClick = (id: number) => {
+    if (isSubmittingRef.current || submitting) return
     if (flippedCards.length === 2) return
     const clickedCard = cards.find((c) => c.id === id)
     if (!clickedCard || clickedCard.isFlipped || clickedCard.isMatched) return
@@ -133,6 +136,8 @@ export const MiniGameModal: React.FC<MiniGameModalProps> = ({ task, onClose, onS
 
   // Submit Game Result
   const handleSubmit = async () => {
+    if (isSubmittingRef.current) return
+    isSubmittingRef.current = true
     setSubmitting(true)
     setErrorMessage(null)
     try {
@@ -156,9 +161,11 @@ export const MiniGameModal: React.FC<MiniGameModalProps> = ({ task, onClose, onS
           origin: { y: 0.6 },
         })
       } else {
+        isSubmittingRef.current = false
         setErrorMessage(res.error || 'Skor belum mencukupi atau hasil gagal divalidasi.')
       }
     } catch (err: any) {
+      isSubmittingRef.current = false
       if (isEarningCapError(err)) {
         setErrorMessage(EARNING_CAP_MESSAGE)
         try { onSuccess() } catch { /* ignore */ }
@@ -239,7 +246,7 @@ export const MiniGameModal: React.FC<MiniGameModalProps> = ({ task, onClose, onS
                         whileHover={!isRevealed ? { scale: 1.05 } : {}}
                         whileTap={!isRevealed ? { scale: 0.95 } : {}}
                         onClick={() => handleCardClick(card.id)}
-                        disabled={isRevealed || gameFinished}
+                        disabled={isRevealed || gameFinished || submitting}
                         className={`aspect-square rounded-2xl text-2xl flex items-center justify-center font-bold transition-all shadow-sm ${
                           card.isMatched
                             ? 'bg-status-success/20 border-2 border-status-success text-status-success ring-2 ring-status-success/30'
@@ -284,8 +291,9 @@ export const MiniGameModal: React.FC<MiniGameModalProps> = ({ task, onClose, onS
                 <div className="flex gap-2 pt-2">
                   <button
                     type="button"
+                    disabled={submitting}
                     onClick={initializeGame}
-                    className="p-3 rounded-2xl border border-border-subtle bg-surface text-text-secondary hover:text-text-primary font-bold text-xs flex items-center gap-1.5 transition-colors"
+                    className="p-3 rounded-2xl border border-border-subtle bg-surface text-text-secondary hover:text-text-primary font-bold text-xs flex items-center gap-1.5 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     <RotateCcw className="w-4 h-4" />
                     <span>Ulang</span>

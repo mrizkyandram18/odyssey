@@ -23,10 +23,12 @@ export const CameraCaptureModal: React.FC<CameraCaptureModalProps> = ({ task, on
   const [note, setNote] = useState('')
   const [compressing, setCompressing] = useState(false)
   const [uploading, setUploading] = useState(false)
+  const isSubmittingRef = useRef(false)
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
   const [submitted, setSubmitted] = useState(isAlreadyDone)
 
   const handleCapture = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (isSubmittingRef.current || uploading) return
     if (e.target.files && e.target.files[0]) {
       const originalFile = e.target.files[0]
       setCompressing(true)
@@ -49,7 +51,9 @@ export const CameraCaptureModal: React.FC<CameraCaptureModalProps> = ({ task, on
   }
 
   const handleSubmit = async () => {
+    if (isSubmittingRef.current) return
     if (!capturedFile) return
+    isSubmittingRef.current = true
     setUploading(true)
     setErrorMessage(null)
     try {
@@ -74,9 +78,11 @@ export const CameraCaptureModal: React.FC<CameraCaptureModalProps> = ({ task, on
       if (res.success) {
         setSubmitted(true)
       } else {
+        isSubmittingRef.current = false
         setErrorMessage(res.error || 'Gagal menyimpan submission foto')
       }
     } catch (err: any) {
+      isSubmittingRef.current = false
       if (isEarningCapError(err)) {
         setErrorMessage(EARNING_CAP_MESSAGE)
         try { onSuccess() } catch { /* ignore */ }
@@ -150,14 +156,19 @@ export const CameraCaptureModal: React.FC<CameraCaptureModalProps> = ({ task, on
                   accept="image/*"
                   capture="environment"
                   className="hidden"
+                  disabled={uploading || compressing}
                   onChange={handleCapture}
                 />
 
                 {/* Camera Viewfinder / Preview */}
                 {!previewUrl ? (
                   <div
-                    onClick={() => cameraInputRef.current?.click()}
-                    className="aspect-square w-full max-w-[280px] mx-auto border-2 border-dashed border-accent-magic/50 bg-accent-magic/5 rounded-2xl flex flex-col items-center justify-center gap-3 cursor-pointer hover:bg-accent-magic/10 active:scale-95 transition-all p-6 text-center shadow-inner"
+                    onClick={() => {
+                      if (!uploading && !compressing) cameraInputRef.current?.click()
+                    }}
+                    className={`aspect-square w-full max-w-[280px] mx-auto border-2 border-dashed border-accent-magic/50 bg-accent-magic/5 rounded-2xl flex flex-col items-center justify-center gap-3 transition-all p-6 text-center shadow-inner ${
+                      uploading || compressing ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer hover:bg-accent-magic/10 active:scale-95'
+                    }`}
                   >
                     <div className="w-16 h-16 rounded-full bg-accent-magic text-white flex items-center justify-center shadow-lg shadow-accent-magic/30">
                       <Camera className="w-8 h-8" />
@@ -188,8 +199,9 @@ export const CameraCaptureModal: React.FC<CameraCaptureModalProps> = ({ task, on
                     <div className="text-center">
                       <button
                         type="button"
+                        disabled={uploading || compressing}
                         onClick={() => cameraInputRef.current?.click()}
-                        className="inline-flex items-center gap-1.5 text-xs text-accent-magic font-bold hover:underline"
+                        className="inline-flex items-center gap-1.5 text-xs text-accent-magic font-bold hover:underline disabled:opacity-50 disabled:cursor-not-allowed"
                       >
                         <RefreshCw className="w-3.5 h-3.5" />
                         <span>Ambil Ulang Foto</span>
@@ -212,6 +224,7 @@ export const CameraCaptureModal: React.FC<CameraCaptureModalProps> = ({ task, on
                   <label className="text-xs font-bold text-text-secondary">Penjelasan Singkat:</label>
                   <textarea
                     rows={2}
+                    disabled={uploading}
                     value={note}
                     onChange={(e) => setNote(e.target.value)}
                     placeholder="Tulis penjelasan singkat tentang fotomu (misalnya apa yang bisa dibuat lebih baik dan alasannya)..."

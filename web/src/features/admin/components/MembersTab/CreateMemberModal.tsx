@@ -9,6 +9,7 @@ interface CreateMemberModalProps {
     password: string
     explorer_name: string
     role: 'ADMIN' | 'MEMBER'
+    income_status: 'NOT_CONFIGURED' | 'CONFIGURED' | 'DISABLED'
     monthly_coin_target: number
     monthly_earning_cap: number
     payout_frequency: 'THRESHOLD' | 'WEEKLY' | 'MONTHLY'
@@ -23,6 +24,7 @@ interface CreateMemberModalProps {
       password: string
       explorer_name: string
       role: 'ADMIN' | 'MEMBER'
+      income_status: 'NOT_CONFIGURED' | 'CONFIGURED' | 'DISABLED'
       monthly_coin_target: number
       monthly_earning_cap: number
       payout_frequency: 'THRESHOLD' | 'WEEKLY' | 'MONTHLY'
@@ -185,39 +187,91 @@ export const CreateMemberModal: React.FC<CreateMemberModalProps> = ({
                       Batas Koin Bulanan (Earning Cap)
                     </label>
                     <span className="text-[10px] font-semibold text-text-secondary">
-                      {form.monthly_earning_cap > 0 ? `Batas Khusus (${form.monthly_earning_cap} koin)` : 'Belum Diatur (Rp0)'}
+                      {form.income_status === 'CONFIGURED'
+                        ? (form.monthly_earning_cap > 0
+                          ? `Batas Khusus: ${form.monthly_earning_cap.toLocaleString('id-ID')} koin`
+                          : 'Batas Belum Diisi')
+                        : form.income_status === 'DISABLED'
+                          ? 'Dinonaktifkan (Rp0)'
+                          : 'Belum Diatur (Rp0)'}
                     </span>
                   </div>
 
                   <div className="space-y-2">
-                    <label className="flex items-center gap-2 cursor-pointer text-xs text-text-primary">
-                      <input
-                        type="radio"
-                        name="create_cap_mode"
-                        checked={form.monthly_earning_cap === 0}
-                        onChange={() => setForm({ ...form, monthly_earning_cap: 0 })}
-                        className="text-accent-magic cursor-pointer"
-                      />
-                      <span>Belum dikonfigurasi sekarang (Batas Rp0 — Anggota masuk antrean triage)</span>
+                    <label className="text-[11px] font-bold text-text-secondary block">
+                      Status Konfigurasi Earning:
                     </label>
+                    <div className="grid grid-cols-1 gap-2">
+                      <label className={`flex items-start gap-2.5 p-2.5 rounded-xl border cursor-pointer transition-all ${
+                        form.income_status === 'CONFIGURED'
+                          ? 'bg-accent-magic/10 border-accent-magic text-text-primary'
+                          : 'bg-surface border-border-subtle text-text-secondary hover:border-border-strong'
+                      }`}>
+                        <input
+                          type="radio"
+                          name="create_income_status"
+                          value="CONFIGURED"
+                          checked={form.income_status === 'CONFIGURED'}
+                          onChange={() => setForm({
+                            ...form,
+                            income_status: 'CONFIGURED',
+                            monthly_earning_cap: form.monthly_earning_cap > 0
+                              ? form.monthly_earning_cap
+                              : (form.monthly_coin_target > 0 ? form.monthly_coin_target : 3000),
+                          })}
+                          className="mt-0.5 text-accent-magic cursor-pointer"
+                        />
+                        <div className="text-xs">
+                          <span className="font-bold text-text-primary block">Batas Koin Aktif (Dikonfigurasi)</span>
+                          <span className="text-[11px] text-text-secondary">Anggota dapat memperoleh koin tugas hingga batas bulanan yang ditentukan.</span>
+                        </div>
+                      </label>
 
-                    <label className="flex items-center gap-2 cursor-pointer text-xs text-text-primary">
-                      <input
-                        type="radio"
-                        name="create_cap_mode"
-                        checked={form.monthly_earning_cap > 0}
-                        onChange={() => setForm({ ...form, monthly_earning_cap: form.monthly_coin_target > 0 ? form.monthly_coin_target : 3000 })}
-                        className="text-accent-magic cursor-pointer"
-                      />
-                      <span>Atur batas koin khusus untuk anggota ini sekarang</span>
-                    </label>
+                      <label className={`flex items-start gap-2.5 p-2.5 rounded-xl border cursor-pointer transition-all ${
+                        form.income_status === 'NOT_CONFIGURED'
+                          ? 'bg-status-warning/10 border-status-warning text-text-primary'
+                          : 'bg-surface border-border-subtle text-text-secondary hover:border-border-strong'
+                      }`}>
+                        <input
+                          type="radio"
+                          name="create_income_status"
+                          value="NOT_CONFIGURED"
+                          checked={form.income_status === 'NOT_CONFIGURED'}
+                          onChange={() => setForm({ ...form, income_status: 'NOT_CONFIGURED', monthly_earning_cap: 0 })}
+                          className="mt-0.5 text-status-warning cursor-pointer"
+                        />
+                        <div className="text-xs">
+                          <span className="font-bold text-text-primary block">Belum Diatur (Batas Rp0 — Antrean Triage)</span>
+                          <span className="text-[11px] text-text-secondary">Batas koin efektif 0 koin (Rp0). Anggota masuk antrean triage admin sampai dikonfigurasi.</span>
+                        </div>
+                      </label>
+
+                      <label className={`flex items-start gap-2.5 p-2.5 rounded-xl border cursor-pointer transition-all ${
+                        form.income_status === 'DISABLED'
+                          ? 'bg-zinc-500/10 border-zinc-500 text-text-primary'
+                          : 'bg-surface border-border-subtle text-text-secondary hover:border-border-strong'
+                      }`}>
+                        <input
+                          type="radio"
+                          name="create_income_status"
+                          value="DISABLED"
+                          checked={form.income_status === 'DISABLED'}
+                          onChange={() => setForm({ ...form, income_status: 'DISABLED', monthly_earning_cap: 0 })}
+                          className="mt-0.5 text-zinc-500 cursor-pointer"
+                        />
+                        <div className="text-xs">
+                          <span className="font-bold text-text-primary block">Dinonaktifkan (Batas Rp0 — Ditutup)</span>
+                          <span className="text-[11px] text-text-secondary">Earning koin dinonaktifkan (Rp0). Anggota tidak memperoleh koin dan tidak masuk triage.</span>
+                        </div>
+                      </label>
+                    </div>
                   </div>
 
-                  {form.monthly_earning_cap > 0 && (
+                  {form.income_status === 'CONFIGURED' ? (
                     <div className="pt-2 border-t border-border-subtle/60 space-y-2">
                       <div className="flex items-center justify-between">
-                        <label className="text-[11px] font-bold text-text-secondary">
-                          Batas Koin Khusus (Per Bulan):
+                        <label htmlFor="create-custom-cap" className="text-[11px] font-bold text-text-secondary">
+                          Batas Koin Bulanan (Wajib &gt; 0, Maks 10.000):
                         </label>
                         <div className="flex items-center gap-1 text-[10px] text-text-secondary">
                           <span>Pilihan:</span>
@@ -251,18 +305,39 @@ export const CreateMemberModal: React.FC<CreateMemberModalProps> = ({
                       </div>
                       <div className="relative">
                         <input
+                          id="create-custom-cap"
                           type="number"
                           min={1}
                           max={10000}
-                          value={form.monthly_earning_cap}
+                          value={form.monthly_earning_cap > 0 ? form.monthly_earning_cap : ''}
                           onChange={(e) => setForm({ ...form, monthly_earning_cap: Math.max(0, parseInt(e.target.value || '0', 10)) })}
                           placeholder="Contoh: 3500"
-                          className="w-full p-2.5 pr-24 rounded-xl bg-surface border border-border-subtle text-xs sm:text-sm font-bold text-text-primary focus:outline-none focus:border-accent-magic font-mono"
+                          className={`w-full p-2.5 pr-24 rounded-xl bg-surface border text-xs sm:text-sm font-bold text-text-primary focus:outline-none font-mono ${
+                            form.monthly_earning_cap <= 0
+                              ? 'border-status-error focus:border-status-error'
+                              : 'border-border-subtle focus:border-accent-magic'
+                          }`}
                         />
                         <span className="absolute right-3 top-2.5 text-xs text-text-secondary">koin / bulan</span>
                       </div>
+                      {form.monthly_earning_cap <= 0 && (
+                        <p className="text-[11px] text-status-error font-medium">
+                          Batas koin harus diisi angka positif (minimal 1 koin, maksimal 10.000 koin).
+                        </p>
+                      )}
                       <p className="text-[10px] text-text-secondary">
-                        Batas khusus ini hanya berlaku untuk anggota ini dan menggantikan batas standar sistem.
+                        Batas khusus ini hanya berlaku untuk anggota ini. 1 Koin bernilai Rp100.
+                      </p>
+                    </div>
+                  ) : (
+                    <div className="p-2.5 rounded-lg bg-surface border border-border-subtle text-[11px] text-text-secondary space-y-1">
+                      <span className="font-bold text-text-primary block">
+                        Batas Koin Efektif: 0 koin (Rp0)
+                      </span>
+                      <p>
+                        {form.income_status === 'NOT_CONFIGURED'
+                          ? 'Anggota baru belum memiliki batas koin yang dikonfigurasi. Anggota tidak akan menerima koin dari reward tugas sampai status diatur ke CONFIGURED.'
+                          : 'Earning koin dinonaktifkan secara eksplisit untuk anggota baru ini.'}
                       </p>
                     </div>
                   )}

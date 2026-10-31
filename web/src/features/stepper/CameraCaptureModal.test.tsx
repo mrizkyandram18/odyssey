@@ -100,4 +100,47 @@ describe('CameraCaptureModal photo explanation note', () => {
     await waitFor(() => expect(submitMock).toHaveBeenCalledTimes(1))
     expect(submitMock.mock.calls[0][1].payload.note).toBe('')
   })
+
+  it('prevents multiple uploads and submissions on rapid clicking (F-04)', async () => {
+    const compressMock = compressModule.compressImage as unknown as ReturnType<typeof vi.fn>
+    const uploadMock = compressModule.uploadTaskProof as unknown as ReturnType<typeof vi.fn>
+    const submitMock = tasksApi.submit as unknown as ReturnType<typeof vi.fn>
+    const file = new File(['fake-image'], 'kondisi.jpg', { type: 'image/jpeg' })
+    compressMock.mockResolvedValue({ file, dataUrl: 'data:image/jpeg;base64,xxx' })
+
+    let resolveUpload: (val: any) => void = () => {}
+    uploadMock.mockReturnValue(new Promise((resolve) => { resolveUpload = resolve }))
+
+    const { container } = render(
+      <CameraCaptureModal task={baseTask} onClose={vi.fn()} onSuccess={vi.fn()} onNextTask={vi.fn()} />
+    )
+    const input = container.querySelector('input[type="file"]') as HTMLInputElement
+    fireEvent.change(input, { target: { files: [file] } })
+    await waitFor(() => expect(screen.getByAltText('Preview Foto')).toBeInTheDocument())
+
+    const sendBtn = screen.getByText(/Kirim Foto Bukti/)
+    // Rapid multiple clicks
+    fireEvent.click(sendBtn)
+    fireEvent.click(sendBtn)
+    fireEvent.click(sendBtn)
+
+    // Crucial: Only one upload started!
+    expect(uploadMock).toHaveBeenCalledTimes(1)
+
+    // F-POST-01: In-flight state disables file input and retake button
+    expect(input).toBeDisabled()
+    const retakeBtn = screen.getByRole('button', { name: /Ambil Ulang Foto/i })
+    expect(retakeBtn).toBeDisabled()
+
+    // Clicking retake while in-flight must not reset lock
+    fireEvent.click(retakeBtn)
+    fireEvent.click(sendBtn)
+    expect(uploadMock).toHaveBeenCalledTimes(1)
+
+    // Complete upload
+    resolveUpload({ file_url: 'https://cdn/foto.jpg', file_name: 'kondisi.jpg', file_size: 12345 })
+    submitMock.mockResolvedValue({ success: true })
+
+    await waitFor(() => expect(submitMock).toHaveBeenCalledTimes(1))
+  })
 })
