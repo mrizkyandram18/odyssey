@@ -38,6 +38,8 @@ export function useAdminMembers(options?: UseAdminMembersOptions) {
     explorer_name: '',
     role: 'MEMBER' as 'ADMIN' | 'MEMBER',
     is_active: true,
+    income_status: 'NOT_CONFIGURED' as 'NOT_CONFIGURED' | 'CONFIGURED' | 'DISABLED',
+    reason: '',
     reset_device: false,
     monthly_coin_target: null as number | null,
     monthly_earning_cap: 0,
@@ -120,7 +122,7 @@ export function useAdminMembers(options?: UseAdminMembersOptions) {
       return
     }
     if (newMember.role === 'MEMBER' && (newMember.monthly_earning_cap < 0 || newMember.monthly_earning_cap > 10000)) {
-      alert('Batas earning bulanan harus 0..10000 (0=unlimited)')
+      alert('Batas earning bulanan harus 0..10000')
       return
     }
     if (newMember.minimum_withdrawal_coins < 1 || newMember.minimum_withdrawal_coins > 100000) {
@@ -129,11 +131,15 @@ export function useAdminMembers(options?: UseAdminMembersOptions) {
     }
     setIsCreating(true)
     try {
+      const incomeStatus = newMember.role === 'MEMBER'
+        ? (newMember.monthly_earning_cap > 0 ? 'CONFIGURED' : 'NOT_CONFIGURED')
+        : undefined
       const payload: any = {
         username: newMember.username.trim(),
         password: newMember.password.trim(),
         explorer_name: newMember.explorer_name.trim(),
         role: newMember.role,
+        income_status: incomeStatus,
         monthly_coin_target: newMember.role === 'MEMBER' ? newMember.monthly_coin_target : undefined,
         monthly_earning_cap: newMember.role === 'MEMBER' ? newMember.monthly_earning_cap : undefined,
         payout_frequency: newMember.payout_frequency,
@@ -160,6 +166,8 @@ export function useAdminMembers(options?: UseAdminMembersOptions) {
       explorer_name: member.explorer_name,
       role: (member.role === 'ADMIN' || member.role === 'GUIDE' || member.role === 'BUILDER') ? 'ADMIN' : 'MEMBER',
       is_active: member.is_active,
+      income_status: member.income_status || 'NOT_CONFIGURED',
+      reason: '',
       reset_device: false,
       // NULL (inherit) passes through; only explicit numbers are baked in.
       monthly_coin_target: member.monthly_coin_target ?? null,
@@ -187,9 +195,15 @@ export function useAdminMembers(options?: UseAdminMembersOptions) {
       alert('Target koin bulanan harus 0..10000 (kosongkan untuk ikut default)')
       return
     }
-    if (editMemberForm.monthly_earning_cap < 0 || editMemberForm.monthly_earning_cap > 10000) {
-      alert('Batas earning bulanan harus 0..10000 (0=unlimited)')
-      return
+    if (editMemberForm.income_status === 'CONFIGURED') {
+      if (editMemberForm.monthly_earning_cap <= 0) {
+        alert('Batas koin bulanan harus lebih besar dari 0 untuk status CONFIGURED')
+        return
+      }
+      if (editMemberForm.monthly_earning_cap > 10000) {
+        alert('Batas koin bulanan tidak boleh melebihi 10.000 koin')
+        return
+      }
     }
     if (editMemberForm.minimum_withdrawal_coins < 1 || editMemberForm.minimum_withdrawal_coins > 100000) {
       alert('Minimum withdrawal harus 1..100000')
@@ -197,14 +211,17 @@ export function useAdminMembers(options?: UseAdminMembersOptions) {
     }
     setIsSavingEdit(true)
     try {
+      const effectiveCap = editMemberForm.income_status === 'CONFIGURED' ? editMemberForm.monthly_earning_cap : 0
       const payload: any = {
         explorer_name: editMemberForm.explorer_name.trim(),
         role: editMemberForm.role,
         is_active: editMemberForm.is_active,
+        income_status: editMemberForm.income_status,
+        reason: editMemberForm.reason.trim() || undefined,
         reset_device: editMemberForm.reset_device ? true : undefined,
         // NULL = inherit: omit the key so the stored NULL survives the save.
         ...(editTarget !== null ? { monthly_coin_target: editTarget } : {}),
-        monthly_earning_cap: editMemberForm.monthly_earning_cap,
+        monthly_earning_cap: effectiveCap,
         payout_frequency: editMemberForm.payout_frequency,
         minimum_withdrawal_coins: editMemberForm.minimum_withdrawal_coins,
       }

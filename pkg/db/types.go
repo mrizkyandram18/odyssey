@@ -15,6 +15,7 @@ type UserProfile struct {
 	Coins              int64      `json:"coins"`
 	MonthlyCoinTarget  *int       `json:"monthly_coin_target,omitempty"`
 	MonthlyEarningCap  *int       `json:"monthly_earning_cap,omitempty"`
+	IncomeStatus       string     `json:"income_status,omitempty"`
 	StreakDays         int        `json:"streak_days"`
 	LastActive         *string    `json:"last_active_date,omitempty"`
 	AvatarStyle        string     `json:"avatar_style"`

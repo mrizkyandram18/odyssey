@@ -39,50 +39,72 @@ func fetchSystemTimezone(ctx context.Context, client db.SupabaseClient) string {
 }
 
 func getEffectiveEarningCap(ctx context.Context, client db.SupabaseClient, uid string) int {
-	baseCap := -1
-	// Try per-user cap directly
-	if uid != "" {
-		raw, err := client.Get(ctx, "odyssey_user_profiles", fmt.Sprintf("uid=eq.%s&select=monthly_earning_cap,level", uid))
-		if err == nil && len(raw) > 0 && strings.Contains(string(raw), "monthly_earning_cap") {
-			var rows []struct {
-				MonthlyEarningCap *int `json:"monthly_earning_cap"`
-				Level             *int `json:"level"`
-			}
-			if err := json.Unmarshal(raw, &rows); err == nil && len(rows) > 0 {
-				if rows[0].MonthlyEarningCap != nil {
-					baseCap = *rows[0].MonthlyEarningCap
-				}
-			}
-		}
-	}
-	// Fallback to global default from odyssey_system_config
-	if baseCap < 0 {
-		raw, err := client.Get(ctx, "odyssey_system_config", "key=eq.default_monthly_earning_cap&select=value")
-		if err == nil && len(raw) > 0 {
-			var rows []struct {
-				Value string `json:"value"`
-			}
-			if err := json.Unmarshal(raw, &rows); err == nil && len(rows) > 0 {
-				if v, err := strconv.Atoi(strings.TrimSpace(rows[0].Value)); err == nil && v >= 0 {
-					baseCap = v
-				}
-			}
-		}
-	}
-	// If baseCap is still < 0, config is missing/invalid. Do not default to 0 (unlimited).
-	if baseCap < 0 {
-		return -1
-	}
-	// 0 = unlimited
-	if baseCap == 0 {
+	if uid == "" {
 		return 0
 	}
+	raw, err := client.Get(ctx, "odyssey_user_profiles", fmt.Sprintf("uid=eq.%s&select=role,income_status,monthly_earning_cap", uid))
+	if err != nil || len(raw) == 0 {
+		return 0
+	}
+	var rows []struct {
+		Role              string `json:"role"`
+		IncomeStatus      string `json:"income_status"`
+		MonthlyEarningCap *int   `json:"monthly_earning_cap"`
+	}
+	if err := json.Unmarshal(raw, &rows); err != nil || len(rows) == 0 {
+		return 0
+	}
+	user := rows[0]
+	if user.Role != "MEMBER" {
+		return 0
+	}
+	if user.IncomeStatus != "CONFIGURED" || user.MonthlyEarningCap == nil || *user.MonthlyEarningCap <= 0 {
+		return 0
+	}
+	baseCap := *user.MonthlyEarningCap
 
-	// Non-negotiable financial invariant:
-	// The effective monthly earning cap is strictly the validated administrator-authorized cap.
-	// Level progression, RPG rewards, and derived formulas must never increase the cap
-	// above the administrator-authorized amount.
-	return baseCap
+	// Ceiling check
+	ceiling := 10000
+	if cfgRaw, err := client.Get(ctx, "odyssey_system_config", "key=eq.max_monthly_earning_cap_ceiling&select=value"); err == nil && len(cfgRaw) > 0 {
+		var cfgRows []struct {
+			Value string `json:"value"`
+		}
+		if err := json.Unmarshal(cfgRaw, &cfgRows); err == nil && len(cfgRows) > 0 {
+			if v, err := strconv.Atoi(strings.TrimSpace(cfgRows[0].Value)); err == nil && v > 0 {
+				ceiling = v
+			}
+		}
+	}
+	if baseCap > ceiling {
+		baseCap = ceiling
+	}
+
+	// Current Jakarta year & month
+	tz := fetchSystemTimezone(ctx, client)
+	loc, err := time.LoadLocation(tz)
+	if err != nil {
+		loc = time.FixedZone("WIB", 7*3600)
+	}
+	nowInTz := time.Now().In(loc)
+	year, month := nowInTz.Year(), int(nowInTz.Month())
+
+	// Scheduled historical adjustment deduction
+	deduction := 0
+	adjRaw, err := client.Get(ctx, "odyssey_member_monthly_adjustments", fmt.Sprintf("user_uid=eq.%s&period_year=eq.%d&period_month=eq.%d&select=deduction_amount", uid, year, month))
+	if err == nil && len(adjRaw) > 0 {
+		var adjRows []struct {
+			DeductionAmount int `json:"deduction_amount"`
+		}
+		if err := json.Unmarshal(adjRaw, &adjRows); err == nil && len(adjRows) > 0 {
+			deduction = adjRows[0].DeductionAmount
+		}
+	}
+
+	effective := baseCap - deduction
+	if effective < 0 {
+		return 0
+	}
+	return effective
 }
 
 func getEarnedThisPeriodForUser(ctx context.Context, client db.SupabaseClient, uid string) int {

@@ -51,6 +51,7 @@ func TestHandleListMembers_FullMonthCycleAndEffectiveCap(t *testing.T) {
 					return json.Marshal([]map[string]any{{
 						"uid": "u1", "username": "selvi", "family_id": "fam_1",
 						"explorer_name": "Selvi", "role": "MEMBER", "is_active": true,
+						"income_status": "CONFIGURED",
 						"level": 20, "xp": 1000, "coins": 341,
 						"monthly_coin_target": 3320, "monthly_earning_cap": cap,
 						"created_at": "2026-09-01T00:00:00Z",
@@ -118,5 +119,95 @@ func TestHandleListMembers_FullMonthCycleAndEffectiveCap(t *testing.T) {
 	}
 	if m.EarningLocked {
 		t.Errorf("member should not be locked with 0 earned vs cap 3000")
+	}
+}
+
+func TestHandleListMembers_IncomeStatusAndAdjustments(t *testing.T) {
+	cases := []struct {
+		name        string
+		status      string
+		cap         int
+		deduction   int
+		wantEffCap  int
+		wantLocked  bool
+		wantStatus  string
+	}{
+		{"not configured gives zero budget", "NOT_CONFIGURED", 3320, 0, 0, true, "HALTED"},
+		{"disabled gives zero budget", "DISABLED", 3320, 0, 0, true, "HALTED"},
+		{"configured zero cap gives zero budget", "CONFIGURED", 0, 0, 0, true, "HALTED"},
+		{"configured normal cap", "CONFIGURED", 3320, 0, 3320, false, "ACTIVE"},
+		{"selvi nov adjustment deducted", "CONFIGURED", 3320, 1437, 1883, false, "ACTIVE"},
+		{"selvi increased cap with adjustment", "CONFIGURED", 3500, 1437, 2063, false, "ACTIVE"},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			mock := &mockSupabaseClient{
+				getFunc: func(ctx context.Context, table string, params string) ([]byte, error) {
+					switch table {
+					case "odyssey_user_profiles":
+						switch {
+						case strings.Contains(params, "select=uid,is_active"):
+							return json.Marshal([]map[string]any{{"uid": "u1", "is_active": true}})
+						case strings.Contains(params, "select=uid,password_hash"):
+							return json.Marshal([]map[string]any{{"uid": "u1", "password_hash": "h"}})
+						default:
+							return json.Marshal([]map[string]any{{
+								"uid": "u1", "username": "member1", "family_id": "fam_1",
+								"explorer_name": "Member 1", "role": "MEMBER", "is_active": true,
+								"income_status": tc.status,
+								"level": 5, "xp": 500, "coins": 100,
+								"monthly_coin_target": 3320, "monthly_earning_cap": tc.cap,
+								"created_at": "2026-09-01T00:00:00Z",
+							}})
+						}
+					case "odyssey_member_monthly_adjustments":
+						if tc.deduction > 0 {
+							return json.Marshal([]map[string]any{{
+								"user_uid": "u1", "deduction_amount": tc.deduction,
+							}})
+						}
+						return []byte("[]"), nil
+					case "odyssey_system_config":
+						switch {
+						case strings.Contains(params, "key=eq.timezone"):
+							return json.Marshal([]map[string]string{{"value": "Asia/Jakarta"}})
+						case strings.Contains(params, "key=eq.max_monthly_earning_cap_ceiling"):
+							return json.Marshal([]map[string]string{{"value": "10000"}})
+						default:
+							return json.Marshal([]map[string]string{{"value": "3320"}})
+						}
+					default:
+						return []byte("[]"), nil
+					}
+				},
+			}
+
+			api := NewAPI(mock)
+			req := httptest.NewRequest(http.MethodGet, "/api/admin/members", nil)
+			req = req.WithContext(auth.ContextWithClaims(req.Context(), &auth.SessionClaims{
+				UID: "admin_1", Role: "ADMIN", FamilyID: "fam_1",
+			}))
+			rec := httptest.NewRecorder()
+			api.HandleListMembers(rec, req)
+			if rec.Code != http.StatusOK {
+				t.Fatalf("expected 200, got %d", rec.Code)
+			}
+			var resp shared.PaginatedResponse[MemberView]
+			_ = json.Unmarshal(rec.Body.Bytes(), &resp)
+			if len(resp.Items) != 1 {
+				t.Fatalf("expected 1 item, got %d", len(resp.Items))
+			}
+			m := resp.Items[0]
+			if m.EffectiveEarningCap == nil || *m.EffectiveEarningCap != tc.wantEffCap {
+				t.Errorf("EffectiveEarningCap = %v, want %d", m.EffectiveEarningCap, tc.wantEffCap)
+			}
+			if m.EarningLocked != tc.wantLocked {
+				t.Errorf("EarningLocked = %v, want %v", m.EarningLocked, tc.wantLocked)
+			}
+			if m.EarningStatus != tc.wantStatus {
+				t.Errorf("EarningStatus = %v, want %v", m.EarningStatus, tc.wantStatus)
+			}
+		})
 	}
 }

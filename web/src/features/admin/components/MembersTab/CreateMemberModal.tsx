@@ -185,7 +185,7 @@ export const CreateMemberModal: React.FC<CreateMemberModalProps> = ({
                       Batas Koin Bulanan (Earning Cap)
                     </label>
                     <span className="text-[10px] font-semibold text-text-secondary">
-                      {form.monthly_earning_cap > 0 ? `Batas Khusus (${form.monthly_earning_cap} koin)` : 'Standar Sistem (3.320 koin)'}
+                      {form.monthly_earning_cap > 0 ? `Batas Khusus (${form.monthly_earning_cap} koin)` : 'Belum Diatur (Rp0)'}
                     </span>
                   </div>
 
@@ -198,7 +198,7 @@ export const CreateMemberModal: React.FC<CreateMemberModalProps> = ({
                         onChange={() => setForm({ ...form, monthly_earning_cap: 0 })}
                         className="text-accent-magic cursor-pointer"
                       />
-                      <span>Gunakan batas koin bulanan standar sistem (3.320 koin / bulan)</span>
+                      <span>Belum dikonfigurasi sekarang (Batas Rp0 — Anggota masuk antrean triage)</span>
                     </label>
 
                     <label className="flex items-center gap-2 cursor-pointer text-xs text-text-primary">
@@ -206,10 +206,10 @@ export const CreateMemberModal: React.FC<CreateMemberModalProps> = ({
                         type="radio"
                         name="create_cap_mode"
                         checked={form.monthly_earning_cap > 0}
-                        onChange={() => setForm({ ...form, monthly_earning_cap: form.monthly_coin_target > 0 ? form.monthly_coin_target : 3320 })}
+                        onChange={() => setForm({ ...form, monthly_earning_cap: form.monthly_coin_target > 0 ? form.monthly_coin_target : 3000 })}
                         className="text-accent-magic cursor-pointer"
                       />
-                      <span>Atur batas koin khusus untuk anggota ini</span>
+                      <span>Atur batas koin khusus untuk anggota ini sekarang</span>
                     </label>
                   </div>
 
@@ -221,20 +221,32 @@ export const CreateMemberModal: React.FC<CreateMemberModalProps> = ({
                         </label>
                         <div className="flex items-center gap-1 text-[10px] text-text-secondary">
                           <span>Pilihan:</span>
-                          <button
-                            type="button"
-                            onClick={() => setForm({ ...form, monthly_earning_cap: form.monthly_coin_target > 0 ? form.monthly_coin_target : 3320 })}
-                            className="px-2 py-0.5 rounded bg-surface border border-border-subtle hover:text-text-primary"
-                          >
-                            = Target ({form.monthly_coin_target > 0 ? form.monthly_coin_target : 3320})
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => setForm({ ...form, monthly_earning_cap: Math.round((form.monthly_coin_target > 0 ? form.monthly_coin_target : 3320) * 1.1) })}
-                            className="px-2 py-0.5 rounded bg-surface border border-border-subtle hover:text-text-primary"
-                          >
-                            +10%
-                          </button>
+                          {form.monthly_coin_target > 0 ? (
+                            <>
+                              <button
+                                type="button"
+                                onClick={() => setForm({ ...form, monthly_earning_cap: form.monthly_coin_target })}
+                                className="px-2 py-0.5 rounded bg-surface border border-border-subtle hover:text-text-primary"
+                              >
+                                = Target ({form.monthly_coin_target})
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => setForm({ ...form, monthly_earning_cap: Math.round(form.monthly_coin_target * 1.1) })}
+                                className="px-2 py-0.5 rounded bg-surface border border-border-subtle hover:text-text-primary"
+                              >
+                                +10%
+                              </button>
+                            </>
+                          ) : (
+                            <button
+                              type="button"
+                              onClick={() => setForm({ ...form, monthly_earning_cap: 3000 })}
+                              className="px-2 py-0.5 rounded bg-surface border border-border-subtle hover:text-text-primary"
+                            >
+                              3.000 koin
+                            </button>
+                          )}
                         </div>
                       </div>
                       <div className="relative">

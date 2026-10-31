@@ -90,3 +90,221 @@ describe('Gate 2-D — NULL target preservation (Q1 guard)', () => {
     expect(sent.monthly_coin_target).toBe(0)
   })
 })
+
+describe('Phase 1 — Income Configuration Correctness (F-01 / F-02)', () => {
+  it('NOT_CONFIGURED forces monthly_earning_cap to 0', async () => {
+    vi.mocked(adminMembersApi.getMembers).mockResolvedValue({ items: [], pagination: {} } as any)
+    vi.mocked(adminMembersApi.updateMember).mockResolvedValue({} as any)
+    const { result } = renderHook(() => useAdminMembers())
+    await waitFor(() => expect(result.current.isFetching).toBe(false))
+
+    act(() => {
+      result.current.openEditModal(member('u1', 3000))
+      result.current.setEditMemberForm((prev) => ({
+        ...prev,
+        income_status: 'NOT_CONFIGURED',
+        monthly_earning_cap: 5000, // Even if cap was set higher, NOT_CONFIGURED forces 0
+      }))
+    })
+
+    await act(async () => {
+      await result.current.handleSaveEditMember()
+    })
+
+    expect(adminMembersApi.updateMember).toHaveBeenCalledWith(
+      'u1',
+      expect.objectContaining({
+        income_status: 'NOT_CONFIGURED',
+        monthly_earning_cap: 0,
+      })
+    )
+  })
+
+  it('DISABLED forces monthly_earning_cap to 0', async () => {
+    vi.mocked(adminMembersApi.getMembers).mockResolvedValue({ items: [], pagination: {} } as any)
+    vi.mocked(adminMembersApi.updateMember).mockResolvedValue({} as any)
+    const { result } = renderHook(() => useAdminMembers())
+    await waitFor(() => expect(result.current.isFetching).toBe(false))
+
+    act(() => {
+      result.current.openEditModal(member('u1', 3000))
+      result.current.setEditMemberForm((prev) => ({
+        ...prev,
+        income_status: 'DISABLED',
+        monthly_earning_cap: 5000,
+      }))
+    })
+
+    await act(async () => {
+      await result.current.handleSaveEditMember()
+    })
+
+    expect(adminMembersApi.updateMember).toHaveBeenCalledWith(
+      'u1',
+      expect.objectContaining({
+        income_status: 'DISABLED',
+        monthly_earning_cap: 0,
+      })
+    )
+  })
+
+  it('CONFIGURED with valid positive cap sends payload and refreshes members list', async () => {
+    vi.mocked(adminMembersApi.getMembers).mockResolvedValue({ items: [], pagination: {} } as any)
+    vi.mocked(adminMembersApi.updateMember).mockResolvedValue({} as any)
+    const { result } = renderHook(() => useAdminMembers())
+    await waitFor(() => expect(result.current.isFetching).toBe(false))
+
+    act(() => {
+      result.current.openEditModal(member('u1', 3000))
+      result.current.setEditMemberForm((prev) => ({
+        ...prev,
+        income_status: 'CONFIGURED',
+        monthly_earning_cap: 3500,
+        reason: 'Penyesuaian budget bulanan',
+      }))
+    })
+
+    await act(async () => {
+      await result.current.handleSaveEditMember()
+    })
+
+    expect(adminMembersApi.updateMember).toHaveBeenCalledWith(
+      'u1',
+      expect.objectContaining({
+        income_status: 'CONFIGURED',
+        monthly_earning_cap: 3500,
+        reason: 'Penyesuaian budget bulanan',
+      })
+    )
+    expect(result.current.selectedMember).toBeNull()
+    expect(adminMembersApi.getMembers).toHaveBeenCalled()
+  })
+
+  it('CONFIGURED with 0 or negative cap alerts error and prevents submission', async () => {
+    vi.mocked(adminMembersApi.getMembers).mockResolvedValue({ items: [], pagination: {} } as any)
+    const { result } = renderHook(() => useAdminMembers())
+    await waitFor(() => expect(result.current.isFetching).toBe(false))
+
+    act(() => {
+      result.current.openEditModal(member('u1', 3000))
+      result.current.setEditMemberForm((prev) => ({
+        ...prev,
+        income_status: 'CONFIGURED',
+        monthly_earning_cap: 0,
+      }))
+    })
+
+    await act(async () => {
+      await result.current.handleSaveEditMember()
+    })
+
+    expect(window.alert).toHaveBeenCalledWith(
+      expect.stringContaining('harus lebih besar dari 0 untuk status CONFIGURED')
+    )
+    expect(adminMembersApi.updateMember).not.toHaveBeenCalled()
+  })
+
+  it('CONFIGURED with cap > 10000 alerts error and prevents submission', async () => {
+    vi.mocked(adminMembersApi.getMembers).mockResolvedValue({ items: [], pagination: {} } as any)
+    const { result } = renderHook(() => useAdminMembers())
+    await waitFor(() => expect(result.current.isFetching).toBe(false))
+
+    act(() => {
+      result.current.openEditModal(member('u1', 3000))
+      result.current.setEditMemberForm((prev) => ({
+        ...prev,
+        income_status: 'CONFIGURED',
+        monthly_earning_cap: 10001,
+      }))
+    })
+
+    await act(async () => {
+      await result.current.handleSaveEditMember()
+    })
+
+    expect(window.alert).toHaveBeenCalledWith(
+      expect.stringContaining('tidak boleh melebihi 10.000')
+    )
+    expect(adminMembersApi.updateMember).not.toHaveBeenCalled()
+  })
+
+  it('failed update does not close modal or report false success', async () => {
+    vi.mocked(adminMembersApi.getMembers).mockResolvedValue({ items: [], pagination: {} } as any)
+    vi.mocked(adminMembersApi.updateMember).mockRejectedValue(new Error('RPC Database Error'))
+    const { result } = renderHook(() => useAdminMembers())
+    await waitFor(() => expect(result.current.isFetching).toBe(false))
+
+    act(() => {
+      result.current.openEditModal(member('u1', 3000))
+      result.current.setEditMemberForm((prev) => ({
+        ...prev,
+        income_status: 'CONFIGURED',
+        monthly_earning_cap: 3500,
+      }))
+    })
+
+    await act(async () => {
+      await result.current.handleSaveEditMember()
+    })
+
+    expect(window.alert).toHaveBeenCalledWith(
+      expect.stringContaining('RPC Database Error')
+    )
+    expect(result.current.selectedMember).not.toBeNull()
+  })
+
+  it('handleCreateMember sets NOT_CONFIGURED when cap is 0 and CONFIGURED when cap > 0', async () => {
+    vi.mocked(adminMembersApi.getMembers).mockResolvedValue({ items: [], pagination: {} } as any)
+    vi.mocked(adminMembersApi.createMember).mockResolvedValue({} as any)
+    const { result } = renderHook(() => useAdminMembers())
+    await waitFor(() => expect(result.current.isFetching).toBe(false))
+
+    // 1. Cap 0 -> NOT_CONFIGURED
+    act(() => {
+      result.current.openCreateModal()
+      result.current.setNewMember((prev) => ({
+        ...prev,
+        username: 'new_user',
+        password: 'password123',
+        explorer_name: 'New Explorer',
+        role: 'MEMBER',
+        monthly_earning_cap: 0,
+      }))
+    })
+
+    await act(async () => {
+      await result.current.handleCreateMember()
+    })
+
+    expect(adminMembersApi.createMember).toHaveBeenCalledWith(
+      expect.objectContaining({
+        income_status: 'NOT_CONFIGURED',
+        monthly_earning_cap: 0,
+      })
+    )
+
+    // 2. Cap > 0 -> CONFIGURED
+    act(() => {
+      result.current.openCreateModal()
+      result.current.setNewMember((prev) => ({
+        ...prev,
+        username: 'configured_user',
+        password: 'password123',
+        explorer_name: 'Configured Explorer',
+        role: 'MEMBER',
+        monthly_earning_cap: 4000,
+      }))
+    })
+
+    await act(async () => {
+      await result.current.handleCreateMember()
+    })
+
+    expect(adminMembersApi.createMember).toHaveBeenCalledWith(
+      expect.objectContaining({
+        income_status: 'CONFIGURED',
+        monthly_earning_cap: 4000,
+      })
+    )
+  })
+})

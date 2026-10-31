@@ -15,6 +15,8 @@ interface EditMemberModalProps {
     explorer_name: string
     role: 'ADMIN' | 'MEMBER'
     is_active: boolean
+    income_status: 'NOT_CONFIGURED' | 'CONFIGURED' | 'DISABLED'
+    reason: string
     reset_device: boolean
     monthly_coin_target: number | null
     monthly_earning_cap: number
@@ -29,6 +31,8 @@ interface EditMemberModalProps {
       explorer_name: string
       role: 'ADMIN' | 'MEMBER'
       is_active: boolean
+      income_status: 'NOT_CONFIGURED' | 'CONFIGURED' | 'DISABLED'
+      reason: string
       reset_device: boolean
       monthly_coin_target: number | null
       monthly_earning_cap: number
