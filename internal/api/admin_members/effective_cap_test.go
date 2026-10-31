@@ -24,12 +24,10 @@ func TestApplyCapBonusCeiling(t *testing.T) {
 	}{
 		{"unlimited stays unlimited", 0, 20, cfg, 10000, 0},
 		{"unconfigured stays unconfigured", -1, 20, cfg, 10000, -1},
-		{"no bonus below threshold", 3000, 8, cfg, 10000, 3000},
-		{"level bonus applied", 3000, 20, cfg, 10000, 4000},
-		{"highest threshold wins", 3000, 15, cfg, 10000, 3500},
-		{"ceiling clamps", 9500, 20, cfg, 10000, 10000},
-		{"malformed bonus ignored", 3000, 20, "invalid-json", 10000, 3000},
-		{"no ceiling configured", 3000, 20, cfg, -1, 4000},
+		{"explicit cap 3320 preserved exactly", 3320, 20, cfg, 10000, 3320},
+		{"explicit cap 5000 preserved exactly", 5000, 20, cfg, 10000, 5000},
+		{"explicit cap 2500 preserved exactly", 2500, 8, cfg, 10000, 2500},
+		{"level bonus does NOT inflate authorized cap", 3000, 20, cfg, 10000, 3000},
 	}
 	for _, c := range cases {
 		if got := applyCapBonusCeiling(c.base, c.level, c.bonus, c.ceiling); got != c.want {
@@ -106,19 +104,19 @@ func TestHandleListMembers_FullMonthCycleAndEffectiveCap(t *testing.T) {
 	if m.CurrentCycleStart != wantStart || m.CurrentCycleEnd != wantEnd {
 		t.Errorf("cycle = %s..%s, want %s..%s", m.CurrentCycleStart, m.CurrentCycleEnd, wantStart, wantEnd)
 	}
-	// Effective cap = base 3000 + level-20 bonus 1000, ceiling 10000.
-	if m.EffectiveEarningCap == nil || *m.EffectiveEarningCap != 4000 {
+	// Effective cap = exact admin-authorized cap 3000 (no level bonus inflation).
+	if m.EffectiveEarningCap == nil || *m.EffectiveEarningCap != 3000 {
 		got := -9999
 		if m.EffectiveEarningCap != nil {
 			got = *m.EffectiveEarningCap
 		}
-		t.Errorf("effective_earning_cap = %d, want 4000", got)
+		t.Errorf("effective_earning_cap = %d, want 3000", got)
 	}
 	// Raw stored cap preserved.
 	if m.MonthlyEarningCap == nil || *m.MonthlyEarningCap != 3000 {
 		t.Errorf("monthly_earning_cap not preserved")
 	}
 	if m.EarningLocked {
-		t.Errorf("member should not be locked with 0 earned vs cap 4000")
+		t.Errorf("member should not be locked with 0 earned vs cap 3000")
 	}
 }

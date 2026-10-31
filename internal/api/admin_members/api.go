@@ -187,8 +187,10 @@ func getCapBonusConfig(ctx context.Context, client db.SupabaseClient) (bonusValu
 	return
 }
 
-// applyCapBonusCeiling resolves baseCap (per-user value or system default)
-// with the level bonus map and ceiling clamp: 0 = unlimited, <0 = unconfigured.
+// applyCapBonusCeiling resolves the effective cap for a member.
+// Non-negotiable financial invariant: the administrator-authorized cap is the
+// absolute limit. Level bonuses and derived formulas must NEVER increase the cap
+// above the authorized amount. 0 = unlimited, <0 = unconfigured.
 func applyCapBonusCeiling(baseCap, userLevel int, bonusValue string, ceiling int) int {
 	if baseCap < 0 {
 		return -1
@@ -196,26 +198,7 @@ func applyCapBonusCeiling(baseCap, userLevel int, bonusValue string, ceiling int
 	if baseCap == 0 {
 		return 0
 	}
-	levelBonus := 0
-	if bonusValue != "" {
-		var cfgMap map[string]int
-		if err := json.Unmarshal([]byte(bonusValue), &cfgMap); err == nil {
-			highestThreshold := -1
-			for k, bonusVal := range cfgMap {
-				if th, err := strconv.Atoi(k); err == nil && th <= userLevel && bonusVal >= 0 {
-					if th > highestThreshold {
-						highestThreshold = th
-						levelBonus = bonusVal
-					}
-				}
-			}
-		}
-	}
-	effective := baseCap + levelBonus
-	if ceiling > 0 && effective > ceiling {
-		return ceiling
-	}
-	return effective
+	return baseCap
 }
 
 func earningStatus(cap, earned int) (status string, locked bool) {	if cap < 0 {

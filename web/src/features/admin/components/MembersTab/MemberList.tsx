@@ -205,7 +205,7 @@ export const MemberList: React.FC<MemberListProps> = ({ controller }) => {
                   {members.map((member) => {
                     const last = formatLastTask(member)
                     const earned = member.earned_this_period ?? 0
-                    // Effective cap is what the backend enforces (base + level bonus, ceiling-clamped).
+                    // Effective cap is what the backend enforces (strictly authorized cap, no level bonus inflation).
                     const capVal = member.effective_earning_cap ?? member.monthly_earning_cap ?? 0
                     const targetVal = member.monthly_coin_target ?? 3320
                     const pace = calculateTargetPace(earned, targetVal)
@@ -356,7 +356,7 @@ export const MemberList: React.FC<MemberListProps> = ({ controller }) => {
             {members.map((member) => {
               const badge = getStatusConfig(member)
               const last = formatLastTask(member)
-              // Effective cap is what the backend enforces (base + level bonus, ceiling-clamped).
+              // Effective cap is what the backend enforces (strictly authorized cap, no level bonus inflation).
               const capVal = member.effective_earning_cap ?? member.monthly_earning_cap ?? 0
               return (
                 <div key={member.uid} className="rounded-2xl border border-zinc-200 bg-white p-4 shadow-sm">

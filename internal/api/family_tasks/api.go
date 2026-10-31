@@ -40,7 +40,6 @@ func fetchSystemTimezone(ctx context.Context, client db.SupabaseClient) string {
 
 func getEffectiveEarningCap(ctx context.Context, client db.SupabaseClient, uid string) int {
 	baseCap := -1
-	userLevel := 1
 	// Try per-user cap directly
 	if uid != "" {
 		raw, err := client.Get(ctx, "odyssey_user_profiles", fmt.Sprintf("uid=eq.%s&select=monthly_earning_cap,level", uid))
@@ -52,9 +51,6 @@ func getEffectiveEarningCap(ctx context.Context, client db.SupabaseClient, uid s
 			if err := json.Unmarshal(raw, &rows); err == nil && len(rows) > 0 {
 				if rows[0].MonthlyEarningCap != nil {
 					baseCap = *rows[0].MonthlyEarningCap
-				}
-				if rows[0].Level != nil && *rows[0].Level > 1 {
-					userLevel = *rows[0].Level
 				}
 			}
 		}
@@ -77,53 +73,16 @@ func getEffectiveEarningCap(ctx context.Context, client db.SupabaseClient, uid s
 	if baseCap < 0 {
 		return -1
 	}
-	// 0 = unlimited; bonus must not cap or alter unlimited
+	// 0 = unlimited
 	if baseCap == 0 {
 		return 0
 	}
 
-	// Level bonus from odyssey_system_config key 'level_cap_bonus'
-	levelBonus := 0
-	bonusRaw, err := client.Get(ctx, "odyssey_system_config", "key=eq.level_cap_bonus&select=value")
-	if err == nil && len(bonusRaw) > 0 {
-		var rows []struct {
-			Value string `json:"value"`
-		}
-		if err := json.Unmarshal(bonusRaw, &rows); err == nil && len(rows) > 0 && strings.TrimSpace(rows[0].Value) != "" {
-			var cfgMap map[string]int
-			if err := json.Unmarshal([]byte(rows[0].Value), &cfgMap); err == nil {
-				highestThreshold := -1
-				for k, bonusVal := range cfgMap {
-					if th, err := strconv.Atoi(k); err == nil && th <= userLevel && bonusVal >= 0 {
-						if th > highestThreshold {
-							highestThreshold = th
-							levelBonus = bonusVal
-						}
-					}
-				}
-			}
-		}
-	}
-
-	// Ceiling from odyssey_system_config key 'max_monthly_earning_cap_ceiling'
-	ceiling := -1
-	ceilingRaw, err := client.Get(ctx, "odyssey_system_config", "key=eq.max_monthly_earning_cap_ceiling&select=value")
-	if err == nil && len(ceilingRaw) > 0 {
-		var rows []struct {
-			Value string `json:"value"`
-		}
-		if err := json.Unmarshal(ceilingRaw, &rows); err == nil && len(rows) > 0 {
-			if v, err := strconv.Atoi(strings.TrimSpace(rows[0].Value)); err == nil && v > 0 {
-				ceiling = v
-			}
-		}
-	}
-
-	effective := baseCap + levelBonus
-	if ceiling > 0 && effective > ceiling {
-		return ceiling
-	}
-	return effective
+	// Non-negotiable financial invariant:
+	// The effective monthly earning cap is strictly the validated administrator-authorized cap.
+	// Level progression, RPG rewards, and derived formulas must never increase the cap
+	// above the administrator-authorized amount.
+	return baseCap
 }
 
 func getEarnedThisPeriodForUser(ctx context.Context, client db.SupabaseClient, uid string) int {
