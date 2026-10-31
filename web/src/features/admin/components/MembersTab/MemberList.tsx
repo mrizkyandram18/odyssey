@@ -7,19 +7,19 @@ import { Avatar } from '../../../../shared/components/atoms/Avatar'
 import { calculateTargetPace } from '../../../../shared/lib/targetPace'
 
 function formatCycle(start?: string, end?: string): string {
-  if (!start || !end) return 'â€”'
+  if (!start || !end) return '—'
   try {
     const s = new Date(start)
     const e = new Date(end)
     const opts: Intl.DateTimeFormatOptions = { day: 'numeric', month: 'short' }
-    return `${s.toLocaleDateString('id-ID', opts)} â€“ ${e.toLocaleDateString('id-ID', opts)}`
+    return `${s.toLocaleDateString('id-ID', opts)} – ${e.toLocaleDateString('id-ID', opts)}`
   } catch {
-    return `${start} â€“ ${end}`
+    return `${start} – ${end}`
   }
 }
 
 function formatLastTask(member: any): { text: string; sub?: string } {
-  if (!member.last_completed_date) return { text: 'â€”' }
+  if (!member.last_completed_date) return { text: '—' }
   try {
     const d = new Date(member.last_completed_date)
     const text = d.toLocaleDateString('id-ID', { day: 'numeric', month: 'short' })
@@ -31,9 +31,9 @@ function formatLastTask(member: any): { text: string; sub?: string } {
 }
 
 function formatInactive(member: any): string {
-  if (!member.is_active) return 'â€”'
+  if (!member.is_active) return '—'
   if (member.inactivity_status === 'NO_ACTIVITY_THIS_CYCLE') return 'Belum ada aktivitas'
-  if (member.inactive_days == null) return 'â€”'
+  if (member.inactive_days == null) return '—'
   return `${member.inactive_days} hari`
 }
 
@@ -243,7 +243,7 @@ export const MemberList: React.FC<MemberListProps> = ({ controller }) => {
                               >
                                 {formatInactive(member)}
                               </span>
-                              <span>â€¢</span>
+                              <span>•</span>
                               <span>{formatCycle(member.current_cycle_start, member.current_cycle_end)}</span>
                             </div>
                           </div>
@@ -259,41 +259,67 @@ export const MemberList: React.FC<MemberListProps> = ({ controller }) => {
                           </div>
                         </td>
                         <td className="px-4 py-3">
-                          <div className="space-y-1.5 max-w-[210px]">
-                            <div className="flex items-center justify-between text-[11px]">
-                              <span className="font-mono font-bold text-text-primary">
-                                {earned.toLocaleString('id-ID')} / {targetVal.toLocaleString('id-ID')}
+                          {isAdminRole(member.role) ? (
+                            <div className="space-y-1">
+                              <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-text-secondary">
+                                <Shield className="h-3.5 w-3.5 text-accent-magic" />
+                                Akun Pengelola (Admin)
                               </span>
-                              <span
-                                className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full border ${pace.badgeClass}`}
-                              >
-                                {pace.label}
-                              </span>
+                              <p className="text-[10px] text-text-secondary">Tidak ada target kompensasi koin</p>
                             </div>
-                            <div className="w-full h-1.5 rounded-full bg-surface-elevated border border-border-subtle overflow-hidden">
-                              <div
-                                className={`h-full bg-gradient-to-r ${pace.barGradient} transition-all`}
-                                style={{ width: `${pace.targetPercent}%` }}
-                              />
+                          ) : member.income_status === 'DISABLED' ? (
+                            <div className="space-y-1">
+                              <span className="text-xs font-bold text-zinc-500">Dinonaktifkan (Rp0)</span>
+                              <p className="text-[10px] text-text-secondary">Earning koin dinonaktifkan</p>
                             </div>
-                            <div className="flex items-center justify-between text-[10px] text-text-secondary">
-                              <span>
-                                Batas:{' '}
-                                {member.income_status === 'NOT_CONFIGURED' ? (
-                                  <strong className="text-status-warning font-bold">Belum Diatur (Rp0)</strong>
-                                ) : member.income_status === 'DISABLED' ? (
-                                  <strong className="text-zinc-500 font-bold">Dinonaktifkan (Rp0)</strong>
-                                ) : capVal > 0 ? (
-                                  `${capVal.toLocaleString('id-ID')} koin`
-                                ) : (
-                                  'Rp0'
-                                )}
-                              </span>
-                              {member.earning_locked && (
-                                <span className="font-bold text-status-warning">ðŸ”’ Penuh</span>
-                              )}
+                          ) : member.income_status === 'NOT_CONFIGURED' ? (
+                            <div className="space-y-1">
+                              <span className="text-xs font-bold text-status-warning">Belum Diatur (Rp0)</span>
+                              <p className="text-[10px] text-text-secondary">Atur target di Edit Anggota</p>
                             </div>
-                          </div>
+                          ) : (
+                            <div className="space-y-1.5 max-w-[210px]">
+                              {(() => {
+                                const baseTarget = member.monthly_coin_target ?? member.base_earning_cap ?? 3320
+                                const effectiveTarget = capVal > 0 ? capVal : baseTarget
+                                const pace = calculateTargetPace(earned, effectiveTarget)
+                                return (
+                                  <>
+                                    <div className="flex items-center justify-between text-[11px]">
+                                      <span className="font-mono font-bold text-text-primary">
+                                        {earned.toLocaleString('id-ID')} / {effectiveTarget.toLocaleString('id-ID')}
+                                      </span>
+                                      <span
+                                        className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full border ${pace.badgeClass}`}
+                                      >
+                                        {pace.label}
+                                      </span>
+                                    </div>
+                                    <div className="w-full h-1.5 rounded-full bg-surface-elevated border border-border-subtle overflow-hidden">
+                                      <div
+                                        className={`h-full bg-gradient-to-r ${pace.barGradient} transition-all`}
+                                        style={{ width: `${pace.targetPercent}%` }}
+                                      />
+                                    </div>
+                                    <div className="flex items-center justify-between text-[10px] text-text-secondary">
+                                      <span>
+                                        {member.monthly_adjustment && member.monthly_adjustment > 0 ? (
+                                          <span title={`Base: ${baseTarget.toLocaleString('id-ID')} - Penyesuaian: ${member.monthly_adjustment.toLocaleString('id-ID')}`}>
+                                            Batas: <strong>{capVal.toLocaleString('id-ID')} koin</strong> (Base {baseTarget.toLocaleString('id-ID')} - Adj {member.monthly_adjustment.toLocaleString('id-ID')})
+                                          </span>
+                                        ) : (
+                                          <span>Batas: {capVal > 0 ? `${capVal.toLocaleString('id-ID')} koin` : 'Rp0'}</span>
+                                        )}
+                                      </span>
+                                      {member.earning_locked && (
+                                        <span className="font-bold text-status-warning">🔒 Penuh</span>
+                                      )}
+                                    </div>
+                                  </>
+                                )
+                              })()}
+                            </div>
+                          )}
                         </td>
                         <td className="px-3 py-3 text-right">
                           <div className="flex flex-col items-end gap-0.5">
@@ -462,40 +488,56 @@ export const MemberList: React.FC<MemberListProps> = ({ controller }) => {
                     </div>
                     <div className="text-right">
                       <p className="text-[11px] font-semibold uppercase tracking-wide text-zinc-500">Target & Batas</p>
-                      {(() => {
-                        const targetVal = member.monthly_coin_target ?? 3320
-                        const earned = member.earned_this_period ?? 0
-                        const pace = calculateTargetPace(earned, targetVal)
-                        return (
-                          <>
-                            <p className="mt-1 font-mono text-xs font-bold text-zinc-900">
-                              {earned.toLocaleString('id-ID')} / {targetVal.toLocaleString('id-ID')}
-                            </p>
-                            <div className="mt-1 flex items-center justify-end gap-1 flex-wrap">
-                              <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full border ${pace.badgeClass}`}>
-                                {pace.label}
-                              </span>
-                              {member.earning_locked && (
-                                <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-amber-100 text-amber-800 border border-amber-200">
-                                  ðŸ”’ Penuh
+                      {isAdminRole(member.role) ? (
+                        <div className="mt-1 space-y-0.5">
+                          <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-zinc-600">
+                            <Shield className="h-3 w-3 text-accent-magic" />
+                            Admin
+                          </span>
+                          <p className="text-[10px] text-zinc-400">Tanpa target koin</p>
+                        </div>
+                      ) : member.income_status === 'DISABLED' ? (
+                        <div className="mt-1 space-y-0.5">
+                          <span className="text-[11px] font-bold text-zinc-500">Dinonaktifkan (Rp0)</span>
+                          <p className="text-[10px] text-zinc-400">Earning nonaktif</p>
+                        </div>
+                      ) : member.income_status === 'NOT_CONFIGURED' ? (
+                        <div className="mt-1 space-y-0.5">
+                          <span className="text-[11px] font-bold text-status-warning">Belum Diatur (Rp0)</span>
+                          <p className="text-[10px] text-zinc-400">Atur di Edit</p>
+                        </div>
+                      ) : (
+                        (() => {
+                          const baseTarget = member.monthly_coin_target ?? member.base_earning_cap ?? 3320
+                          const effectiveTarget = capVal > 0 ? capVal : baseTarget
+                          const earned = member.earned_this_period ?? 0
+                          const pace = calculateTargetPace(earned, effectiveTarget)
+                          return (
+                            <>
+                              <p className="mt-1 font-mono text-xs font-bold text-zinc-900">
+                                {earned.toLocaleString('id-ID')} / {effectiveTarget.toLocaleString('id-ID')}
+                              </p>
+                              <div className="mt-1 flex items-center justify-end gap-1 flex-wrap">
+                                <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full border ${pace.badgeClass}`}>
+                                  {pace.label}
                                 </span>
-                              )}
-                            </div>
-                            <p className="text-[10px] text-zinc-500 mt-0.5">
-                              Batas:{' '}
-                              {member.income_status === 'NOT_CONFIGURED' ? (
-                                <strong className="text-status-warning font-bold">Belum Diatur (Rp0)</strong>
-                              ) : member.income_status === 'DISABLED' ? (
-                                <strong className="text-zinc-500 font-bold">Dinonaktifkan (Rp0)</strong>
-                              ) : capVal > 0 ? (
-                                `${capVal.toLocaleString('id-ID')} koin`
-                              ) : (
-                                'Rp0'
-                              )}
-                            </p>
-                          </>
-                        )
-                      })()}
+                                {member.earning_locked && (
+                                  <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-amber-100 text-amber-800 border border-amber-200">
+                                    🔒 Penuh
+                                  </span>
+                                )}
+                              </div>
+                              <p className="text-[10px] text-zinc-500 mt-0.5">
+                                {member.monthly_adjustment && member.monthly_adjustment > 0 ? (
+                                  <span>Batas: <strong>{capVal.toLocaleString('id-ID')}</strong> (Base {baseTarget} - Adj {member.monthly_adjustment})</span>
+                                ) : (
+                                  <span>Batas: {capVal > 0 ? `${capVal.toLocaleString('id-ID')} koin` : 'Rp0'}</span>
+                                )}
+                              </p>
+                            </>
+                          )
+                        })()
+                      )}
                     </div>
                   </div>
                   {!member.is_active && member.block_reason && (

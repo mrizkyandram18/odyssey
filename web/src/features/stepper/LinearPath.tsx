@@ -122,8 +122,8 @@ export const LinearPath: React.FC = () => {
   }, [loadTasks])
 
   const handleTaskClick = (task: TaskView) => {
-    if (earningLocked) return
-    if (task.earning_locked || task.is_locked || task.status === 'LOCKED') return
+    // Earning cap reached does NOT block opening or submitting tasks for EXP
+    if (task.is_locked || task.status === 'LOCKED') return
     setActiveModalTask(task)
   }
   const handleModalSuccess = () => {
@@ -138,11 +138,6 @@ export const LinearPath: React.FC = () => {
       const currentIndex = tasks.findIndex((t) => t.id === currentTask.id)
       const next = currentIndex >= 0 ? tasks[currentIndex + 1] : undefined
       if (next) {
-        // Do not open next if earning is locked
-        if (earningLocked || next.earning_locked) {
-          setActiveModalTask(null)
-          return
-        }
         setActiveModalTask({ ...next, is_locked: false, status: next.status === 'LOCKED' ? 'UNLOCKED' : next.status })
         return
       }
@@ -538,6 +533,25 @@ export const LinearPath: React.FC = () => {
         </div>
       </div>
 
+      {/* Persistent Monthly Coin Cap Reached Banner */}
+      {earningLocked && (
+        <div
+          data-testid="cap-reached-banner"
+          className="p-3.5 rounded-2xl bg-amber-500/10 border border-amber-500/30 flex items-start gap-3 shadow-sm"
+        >
+          <div className="w-7 h-7 rounded-xl bg-amber-500/20 text-amber-500 flex items-center justify-center shrink-0 mt-0.5">
+            <Target className="w-4 h-4" />
+          </div>
+          <div className="space-y-1 text-xs">
+            <p className="font-bold text-text-primary">
+              Target Coin Bulan Ini Tercapai!
+            </p>
+            <p className="text-text-secondary leading-relaxed">
+              Kamu tidak wajib mengerjakan misi lagi untuk mendapatkan Coin bulan ini. Namun, kamu tetap bebas mengerjakan misi jika ingin mengumpulkan EXP dan melanjutkan progres petualanganmu.
+            </p>
+          </div>
+        </div>
+      )}
       {/* Monthly Target Checkpoint Card */}
       {targetCheckpoint && (
         <div
@@ -631,8 +645,8 @@ export const LinearPath: React.FC = () => {
             {tasks.map((task) => {
               const isApproved = task.status === 'APPROVED'
               const isPending = task.status === 'PENDING'
-              const isUnlocked = task.status === 'UNLOCKED' && !earningLocked && !task.earning_locked
-              const isLocked = task.status === 'LOCKED' || task.is_locked || earningLocked || Boolean(task.earning_locked)
+              const isUnlocked = task.status === 'UNLOCKED'
+              const isLocked = task.status === 'LOCKED' || task.is_locked
               const isRejected = task.status === 'REJECTED'
 
               return (
@@ -685,6 +699,11 @@ export const LinearPath: React.FC = () => {
                       <span className="text-[11px] font-bold text-text-secondary">
                         Langkah #{task.step_order}
                       </span>
+                      {(earningLocked || task.earning_locked) && !isApproved && (
+                        <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-md bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20">
+                          Hanya EXP • Cap Tercapai
+                        </span>
+                      )}
                     </span>
                     <span
                       className={`text-sm font-extrabold leading-snug block truncate mt-0.5 ${
@@ -694,7 +713,11 @@ export const LinearPath: React.FC = () => {
                       {task.title}
                     </span>
                     <span className="text-xs text-text-secondary line-clamp-1 mt-0.5">
-                      {task.description || (isLocked ? 'Selesaikan tugas sebelumnya untuk membuka' : `Bobot +${task.reward_coins} Koin • +${task.reward_xp} Bintang`)}
+                      {task.description || (isLocked
+                        ? 'Selesaikan tugas sebelumnya untuk membuka'
+                        : (earningLocked || task.earning_locked)
+                        ? `Bobot +${task.reward_xp} Bintang (Koin 0 • Cap Tercapai)`
+                        : `Bobot +${task.reward_coins} Koin • +${task.reward_xp} Bintang`)}
                     </span>
                     {isPending && (
                       <span className="block text-[11px] text-amber-700 dark:text-amber-300 mt-1 leading-relaxed">

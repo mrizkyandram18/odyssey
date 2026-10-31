@@ -40,7 +40,7 @@ export const MemberCapSection: React.FC<MemberCapSectionProps> = ({
       }
     })
   }
-  // NULL (or missing) = inherit system default Â· 0 = no coin payout Â· N = explicit pool.
+  // NULL (or missing) = inherit system default · 0 = no coin payout · N = explicit pool.
   const targetState =
     form.monthly_coin_target == null
       ? 'Ikut default'
@@ -79,7 +79,7 @@ export const MemberCapSection: React.FC<MemberCapSectionProps> = ({
           </div>
         </div>
         <p className="text-[11px] text-text-secondary leading-relaxed">
-          ðŸ’¡ <strong>Rekomendasi Admin:</strong> Set Batas Koin <strong>sama dengan Target Koin</strong>, atau beri toleransi bonus 10%â€“20% (misal Target 3.320 &rarr; Batas 3.500â€“4.000 koin).
+          💡 <strong>Rekomendasi Admin:</strong> Set Batas Koin <strong>sama dengan Target Koin</strong>, atau beri toleransi bonus 10%–20% (misal Target 3.320 &rarr; Batas 3.500–4.000 koin).
         </p>
       </div>
 

@@ -422,14 +422,10 @@ func (a *API) HandleGetToday(w http.ResponseWriter, r *http.Request) {
 	cap := getEffectiveEarningCap(ctx, a.client, uid)
 	earned := getEarnedThisPeriodForUser(ctx, a.client, uid)
 	if earningLocked {
-		// Mark all UNLOCKED coin-earning tasks as earning-locked (UI can show HALTED badge)
+		// Mark coin-earning tasks as earning-locked (UI shows cap reached indicator),
+		// but NEVER block task progression or EXP accumulation (IsLocked remains false).
 		for i := range taskViews {
-			if taskViews[i].Status == "UNLOCKED" {
-				taskViews[i].EarningLocked = true
-				taskViews[i].IsLocked = true
-			}
-			// Also annotate PENDING-free LOCKED tasks that would otherwise be earnable
-			if taskViews[i].Status == "LOCKED" && taskViews[i].RewardCoins > 0 {
+			if taskViews[i].RewardCoins > 0 {
 				taskViews[i].EarningLocked = true
 			}
 		}
@@ -472,10 +468,8 @@ func (a *API) HandleSubmit(w http.ResponseWriter, r *http.Request) {
 		shared.WriteJSONError(w, "akun Anda diblokir, tidak dapat mengerjakan tugas", http.StatusForbidden)
 		return
 	}
-	if isEarningHalted(ctx, a.client, uid) {
-		shared.WriteJSONError(w, "EARNING_CAP_REACHED: batas earning bulanan tercapai, tidak dapat mengerjakan tugas lagi sampai periode berikutnya", http.StatusForbidden)
-		return
-	}
+	// NOTE: Reaching monthly earning cap must NEVER block task submission.
+	// Tasks completed after cap is reached award 0 coins, full EXP, and maintain streaks.
 
 	// Extract Task ID from path: /api/tasks/{id}/submit
 	path := strings.TrimPrefix(r.URL.Path, "/api/tasks/")
@@ -552,7 +546,7 @@ func (a *API) HandleSubmit(w http.ResponseWriter, r *http.Request) {
 
 		// Decision/finance scenario (MINI_GAME + config.scenario): never trust
 		// the client-reported score/balance. Recompute authoritatively from
-		// the task config stored in DB and force the completion score.
+		// the task config stored in DB.
 		if targetTask.TaskType == "MINI_GAME" {
 			if _, hasScenario := tasks.GetDecisionScenario(targetTask.Config); hasScenario {
 				var choices map[string]any
@@ -561,14 +555,27 @@ func (a *API) HandleSubmit(w http.ResponseWriter, r *http.Request) {
 						choices = cMap
 					}
 				}
-				finalBalance, err := tasks.ValidateDecisionChoices(targetTask.Config, choices)
-				if err != nil {
-					shared.WriteJSONError(w, "hasil permainan tidak valid: "+err.Error(), http.StatusBadRequest)
-					return
+
+				gameName, _ := targetTask.Config["game"].(string)
+				if strings.TrimSpace(gameName) == "DECISION_PRIORITY" {
+					score, finalBalance, err := tasks.EvaluateDecisionPriorityScore(targetTask.Config, choices)
+					if err != nil {
+						shared.WriteJSONError(w, "hasil permainan tidak valid: "+err.Error(), http.StatusBadRequest)
+						return
+					}
+					answers["choices"] = choices
+					answers["final_balance"] = finalBalance
+					answers["score"] = score
+				} else {
+					finalBalance, err := tasks.ValidateDecisionChoices(targetTask.Config, choices)
+					if err != nil {
+						shared.WriteJSONError(w, "hasil permainan tidak valid: "+err.Error(), http.StatusBadRequest)
+						return
+					}
+					answers["choices"] = choices
+					answers["final_balance"] = finalBalance
+					answers["score"] = 100
 				}
-				answers["choices"] = choices
-				answers["final_balance"] = finalBalance
-				answers["score"] = 100
 			}
 		}
 

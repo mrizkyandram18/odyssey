@@ -105,10 +105,29 @@ export const SubmissionCard: React.FC<SubmissionCardProps> = ({
         </div>
 
         <div className="flex items-center gap-2 self-start sm:self-auto">
-          <span className="text-xs font-extrabold text-accent-gold px-2 py-0.5 rounded-md bg-accent-gold/10 border border-accent-gold/20">
-            {/* Approved shows the actual credited amount (0 stays 0); pending shows the nominal reward. */}
-            +{isSubApproved ? (submission.coins_earned ?? 0) : (submission.coins_earned || submission.reward_coins)} 🪙
-          </span>
+          {isSubApproved ? (
+            <span className="text-xs font-extrabold text-status-success px-2 py-0.5 rounded-md bg-status-success/10 border border-status-success/20">
+              +{submission.coins_earned ?? 0} 🪙
+            </span>
+          ) : isSubPending ? (
+            submission.reserved_coins !== undefined && submission.reserved_coins === 0 ? (
+              <span
+                data-testid="submission-zero-reserve-badge"
+                className="text-xs font-extrabold text-amber-600 dark:text-amber-400 px-2 py-0.5 rounded-md bg-amber-500/10 border border-amber-500/20"
+                title="Batas koin bulanan tercapai. Submission ini tidak mencadangkan koin (hanya memberikan EXP jika disetujui)."
+              >
+                +0 🪙 (Hanya EXP)
+              </span>
+            ) : (
+              <span className="text-xs font-extrabold text-accent-gold px-2 py-0.5 rounded-md bg-accent-gold/10 border border-accent-gold/20">
+                +{submission.reserved_coins ?? (submission.coins_earned || submission.reward_coins)} 🪙
+              </span>
+            )
+          ) : (
+            <span className="text-xs font-extrabold text-status-error px-2 py-0.5 rounded-md bg-status-error/10 border border-status-error/20">
+              {submission.coins_earned != null && submission.coins_earned < 0 ? `${submission.coins_earned} 🪙 (Penalti)` : '0 🪙'}
+            </span>
+          )}
         </div>
       </div>
 

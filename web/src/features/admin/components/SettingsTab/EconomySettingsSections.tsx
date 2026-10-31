@@ -41,32 +41,35 @@ export const HighImpactBadge: React.FC = () => (
   </span>
 )
 
-export const EconomyHeader: React.FC<{ isOpen: boolean | null }> = ({ isOpen }) => (
-  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 pb-3 border-b border-border-subtle/60">
-    <div>
-      <h3 className="font-heading font-bold text-text-primary text-sm sm:text-base flex items-center gap-2">
-        <Sliders className="w-4 h-4 text-accent-magic" />
-        <span>Pengaturan Ekonomi & Batas Koin Bulanan</span>
-      </h3>
-      <p className="text-[11px] text-text-secondary mt-0.5">
-        Kelola batas koin bulanan, bonus berdasarkan Tingkat, nilai konversi koin, dan jadwal pencairan.
-      </p>
-    </div>
+export const EconomyHeader: React.FC<{ isOpen: boolean | null; isFlexible?: boolean }> = ({ isOpen, isFlexible = true }) => {
+  const actuallyOpen = isFlexible ? true : Boolean(isOpen)
+  return (
+    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 pb-3 border-b border-border-subtle/60">
+      <div>
+        <h3 className="font-heading font-bold text-text-primary text-sm sm:text-base flex items-center gap-2">
+          <Sliders className="w-4 h-4 text-accent-magic" />
+          <span>Pengaturan Ekonomi & Batas Koin Bulanan</span>
+        </h3>
+        <p className="text-[11px] text-text-secondary mt-0.5">
+          Kelola batas koin bulanan, bonus berdasarkan Tingkat, nilai konversi koin, dan aturan pencairan.
+        </p>
+      </div>
 
-    {isOpen !== null && (
-      <span
-        className={`inline-flex items-center gap-1.5 text-xs font-bold px-3 py-1 rounded-full self-start sm:self-auto ${
-          isOpen
-            ? 'bg-status-success/15 text-status-success border border-status-success/20'
-            : 'bg-surface-elevated text-text-secondary border border-border-subtle'
-        }`}
-      >
-        <span className={`w-2 h-2 rounded-full ${isOpen ? 'bg-status-success animate-pulse' : 'bg-text-secondary'}`} />
-        {isOpen ? 'Pencairan Dibuka' : 'Pencairan Ditutup'}
-      </span>
-    )}
-  </div>
-)
+      {isOpen !== null && (
+        <span
+          className={`inline-flex items-center gap-1.5 text-xs font-bold px-3 py-1 rounded-full self-start sm:self-auto ${
+            actuallyOpen
+              ? 'bg-status-success/15 text-status-success border border-status-success/20'
+              : 'bg-surface-elevated text-text-secondary border border-border-subtle'
+          }`}
+        >
+          <span className={`w-2 h-2 rounded-full ${actuallyOpen ? 'bg-status-success animate-pulse' : 'bg-text-secondary'}`} />
+          {actuallyOpen ? 'Pencairan Dibuka (Fleksibel Kapan Saja)' : 'Pencairan Ditutup'}
+        </span>
+      )}
+    </div>
+  )
+}
 
 export const CapFormulaHero: React.FC<{
   baseCapNum: number

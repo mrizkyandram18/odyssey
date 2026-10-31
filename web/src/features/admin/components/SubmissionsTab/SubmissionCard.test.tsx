@@ -49,4 +49,9 @@ describe('SubmissionCard reward badge', () => {
     render(<SubmissionCard submission={{ ...base, status: 'PENDING' }} {...props} />)
     expect(screen.getByText('+120 🪙')).toBeInTheDocument()
   })
+
+  it('pending submission with 0 reserved coins displays zero reserve indicator', () => {
+    render(<SubmissionCard submission={{ ...base, status: 'PENDING', reserved_coins: 0 }} {...props} />)
+    expect(screen.getByTestId('submission-zero-reserve-badge')).toHaveTextContent('+0 🪙 (Hanya EXP)')
+  })
 })
