@@ -393,7 +393,7 @@ func getEarnedThisPeriod(ctx context.Context, client db.SupabaseClient, uids []s
 		loc = time.FixedZone("WIB", 7*3600)
 	}
 	nowInTz := time.Now().In(loc)
-	// Calendar month: 1 â†’ last day (earning cap), not target_earning 1-24
+	// Calendar month: 1 → last day (earning cap), not target_earning 1-24
 	lastDay := time.Date(nowInTz.Year(), nowInTz.Month()+1, 0, 0, 0, 0, 0, loc).Day()
 	periodStart := time.Date(nowInTz.Year(), nowInTz.Month(), 1, 0, 0, 0, 0, loc).UTC().Format(time.RFC3339)
 	periodEnd := time.Date(nowInTz.Year(), nowInTz.Month(), lastDay+1, 0, 0, 0, 0, loc).UTC().Format(time.RFC3339)
@@ -711,14 +711,14 @@ func (a *API) HandleListMembers(w http.ResponseWriter, r *http.Request) {
 
 	// Hoist system config reads to avoid duplicate Supabase calls per member
 	_, loc := resolveTimezone(ctx, a.client)
-	// Earning cap uses calendar month (1 â†’ last day), not 1-24 target period
+	// Earning cap uses calendar month (1 → last day), not 1-24 target period
 	nowForCap := time.Now().In(loc)
 	capLastDay := time.Date(nowForCap.Year(), nowForCap.Month()+1, 0, 0, 0, 0, 0, loc).Day()
 	earnedMap := getEarnedThisPeriodWithLoc(ctx, a.client, uids, loc, 1, capLastDay)
 	defaultTarget := getDefaultMonthlyTarget(ctx, a.client)
 	// Hoisted once: level-bonus map + ceiling for the effective cap (no per-member reads).
 	_, capCeiling := getCapBonusConfig(ctx, a.client)
-	// Inactivity tracking (read-only, cycle-aware) â€” reuse hoisted loc/days
+	// Inactivity tracking (read-only, cycle-aware) — reuse hoisted loc/days
 	isActiveMap := make(map[string]bool, len(profs))
 	for _, p := range profs {
 		isActiveMap[p.UID] = p.IsActive
@@ -757,7 +757,7 @@ func (a *API) HandleListMembers(w http.ResponseWriter, r *http.Request) {
 			username = p.UID
 		}
 		tgt := p.MonthlyCoinTarget
-		if tgt == nil {
+		if tgt == nil && p.Role == "MEMBER" {
 			q := defaultTarget
 			tgt = &q
 		}
@@ -773,7 +773,7 @@ func (a *API) HandleListMembers(w http.ResponseWriter, r *http.Request) {
 		}
 
 		var effCap int
-		if incomeStatus != "CONFIGURED" || p.MonthlyEarningCap == nil || *p.MonthlyEarningCap <= 0 {
+		if p.Role != "MEMBER" || incomeStatus != "CONFIGURED" || p.MonthlyEarningCap == nil || *p.MonthlyEarningCap <= 0 {
 			effCap = 0
 		} else {
 			base := *p.MonthlyEarningCap

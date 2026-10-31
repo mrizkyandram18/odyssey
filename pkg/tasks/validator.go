@@ -1,7 +1,9 @@
 package tasks
 
 import (
+	"encoding/json"
 	"fmt"
+	"math"
 	"strings"
 )
 
@@ -353,6 +355,7 @@ type DecisionEvent struct {
 // DecisionScenario is the authoritative server-side view of config.scenario.
 type DecisionScenario struct {
 	InitialBalance int
+	Currency       string
 	Events         []DecisionEvent
 }
 
@@ -455,6 +458,9 @@ func GetDecisionScenario(config map[string]any) (sc DecisionScenario, ok bool) {
 	if !ok || len(eventsRaw) == 0 {
 		return DecisionScenario{}, false
 	}
+	if curr, ok := scMap["currency"].(string); ok {
+		sc.Currency = strings.TrimSpace(curr)
+	}
 	if ib, ok := toInt(scMap["initial_balance"]); ok {
 		sc.InitialBalance = ib
 	}
@@ -488,6 +494,83 @@ func GetDecisionScenario(config map[string]any) (sc DecisionScenario, ok bool) {
 	return sc, true
 }
 
+// ParseStrictPositiveInt32 parses v into a strictly positive int32 (1 to math.MaxInt32).
+// It rejects nil, non-numeric types, strings, booleans, floating-point numbers with fractions,
+// negative numbers, zero, and numbers exceeding math.MaxInt32.
+func ParseStrictPositiveInt32(v any) (int, error) {
+	if v == nil {
+		return 0, fmt.Errorf("nilai tidak boleh nil")
+	}
+	switch val := v.(type) {
+	case int:
+		if val <= 0 {
+			return 0, fmt.Errorf("angka harus positif (> 0), ditemukan: %d", val)
+		}
+		if val > math.MaxInt32 {
+			return 0, fmt.Errorf("angka melebihi batas int32: %d", val)
+		}
+		return val, nil
+	case int32:
+		if val <= 0 {
+			return 0, fmt.Errorf("angka harus positif (> 0), ditemukan: %d", val)
+		}
+		return int(val), nil
+	case int64:
+		if val <= 0 {
+			return 0, fmt.Errorf("angka harus positif (> 0), ditemukan: %d", val)
+		}
+		if val > math.MaxInt32 {
+			return 0, fmt.Errorf("angka melebihi batas int32: %d", val)
+		}
+		return int(val), nil
+	case float64:
+		if math.IsNaN(val) || math.IsInf(val, 0) {
+			return 0, fmt.Errorf("angka tidak boleh NaN atau Inf")
+		}
+		if val != math.Floor(val) {
+			return 0, fmt.Errorf("angka tidak boleh memiliki desimal/pecahan: %f", val)
+		}
+		if val <= 0 {
+			return 0, fmt.Errorf("angka harus positif (> 0), ditemukan: %f", val)
+		}
+		if val > float64(math.MaxInt32) {
+			return 0, fmt.Errorf("angka melebihi batas int32: %f", val)
+		}
+		return int(val), nil
+	case json.Number:
+		i, err := val.Int64()
+		if err != nil {
+			return 0, fmt.Errorf("format angka tidak valid: %w", err)
+		}
+		if i <= 0 {
+			return 0, fmt.Errorf("angka harus positif (> 0), ditemukan: %d", i)
+		}
+		if i > math.MaxInt32 {
+			return 0, fmt.Errorf("angka melebihi batas int32: %d", i)
+		}
+		return int(i), nil
+	default:
+		return 0, fmt.Errorf("tipe data tidak didukung (harus integer angka, bukan %T)", v)
+	}
+}
+
+// SafeAddInt32 performs addition of two integers with strict 32-bit signed overflow checking.
+func SafeAddInt32(a, b int) (int, error) {
+	if a < math.MinInt32 || a > math.MaxInt32 {
+		return 0, fmt.Errorf("operand a berada di luar jangkauan int32: %d", a)
+	}
+	if b < math.MinInt32 || b > math.MaxInt32 {
+		return 0, fmt.Errorf("operand b berada di luar jangkauan int32: %d", b)
+	}
+	if b > 0 && a > math.MaxInt32-b {
+		return 0, fmt.Errorf("integer overflow terdeteksi: %d + %d > %d", a, b, math.MaxInt32)
+	}
+	if b < 0 && a < math.MinInt32-b {
+		return 0, fmt.Errorf("integer underflow terdeteksi: %d + %d < %d", a, b, math.MinInt32)
+	}
+	return a + b, nil
+}
+
 // ValidateDecisionChoices verifies that choices covers every scenario event
 // exactly once with a valid option id, and returns the authoritative final
 // balance (initial + sum of deltas). The client-reported score/balance is
@@ -518,7 +601,11 @@ func ValidateDecisionChoices(config map[string]any, choices map[string]any) (fin
 		found := false
 		for _, opt := range ev.Options {
 			if opt.ID == optID {
-				balance += opt.Delta
+				nextBal, err := SafeAddInt32(balance, opt.Delta)
+				if err != nil {
+					return 0, fmt.Errorf("perhitungan saldo overflow pada event %s: %w", ev.ID, err)
+				}
+				balance = nextBal
 				found = true
 				break
 			}
@@ -528,6 +615,52 @@ func ValidateDecisionChoices(config map[string]any, choices map[string]any) (fin
 		}
 	}
 	return balance, nil
+}
+
+// EvaluateDecisionPriorityScore evaluates user choices for DECISION_PRIORITY mini-games.
+// It guarantees:
+// 1. Task config defines game == "DECISION_PRIORITY".
+// 2. Scenario currency is strictly "POINTS".
+// 3. target_score is a valid positive int32.
+// 4. Choices are evaluated authoritatively using server-side options and SafeAddInt32.
+// 5. Returns error if score < target_score.
+func EvaluateDecisionPriorityScore(config map[string]any, choices map[string]any) (score int, finalBalance int, err error) {
+	if config == nil {
+		return 0, 0, fmt.Errorf("konfigurasi tugas tidak ditemukan")
+	}
+	gameRaw, ok := config["game"]
+	if !ok {
+		return 0, 0, fmt.Errorf("bukan game DECISION_PRIORITY")
+	}
+	gameStr, ok := gameRaw.(string)
+	if !ok || strings.TrimSpace(gameStr) != "DECISION_PRIORITY" {
+		return 0, 0, fmt.Errorf("game %q bukan DECISION_PRIORITY", gameStr)
+	}
+
+	sc, hasScenario := GetDecisionScenario(config)
+	if !hasScenario {
+		return 0, 0, fmt.Errorf("tugas ini tidak memiliki skenario keputusan")
+	}
+	if sc.Currency != "POINTS" {
+		return 0, 0, fmt.Errorf("mata uang skenario harus POINTS (ditemukan: %s)", sc.Currency)
+	}
+
+	targetScore, err := ParseStrictPositiveInt32(config["target_score"])
+	if err != nil {
+		return 0, 0, fmt.Errorf("target_score tidak valid: %w", err)
+	}
+
+	finalBal, err := ValidateDecisionChoices(config, choices)
+	if err != nil {
+		return 0, 0, err
+	}
+
+	score = finalBal
+	if score < targetScore {
+		return score, finalBal, fmt.Errorf("skor permainan belum mencapai target minimum (%d vs target %d)", score, targetScore)
+	}
+
+	return score, finalBal, nil
 }
 
 // HasVideoRecording reports whether a task config enables user video

@@ -24,7 +24,7 @@ export interface AdminOverviewProps {
 // Queue aging from already-loaded data only. Backend sorts newest-first
 // (created_at DESC), so the global oldest is derivable ONLY when the whole
 // pending set is loaded (default PENDING filter, page 1). Otherwise return
-// null â€” never guess from a partial page. Read-only, no API/DB change.
+// null — never guess from a partial page. Read-only, no API/DB change.
 function oldestPendingAgeLabel(
   items: Array<{ status?: string; created_at?: string }>,
   pendingTotal: number | null | undefined
@@ -188,7 +188,7 @@ export const AdminOverview: React.FC<AdminOverviewProps> = ({
                         : 'Bukti pengerjaan tugas siap diperiksa untuk pemberian koin reward.'}
                       {oldestSubAge && (
                         <>
-                          {' '}â€¢ Tertua: <strong className="text-text-primary">{oldestSubAge}</strong>
+                          {' '}• Tertua: <strong className="text-text-primary">{oldestSubAge}</strong>
                         </>
                       )}
                     </p>
@@ -227,7 +227,7 @@ export const AdminOverview: React.FC<AdminOverviewProps> = ({
                       Total <strong>{totalCoinsRequested.toLocaleString('id-ID')} Koin</strong> (estimasi Rp {estimatedRupiah.toLocaleString('id-ID')}) menunggu ditransfer.
                       {oldestClaimAge && (
                         <>
-                          {' '}â€¢ Tertua: <strong className="text-text-primary">{oldestClaimAge}</strong>
+                          {' '}• Tertua: <strong className="text-text-primary">{oldestClaimAge}</strong>
                         </>
                       )}
                     </p>

@@ -65,6 +65,7 @@ type PendingSubmissionView struct {
 	CreatedAt      string         `json:"created_at"`
 	RewardCoins    int            `json:"reward_coins"`
 	RewardXP       int            `json:"reward_xp"`
+	ReservedCoins  int            `json:"reserved_coins,omitempty"`
 	CoinsEarned    int            `json:"coins_earned,omitempty"`
 	XPEarned       int            `json:"xp_earned,omitempty"`
 	AdminNotes     *string        `json:"admin_notes,omitempty"`
@@ -900,6 +901,7 @@ func (a *API) HandleListPendingSubmissions(w http.ResponseWriter, r *http.Reques
 		CreatedAt      string         `json:"created_at"`
 		CoinsEarned    int            `json:"coins_earned"`
 		XPEarned       int            `json:"xp_earned"`
+		ReservedCoins  int            `json:"reserved_coins"`
 		AdminNotes     *string        `json:"admin_notes"`
 		ReviewedAt     *string        `json:"reviewed_at"`
 	}
@@ -986,6 +988,7 @@ func (a *API) HandleListPendingSubmissions(w http.ResponseWriter, r *http.Reques
 			CreatedAt:      s.CreatedAt,
 			RewardCoins:    rewardCoins,
 			RewardXP:       rewardXP,
+			ReservedCoins:  s.ReservedCoins,
 			CoinsEarned:    s.CoinsEarned,
 			XPEarned:       s.XPEarned,
 			AdminNotes:     s.AdminNotes,
